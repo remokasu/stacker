@@ -253,8 +253,8 @@ def show_help():
         "Examples:\n"
         "  RPN expression: 3 4 +\n"
         "  Variable assignment: x = 5\n"
-        "  Function definition: f => 3 x +\n"
-        "  Function call: f(2)\n"
+        "  Function definition: x y func => x y *\n"
+        "  Function call: 4 5 func\n"
     )
     print(help_message)
 
