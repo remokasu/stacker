@@ -1,4 +1,5 @@
 import math
+import re
 import sys
 
 from termcolor import colored
@@ -9,37 +10,71 @@ except ImportError:
     import pyreadline as readline
 
 
-class RPNCalculator:
+class Stacker:
     def __init__(self):
+        self.stack = []  # スタックを追加
         self.operator = {
-            "==": (lambda x1, x2: x1 == x2),
-            "!=": (lambda x1, x2: x1 != x2),
-            "<": (lambda x1, x2: x1 < x2),
-            "<=": (lambda x1, x2: x1 <= x2),
-            ">": (lambda x1, x2: x1 > x2),
-            ">=": (lambda x1, x2: x1 >= x2),
-            "and": (lambda x1, x2: x1 and x2),
-            "or": (lambda x1, x2: x1 or x2),
-            "+": (lambda x1, x2: x1 + x2),
-            "-": (lambda x1, x2: x1 - x2),
-            "*": (lambda x1, x2: x1 * x2),
-            "/": (lambda x1, x2: x1 / x2),
-            "//": (lambda x1, x2: x1 // x2),
-            "%": (lambda x1, x2: x1 % x2),
-            "neg": (lambda x: -x),
-            "abs": (lambda x: abs(x)),
-            "exp": (lambda x: math.exp(x)),
-            "log": (lambda x: math.log(x)),
-            "sin": (lambda x: math.sin(x)),
-            "cos": (lambda x: math.cos(x)),
-            "tan": (lambda x: math.tan(x)),
-            "^": (lambda x1, x2: math.pow(x1, x2))
+            "==": (lambda x1, x2: x1 == x2),  # 等しい
+            "!=": (lambda x1, x2: x1 != x2),  # 等しくない
+            "<": (lambda x1, x2: x1 < x2),  # より小さい
+            "<=": (lambda x1, x2: x1 <= x2),  # 以下
+            ">": (lambda x1, x2: x1 > x2),  # より大きい
+            ">=": (lambda x1, x2: x1 >= x2),  # 以上
+            "and": (lambda x1, x2: x1 and x2),  # 論理積
+            "or": (lambda x1, x2: x1 or x2),  # 論理和
+            "not": (lambda x: not x),  # 否定
+            "+": (lambda x1, x2: x1 + x2),  # 加算
+            "-": (lambda x1, x2: x1 - x2),  # 減算
+            "*": (lambda x1, x2: x1 * x2),  # 乗算
+            "/": (lambda x1, x2: x1 / x2),  # 除算
+            "//": (lambda x1, x2: x1 // x2),  # 整数除算
+            "%": (lambda x1, x2: x1 % x2),  # 剰余
+            "neg": (lambda x: -x),  # 符号反転
+            "abs": (lambda x: abs(x)),  # 絶対値
+            "exp": (lambda x: math.exp(x)),  # 指数関数
+            "log": (lambda x: math.log(x)),  # 自然対数
+            "sin": (lambda x: math.sin(x)),  # 正弦関数
+            "cos": (lambda x: math.cos(x)),  # 余弦関数
+            "tan": (lambda x: math.tan(x)),  # 正接関数
+            "^": (lambda x1, x2: math.pow(x1, x2)),  # べき乗
+            "int2float": (lambda x1: float(x1)),  # 整数を浮動小数点数に変換
+            "float2int": (lambda x1: int(x1)),  # 浮動小数点数を整数に変換
         }
         self.variables = {
             "pi": math.pi,
-            "e": math.e
+            "e": math.e,
+            "true": True,
+            "false": False,
         }
         self.functions = {}
+
+    def highlight_syntax(self, expression):
+        """
+        Highlights the syntax of the given RPN expression.
+        Returns a colored string of the input expression.
+        """
+        tokens = expression.split()
+        highlighted_tokens = []
+
+        for token in tokens:
+            if token in self.operator:
+                color = "cyan"
+                if token in {"==", "!=", "<", "<=", ">", ">="}:
+                    color = "yellow"
+                elif token in {"and", "or"}:
+                    color = "green"
+                highlighted_tokens.append(colored(token, color))
+            else:
+                try:
+                    float(token)
+                    highlighted_tokens.append(colored(token, "white"))
+                except ValueError:
+                    highlighted_tokens.append(colored(token, "red"))
+
+        return " ".join(highlighted_tokens)
+
+    def clear_stack(self):
+        self.stack = []
 
     def define_function(self, name, arg_labels, expression):
         self.validate_name(name)
@@ -70,39 +105,15 @@ class RPNCalculator:
             raise ValueError(f"Function '{name}' requires {len(arg_labels)} arguments, {len(args)} provided")
         for label, arg in zip(arg_labels, args):  # 引数の値を割り当てる
             self.assign_variable(label, arg)
-        return self.evaluate(expression)
-
-    def highlight_syntax(self, expression):
-        """
-        Highlights the syntax of the given RPN expression.
-        Returns a colored string of the input expression.
-        """
-        tokens = expression.split()
-        highlighted_tokens = []
-
-        for token in tokens:
-            if token in self.operator:
-                color = "cyan"
-                if token in {"==", "!=", "<", "<=", ">", ">="}:
-                    color = "yellow"
-                elif token in {"and", "or"}:
-                    color = "green"
-                highlighted_tokens.append(colored(token, color))
-            else:
-                try:
-                    float(token)
-                    highlighted_tokens.append(colored(token, "white"))
-                except ValueError:
-                    highlighted_tokens.append(colored(token, "red"))
-
-        return " ".join(highlighted_tokens)
+        result = self.evaluate(expression)
+        return result[-1]  # 評価された関数の結果だけを返す
 
     def apply_operator(self, token, stack):
         """
         Applies an operator to the top elements on the stack.
         Modifies the stack in-place.
         """
-        if token in {"neg", "abs", "exp", "log", "sin", "cos", "tan"}:
+        if token in {"neg", "abs", "exp", "log", "sin", "cos", "tan", "not", "int2float", "float2int"}:
             if len(stack) < 1:
                 raise ValueError(f"Not enough operands for operator '{token}'")
             value = stack.pop()
@@ -114,12 +125,14 @@ class RPNCalculator:
             value_1 = stack.pop()
             stack.append(self.operator[token](value_1, value_2))
 
-    def evaluate(self, expression):
+    def evaluate(self, expression, stack=None):
         """
         Evaluates a given RPN expression.
         Returns the result of the evaluation.
         """
-        stack = []
+        if stack is None:
+            stack = []
+
         tokens = expression.split()
         for token in tokens:
             if token in self.operator:
@@ -127,7 +140,7 @@ class RPNCalculator:
             elif token == "=>":
                 continue
             elif token in self.variables:
-                stack.append(self.variables[token])
+                stack.append(self.variables[token])  # 定数をスタックにプッシュ
             elif token in self.functions:
                 if len(stack) < len(self.functions[token][0]):
                     raise ValueError(f"Not enough arguments for function '{token}'")
@@ -139,10 +152,7 @@ class RPNCalculator:
                 except ValueError:
                     raise ValueError(f"Invalid token '{token}'")
 
-        if len(stack) != 1:
-            raise ValueError("Invalid RPN expression")
-
-        return stack.pop()
+        return stack
 
     def process_function_definition(self, expression):
         tokens = expression.split()
@@ -159,10 +169,11 @@ class RPNCalculator:
 
     def process_variable_assignment(self, expression):
         name, value_expression = [s.strip() for s in expression.split("=", 1)]
+        print(name, value_expression)
         if name in self.operator:
             raise ValueError(f"Invalid variable name '{name}'")
         self.validate_name(name)
-        value = self.evaluate(value_expression)
+        value = self.evaluate(value_expression)[0]
         self.assign_variable(name, value)
         # return colored(f"Variable '{name}' assigned with value {value}", "blue")
         highlighted_value_expression = self.highlight_syntax(value_expression)
@@ -171,43 +182,16 @@ class RPNCalculator:
     def process_expression(self, expression):
         if "=>" in expression:  # 関数定義
             return self.process_function_definition(expression)
-        elif "=" in expression:  # 代入処理
+        elif re.search(r"\b\w+\s*=(?!=)", expression): # 代入処理
             return self.process_variable_assignment(expression)
-        else:  # 既存のRPN式の評価と結果の表示
-            ans = self.evaluate(expression)
-            self.assign_variable('ans', ans)
-            return colored(f"(ans) {ans}", "white")
+        else:  # RPN式の評価と結果の表示
+            ans = self.evaluate(expression, stack=self.stack)
+            return colored(f"{ans}", "white")
 
 
 class ExecutionMode:
     def __init__(self, rpn_calculator):
         self.rpn_calculator = rpn_calculator
-
-    def process_expression(self, expression):
-        if "=>" in expression:
-            tokens = expression.split()
-            name = tokens[tokens.index("=>") - 1]
-            self.rpn_calculator.validate_name(name)
-            arg_labels = tokens[:tokens.index("=>") - 1]  # 引数のラベルを取得
-            function_expression = " ".join(tokens[tokens.index("=>") + 1:])
-            if name in self.rpn_calculator.operator:
-                raise ValueError(f"Invalid function name '{name}'")
-            self.rpn_calculator.define_function(name, arg_labels, function_expression)  # 引数を追加
-            return colored(f"Function '{name}' defined", "magenta")
-
-        if "=" in expression:
-            name, value_expression = [s.strip() for s in expression.split("=", 1)]
-            if name in self.rpn_calculator.operator:
-                raise ValueError(f"Invalid variable name '{name}'")
-            self.rpn_calculator.validate_name(name)
-            value = self.rpn_calculator.evaluate(value_expression)
-            self.rpn_calculator.assign_variable(name, value)
-            return colored(f"Variable '{name}' assigned with value {value}", "blue")
-
-        # 既存のRPN式の評価と結果の表示
-        ans = self.rpn_calculator.evaluate(expression)
-        self.rpn_calculator.assign_variable('ans', ans)
-        return colored(f"(ans) {ans}", "white")
 
     def run(self):
         raise NotImplementedError("Subclasses must implement the 'run' method")
@@ -226,6 +210,10 @@ class InteractiveMode(ExecutionMode):
 
                 if expression.lower() == "help":
                     show_help()
+                    continue
+
+                if expression.lower() == "clear":
+                    self.rpn_calculator.clear_stack()
                     continue
 
                 result = self.rpn_calculator.process_expression(expression)
@@ -258,42 +246,6 @@ class ScriptMode(ExecutionMode):
                     print("Please check the script for valid RPN expressions, variable assignments, or function definitions.")
 
 
-def interactive_mode(rpn_calculator):
-    print("Enter RPN expression, variable assignment, or function definition")
-    while True:
-        try:
-            expression = input()
-
-            if expression.lower() == "exit":
-                break
-
-            if expression.lower() == "help":
-                show_help()
-                continue
-
-            result = rpn_calculator.process_expression(expression)
-            print(result)
-
-        except Exception as e:
-            print(f"Error: {e}")
-            print("Please enter a valid RPN expression, variable assignment, or function definition.")
-
-
-def execute_script(filename, rpn_calculator):
-    with open(filename, 'r') as file:
-        for line in file:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-
-            try:
-                result = rpn_calculator.process_expression(line)
-                print(result)
-            except Exception as e:
-                print(f"Error: {e}")
-                print("Please check the script for valid RPN expressions, variable assignments, or function definitions.")
-
-
 def show_help():
     help_message = (
         "Enter RPN expression, variable assignment, or function definition.\n"
@@ -308,7 +260,7 @@ def show_help():
 
 
 def main():
-    rpn_calculator = RPNCalculator()
+    rpn_calculator = Stacker()
 
     if len(sys.argv) > 1:  # 追加
         script_filename = sys.argv[1]
