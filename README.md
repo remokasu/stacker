@@ -1,5 +1,13 @@
 # Stacker: RPN Calculator
+~~~
+  _____  _                 _
+ / ____|| |               | |
+| (___  | |_   __ _   ___ | | __  ___  _ __
+ \___ \ | __| / _` | / __|| |/ / / _ \| '__|
+ ____) || |_ | (_| || (__ |   < |  __/| |
+|_____/  \__| \__,_| \___||_|\_\ \___||_|
 
+~~~
 # 概要
 
 ある晴れた日、学生Aは数学の試験に挑むため、緊張しながら教室へ向かっていました。しかし、彼はある重要なものを忘れてしまっていたのです。それは、関数電卓でした。
@@ -66,6 +74,8 @@ Amaz●nではプレミアがついて10倍の値段で取引されている。
 
 <hr>
 
+# ダウンロード & インストール
+
 python3が無ければ事前にインストールしてください。
 以下は`stacker`のインストール方法です。
 
@@ -75,24 +85,26 @@ python3が無ければ事前にインストールしてください。
 ~~~
 
 2. 依存環境インストール
-~~~ bash
-> pip install termcolor
 ~~~
+pip install setuptools
+~~~
+
 * windowsの場合のみ
 ~~~ bash
 > pip install pyreadline
 ~~~
 
-3. 起動
+3. インストールせず直接起動
 ~~~ bash
 > cd stacker/stacker
 > python stacker.py
 ~~~
 
-4. またはインストール
+4. (または)インストールして起動
 ~~~ bash
 cd stacker
 > python setup.py install
+> stacker
 ~~~
 
 * 遊び終わったら削除しましょう
@@ -188,7 +200,7 @@ stacker:0> true false or
 stacker:0> true not
 [False]
 stacker:1> false not
-(ans) True
+[True]
 ~~~
 
 <hr>
@@ -257,8 +269,27 @@ stacker:2> +
 [7.0]
 ~~~
 
+## clear
+`clear` でスタックを初期化
+~~~
+stacker:0> clear
+[]
+~~~
+
 ## exit
 `exit` で終了
 ~~~
 stacker:0> exit
+~~~
+
+## about
+`about` でStaclerの情報を表示(特に意味なし)
+~~~
+stacker:0> about
+~~~
+
+## help
+`help` で使い方を表示
+~~~
+stacker:0> about
 ~~~

@@ -1,0 +1,9 @@
+Welcome to Stacker, where we stack things up - but only in the right order! 😉
+This powerful, yet humble, Reverse Polish Notation (RPN) calculator is here to make your life easier.
+We know, it's not every day you encounter a calculator that loves postfix expressions as much as we do. 🤓
+
+With Stacker, you'll experience the joy of crunching numbers without the hassle of parentheses. 🥴
+Our calculator is so dedicated to the cause that it even lets you define your own functions - isn't that fantastic? 🚀
+
+So, go ahead and give Stacker a spin! Just remember, if you ever feel lost, type "help" and we'll be there for you.
+Happy stacking! 🎉

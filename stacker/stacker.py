@@ -1,13 +1,65 @@
 import math
 import re
 import sys
-
-from termcolor import colored
+from pathlib import Path
+from typing import Optional
 
 try:
     import readline
 except ImportError:
     import pyreadline as readline
+
+import pkg_resources
+
+COLORS = {
+    "black": "\033[30m",
+    "red": "\033[31m",
+    "green": "\033[32m",
+    "yellow": "\033[33m",
+    "blue": "\033[34m",
+    "magenta": "\033[35m",
+    "cyan": "\033[36m",
+    "lightgray": "\033[37m",
+    "default": "\033[39m",
+    "darkgray": "\033[90m",
+    "lightred": "\033[91m",
+    "lightgreen": "\033[92m",
+    "lightyellow": "\033[93m",
+    "lightblue": "\033[94m",
+    "lightmagenta": "\033[95m",
+    "lightcyan": "\033[96m",
+    "white": "\033[97m",
+    "reset": "\033[0m",
+}
+
+
+def colored(text: str, color: Optional[str] = "default", end: str = "\n") -> None:
+    """A context manager for setting and resetting the terminal color.
+    Args:
+        color (str, optional): The desired text color. Defaults to "default".
+    Returns:
+        None
+    """
+    ctext = COLORS[color] + text + COLORS["reset"]
+    return ctext
+
+
+def show_top():
+    with pkg_resources.resource_stream(__name__, "data/top.txt") as f:
+        message = f.read().decode('utf-8')
+    print(message)
+
+
+def show_about():
+    with pkg_resources.resource_stream(__name__, "data/about.txt") as f:
+        message = f.read().decode('utf-8')
+    print(message)
+
+
+def show_help():
+    with pkg_resources.resource_stream(__name__, "data/help.txt") as f:
+        message = f.read().decode('utf-8')
+    print(message)
 
 
 class Stacker:
@@ -23,22 +75,46 @@ class Stacker:
             "and": (lambda x1, x2: x1 and x2),  # 論理積
             "or": (lambda x1, x2: x1 or x2),  # 論理和
             "not": (lambda x: not x),  # 否定
+            "band": (lambda x1, x2: int(x1) & int(x2)),  # ビット毎の and
+            "bor": (lambda x1, x2: int(x1) | int(x2)),  # ビット毎の or
+            "bxor": (lambda x1, x2: int(x1) ^ int(x2)),  # ビット毎の xor
             "+": (lambda x1, x2: x1 + x2),  # 加算
             "-": (lambda x1, x2: x1 - x2),  # 減算
             "*": (lambda x1, x2: x1 * x2),  # 乗算
             "/": (lambda x1, x2: x1 / x2),  # 除算
             "//": (lambda x1, x2: x1 // x2),  # 整数除算
             "%": (lambda x1, x2: x1 % x2),  # 剰余
+            "^": (lambda x1, x2: math.pow(x1, x2)),  # べき乗
+            "gcd": (lambda x1, x2: math.gcd(int(x1), int(x2))),  # 最大公約数
             "neg": (lambda x: -x),  # 符号反転
             "abs": (lambda x: abs(x)),  # 絶対値
             "exp": (lambda x: math.exp(x)),  # 指数関数
             "log": (lambda x: math.log(x)),  # 自然対数
+            "log10": (lambda x: math.log10(x)),  # 常用対数（底が10）
+            "log2": (lambda x: math.log2(x)),  # 常用対数（底が10）
             "sin": (lambda x: math.sin(x)),  # 正弦関数
             "cos": (lambda x: math.cos(x)),  # 余弦関数
             "tan": (lambda x: math.tan(x)),  # 正接関数
-            "^": (lambda x1, x2: math.pow(x1, x2)),  # べき乗
-            "int2float": (lambda x1: float(x1)),  # 整数を浮動小数点数に変換
-            "float2int": (lambda x1: int(x1)),  # 浮動小数点数を整数に変換
+            "asin": (lambda x: math.asin(x)),  # アークサイン
+            "acos": (lambda x: math.acos(x)),  # アークコサイン
+            "atan": (lambda x: math.atan(x)),  # アークタンジェント
+            "sinh": (lambda x: math.sinh(x)),  # 双曲線正弦
+            "cosh": (lambda x: math.cosh(x)),  # 双曲線余弦
+            "tanh": (lambda x: math.tanh(x)),  # 双曲線正接
+            "asinh": (lambda x: math.asinh(x)),  # 双曲線正弦の逆関数
+            "acosh": (lambda x: math.acosh(x)),  # 双曲線余弦の逆関数
+            "atanh": (lambda x: math.atanh(x)),  # 双曲線正接の逆関数
+            "!": (lambda x: math.factorial(int(x))),  # 階乗
+            "cbrt": (lambda x: pow(x, 1/3)),  # 立方根
+            "ncr": (lambda n, k: math.comb(int(n), int(k))),  # 組み合わせ (nCr)
+            "npr": (lambda n, k: math.perm(int(n), int(k))),  # 順列 (nPr)
+            "int2float": (lambda x: float(x)),  # 整数を浮動小数点数に変換
+            "float2int": (lambda x: int(x)),  # 浮動小数点数を整数に変換
+            "sqrt": (lambda x: math.sqrt(x)),  # 平方根
+            "ceil": (lambda x: math.ceil(x)),    # 小数点以下を切り上げた最小の整数
+            "floor": (lambda x: math.floor(x)),  # 小数点以下を切り捨てた最大の整数
+            "round": (lambda x: round(x)),  # 最も近い整数に四捨五入
+            "roundn": (lambda x1, x2: round(x1, int(x2))),  # 任意の桁数で丸める
         }
         self.variables = {
             "pi": math.pi,
@@ -47,6 +123,17 @@ class Stacker:
             "false": False,
         }
         self.functions = {}
+        self.reserved_word = ["help", "about", "exit"]
+
+    def get_operators_with_n_args(self, n: int):
+        # 任意の引数の数に対応する演算子の一覧を取得
+        matching_operators = []
+
+        for label, func in self.operator.items():
+            if func.__code__.co_argcount == n:
+                matching_operators.append(label)
+
+        return matching_operators
 
     def highlight_syntax(self, expression):
         """
@@ -85,7 +172,7 @@ class Stacker:
         Validates if a given name is not a reserved word or an operator.
         Raises a ValueError if the name is invalid.
         """
-        if name in self.operator or name.lower() == "help":
+        if name in self.operator or name.lower() in self.reserved_word:
             raise ValueError(f"Invalid name '{name}', it is a reserved word.")
         return name
 
@@ -113,7 +200,8 @@ class Stacker:
         Applies an operator to the top elements on the stack.
         Modifies the stack in-place.
         """
-        if token in {"neg", "abs", "exp", "log", "sin", "cos", "tan", "not", "int2float", "float2int"}:
+        if token in self.get_operators_with_n_args(n=1):
+            # 引数の数nが1の演算
             if len(stack) < 1:
                 raise ValueError(f"Not enough operands for operator '{token}'")
             value = stack.pop()
@@ -186,7 +274,7 @@ class Stacker:
             return self.process_variable_assignment(expression)
         else:  # RPN式の評価と結果の表示
             ans = self.evaluate(expression, stack=self.stack)
-            return colored(f"{ans}", "white")
+            return colored(f"{ans}", "green")
 
 
 class ExecutionMode:
@@ -199,7 +287,6 @@ class ExecutionMode:
 
 class InteractiveMode(ExecutionMode):
     def run(self):
-        print("Enter RPN expression, variable assignment, or function definition")
         line_count = 0
         while True:
             try:
@@ -212,6 +299,10 @@ class InteractiveMode(ExecutionMode):
                     show_help()
                     continue
 
+                if expression.lower() == "about":
+                    show_about()
+                    continue
+
                 if expression.lower() == "clear":
                     self.rpn_calculator.clear_stack()
                     continue
@@ -220,8 +311,8 @@ class InteractiveMode(ExecutionMode):
                 print(result)
 
             except Exception as e:
-                print(f"Error: {e}")
-                print("Please enter a valid RPN expression, variable assignment, or function definition.")
+                print(colored(f"[ERROR]: {e}", "red"))
+                # print("Please enter a valid RPN expression, variable assignment, or function definition.")
 
             line_count += 1
 
@@ -243,23 +334,11 @@ class ScriptMode(ExecutionMode):
                     print(result)
                 except Exception as e:
                     print(f"Error: {e}")
-                    print("Please check the script for valid RPN expressions, variable assignments, or function definitions.")
-
-
-def show_help():
-    help_message = (
-        "Enter RPN expression, variable assignment, or function definition.\n"
-        "Type 'exit' to quit.\n\n"
-        "Examples:\n"
-        "  RPN expression: 3 4 +\n"
-        "  Variable assignment: x = 5\n"
-        "  Function definition: x y func => x y *\n"
-        "  Function call: 4 5 func\n"
-    )
-    print(help_message)
 
 
 def main():
+    show_top()
+
     rpn_calculator = Stacker()
 
     if len(sys.argv) > 1:  # 追加

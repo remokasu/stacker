@@ -1,0 +1,29 @@
+Enter RPN expression, variable assignment, or function definition.
+Type 'exit' to quit.
+
+Examples:
+  RPN expression: 3 4 +
+  Variable assignment: x = 5
+  Function definition: x y func => x y *
+  Function call: 4 5 func
+
+Supported operators and functions:
+  Arithmetic: +, -, *, /, //, %, ^, neg, abs
+  Comparison: ==, !=, <, <=, >, >=
+  Logical: and, or, not
+  Bitwise: band, bor, bxor
+  Math functions:
+    exp, log, log10, log2, sin, cos, tan, asin, acos, atan,
+    sinh, cosh, tanh, asinh, acosh, atanh, sqrt, cbrt,
+    ceil, floor, round, ncr((nCr)), npr(nPr)
+
+  Type conversion: int2float, float2int
+  Factorial: !
+  GCD: gcd
+
+Usage:
+  Input numbers and operators in RPN notation, separated by spaces.
+  Press Enter to evaluate the expression and display the result.
+  The result will be pushed onto the stack.
+  To use the result in a subsequent calculation, input the next expression.
+  To clear the stack, type 'clear'.

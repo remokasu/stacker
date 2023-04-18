@@ -35,7 +35,19 @@ class TestStacker(unittest.TestCase):
             ("3 3 >=", True),
             ("true false and", False),
             ("true false or", True),
-            ("true not", False)
+            ("true not", False),
+            ("3 2 band", 3 & 2),
+            ("3 2 bor", 3 | 2),
+            ("3 2 bxor", 3 ^ 2),
+            ("4 2 gcd", math.gcd(4, 2)),
+            ("4 log10", math.log10(4)),
+            ("4 log2", math.log2(4)),
+            ("4 !", math.factorial(4)),
+            ("9 sqrt", math.sqrt(9)),
+            ("3.2 ceil", math.ceil(3.2)),
+            ("3.8 floor", math.floor(3.8)),
+            ("3.5 round", round(3.5)),
+            ("3.51  1 roundn", round(3.5, 1)),
         ]
 
         for expression, expected in test_cases:
