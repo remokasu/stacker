@@ -50,9 +50,15 @@ def colored(text: str, color: Optional[str] = "default", end: str = "\n") -> Non
 
 
 def show_top():
+    colors = ["red", "green", "yellow", "cyan", "lightred", "lightyellow"]
     with pkg_resources.resource_stream(__name__, "data/top.txt") as f:
-        message = f.read().decode('utf-8')
-    print(message)
+        messages = f.readlines()
+        for i in range(len(messages)):
+            print(colored(messages[i].decode('utf-8'), colors[i]), end="")
+    print("")
+    # with pkg_resources.resource_stream(__name__, "data/top.txt") as f:
+    #     message = f.read().decode('utf-8')
+    # print(message)
 
 
 def show_about():
@@ -367,8 +373,8 @@ class InteractiveMode(ExecutionMode):
                 if expression.lower() == "clear":
                     self.rpn_calculator.clear_stack()
                     continue
-                result = self.rpn_calculator.process_expression(expression)
-                print(result)  # stackを全表示
+                stack_str = self.rpn_calculator.process_expression(expression)
+                print(stack_str)  # stackを全表示
 
             except Exception as e:
                 print(colored(f"[ERROR]: {e}", "red"))

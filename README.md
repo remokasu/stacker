@@ -1,4 +1,4 @@
-# Stacker: RPN Calculator
+# Stacker: RPN Calculator in Python
 ~~~
   _____  _                 _
  / ____|| |               | |
@@ -291,5 +291,5 @@ stacker:0> about
 ## help
 `help` で使い方を表示
 ~~~
-stacker:0> about
+stacker:0> help
 ~~~
