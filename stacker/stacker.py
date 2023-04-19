@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import math
+import random
 import re
+import shlex
 import sys
-from pathlib import Path
 from typing import Optional
 
 try:
@@ -10,6 +13,8 @@ except ImportError:
     import pyreadline as readline
 
 import pkg_resources
+
+global exec_ret
 
 COLORS = {
     "black": "\033[30m",
@@ -62,6 +67,18 @@ def show_help():
     print(message)
 
 
+def input_to_str_or_int_or_float(input_str: str) -> int | float | str:
+    try:
+        return int(input_str)
+    except ValueError:
+        pass
+    try:
+        return float(input_str)
+    except ValueError:
+        pass
+    return input_str
+
+
 class Stacker:
     def __init__(self):
         self.stack = []  # スタックを追加
@@ -86,6 +103,7 @@ class Stacker:
             "%": (lambda x1, x2: x1 % x2),  # 剰余
             "^": (lambda x1, x2: math.pow(x1, x2)),  # べき乗
             "gcd": (lambda x1, x2: math.gcd(int(x1), int(x2))),  # 最大公約数
+            "lcm": (lambda x1, x2: math.lcm(int(x1), int(x2))),  # 最小公倍数
             "neg": (lambda x: -x),  # 符号反転
             "abs": (lambda x: abs(x)),  # 絶対値
             "exp": (lambda x: math.exp(x)),  # 指数関数
@@ -104,23 +122,33 @@ class Stacker:
             "asinh": (lambda x: math.asinh(x)),  # 双曲線正弦の逆関数
             "acosh": (lambda x: math.acosh(x)),  # 双曲線余弦の逆関数
             "atanh": (lambda x: math.atanh(x)),  # 双曲線正接の逆関数
+            "radians":  (lambda deg: math.radians(deg)),  # ディグリー(度、Degree)からラジアン(弧度、Radian)に変換
             "!": (lambda x: math.factorial(int(x))),  # 階乗
             "cbrt": (lambda x: pow(x, 1/3)),  # 立方根
             "ncr": (lambda n, k: math.comb(int(n), int(k))),  # 組み合わせ (nCr)
             "npr": (lambda n, k: math.perm(int(n), int(k))),  # 順列 (nPr)
-            "int2float": (lambda x: float(x)),  # 整数を浮動小数点数に変換
-            "float2int": (lambda x: int(x)),  # 浮動小数点数を整数に変換
+            "float": (lambda x: float(x)),  # 整数を浮動小数点数に変換
+            "int": (lambda x: int(x)),  # 浮動小数点数を整数に変換
             "sqrt": (lambda x: math.sqrt(x)),  # 平方根
             "ceil": (lambda x: math.ceil(x)),    # 小数点以下を切り上げた最小の整数
             "floor": (lambda x: math.floor(x)),  # 小数点以下を切り捨てた最大の整数
             "round": (lambda x: round(x)),  # 最も近い整数に四捨五入
             "roundn": (lambda x1, x2: round(x1, int(x2))),  # 任意の桁数で丸める
+            "random": (lambda: random.random()),  # 0から1までの範囲でランダムな浮動小数点数を生成
+            "randint": (lambda x1, x2: random.randint(int(x1), int(x2))),  # 指定された範囲でランダムな整数を生成
+            "uniform": (lambda x1, x2: random.uniform(x1, x2)),  # 指定された範囲でランダムな浮動小数点数を生成
+            "d": (lambda num_dice, num_faces: sum(random.randint(1, int(num_faces)) for _ in range(int(num_dice)))),  # ダイスロール(例 3d6)
+            "exec": (lambda command: exec(command, globals())),  # 指定のPythonコードを実行
+            "eval": (lambda command: eval(command)),  # 指定のPython式を評価
         }
         self.variables = {
             "pi": math.pi,
+            "tau": math.tau,
             "e": math.e,
             "true": True,
             "false": False,
+            "inf": float("inf"),
+            "nan": math.nan,
         }
         self.functions = {}
         self.reserved_word = ["help", "about", "exit"]
@@ -134,6 +162,13 @@ class Stacker:
                 matching_operators.append(label)
 
         return matching_operators
+
+    def get_n_args_for_operator(self, token):
+        # token(演算子)に必要な引数の数
+        if token in self.operator:
+            return self.operator[token].__code__.co_argcount
+        else:
+            raise KeyError(f"Invalid token {token}")
 
     def highlight_syntax(self, expression):
         """
@@ -200,18 +235,32 @@ class Stacker:
         Applies an operator to the top elements on the stack.
         Modifies the stack in-place.
         """
-        if token in self.get_operators_with_n_args(n=1):
-            # 引数の数nが1の演算
-            if len(stack) < 1:
-                raise ValueError(f"Not enough operands for operator '{token}'")
-            value = stack.pop()
-            stack.append(self.operator[token](value))
-        else:
-            if len(stack) < 2:
-                raise ValueError(f"Not enough operands for operator '{token}'")
-            value_2 = stack.pop()
-            value_1 = stack.pop()
-            stack.append(self.operator[token](value_1, value_2))
+        # if token in self.get_operators_with_n_args(n=1):
+        #     # 引数の数nが1の演算
+        #     if len(stack) < 1:
+        #         raise ValueError(f"Not enough operands for operator '{token}'")
+        #     value = stack.pop()
+        #     stack.append(self.operator[token](value))
+        # else:
+        #     if len(stack) < 2:
+        #         raise ValueError(f"Not enough operands for operator '{token}'")
+        #     value_2 = stack.pop()
+        #     value_1 = stack.pop()
+        #     stack.append(self.operator[token](value_1, value_2))
+        n_args = self.get_n_args_for_operator(token)
+        if n_args is None:
+            raise ValueError(f"Unknown operator '{token}'")
+
+        if len(stack) < n_args:
+            raise ValueError(f"Not enough operands for operator '{token}'")
+
+        args = [stack.pop() for _ in range(n_args)]
+        args.reverse()  # 引数の順序を逆にする
+        # stack.append(self.operator[token](*args))
+        ans = self.operator[token](*args)
+        if token == 'exec':
+            return
+        stack.append(ans)
 
     def evaluate(self, expression, stack=None):
         """
@@ -221,8 +270,10 @@ class Stacker:
         if stack is None:
             stack = []
 
-        tokens = expression.split()
+        # tokens = expression.split()
+        tokens = shlex.split(expression)
         for token in tokens:
+            # token: (str)
             if token in self.operator:
                 self.apply_operator(token, stack)
             elif token == "=>":
@@ -236,7 +287,8 @@ class Stacker:
                 stack.append(self.evaluate_function(token, *args))
             else:
                 try:
-                    stack.append(float(token))
+                    # stack.append(float(token))
+                    stack.append(input_to_str_or_int_or_float(token))
                 except ValueError:
                     raise ValueError(f"Invalid token '{token}'")
 
@@ -281,6 +333,19 @@ class ExecutionMode:
     def __init__(self, rpn_calculator):
         self.rpn_calculator = rpn_calculator
 
+    def get_multiline_input(prompt=""):
+        lines = []
+        while True:
+            line = input(prompt)
+            if line.endswith("\\"):
+                line = line[:-1]  # バックスラッシュを取り除く
+                lines.append(line)
+                prompt = ""  # 2行目以降のプロンプトは空にする
+            else:
+                lines.append(line)
+                break
+        return "\n".join(lines)
+
     def run(self):
         raise NotImplementedError("Subclasses must implement the 'run' method")
 
@@ -291,24 +356,19 @@ class InteractiveMode(ExecutionMode):
         while True:
             try:
                 expression = input(f"stacker:{line_count}> ")
-
                 if expression.lower() == "exit":
                     break
-
                 if expression.lower() == "help":
                     show_help()
                     continue
-
                 if expression.lower() == "about":
                     show_about()
                     continue
-
                 if expression.lower() == "clear":
                     self.rpn_calculator.clear_stack()
                     continue
-
                 result = self.rpn_calculator.process_expression(expression)
-                print(result)
+                print(result)  # stackを全表示
 
             except Exception as e:
                 print(colored(f"[ERROR]: {e}", "red"))
