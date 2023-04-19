@@ -144,6 +144,10 @@ class Stacker:
             "randint": (lambda x1, x2: random.randint(int(x1), int(x2))),  # 指定された範囲でランダムな整数を生成
             "uniform": (lambda x1, x2: random.uniform(x1, x2)),  # 指定された範囲でランダムな浮動小数点数を生成
             "d": (lambda num_dice, num_faces: sum(random.randint(1, int(num_faces)) for _ in range(int(num_dice)))),  # ダイスロール(例 3d6)
+            "delete": (lambda index: self.stack.pop(index)),  # 指定のindexを削除
+            "pluck": (lambda index: self.stack.pop(index)),  # 指定のindexを削除し、スタックのトップに移動
+            "pick": (lambda index: self.stack.append((self.stack[index]))),  # 指定されたインデックスの要素をスタックのトップにコピー
+            "pop": (lambda: self.stack.pop()),  # pop
             "exec": (lambda command: exec(command, globals())),  # 指定のPythonコードを実行
             "eval": (lambda command: eval(command)),  # 指定のPython式を評価
         }
@@ -264,7 +268,7 @@ class Stacker:
         args.reverse()  # 引数の順序を逆にする
         # stack.append(self.operator[token](*args))
         ans = self.operator[token](*args)
-        if token == 'exec':
+        if token in {"exec", "delete", "pop", "pick"}:  # このコマンド実行時は戻り値NoneをStackしない
             return
         stack.append(ans)
 
@@ -362,6 +366,15 @@ class InteractiveMode(ExecutionMode):
         while True:
             try:
                 expression = input(f"stacker:{line_count}> ")
+
+                # ダブルコーテーションまたはシングルコーテーションで始まる入力が閉じられるまで継続する処理
+                while (
+                    (expression.startswith('"') and expression.count('"') % 2 != 0) or
+                    (expression.startswith("'") and expression.count("'") % 2 != 0)
+                ):
+                    next_line = input(f"stacker:{line_count}> ")
+                    expression += "\n" + next_line
+
                 if expression.lower() == "exit":
                     break
                 if expression.lower() == "help":
@@ -381,7 +394,6 @@ class InteractiveMode(ExecutionMode):
                 # print("Please enter a valid RPN expression, variable assignment, or function definition.")
 
             line_count += 1
-
 
 class ScriptMode(ExecutionMode):
     def __init__(self, rpn_calculator, filename):
