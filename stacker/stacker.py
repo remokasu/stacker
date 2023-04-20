@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import cmath
 import math
 import random
 import re
@@ -50,7 +51,8 @@ def colored(text: str, color: Optional[str] = "default", end: str = "\n") -> Non
 
 
 def show_top():
-    colors = ["red", "green", "yellow", "cyan", "lightred", "lightyellow"]
+    # colors = ["red", "green", "yellow", "cyan", "lightred", "lightyellow"]
+    colors = ["red", "green", "yellow", "lightblue", "lightmagenta", "cyan"]
     with pkg_resources.resource_stream(__name__, "data/top.txt") as f:
         messages = f.readlines()
         for i in range(len(messages)):
@@ -82,12 +84,58 @@ def input_to_str_or_int_or_float(input_str: str) -> int | float | str:
         return float(input_str)
     except ValueError:
         pass
+    try:
+        return complex(input_str)
+    except ValueError:
+        pass
     return input_str
+
+
+# 入力が実数か虚数かで呼び出すモジュールを切り替える
+def wrap(func, cfunc):
+    def wrapper(x):
+        if isinstance(x, complex):
+            return cfunc(x)
+        return func(x)
+    return wrapper
+
+
+def math_pow(x1, x2):
+    if isinstance(x1, complex) or isinstance(x2, complex):
+        return cmath.exp(x2 * cmath.log(x1))
+    else:
+        return math.pow(x1, x2)
+
+
+def math_log2(x):
+    if isinstance(x, complex):
+        return cmath.log(x) / cmath.log(2)
+    else:
+        return math.log2(x)
+
+
+math_exp = wrap(math.exp, cmath.exp)
+math_log = wrap(math.log, cmath.log)
+math_log10 = wrap(math.log10, cmath.log10)
+math_sin = wrap(math.sin, cmath.sin)
+math_cos = wrap(math.cos, cmath.cos)
+math_tan = wrap(math.tan, cmath.tan)
+math_asin = wrap(math.asin, cmath.asin)
+math_acos = wrap(math.acos, cmath.acos)
+math_atan = wrap(math.atan, cmath.atan)
+math_sinh = wrap(math.sinh, cmath.sinh)
+math_cosh = wrap(math.cosh, cmath.cosh)
+math_tanh = wrap(math.tanh, cmath.tanh)
+math_asinh = wrap(math.asinh, cmath.asinh)
+math_acosh = wrap(math.acosh, cmath.acosh)
+math_atanh = wrap(math.atanh, cmath.atanh)
+math_sqrt = wrap(math.sqrt, cmath.sqrt)
 
 
 class Stacker:
     def __init__(self):
         self.stack = []  # スタックを追加
+        self.last_pop = None  # pop コマンド(ユーザー入力)で取り出した値を一時的に格納。演算でpopする場合は対象外
         self.operator = {
             "==": (lambda x1, x2: x1 == x2),  # 等しい
             "!=": (lambda x1, x2: x1 != x2),  # 等しくない
@@ -107,27 +155,28 @@ class Stacker:
             "/": (lambda x1, x2: x1 / x2),  # 除算
             "//": (lambda x1, x2: x1 // x2),  # 整数除算
             "%": (lambda x1, x2: x1 % x2),  # 剰余
-            "^": (lambda x1, x2: math.pow(x1, x2)),  # べき乗
+            "^": (lambda x1, x2: math_pow(x1, x2)),  # べき乗
             "gcd": (lambda x1, x2: math.gcd(int(x1), int(x2))),  # 最大公約数
             "lcm": (lambda x1, x2: math.lcm(int(x1), int(x2))),  # 最小公倍数
             "neg": (lambda x: -x),  # 符号反転
             "abs": (lambda x: abs(x)),  # 絶対値
-            "exp": (lambda x: math.exp(x)),  # 指数関数
-            "log": (lambda x: math.log(x)),  # 自然対数
-            "log10": (lambda x: math.log10(x)),  # 常用対数（底が10）
-            "log2": (lambda x: math.log2(x)),  # 常用対数（底が10）
-            "sin": (lambda x: math.sin(x)),  # 正弦関数
-            "cos": (lambda x: math.cos(x)),  # 余弦関数
-            "tan": (lambda x: math.tan(x)),  # 正接関数
-            "asin": (lambda x: math.asin(x)),  # アークサイン
-            "acos": (lambda x: math.acos(x)),  # アークコサイン
-            "atan": (lambda x: math.atan(x)),  # アークタンジェント
-            "sinh": (lambda x: math.sinh(x)),  # 双曲線正弦
-            "cosh": (lambda x: math.cosh(x)),  # 双曲線余弦
-            "tanh": (lambda x: math.tanh(x)),  # 双曲線正接
-            "asinh": (lambda x: math.asinh(x)),  # 双曲線正弦の逆関数
-            "acosh": (lambda x: math.acosh(x)),  # 双曲線余弦の逆関数
-            "atanh": (lambda x: math.atanh(x)),  # 双曲線正接の逆関数
+            "exp": (lambda x: math_exp(x)),  # 指数関数
+            "log": (lambda x: math_log(x)),  # 自然対数
+            "log10": (lambda x: math_log10(x)),  # 常用対数（底が10）
+            "log2": (lambda x: math_log2(x)),  # 常用対数（底が10）
+            "sin": (lambda x: math_sin(x)),  # 正弦関数
+            "cos": (lambda x: math_cos(x)),  # 余弦関数
+            "tan": (lambda x: math_tan(x)),  # 正接関数
+            "asin": (lambda x: math_asin(x)),  # アークサイン
+            "acos": (lambda x: math_acos(x)),  # アークコサイン
+            "atan": (lambda x: math_atan(x)),  # アークタンジェント
+            "sinh": (lambda x: math_sinh(x)),  # 双曲線正弦
+            "cosh": (lambda x: math_cosh(x)),  # 双曲線余弦
+            "tanh": (lambda x: math_tanh(x)),  # 双曲線正接
+            "asinh": (lambda x: math_asinh(x)),  # 双曲線正弦の逆関数
+            "acosh": (lambda x: math_acosh(x)),  # 双曲線余弦の逆関数
+            "atanh": (lambda x: math_atanh(x)),  # 双曲線正接の逆関数
+            "sqrt": (lambda x: math_sqrt(x)),  # 平方根
             "radians":  (lambda deg: math.radians(deg)),  # ディグリー(度、Degree)からラジアン(弧度、Radian)に変換
             "!": (lambda x: math.factorial(int(x))),  # 階乗
             "cbrt": (lambda x: pow(x, 1/3)),  # 立方根
@@ -135,7 +184,6 @@ class Stacker:
             "npr": (lambda n, k: math.perm(int(n), int(k))),  # 順列 (nPr)
             "float": (lambda x: float(x)),  # 整数を浮動小数点数に変換
             "int": (lambda x: int(x)),  # 浮動小数点数を整数に変換
-            "sqrt": (lambda x: math.sqrt(x)),  # 平方根
             "ceil": (lambda x: math.ceil(x)),    # 小数点以下を切り上げた最小の整数
             "floor": (lambda x: math.floor(x)),  # 小数点以下を切り捨てた最大の整数
             "round": (lambda x: round(x)),  # 最も近い整数に四捨五入
@@ -163,15 +211,15 @@ class Stacker:
         self.functions = {}
         self.reserved_word = ["help", "about", "exit"]
 
-    def get_operators_with_n_args(self, n: int):
-        # 任意の引数の数に対応する演算子の一覧を取得
-        matching_operators = []
+    # def get_operators_with_n_args(self, n: int):
+    #     # 任意の引数の数に対応する演算子の一覧を取得
+    #     matching_operators = []
 
-        for label, func in self.operator.items():
-            if func.__code__.co_argcount == n:
-                matching_operators.append(label)
+    #     for label, func in self.operator.items():
+    #         if func.__code__.co_argcount == n:
+    #             matching_operators.append(label)
 
-        return matching_operators
+    #     return matching_operators
 
     def get_n_args_for_operator(self, token):
         # token(演算子)に必要な引数の数
@@ -245,18 +293,6 @@ class Stacker:
         Applies an operator to the top elements on the stack.
         Modifies the stack in-place.
         """
-        # if token in self.get_operators_with_n_args(n=1):
-        #     # 引数の数nが1の演算
-        #     if len(stack) < 1:
-        #         raise ValueError(f"Not enough operands for operator '{token}'")
-        #     value = stack.pop()
-        #     stack.append(self.operator[token](value))
-        # else:
-        #     if len(stack) < 2:
-        #         raise ValueError(f"Not enough operands for operator '{token}'")
-        #     value_2 = stack.pop()
-        #     value_1 = stack.pop()
-        #     stack.append(self.operator[token](value_1, value_2))
         n_args = self.get_n_args_for_operator(token)
         if n_args is None:
             raise ValueError(f"Unknown operator '{token}'")
@@ -266,11 +302,14 @@ class Stacker:
 
         args = [stack.pop() for _ in range(n_args)]
         args.reverse()  # 引数の順序を逆にする
-        # stack.append(self.operator[token](*args))
+
         ans = self.operator[token](*args)
-        if token in {"exec", "delete", "pop", "pick"}:  # このコマンド実行時は戻り値NoneをStackしない
+        if token in {"exec", "delete", "pick"}:  # このコマンド実行時は戻り値NoneをStackしない
             return
-        stack.append(ans)
+        elif token == "pop":  # popの場合は戻り値を保存
+            self.last_pop = ans
+        else:
+            stack.append(ans)  # stackは参照渡し
 
     def evaluate(self, expression, stack=None):
         """
@@ -288,6 +327,8 @@ class Stacker:
                 self.apply_operator(token, stack)
             elif token == "=>":
                 continue
+            elif token == "last_pop":  # popコマンドでpopした値
+                stack.append(self.last_pop)
             elif token in self.variables:
                 stack.append(self.variables[token])  # 定数をスタックにプッシュ
             elif token in self.functions:
@@ -395,6 +436,7 @@ class InteractiveMode(ExecutionMode):
 
             line_count += 1
 
+
 class ScriptMode(ExecutionMode):
     def __init__(self, rpn_calculator, filename):
         super().__init__(rpn_calculator)
@@ -419,15 +461,20 @@ def main():
 
     rpn_calculator = Stacker()
 
-    if len(sys.argv) > 1:  # 追加
-        script_filename = sys.argv[1]
-        # スクリプトモードの実行
-        script_mode = ScriptMode(rpn_calculator, script_filename)
-        script_mode.run()
-    else:
-        # インタラクティブモードの実行
-        interactive_mode = InteractiveMode(rpn_calculator)
-        interactive_mode.run()
+    # 機能拡張予定
+    # if len(sys.argv) > 1:  # 追加
+    #     script_filename = sys.argv[1]
+    #     # スクリプトモードの実行
+    #     script_mode = ScriptMode(rpn_calculator, script_filename)
+    #     script_mode.run()
+    # else:
+    #     # インタラクティブモードの実行
+    #     interactive_mode = InteractiveMode(rpn_calculator)
+    #     interactive_mode.run()
+
+    # インタラクティブモードの実行
+    interactive_mode = InteractiveMode(rpn_calculator)
+    interactive_mode.run()
 
 
 if __name__ == "__main__":
