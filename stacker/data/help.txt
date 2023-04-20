@@ -15,7 +15,8 @@ Supported operators and functions:
   Math functions:
     exp, log, log10, log2, sin, cos, tan, asin, acos, atan,
     sinh, cosh, tanh, asinh, acosh, atanh, sqrt, cbrt,
-    ceil, floor, round, ncr((nCr)), npr(nPr)
+    ceil, floor, round, roundn, random, randint, uniform, d,
+    ncr((nCr)), npr(nPr)
 
   Type conversion: int2float, float2int
   Factorial: !
