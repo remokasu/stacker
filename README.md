@@ -10,44 +10,22 @@
 ~~~
 
 
-# Download & Install
+# Install
 
 If you don't have Python 3 installed, please install it beforehand.
 Here are the installation instructions for `stacker`:
 
-1. Download
+1. Install
 ~~~ bash
-> git clone git@github.com:remokasu/stacker.git
+> pip install pystacker
 ~~~
 
-2. Install dependencies
+2. Run the program
 ~~~
-pip install setuptools
-~~~
-
-* For Windows users only
-~~~ bash
-> pip install pyreadline
-~~~
-
-3. Run the program without installation
-~~~ bash
-> cd stacker/stacker
-> python stacker.py
-~~~
-
-4. (Or) Install and run the program
-~~~ bash
-cd stacker
-> python setup.py install
 > stacker
 ~~~
 
-* When you're done playing with it, uninstall
-~~~ bash
-> pip uninstall stacker
-~~~
-
+# Usage
 
 | Operator | Description                                           | Example                    | Result                   |
 |----------|-------------------------------------------------------|----------------------------|--------------------------|
@@ -101,8 +79,13 @@ cd stacker
 | random   | Generate a random floating-point number between 0 and 1| `random`                   | random.random()          |
 | randint  | Generate a random integer within a specified range    | `1 6 randint`              | random.randint(1, 6)     |
 | uniform  | Generate a random floating-point number within a specified range | `1 2 uniform` | random.uniform(1, 2) |
-| d        | Roll dice (e.g., 3d6)                                 | `3 6 d`                     | sum(random.randint(1, 6) for _ in range(3)) |
-
+| dice     | Roll dice (e.g., 3d6)                                 | `3 6 dice`                 | sum(random.randint(1, 6) for _ in range(3)) |
+| delete   | Remove the element at the specified index             | `2 delete`                 | Remove the element at index 2 from the stack  |
+| pluck    | Remove the element at the specified index and move it to the top of the stack | `2 pluck`              | Remove the element at index 2 and move it to the top of the stack  |
+| pick     | Copy the element at the specified index to the top of the stack | `2 pick`                   | Copy the element at index 2 to the top of the stack  |
+| pop      | Remove the top element from the stack                | `pop`                      | Remove the top element from the stack  |
+| exec     | Execute the specified Python code                    | `'print(1+1)' exec`        | Execute 1+1 and print 2 |
+| eval     | Evaluate the specified Python expression             | `'1+1' eval`               | Add 2 to the stack       |
 
 <hr>
 
@@ -147,7 +130,7 @@ stacker:0> exit
 ~~~
 
 ## about
-Display Stacler's information with `about` (not particularly meaningful)
+Display Stacker's information with `about` (not particularly meaningful)
 ~~~
 stacker:0> about
 ~~~
@@ -158,6 +141,22 @@ Display usage instructions with `help`
 stacker:0> help
 ~~~
 
+# Acknowledgments
+Stacker makes use of the features provided by the Python Prompt Toolkit. We would like to express our gratitude to the developers and contributors of the Python Prompt Toolkit for their excellent work.
+
+## License for Python Prompt Toolkit:
+
+The Python Prompt Toolkit is released under the BSD-3-Clause License. The full license text can be found in the LICENSE file of the Python Prompt Toolkit repository, or at the following URL: https://github.com/prompt-toolkit/python-prompt-toolkit/blob/master/LICENSE
+
+Below is a summary of the main terms of the BSD-3-Clause License:
+
+Redistributions of source code must retain the above copyright notice, this list of conditions, and the following disclaimer.
+
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions, and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 <br>
 <hr>
@@ -233,38 +232,21 @@ Amaz●nではプレミアがついて10倍の値段で取引されている。
 python3が無ければ事前にインストールしてください。
 以下は`stacker`のインストール方法です。
 
-1. ダウンロード
+1. ダウンロード & インストール
 ~~~ bash
-> git clone git@github.com:remokasu/stacker.git
+> pip install pystacker
 ~~~
 
-2. 依存環境インストール
-~~~
-> pip install setuptools
-~~~
-
-* windowsの場合のみ
-~~~ bash
-> pip install pyreadline
-~~~
-
-3. インストールせず直接起動
-~~~ bash
-> cd stacker/stacker
-> python stacker.py
-~~~
-
-4. (または)インストールして起動
-~~~ bash
-cd stacker
-> python setup.py install
+2. 起動
+~~~bash
 > stacker
 ~~~
 
 * 遊び終わったら削除しましょう
 ~~~ bash
-> pip uninstall stacker
+> pip uninstall pystacker
 ~~~
+
 
 # 使い方
 
@@ -320,9 +302,13 @@ cd stacker
 | random | 0と1の間の乱数を生成                                  | random                     | random.random()          |
 | randint| 指定した範囲内の整数乱数を生成                        | 1 6 randint                | random.randint(1, 6)     |
 | uniform| 指定した範囲内の浮動小数点数乱数を生成                | 1 2 uniform                | random.uniform(1, 2)     |
-| d      | サイコロを振る (例：3d6)                              | 3 6 d                      | sum(random.randint(1, 6) for _ in range(3)) |
-
-
+| dice   | サイコロを振る (例：3d6)                              | 3 6 dice                   | sum(random.randint(1, 6) for _ in range(3)) |
+| delete   | 指定のindexを削除                                     | `2 delete`                 | スタックからindex 2の要素を削除  |
+| pluck    | 指定のindexを削除し、スタックのトップに移動           | `2 pluck`                  | index 2の要素を削除し、スタックのトップに移動  |
+| pick     | 指定されたインデックスの要素をスタックのトップにコピー | `2 pick`                   | index 2の要素をスタックのトップにコピー  |
+| pop      | スタックのトップを削除                                | `pop`                      | スタックのトップを削除  |
+| exec     | 指定のPythonコードを実行                             | `'print(1+1)' exec`        | 1+1を出力し、2をプリント |
+| eval     | 指定のPython式を評価                                 | `'1+1' eval`               | スタックに2を追加       |
 <br>
 <hr>
 
@@ -367,7 +353,7 @@ stacker:0> exit
 ~~~
 
 ## about
-`about` でStaclerの情報を表示(特に意味なし)
+`about` でStackerの情報を表示(特に意味なし)
 ~~~
 stacker:0> about
 ~~~
@@ -378,7 +364,46 @@ stacker:0> about
 stacker:0> help
 ~~~
 
+# おまけ
 
-<br>
-<hr>
+## eval (逆ポーランドなんてクソ喰らえだ)
+シングルコーテーションで囲った文字列を `eval` で評価できる。
+やはり中置記法こそ正義なのです。
+ところで、なんで君はStackerを使ってるんですか？
+~~~
+stacker:0> '3 + 5' eval
+[8]
+stacker:1> 
+~~~
 
+## exec (Pythonが使いたい)
+シングルコーテーションでかこった範囲は改行しても一連の文字列として認識できる。
+そこにPythonコードをぶっこんで `exec` で実行できる。
+ただし、execはどんな処理でも結果が`None`なので結果はスタックに入らない。
+結果を表示したければptint文を式中に埋め込もう。
+文字列に対して`exec`することでPythonの処理として実行できる。
+
+~~~
+stacker:0> '
+stacker:0> def f(x):
+stacker:0>      return x**2
+stacker:0> print(f(4))
+stacker:0> '
+['\ndef f(x):\n\treturn x**2\nprint(f(4))\n']
+stacker:7> exec
+16
+[]
+~~~
+
+・面倒くさいので以後はStackerからPythonを起動しましょう。
+~~~
+stacker:10> '
+stacker:10> from subprocess import run
+stacker:10> run("python")
+stacker:10> '
+['\nfrom subprocess import run\nrun("python")\n']
+stacker:11> exec
+Python 3.10.6 (main, Mar 10 2023, 10:55:28) [GCC 11.3.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>>
+~~~

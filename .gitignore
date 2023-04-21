@@ -25,3 +25,6 @@ venv/
 # Other
 *.log
 .DS_Store
+
+# stacker log file
+.stacker_history
