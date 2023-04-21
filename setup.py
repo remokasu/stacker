@@ -11,12 +11,17 @@ with open('README.md', 'r', encoding='utf-8') as f:
 with open('LICENSE', 'r', encoding='utf-8') as f:
     license = f.read()
 
+
+with open('requirements.txt', 'r', encoding='utf-8') as f:
+    install_requires = f.read()
+
 setup(
     author='remokasu',
     name="pystacker",
-    version="1.0.3",
+    version="1.1.0",
     license=license,
     url='https://github.com/remokasu/stacker',
+    install_requires=install_requires,
     packages=find_packages(),
     package_data={'stacker': ['data/*']},
     description='Stacker: RPN Calculator in Python',

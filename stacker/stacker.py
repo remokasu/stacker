@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 import cmath
+import copy
 import math
+import os
 import random
 import re
 import shlex
-import sys
+from pathlib import Path
 from typing import Optional
 
-try:
-    import readline
-except ImportError:
-    import pyreadline as readline
-
 import pkg_resources
+from prompt_toolkit import prompt
+from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.history import FileHistory
 
-global exec_ret
+history_file = ".stacker_history"
+history_file_path = Path.home() / history_file
+
 
 COLORS = {
     "black": "\033[30m",
@@ -73,6 +75,17 @@ def show_help():
     with pkg_resources.resource_stream(__name__, "data/help.txt") as f:
         message = f.read().decode('utf-8')
     print(message)
+
+
+def show_help_jp():
+    with pkg_resources.resource_stream(__name__, "data/help-jp.txt") as f:
+        message = f.read().decode('utf-8')
+    print(message)
+
+
+def delete_history():
+    if history_file_path.exists():
+        history_file_path.unlink()
 
 
 def input_to_str_or_int_or_float(input_str: str) -> int | float | str:
@@ -191,7 +204,7 @@ class Stacker:
             "random": (lambda: random.random()),  # 0から1までの範囲でランダムな浮動小数点数を生成
             "randint": (lambda x1, x2: random.randint(int(x1), int(x2))),  # 指定された範囲でランダムな整数を生成
             "uniform": (lambda x1, x2: random.uniform(x1, x2)),  # 指定された範囲でランダムな浮動小数点数を生成
-            "d": (lambda num_dice, num_faces: sum(random.randint(1, int(num_faces)) for _ in range(int(num_dice)))),  # ダイスロール(例 3d6)
+            "dice": (lambda num_dice, num_faces: sum(random.randint(1, int(num_faces)) for _ in range(int(num_dice)))),  # ダイスロール(例 3d6)
             "delete": (lambda index: self.stack.pop(index)),  # 指定のindexを削除
             "pluck": (lambda index: self.stack.pop(index)),  # 指定のindexを削除し、スタックのトップに移動
             "pick": (lambda index: self.stack.append((self.stack[index]))),  # 指定されたインデックスの要素をスタックのトップにコピー
@@ -209,7 +222,7 @@ class Stacker:
             "nan": math.nan,
         }
         self.functions = {}
-        self.reserved_word = ["help", "about", "exit"]
+        self.reserved_word = ["help", "help-jp", "about", "exit", "delete_history", "last_pop"]
 
     # def get_operators_with_n_args(self, n: int):
     #     # 任意の引数の数に対応する演算子の一覧を取得
@@ -381,8 +394,13 @@ class Stacker:
 
 
 class ExecutionMode:
-    def __init__(self, rpn_calculator):
+    def __init__(self, rpn_calculator: Stacker):
         self.rpn_calculator = rpn_calculator
+        self._operator_key = list(self.rpn_calculator.operator.keys())
+        self._variable_key = list(self.rpn_calculator.variables.keys())
+        self._reserved_word = copy.deepcopy(self.rpn_calculator.reserved_word)
+        self._reserved_word = (self._reserved_word + self._operator_key + self._variable_key)
+        self.completer = WordCompleter(self._reserved_word)
 
     def get_multiline_input(prompt=""):
         lines = []
@@ -406,14 +424,22 @@ class InteractiveMode(ExecutionMode):
         line_count = 0
         while True:
             try:
-                expression = input(f"stacker:{line_count}> ")
+                expression = prompt(
+                    f"stacker:{line_count}> ",
+                    history=FileHistory(history_file_path),
+                    completer=self.completer,
+                )
 
                 # ダブルコーテーションまたはシングルコーテーションで始まる入力が閉じられるまで継続する処理
                 while (
                     (expression.startswith('"') and expression.count('"') % 2 != 0) or
                     (expression.startswith("'") and expression.count("'") % 2 != 0)
                 ):
-                    next_line = input(f"stacker:{line_count}> ")
+                    next_line = prompt(
+                        f"stacker:{line_count}> ",
+                        history=FileHistory(history_file_path),
+                        completer=self.completer,
+                    )
                     expression += "\n" + next_line
 
                 if expression.lower() == "exit":
@@ -421,12 +447,19 @@ class InteractiveMode(ExecutionMode):
                 if expression.lower() == "help":
                     show_help()
                     continue
+                if expression.lower() == "help-jp":
+                    show_help_jp()
+                    continue
                 if expression.lower() == "about":
                     show_about()
+                    continue
+                if expression.lower() == "delete_history":
+                    delete_history()
                     continue
                 if expression.lower() == "clear":
                     self.rpn_calculator.clear_stack()
                     continue
+
                 stack_str = self.rpn_calculator.process_expression(expression)
                 print(stack_str)  # stackを全表示
 

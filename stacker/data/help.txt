@@ -8,19 +8,67 @@ Examples:
   Function call: 4 5 func
 
 Supported operators and functions:
-  Arithmetic: +, -, *, /, //, %, ^, neg, abs
-  Comparison: ==, !=, <, <=, >, >=
-  Logical: and, or, not
-  Bitwise: band, bor, bxor
-  Math functions:
-    exp, log, log10, log2, sin, cos, tan, asin, acos, atan,
-    sinh, cosh, tanh, asinh, acosh, atanh, sqrt, cbrt,
-    ceil, floor, round, roundn, random, randint, uniform, d,
-    ncr((nCr)), npr(nPr)
-
-  Type conversion: int2float, float2int
-  Factorial: !
-  GCD: gcd
+    ==    Equal
+    !=    Not equal
+    <     Less than
+    <=    Less than or equal to
+    >     Greater than
+    >=    Greater than or equal to
+    and   Logical AND
+    or    Logical OR
+    not   Logical NOT
+    band  Bitwise AND
+    bor   Bitwise OR
+    bxor  Bitwise XOR
+    +     Addition
+    -     Subtraction
+    *     Multiplication
+    /     Division
+    //    Integer division
+    %     Modulus
+    ^     Exponentiation
+    gcd   Greatest common divisor
+    lcm   Least common multiple
+    neg   Negation
+    abs   Absolute value
+    exp   Exponential function
+    log   Natural logarithm
+    log10 Base 10 logarithm
+    log2  Base 2 logarithm
+    sin   Sine
+    cos   Cosine
+    tan   Tangent
+    asin  Arcsine
+    acos  Arccosine
+    atan  Arctangent
+    sinh  Hyperbolic sine
+    cosh  Hyperbolic cosine
+    tanh  Hyperbolic tangent
+    asinh Inverse hyperbolic sine
+    acosh Inverse hyperbolic cosine
+    atanh Inverse hyperbolic tangent
+    sqrt  Square root
+    radians Convert degrees to radians
+    !     Factorial
+    cbrt  Cube root
+    ncr   Combinations (nCr)
+    npr   Permutations (nPr)
+    float Convert integer to floating-point number
+    int   Convert floating-point number to integer
+    ceil  Ceiling (smallest integer greater than or equal to the number)
+    floor Floor (largest integer less than or equal to the number)
+    round Round to the nearest integer
+    roundn Round to a specified number of decimal places
+    random Generate a random floating-point number between 0 and 1
+    randint Generate a random integer in the specified range
+    uniform Generate a random floating-point number in the specified range
+    dice   Dice roll (e.g., 3d6)
+    delete Remove an item from the stack at the specified index
+    pluck  Remove an item from the stack at the specified index and move it to the top
+    pick   Copy an item from the specified index to the top of the stack
+    pop    Pop an item from the stack
+    exec   Execute specified Python code
+    eval   Evaluate specified Python expression
 
 Usage:
   Input numbers and operators in RPN notation, separated by spaces.
