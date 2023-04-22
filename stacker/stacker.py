@@ -9,7 +9,6 @@ import random
 import re
 import shlex
 import sys
-from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional
 
@@ -56,16 +55,12 @@ def colored(text: str, color: Optional[str] = "default", end: str = "\n") -> Non
 
 
 def show_top():
-    # colors = ["red", "green", "yellow", "cyan", "lightred", "lightyellow"]
     colors = ["red", "green", "yellow", "lightblue", "lightmagenta", "cyan"]
     with pkg_resources.resource_stream(__name__, "data/top.txt") as f:
         messages = f.readlines()
         for i in range(len(messages)):
             print(colored(messages[i].decode('utf-8'), colors[i]), end="")
     print("")
-    # with pkg_resources.resource_stream(__name__, "data/top.txt") as f:
-    #     message = f.read().decode('utf-8')
-    # print(message)
 
 
 def show_about():
@@ -405,24 +400,26 @@ class Stacker(StackerCore):
 def load_plugins(stacker_core: StackerCore):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     plugins_dir = os.path.join(script_dir, plugins_dir_path)
-
     # プラグインディレクトリにパスを追加
     sys.path.insert(0, plugins_dir)
 
     try:
         # プラグインディレクトリ内のファイルを走査
         for filename in os.listdir(plugins_dir):
-            if filename.endswith(".py") and not filename.startswith("__"):
-                # ファイル名から拡張子を除いた名前を取得
-                module_name = os.path.splitext(filename)[0]
-                # モジュールをインポート
-                plugin_module = importlib.import_module(module_name)
-                # プラグインのセットアップ関数を呼び出し
-                plugin_module.setup(stacker_core)
+            try:
+                if filename.endswith(".py") and not filename.startswith("__"):
+                    # ファイル名から拡張子を除いた名前を取得
+                    module_name = os.path.splitext(filename)[0]
+                    # モジュールをインポート
+                    plugin_module = importlib.import_module(module_name)
+                    # プラグインのセットアップ関数を呼び出し
+                    plugin_module.setup(stacker_core)
+            except AttributeError as e:
+                print(colored(f"[ERROR]{e}", "red"))
+            finally:
+                continue
     except FileNotFoundError:
         print("Warning: plugins folder not found. Skipping plugin loading.")
-    except AttributeError as e:
-        print(colored(f"[ERROR]{e}", "red"))
     finally:
         # プラグインディレクトリからパスを削除
         sys.path.pop(0)
@@ -518,24 +515,24 @@ class InteractiveMode(ExecutionMode):
 
             line_count += 1
 
+# 機能拡張予定
+# class ScriptMode(ExecutionMode):
+#     def __init__(self, rpn_calculator, filename):
+#         super().__init__(rpn_calculator)
+#         self.filename = filename
 
-class ScriptMode(ExecutionMode):
-    def __init__(self, rpn_calculator, filename):
-        super().__init__(rpn_calculator)
-        self.filename = filename
+#     def run(self):
+#         with open(self.filename, 'r') as file:
+#             for line in file:
+#                 line = line.strip()
+#                 if not line or line.startswith("#"):
+#                     continue
 
-    def run(self):
-        with open(self.filename, 'r') as file:
-            for line in file:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-
-                try:
-                    result = self.rpn_calculator.process_expression(line)
-                    print(result)
-                except Exception as e:
-                    print(f"Error: {e}")
+#                 try:
+#                     result = self.rpn_calculator.process_expression(line)
+#                     print(result)
+#                 except Exception as e:
+#                     print(f"Error: {e}")
 
 
 def main():

@@ -329,36 +329,36 @@ python3が無ければ事前にインストールしてください。
 | atanh  | 逆双曲線正接                                          | `0.5 atanh`                | math.atanh(0.5)          |
 | sqrt   | 平方根                                                | `9 sqrt`                   | math.sqrt(9)             |
 | ceil   | 切り上げ                                              | `3.2 ceil`                 | math.ceil(3.2)           |
-| floor  | 切り捨て                                              | 3.8 floor                  | math.floor(3.8)          |
-| round  | 四捨五入                                              | 3.5 round                  | round(3.5)               |
-| float  | 浮動小数点数に変換                                    | 5 float                    | 5.0                      |
-| int    | 整数に変換                                            | 3.14 int                   | 3                        |
-| ==     | 等しい                                                | 1 1 ==                     | True                     |
-| !=     | 等しくない                                            | 1 0 !=                     | True                     |
-| <      | より小さい                                            | 1 2 <                      | True                     |
-| <=     | 以下                                                  | 3 3 <=                     | True                     |
-| >      | より大きい                                            | 2 1 >                      | True                     |
-| >=     | 以上                                                  | 3 3 >=                     | True                     |
-| and    | 論理積                                                | true false and             | False                    |
-| or     | 論理和                                                | true false or              | True                     |
-| not    | 論理否定                                              | true not                   | False                    |
-| band   | ビットごとの論理積                                    | 3 2 band                   | 3 & 2                    |
-| bor    | ビットごとの論理和                                    | 3 2 bor                    | 3 | 2                    |
-| bxor   | ビットごとの排他的論理和                              | 3 2 bxor                   | 3 ^ 2                    |
-| gcd    | 最大公約数                                            | 4 2 gcd                    | math.gcd(4, 2)           |
-| !      | 階乗                                                  | 4 !                        | math.factorial(4)        |
-| radians| 度数法から弧度法へ変換                                | 180 radians                | math.radians(180)        |
-| roundn | 指定した小数点以下の桁数で四捨五入                    | 3.51 1 roundn              | round(3.51, 1)           |
-| random | 0と1の間の乱数を生成                                  | random                     | random.random()          |
-| randint| 指定した範囲内の整数乱数を生成                        | 1 6 randint                | random.randint(1, 6)     |
-| uniform| 指定した範囲内の浮動小数点数乱数を生成                | 1 2 uniform                | random.uniform(1, 2)     |
-| dice   | サイコロを振る (例：3d6)                              | 3 6 dice                   | sum(random.randint(1, 6) for _ in range(3)) |
-| delete   | 指定のindexを削除                                     | `2 delete`                 | スタックからindex 2の要素を削除  |
-| pluck    | 指定のindexを削除し、スタックのトップに移動           | `2 pluck`                  | index 2の要素を削除し、スタックのトップに移動  |
-| pick     | 指定されたインデックスの要素をスタックのトップにコピー | `2 pick`                   | index 2の要素をスタックのトップにコピー  |
-| pop      | スタックのトップを削除                                | `pop`                      | スタックのトップを削除  |
-| exec     | 指定のPythonコードを実行                             | `'print(1+1)' exec`        | 1+1を出力し、2をプリント |
-| eval     | 指定のPython式を評価                                 | `'1+1' eval`               | スタックに2を追加       |
+| floor  | 切り捨て                                              | `3.8 floor`                | math.floor(3.8)          |
+| round  | 四捨五入                                              | `3.5 round`                | round(3.5)               |
+| float  | 浮動小数点数に変換                                    | `5 float`                  | 5.0                      |
+| int    | 整数に変換                                            | `3.14 int`                 | 3                        |
+| ==     | 等しい                                                | `1 1 ==`                   | True                     |
+| !=     | 等しくない                                            | `1 0 !=`                   | True                     |
+| <      | より小さい                                            | `1 2 <`                    | True                     |
+| <=     | 以下                                                  | `3 3 <=`                   | True                     |
+| >      | より大きい                                            | `2 1 >`                    | True                     |
+| >=     | 以上                                                  | `3 3 >=`                   | True                     |
+| and    | 論理積                                                | `true false and`           | False                    |
+| or     | 論理和                                                | `true false or`            | True                     |
+| not    | 論理否定                                              | `true not`                 | False                    |
+| band   | ビットごとの論理積                                    | `3 2 band`                 | 3 & 2                    |
+| bor    | ビットごとの論理和                                    | `3 2 bor`                  | 3 | 2                    |
+| bxor   | ビットごとの排他的論理和                              | `3 2 bxor`                 | 3 ^ 2                    |
+| gcd    | 最大公約数                                            | `4 2 gcd`                  | math.gcd(4, 2)           |
+| !      | 階乗                                                  | `4 !`                      | math.factorial(4)        |
+| radians| 度数法から弧度法へ変換                                | `180 radians`              | math.radians(180)        |
+| roundn | 指定した小数点以下の桁数で四捨五入                    | `3.51 1 roundn`            | round(3.51, 1)           |
+| random | 0と1の間の乱数を生成                                  | `random`                   | random.random()          |
+| randint| 指定した範囲内の整数乱数を生成                        | `1 6 randint`              | random.randint(1, 6)     |
+| uniform| 指定した範囲内の浮動小数点数乱数を生成                | `1 2 uniform`              | random.uniform(1, 2)     |
+| dice   | サイコロを振る (例：3d6)                              | `3 6 dice`                 | sum(random.randint(1, 6) for _ in range(3)) |
+| delete   | 指定のindexを削除                                     | `2 delete`               | スタックからindex 2の要素を削除  |
+| pluck    | 指定のindexを削除し、スタックのトップに移動           | `2 pluck`                | index 2の要素を削除し、スタックのトップに移動  |
+| pick     | 指定されたインデックスの要素をスタックのトップにコピー | `2 pick`                | index 2の要素をスタックのトップにコピー  |
+| pop      | スタックのトップを削除                                | `pop`                    | スタックのトップを削除  |
+| exec     | 指定のPythonコードを実行                             | `'print(1+1)' exec`       | 1+1を出力し、2をプリント |
+| eval     | 指定のPython式を評価                                 | `'1+1' eval`              | スタックに2を追加       |
 <br>
 <hr>
 
