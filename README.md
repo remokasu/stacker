@@ -141,6 +141,56 @@ Display usage instructions with `help`
 stacker:0> help
 ~~~
 
+## Plugin Usage
+
+To create a plugin for Stacker, follow these steps:
+
+1. Create a new Python file (e.g., `my_plugin.py`) in the `plugins` directory.
+~~~
+stacker/
+├── stacker/
+       ├── plugins/
+       │   ├── my_plugin.py
+       │   └── ...
+       ├── data/
+       ├── stacker.py
+       ├── test.py
+       └── ...
+~~~
+
+2. Define any functions or classes required for your plugin.
+3. Define a `setup` function in your plugin file that takes a single argument: `stacker_core`.
+4. In the `setup` function, use the `register_plugin` method of `stacker_core` to register your custom commands. For example:
+
+~~~python
+description_en = "Returns the Collatz sequence for the given number."
+description_jp = "与えられた数値のコラッツ数列を返します。"
+
+def collatz_sequence(n):
+    seq = [n]
+    while n != 1:
+        if n % 2 == 0:
+            n //= 2
+        else:
+            n = n * 3 + 1
+        seq.append(n)
+    return seq
+
+def setup(stacker_core):
+    stacker_core.register_plugin(
+        "collatz", lambda x: collatz_sequence(x),
+        description_en=description_en,  #  Please comment out if not necessary.
+        description_jp=description_jp   #  不要な場合はコメントアウト
+    )
+~~~
+5. Reinstall Stacker by running the following command:
+~~~bash
+python setup.py install
+~~~
+5. Save your plugin file in the plugins directory.
+6. When Stacker starts, it will automatically load your plugin, and your custom command will be available for use.
+
+
 # Acknowledgments
 Stacker makes use of the features provided by the Python Prompt Toolkit. We would like to express our gratitude to the developers and contributors of the Python Prompt Toolkit for their excellent work.
 
@@ -363,6 +413,61 @@ stacker:0> about
 ~~~
 stacker:0> help
 ~~~
+
+## プラグインの使い方
+
+Stackerのプラグインを作成するには、以下の手順に従ってください。
+
+1. `plugins`ディレクトリに新しいPythonファイル（例：`my_plugin.py`）を作成します。
+
+~~~
+stacker/
+├── stacker/
+       ├── plugins/
+       │   ├── my_plugin.py
+       │   └── ...
+       ├── data/
+       ├── stacker.py
+       ├── test.py
+       └── ...
+~~~
+
+
+2. プラグインに必要な関数やクラスを定義します。
+3. プラグインファイル内に、引数として`stacker_core`を1つ取る`setup`関数を定義します。
+4. `setup`関数内で、`stacker_core`の`register_plugin`メソッドを使って、カスタムコマンドを登録します。例：
+
+~~~python
+description_en = "Returns the Collatz sequence for the given number."
+description_jp = "与えられた数値のコラッツ数列を返します。"
+
+def collatz_sequence(n):
+    seq = [n]
+    while n != 1:
+        if n % 2 == 0:
+            n //= 2
+        else:
+            n = n * 3 + 1
+        seq.append(n)
+    return seq
+
+def setup(stacker_core):
+    stacker_core.register_plugin(
+        "collatz", lambda x: collatz_sequence(x),
+        description_en=description_en,  #  不要な場合はコメントアウトしてください。
+        description_jp=description_jp   #  不要な場合はコメントアウトしてください。
+    )
+~~~
+
+5. 以下のコマンドを実行してStackerを再インストールします：
+~~~bash
+python setup.py install
+~~~
+6. Stackerが起動すると、自動的にプラグインが読み込まれ、カスタムコマンドが利用可能になります。
+
+英語（description_en）と日本語（description_jp）の説明の提供は任意です。必要がない場合は、それらの行をコメントアウトまたは削除してください。
+
+
 
 # おまけ
 
