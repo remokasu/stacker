@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import cmath
 import copy
+import importlib
 import math
 import os
 import random
 import re
 import shlex
+import sys
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional
 
@@ -17,7 +20,7 @@ from prompt_toolkit.history import FileHistory
 
 history_file = ".stacker_history"
 history_file_path = Path.home() / history_file
-
+plugins_dir_path = "plugins"
 
 COLORS = {
     "black": "\033[30m",
@@ -88,7 +91,7 @@ def delete_history():
         history_file_path.unlink()
 
 
-def input_to_str_or_int_or_float(input_str: str) -> int | float | str:
+def input_to_str_or_int_or_float_or_complex(input_str: str) -> int | float | str:
     try:
         return int(input_str)
     except ValueError:
@@ -145,8 +148,8 @@ math_atanh = wrap(math.atanh, cmath.atanh)
 math_sqrt = wrap(math.sqrt, cmath.sqrt)
 
 
-class Stacker:
-    def __init__(self):
+class StackerCore:
+    def __init__(self, plugin_dir: str = plugins_dir_path):
         self.stack = []  # スタックを追加
         self.last_pop = None  # pop コマンド(ユーザー入力)で取り出した値を一時的に格納。演算でpopする場合は対象外
         self.operator = {
@@ -212,6 +215,85 @@ class Stacker:
             "exec": (lambda command: exec(command, globals())),  # 指定のPythonコードを実行
             "eval": (lambda command: eval(command)),  # 指定のPython式を評価
         }
+        self.plugins = {}
+        self.plugin_descriptions = {}
+        self.plugin_dir = plugin_dir
+
+    def get_n_args_for_operator(self, token):
+        # token(演算子)に必要な引数の数
+        if token in self.operator:
+            return self.operator[token].__code__.co_argcount
+        else:
+            raise KeyError(f"Invalid token {token}")
+
+    def apply_operator(self, token, stack):
+        """
+        Applies an operator to the top elements on the stack.
+        Modifies the stack in-place.
+        """
+        n_args = self.get_n_args_for_operator(token)
+        if n_args is None:
+            raise ValueError(f"Unknown operator '{token}'")
+
+        if len(stack) < n_args:
+            raise ValueError(f"Not enough operands for operator '{token}'")
+
+        args = [stack.pop() for _ in range(n_args)]
+        args.reverse()  # 引数の順序を逆にする
+
+        ans = self.operator[token](*args)
+        if token in {"exec", "delete", "pick"}:  # このコマンド実行時は戻り値NoneをStackしない
+            return
+        elif token == "pop":  # popの場合は戻り値を保存
+            self.last_pop = ans
+        else:
+            stack.append(ans)  # stackは参照渡し
+
+    def evaluate(self, expression, stack=None):
+        """
+        Evaluates a given RPN expression.
+        Returns the result of the evaluation.
+        """
+        if stack is None:
+            stack = []
+
+        # tokens = expression.split()
+        tokens = shlex.split(expression)
+        for token in tokens:
+            # token: (str)
+            if token in self.operator:
+                self.apply_operator(token, stack)
+            elif token == "=>":
+                continue
+            elif token == "last_pop":  # popコマンドでpopした値
+                stack.append(self.last_pop)
+            elif token in self.variables:
+                stack.append(self.variables[token])  # 定数をスタックにプッシュ
+            elif token in self.functions:
+                if len(stack) < len(self.functions[token][0]):
+                    raise ValueError(f"Not enough arguments for function '{token}'")
+                args = [stack.pop() for _ in range(len(self.functions[token][0]))][::-1]
+                stack.append(self.evaluate_function(token, *args))
+            else:
+                try:
+                    # stack.append(float(token))
+                    stack.append(input_to_str_or_int_or_float_or_complex(token))
+                except ValueError:
+                    raise ValueError(f"Invalid token '{token}'")
+
+        return stack
+
+    def register_operator(self, operator_name, operator_func):
+        self.operator[operator_name] = operator_func
+
+    def register_plugin(self, operator_name, operator_func, description_en=None, description_jp=None):
+        self.register_operator(operator_name, operator_func)
+        self.plugin_descriptions[operator_name] = {"en": description_en, "jp": description_jp}
+
+
+class Stacker(StackerCore):
+    def __init__(self):
+        super().__init__()
         self.variables = {
             "pi": math.pi,
             "tau": math.tau,
@@ -223,23 +305,7 @@ class Stacker:
         }
         self.functions = {}
         self.reserved_word = ["help", "help-jp", "about", "exit", "delete_history", "last_pop"]
-
-    # def get_operators_with_n_args(self, n: int):
-    #     # 任意の引数の数に対応する演算子の一覧を取得
-    #     matching_operators = []
-
-    #     for label, func in self.operator.items():
-    #         if func.__code__.co_argcount == n:
-    #             matching_operators.append(label)
-
-    #     return matching_operators
-
-    def get_n_args_for_operator(self, token):
-        # token(演算子)に必要な引数の数
-        if token in self.operator:
-            return self.operator[token].__code__.co_argcount
-        else:
-            raise KeyError(f"Invalid token {token}")
+        self.stack_color = "white"
 
     def highlight_syntax(self, expression):
         """
@@ -301,63 +367,6 @@ class Stacker:
         result = self.evaluate(expression)
         return result[-1]  # 評価された関数の結果だけを返す
 
-    def apply_operator(self, token, stack):
-        """
-        Applies an operator to the top elements on the stack.
-        Modifies the stack in-place.
-        """
-        n_args = self.get_n_args_for_operator(token)
-        if n_args is None:
-            raise ValueError(f"Unknown operator '{token}'")
-
-        if len(stack) < n_args:
-            raise ValueError(f"Not enough operands for operator '{token}'")
-
-        args = [stack.pop() for _ in range(n_args)]
-        args.reverse()  # 引数の順序を逆にする
-
-        ans = self.operator[token](*args)
-        if token in {"exec", "delete", "pick"}:  # このコマンド実行時は戻り値NoneをStackしない
-            return
-        elif token == "pop":  # popの場合は戻り値を保存
-            self.last_pop = ans
-        else:
-            stack.append(ans)  # stackは参照渡し
-
-    def evaluate(self, expression, stack=None):
-        """
-        Evaluates a given RPN expression.
-        Returns the result of the evaluation.
-        """
-        if stack is None:
-            stack = []
-
-        # tokens = expression.split()
-        tokens = shlex.split(expression)
-        for token in tokens:
-            # token: (str)
-            if token in self.operator:
-                self.apply_operator(token, stack)
-            elif token == "=>":
-                continue
-            elif token == "last_pop":  # popコマンドでpopした値
-                stack.append(self.last_pop)
-            elif token in self.variables:
-                stack.append(self.variables[token])  # 定数をスタックにプッシュ
-            elif token in self.functions:
-                if len(stack) < len(self.functions[token][0]):
-                    raise ValueError(f"Not enough arguments for function '{token}'")
-                args = [stack.pop() for _ in range(len(self.functions[token][0]))][::-1]
-                stack.append(self.evaluate_function(token, *args))
-            else:
-                try:
-                    # stack.append(float(token))
-                    stack.append(input_to_str_or_int_or_float(token))
-                except ValueError:
-                    raise ValueError(f"Invalid token '{token}'")
-
-        return stack
-
     def process_function_definition(self, expression):
         tokens = expression.split()
         name = tokens[tokens.index("=>") - 1]
@@ -390,7 +399,33 @@ class Stacker:
             return self.process_variable_assignment(expression)
         else:  # RPN式の評価と結果の表示
             ans = self.evaluate(expression, stack=self.stack)
-            return colored(f"{ans}", "green")
+            return colored(f"{ans}",  self.stack_color)
+
+
+def load_plugins(stacker_core: StackerCore):
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    plugins_dir = os.path.join(script_dir, plugins_dir_path)
+
+    # プラグインディレクトリにパスを追加
+    sys.path.insert(0, plugins_dir)
+
+    try:
+        # プラグインディレクトリ内のファイルを走査
+        for filename in os.listdir(plugins_dir):
+            if filename.endswith(".py") and not filename.startswith("__"):
+                # ファイル名から拡張子を除いた名前を取得
+                module_name = os.path.splitext(filename)[0]
+                # モジュールをインポート
+                plugin_module = importlib.import_module(module_name)
+                # プラグインのセットアップ関数を呼び出し
+                plugin_module.setup(stacker_core)
+    except FileNotFoundError:
+        print("Warning: plugins folder not found. Skipping plugin loading.")
+    except AttributeError as e:
+        print(colored(f"[ERROR]{e}", "red"))
+    finally:
+        # プラグインディレクトリからパスを削除
+        sys.path.pop(0)
 
 
 class ExecutionMode:
@@ -446,9 +481,23 @@ class InteractiveMode(ExecutionMode):
                     break
                 if expression.lower() == "help":
                     show_help()
+                    print("")
+                    print("Plugin commands:")
+                    for plugin_name, plugin_descriptions in self.rpn_calculator.plugin_descriptions.items():
+                        en_description = plugin_descriptions.get("en", None)
+                        if en_description:
+                            print(f"  {plugin_name}: {en_description}")
                     continue
                 if expression.lower() == "help-jp":
                     show_help_jp()
+                    print("")
+                    print("プラグインコマンド：")
+                    for plugin_name, plugin_descriptions in self.rpn_calculator.plugin_descriptions.items():
+                        jp_description = plugin_descriptions.get("jp", None)
+                        if jp_description:
+                            print(f"  {plugin_name}: {jp_description}")
+                        else:
+                            print(f"  {plugin_name}: {plugin_descriptions['en']} (日本語の説明はありません)")
                     continue
                 if expression.lower() == "about":
                     show_about()
@@ -506,6 +555,7 @@ def main():
     #     interactive_mode.run()
 
     # インタラクティブモードの実行
+    load_plugins(rpn_calculator)  # プラグインの読み込み
     interactive_mode = InteractiveMode(rpn_calculator)
     interactive_mode.run()
 
