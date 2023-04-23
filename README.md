@@ -11,6 +11,7 @@
 
 Stacker is a simple yet powerful RPN calculator built with Python. It supports basic mathematical functions and allows users to define their own custom functions. The functionality of Stacker can be easily extended through the use of plugins, making it a versatile tool for various computational needs.
 
+
 <br>
 <hr>
 
@@ -83,6 +84,10 @@ Here are the installation instructions for `stacker`:
 | band     | Bitwise and                                           | `3 2 band`                 | 3 & 2                    |
 | bor      | Bitwise or                                            | `3 2 bor`                  | 3 | 2                    |
 | bxor     | Bitwise xor                                           | `3 2 bxor`                 | 3 ^ 2                    |
+| bin      | Binary representation (result is a string)            | `5 bin`                    | '0b101'                  |
+| oct      | Octal representation (result is a string)             | `10 oct`                   | '0o12'                   |
+| dec      | Decimal representation (result is an integer)         | `0b101010 dec`             | 42                       |
+| hex      | Hexadecimal representation (result is a string)       | `255 hex`                  | '0xff'                   |
 | gcd      | Greatest common divisor                               | `4 2 gcd`                  | math.gcd(4, 2)           |
 | !        | Factorial                                             | `4 !`                      | math.factorial(4)        |
 | radians  | Convert degrees to radians                            | `180 radians`              | math.radians(180)        |
@@ -119,6 +124,19 @@ stacker:2> +
 [7]
 ~~~
 
+You can use triple quotes `"""` to enter multi-line input. When you enclose your input with triple quotes, you can continue entering text even after pressing Enter. Here's an example:
+
+~~~
+stacker:0> """
+stacker:1> This is a multi-line
+stacker:2> input example.
+stacker:3> """
+['\nThis is a multi-line\ninput example.\n']
+~~~
+The input will be treated as a single string containing line breaks:
+
+
+
 <br>
 <hr>
 
@@ -146,15 +164,20 @@ To create a plugin for Stacker, follow these steps:
 1. Create a new Python file (e.g., `my_plugin.py`) in the `plugins` directory.
 ~~~
 stacker/
+│
 ├── stacker/
-       ├── plugins/
-       │   ├── my_plugin.py
-       │   └── ...
-       ├── data/
-       ├── stacker.py
-       ├── test.py
-       └── ...
+│   ├── plugins/
+│   │   ├── my_plugin.py
+│   │   └── ...
+│   │
+│   ├── data/
+│   ├── stacker.py
+│   ├── test.py
+│   └── ...
+│
+└── ...
 ~~~
+
 
 2. Define any functions or classes required for your plugin.
 3. Define a `setup` function in your plugin file that takes a single argument: `stacker_core`.
@@ -202,6 +225,15 @@ stacker:0> clear
 <br>
 <hr>
 
+## help
+Display usage instructions with `help`
+~~~ bash
+stacker:0> help
+~~~
+
+<br>
+<hr>
+
 ## exit
 Exit the program with 'exit'
 ~~~ bash
@@ -209,22 +241,12 @@ stacker:0> exit
 ~~~
 
 <br>
-<hr>
 
-## about
-Display Stacker's information with `about` (not particularly meaningful)
-~~~ bash
-stacker:0> about
-~~~
 
-<br>
-<hr>
+# Feedback and Suggestions
 
-## help
-Display usage instructions with `help`
-~~~ bash
-stacker:0> help
-~~~
+We welcome your feedback and suggestions to improve Stacker. If you find a bug or have an idea for a new feature, please feel free to open an issue on the [Issues](https://github.com/remokasu/stacker/issues) page.
+
 
 <br>
 
@@ -234,6 +256,8 @@ Stacker makes use of the features provided by the Python Prompt Toolkit. We woul
 
 <br>
 <hr>
+
+The following explanation will be provided in Japanese.
 
 # 概要
 
@@ -375,6 +399,10 @@ python3が無ければ事前にインストールしてください。
 | band   | ビットごとの論理積                                    | `3 2 band`                 | 3 & 2                    |
 | bor    | ビットごとの論理和                                    | `3 2 bor`                  | 3 | 2                    |
 | bxor   | ビットごとの排他的論理和                              | `3 2 bxor`                 | 3 ^ 2                    |
+| bin    | ２進数表示 (結果はstring)                             | `5 bin`                    | '0b101'                  |
+| oct    | 8進数表示 (結果はstring)                              | `10 oct`                   | '0o12'                   |
+| dec    | 10進数表示 (結果はinteger)                            | `0b101010 dec`             | 42                       |
+| hex    | 16進数表示 (結果はstring)                             | `255 hex`                  | '0xff'                   |
 | gcd    | 最大公約数                                            | `4 2 gcd`                  | math.gcd(4, 2)           |
 | !      | 階乗                                                  | `4 !`                      | math.factorial(4)        |
 | radians| 度数法から弧度法へ変換                                | `180 radians`              | math.radians(180)        |
@@ -411,6 +439,17 @@ stacker:2> +
 [7]
 ~~~
 
+`"""`を使って複数行の入力ができます。`"""`で囲むことで、Enterキーを押しても入力が継続されます。以下に例を示します。
+~~~
+stacker:0> """
+stacker:1> これは複数行の
+stacker:2> 入力の例です。
+stacker:3> """
+['\nこれは複数行の\n入力の例です。\n']
+~~~
+入力は改行を含む1つの文字列として扱われます。
+
+
 <br>
 <hr>
 
@@ -436,14 +475,18 @@ Stackerのプラグインを作成するには、以下の手順に従ってく�
 
 ~~~
 stacker/
+│
 ├── stacker/
-       ├── plugins/
-       │   ├── my_plugin.py
-       │   └── ...
-       ├── data/
-       ├── stacker.py
-       ├── test.py
-       └── ...
+│   ├── plugins/
+│   │   ├── my_plugin.py
+│   │   └── ...
+│   │
+│   ├── data/
+│   ├── stacker.py
+│   ├── test.py
+│   └── ...
+│
+└── ...
 ~~~
 
 
@@ -497,6 +540,14 @@ stacker:0> clear
 <br>
 <hr>
 
+## help
+`help` で使い方を表示
+~~~ bash
+stacker:0> help
+~~~
+
+<br>
+<hr>
 
 ## exit
 `exit` で終了
@@ -504,21 +555,6 @@ stacker:0> clear
 stacker:0> exit
 ~~~
 
-## about
-`about` でStackerの情報を表示(特に意味なし)
-~~~ bash
-stacker:0> about
-~~~
-
-<br>
-<hr>
-
-
-## help
-`help` で使い方を表示
-~~~ bash
-stacker:0> help
-~~~
 
 <br>
 
@@ -534,14 +570,14 @@ stacker:0> '3 + 5' eval
 ~~~
 
 ## exec (Pythonが使いたい)
-シングルクォーテーションで囲まれた範囲は、改行しても連続した文字列として扱われます。そこにPythonコードを入れ込んでexecで実行することができます。ただし、execはどんな処理でも結果がNoneになるため、スタックには入りません。結果を表示したい場合は、print文を式に埋め込んでみましょう。このように、文字列に対してexecを使うことで、Pythonの処理として実行できます。
+`"""` または `'''` で囲まれた範囲は、改行しても連続した文字列として扱われます。そこにPythonコードを入れ込んでexecで実行することができます。ただし、execはどんな処理でも結果がNoneになるため、スタックには入りません。結果を表示したい場合は、print文を式に埋め込んでみましょう。このように、文字列に対してexecを使うことで、Pythonの処理として実行できます。
 
 ~~~
-stacker:0> '
+stacker:0> '''
 stacker:0> def f(x):
 stacker:0>      return x**2
 stacker:0> print(f(4))
-stacker:0> '
+stacker:0> '''
 ['\ndef f(x):\n\treturn x**2\nprint(f(4))\n']
 stacker:7> exec
 16
