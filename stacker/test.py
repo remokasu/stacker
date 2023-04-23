@@ -43,6 +43,10 @@ class TestStacker(unittest.TestCase):
             ("3 2 band", 3 & 2),
             ("3 2 bor", 3 | 2),
             ("3 2 bxor", 3 ^ 2),
+            ("5 bin", '0b101'),
+            ("10 oct", '0o12'),
+            ("0b101010 dec", 42),
+            ("255 hex", '0xff'),
             ("4 2 gcd", math.gcd(4, 2)),
             ("4 log10", math.log10(4)),
             ("4 log2", math.log2(4)),
@@ -96,6 +100,41 @@ class TestStacker(unittest.TestCase):
         self.stacker.process_expression("x square => x x *")
         self.stacker.process_expression("4 square")
         self.assertEqual(self.stacker.stack[-1], 16)
+
+    def test_input(self):
+        # int
+        self.stacker.process_expression("5")
+        self.assertEqual(self.stacker.stack[-1], 5)
+        self.assertEqual(type(self.stacker.stack[-1]), int)
+
+        # float
+        self.stacker.process_expression("5.0")
+        self.assertEqual(self.stacker.stack[-1], 5.0)
+        self.assertEqual(type(self.stacker.stack[-1]), float)
+
+        self.stacker.process_expression("3.")
+        self.assertEqual(self.stacker.stack[-1], 3.0)
+        self.assertEqual(type(self.stacker.stack[-1]), float)
+
+        # str
+        self.stacker.process_expression("hoge")
+        self.assertEqual(self.stacker.stack[-1], "hoge")
+        self.assertEqual(type(self.stacker.stack[-1]), str)
+
+        # tuple
+        self.stacker.process_expression("(1,2,3)")
+        self.assertEqual(self.stacker.stack[-1], (1, 2, 3))
+        self.assertEqual(type(self.stacker.stack[-1]), tuple)
+
+        # list
+        self.stacker.process_expression("[1,2,3]")
+        self.assertEqual(self.stacker.stack[-1], [1, 2, 3])
+        self.assertEqual(type(self.stacker.stack[-1]), list)
+
+        # complex
+        self.stacker.process_expression("4j")
+        self.assertEqual(self.stacker.stack[-1], complex(4j))
+        self.assertEqual(type(self.stacker.stack[-1]), complex)
 
 
 if __name__ == "__main__":

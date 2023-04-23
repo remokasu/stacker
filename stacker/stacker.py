@@ -86,18 +86,10 @@ def delete_history():
         history_file_path.unlink()
 
 
-def input_to_str_or_int_or_float_or_complex(input_str: str) -> int | float | str:
+def evaluate_token_or_return_str(input_str: str) -> int | float | str:
     try:
-        return int(input_str)
-    except ValueError:
-        pass
-    try:
-        return float(input_str)
-    except ValueError:
-        pass
-    try:
-        return complex(input_str)
-    except ValueError:
+        return eval(input_str)
+    except (SyntaxError, NameError, TypeError, ZeroDivisionError):
         pass
     return input_str
 
@@ -160,6 +152,10 @@ class StackerCore:
             "band": (lambda x1, x2: int(x1) & int(x2)),  # ビット毎の and
             "bor": (lambda x1, x2: int(x1) | int(x2)),  # ビット毎の or
             "bxor": (lambda x1, x2: int(x1) ^ int(x2)),  # ビット毎の xor
+            "bin": (lambda value: bin(eval(str(value)))),  # 2進数表示
+            "dec": (lambda value: eval(str(value))),  # 10進数表示
+            "oct": (lambda value: oct(eval(str(value)))),  # 8進数表
+            "hex": (lambda value: hex(eval(str(value)))),  # 16進表示
             "+": (lambda x1, x2: x1 + x2),  # 加算
             "-": (lambda x1, x2: x1 - x2),  # 減算
             "*": (lambda x1, x2: x1 * x2),  # 乗算
@@ -271,8 +267,7 @@ class StackerCore:
                 stack.append(self.evaluate_function(token, *args))
             else:
                 try:
-                    # stack.append(float(token))
-                    stack.append(input_to_str_or_int_or_float_or_complex(token))
+                    stack.append(evaluate_token_or_return_str(token))
                 except ValueError:
                     raise ValueError(f"Invalid token '{token}'")
 
@@ -464,8 +459,8 @@ class InteractiveMode(ExecutionMode):
 
                 # ダブルコーテーションまたはシングルコーテーションで始まる入力が閉じられるまで継続する処理
                 while (
-                    (expression.startswith('"') and expression.count('"') % 2 != 0) or
-                    (expression.startswith("'") and expression.count("'") % 2 != 0)
+                    (expression.startswith('"""') and expression.count('"""') % 2 != 0) or
+                    (expression.startswith("'''") and expression.count("'''") % 2 != 0)
                 ):
                     next_line = prompt(
                         f"stacker:{line_count}> ",
