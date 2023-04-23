@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-import pkg_resources
+from pkg_resources import get_distribution, resource_stream
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import FileHistory
@@ -56,7 +56,7 @@ def colored(text: str, color: Optional[str] = "default", end: str = "\n") -> Non
 
 def show_top():
     colors = ["red", "green", "yellow", "lightblue", "lightmagenta", "cyan"]
-    with pkg_resources.resource_stream(__name__, "data/top.txt") as f:
+    with resource_stream(__name__, "data/top.txt") as f:
         messages = f.readlines()
         for i in range(len(messages)):
             print(colored(messages[i].decode('utf-8'), colors[i]), end="")
@@ -64,19 +64,19 @@ def show_top():
 
 
 def show_about():
-    with pkg_resources.resource_stream(__name__, "data/about.txt") as f:
+    with resource_stream(__name__, "data/about.txt") as f:
         message = f.read().decode('utf-8')
     print(message)
 
 
 def show_help():
-    with pkg_resources.resource_stream(__name__, "data/help.txt") as f:
+    with resource_stream(__name__, "data/help.txt") as f:
         message = f.read().decode('utf-8')
     print(message)
 
 
 def show_help_jp():
-    with pkg_resources.resource_stream(__name__, "data/help-jp.txt") as f:
+    with resource_stream(__name__, "data/help-jp.txt") as f:
         message = f.read().decode('utf-8')
     print(message)
 
@@ -537,6 +537,10 @@ class InteractiveMode(ExecutionMode):
 
 def main():
     show_top()
+
+    stacker_version = get_distribution('pystacker').version
+    print(f"Stacker {stacker_version} on {sys.platform}")
+    print('Type "help" or "help-jp" to get more information.')
 
     rpn_calculator = Stacker()
 

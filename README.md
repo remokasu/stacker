@@ -9,6 +9,10 @@
 
 ~~~
 
+Stacker is a simple yet powerful RPN calculator built with Python. It supports basic mathematical functions and allows users to define their own custom functions. The functionality of Stacker can be easily extended through the use of plugins, making it a versatile tool for various computational needs.
+
+<br>
+<hr>
 
 # Install
 
@@ -21,9 +25,16 @@ Here are the installation instructions for `stacker`:
 ~~~
 
 2. Run the program
-~~~
+~~~ bash
 > stacker
 ~~~
+* or
+~~~ bash
+> python -m stacker
+~~~
+
+<br>
+
 
 # Usage
 
@@ -87,7 +98,30 @@ Here are the installation instructions for `stacker`:
 | exec     | Execute the specified Python code                    | `'print(1+1)' exec`        | Execute 1+1 and print 2 |
 | eval     | Evaluate the specified Python expression             | `'1+1' eval`               | Add 2 to the stack       |
 
+<br>
 <hr>
+
+## Input like this.
+(Example) 3 4 +
+~~~ bash
+stacker:0> 3 4 +
+[7]
+~~~
+
+* Or,
+
+~~~ bash
+stacker:0> 3
+[3]
+stacker:1> 4
+[3, 4]
+stacker:2> +
+[7]
+~~~
+
+<br>
+<hr>
+
 
 ## Custom Functions::
 
@@ -99,47 +133,16 @@ stacker:1> 2 6 average
 ~~~
 
 
-(Note that the function definition syntax is a custom RPN-like syntax, so please don't worry about it)
+(Note that the function definition syntax is a custom RPN-like syntax）
 
 <br>
-
 <hr>
 
-## You can also enter input like this. In fact, this is the normal way to use it.
-(Example) 3 4 +
-~~~ bash
-stacker:0> 3
-[3.0]
-stacker:1> 4
-[3.0, 4.0]
-stacker:2> +
-[7.0]
-~~~
 
-## clear
-Clear the stack with 'clear'
-~~~
-stacker:0> clear
-[]
-~~~
+(Note that the function definition syntax is a custom RPN-like syntax）
 
-## exit
-Exit the program with 'exit'
-~~~
-stacker:0> exit
-~~~
-
-## about
-Display Stacker's information with `about` (not particularly meaningful)
-~~~
-stacker:0> about
-~~~
-
-## help
-Display usage instructions with `help`
-~~~
-stacker:0> help
-~~~
+<br>
+<hr>
 
 ## Plugin Usage
 
@@ -191,22 +194,48 @@ python setup.py install
 6. When Stacker starts, it will automatically load your plugin, and your custom command will be available for use.
 
 
+<br>
+<hr>
+
+## clear
+Clear the stack with 'clear'
+~~~ bash
+stacker:0> clear
+[]
+~~~
+
+<br>
+<hr>
+
+## exit
+Exit the program with 'exit'
+~~~ bash
+stacker:0> exit
+~~~
+
+<br>
+<hr>
+
+## about
+Display Stacker's information with `about` (not particularly meaningful)
+~~~ bash
+stacker:0> about
+~~~
+
+<br>
+<hr>
+
+## help
+Display usage instructions with `help`
+~~~ bash
+stacker:0> help
+~~~
+
+<br>
+
 # Acknowledgments
 Stacker makes use of the features provided by the Python Prompt Toolkit. We would like to express our gratitude to the developers and contributors of the Python Prompt Toolkit for their excellent work.
 
-## License for Python Prompt Toolkit:
-
-The Python Prompt Toolkit is released under the BSD-3-Clause License. The full license text can be found in the LICENSE file of the Python Prompt Toolkit repository, or at the following URL: https://github.com/prompt-toolkit/python-prompt-toolkit/blob/master/LICENSE
-
-Below is a summary of the main terms of the BSD-3-Clause License:
-
-Redistributions of source code must retain the above copyright notice, this list of conditions, and the following disclaimer.
-
-Redistributions in binary form must reproduce the above copyright notice, this list of conditions, and the following disclaimer in the documentation and/or other materials provided with the distribution.
-
-Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 <br>
 <hr>
@@ -288,9 +317,15 @@ python3が無ければ事前にインストールしてください。
 ~~~
 
 2. 起動
-~~~bash
+~~~ bash
 > stacker
 ~~~
+
+* または
+~~~ bash
+> python -m stacker
+~~~
+
 
 * 遊び終わったら削除しましょう
 ~~~ bash
@@ -359,6 +394,28 @@ python3が無ければ事前にインストールしてください。
 | pop      | スタックのトップを削除                                | `pop`                    | スタックのトップを削除  |
 | exec     | 指定のPythonコードを実行                             | `'print(1+1)' exec`       | 1+1を出力し、2をプリント |
 | eval     | 指定のPython式を評価                                 | `'1+1' eval`              | スタックに2を追加       |
+
+<br>
+<hr>
+
+## 入力
+(例) 3 4 +
+~~~ bash
+stacker:0> 3 4 +
+[7]
+~~~
+
+* または
+
+~~~ bash
+stacker:0> 3
+[3]
+stacker:1> 4
+[3, 4]
+stacker:2> +
+[7]
+~~~
+
 <br>
 <hr>
 
@@ -371,48 +428,10 @@ stacker:1> 2 6 average
 [4.0]
 ~~~
 
-
-(関数定義の構文はRPN構文っぽい独自定義の構文なので突っ込まないでくれ)
+(関数定義の構文はRPN構文っぽい独自定義の構文)
 
 <br>
-
 <hr>
-
-## こんな入力も出来るよ。というかこっちが普通の使い方
-(例) 3 4 +
-~~~ bash
-stacker:0> 3
-[3.0]
-stacker:1> 4
-[3.0, 4.0]
-stacker:2> +
-[7.0]
-~~~
-
-## clear
-`clear` でスタックを初期化
-~~~
-stacker:0> clear
-[]
-~~~
-
-## exit
-`exit` で終了
-~~~
-stacker:0> exit
-~~~
-
-## about
-`about` でStackerの情報を表示(特に意味なし)
-~~~
-stacker:0> about
-~~~
-
-## help
-`help` で使い方を表示
-~~~
-stacker:0> help
-~~~
 
 ## プラグインの使い方
 
@@ -437,7 +456,7 @@ stacker/
 3. プラグインファイル内に、引数として`stacker_core`を1つ取る`setup`関数を定義します。
 4. `setup`関数内で、`stacker_core`の`register_plugin`メソッドを使って、カスタムコマンドを登録します。例：
 
-~~~python
+~~~ python
 description_en = "Returns the Collatz sequence for the given number."
 description_jp = "与えられた数値のコラッツ数列を返します。"
 
@@ -460,14 +479,53 @@ def setup(stacker_core):
 ~~~
 
 5. 以下のコマンドを実行してStackerを再インストールします：
-~~~bash
+~~~ bash
 python setup.py install
 ~~~
+
 6. Stackerが起動すると、自動的にプラグインが読み込まれ、カスタムコマンドが利用可能になります。
 
 英語（description_en）と日本語（description_jp）の説明の提供は任意です。必要がない場合は、それらの行をコメントアウトまたは削除してください。
 
 
+<br>
+<hr>
+
+
+## clear
+`clear` でスタックを初期化
+~~~ bash
+stacker:0> clear
+[]
+~~~
+
+<br>
+<hr>
+
+
+## exit
+`exit` で終了
+~~~ bash
+stacker:0> exit
+~~~
+
+## about
+`about` でStackerの情報を表示(特に意味なし)
+~~~ bash
+stacker:0> about
+~~~
+
+<br>
+<hr>
+
+
+## help
+`help` で使い方を表示
+~~~ bash
+stacker:0> help
+~~~
+
+<br>
 
 # おまけ
 
@@ -478,15 +536,10 @@ python setup.py install
 ~~~
 stacker:0> '3 + 5' eval
 [8]
-stacker:1> 
 ~~~
 
 ## exec (Pythonが使いたい)
-シングルコーテーションでかこった範囲は改行しても一連の文字列として認識できる。
-そこにPythonコードをぶっこんで `exec` で実行できる。
-ただし、execはどんな処理でも結果が`None`なので結果はスタックに入らない。
-結果を表示したければptint文を式中に埋め込もう。
-文字列に対して`exec`することでPythonの処理として実行できる。
+シングルクォーテーションで囲まれた範囲は、改行しても連続した文字列として扱われます。そこにPythonコードを入れ込んでexecで実行することができます。ただし、execはどんな処理でも結果がNoneになるため、スタックには入りません。結果を表示したい場合は、print文を式に埋め込んでみましょう。このように、文字列に対してexecを使うことで、Pythonの処理として実行できます。
 
 ~~~
 stacker:0> '
@@ -500,15 +553,7 @@ stacker:7> exec
 []
 ~~~
 
-・面倒くさいので以後はStackerからPythonを起動しましょう。
-~~~
-stacker:10> '
-stacker:10> from subprocess import run
-stacker:10> run("python")
-stacker:10> '
-['\nfrom subprocess import run\nrun("python")\n']
-stacker:11> exec
-Python 3.10.6 (main, Mar 10 2023, 10:55:28) [GCC 11.3.0] on linux
-Type "help", "copyright", "credits" or "license" for more information.
->>>
+・→ あなたが真に求めるもの：
+~~~ bash
+> python
 ~~~
