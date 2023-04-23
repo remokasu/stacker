@@ -30,3 +30,4 @@ venv/
 .stacker_history
 
 stacker/plugins/*
+!set_color.py
