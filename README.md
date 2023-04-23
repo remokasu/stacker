@@ -94,7 +94,7 @@ Here are the installation instructions for `stacker`:
 | delete   | Remove the element at the specified index             | `2 delete`                 | Remove the element at index 2 from the stack  |
 | pluck    | Remove the element at the specified index and move it to the top of the stack | `2 pluck`              | Remove the element at index 2 and move it to the top of the stack  |
 | pick     | Copy the element at the specified index to the top of the stack | `2 pick`                   | Copy the element at index 2 to the top of the stack  |
-| pop      | Remove the top element from the stack                | `pop`                      | Remove the top element from the stack  |
+| pop      | Remove the top element from the stack. The value popped can be referred to as `last_pop`.   | `pop`  | Remove the top element from the stack  |
 | exec     | Execute the specified Python code                    | `'print(1+1)' exec`        | Execute 1+1 and print 2 |
 | eval     | Evaluate the specified Python expression             | `'1+1' eval`               | Add 2 to the stack       |
 
@@ -138,11 +138,6 @@ stacker:1> 2 6 average
 <br>
 <hr>
 
-
-(Note that the function definition syntax is a custom RPN-like syntax）
-
-<br>
-<hr>
 
 ## Plugin Usage
 
@@ -391,7 +386,7 @@ python3が無ければ事前にインストールしてください。
 | delete   | 指定のindexを削除                                     | `2 delete`               | スタックからindex 2の要素を削除  |
 | pluck    | 指定のindexを削除し、スタックのトップに移動           | `2 pluck`                | index 2の要素を削除し、スタックのトップに移動  |
 | pick     | 指定されたインデックスの要素をスタックのトップにコピー | `2 pick`                | index 2の要素をスタックのトップにコピー  |
-| pop      | スタックのトップを削除                                | `pop`                    | スタックのトップを削除  |
+| pop      | スタックのトップを削除。popした値は`last_pop`で参照できます。 | `pop`            | スタックのトップを削除  |
 | exec     | 指定のPythonコードを実行                             | `'print(1+1)' exec`       | 1+1を出力し、2をプリント |
 | eval     | 指定のPython式を評価                                 | `'1+1' eval`              | スタックに2を追加       |
 
