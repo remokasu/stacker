@@ -94,6 +94,36 @@ def evaluate_token_or_return_str(input_str: str) -> int | float | str:
     return input_str
 
 
+def convert_to_base(value, base):
+    value = str(value)
+
+    # 2進数 (0b...)
+    binary_pattern = re.compile(r'^0b[01]+$')
+    # 8進数 (0o...)
+    octal_pattern = re.compile(r'^0o[0-7]+$')
+    # 10進数
+    decimal_pattern = re.compile(r'^[-+]?\d+$')
+    # 16進数 (0x...)
+    hex_pattern = re.compile(r'^0x[\da-fA-F]+$')
+
+    if not (binary_pattern.match(value) or octal_pattern.match(value) or decimal_pattern.match(value) or hex_pattern.match(value)):
+        raise ValueError("Invalid number format.")
+
+    # 文字列を整数に変換
+    value_as_int = int(value, 0)  # 0は、2進数、8進数、16進数を自動的に検出して処理することを意味する
+
+    if base == 2:
+        return bin(value_as_int)
+    elif base == 8:
+        return oct(value_as_int)
+    elif base == 10:
+        return value_as_int
+    elif base == 16:
+        return hex(value_as_int)
+    else:
+        raise ValueError("Invalid base.")
+
+
 # 入力が実数か虚数かで呼び出すモジュールを切り替える
 def wrap(func, cfunc):
     def wrapper(x):
@@ -152,10 +182,10 @@ class StackerCore:
             "band": (lambda x1, x2: int(x1) & int(x2)),  # ビット毎の and
             "bor": (lambda x1, x2: int(x1) | int(x2)),  # ビット毎の or
             "bxor": (lambda x1, x2: int(x1) ^ int(x2)),  # ビット毎の xor
-            "bin": (lambda value: bin(eval(str(value)))),  # 2進数表示
-            "dec": (lambda value: eval(str(value))),  # 10進数表示
-            "oct": (lambda value: oct(eval(str(value)))),  # 8進数表
-            "hex": (lambda value: hex(eval(str(value)))),  # 16進表示
+            "bin": (lambda value: convert_to_base(value, 2)),  # 2進数表示
+            "oct": (lambda value: convert_to_base(value, 8)),  # 8進数表
+            "dec": (lambda value: convert_to_base(value, 10)),  # 10進数表示
+            "hex": (lambda value: convert_to_base(value, 16)),  # 16進表示
             "+": (lambda x1, x2: x1 + x2),  # 加算
             "-": (lambda x1, x2: x1 - x2),  # 減算
             "*": (lambda x1, x2: x1 * x2),  # 乗算

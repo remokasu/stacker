@@ -1,3 +1,28 @@
+
+# CHANGE LOG
+
+## [1.2.4] - 2023-04-24
+
+### Added
+
+- Added support for multi-line input within triple quotes.
+  - Users can now enter multi-line input by enclosing it within triple quotes.
+
+    Example:
+
+    ~~~
+    stacker:0> """
+    stacker:0> This is a multi-line
+    stacker:0> input example.
+    stacker:0> """
+    ['\nThis is a multi-line\ninput example.\n']
+    ~~~
+
+### Fixed
+- Fix Typo in README.md
+
+<hr>
+
 ## [1.2.3] - 2023-04-23
 
 ### Fixed
@@ -10,6 +35,8 @@
 - Added support for binary, octal, and hexadecimal number representations.
   - Users can now input and display numbers in binary, octal, and hexadecimal formats.
 
+<hr>
+
 ## [1.2.0] - 2023-04-22
 
 ### Added
@@ -18,6 +45,7 @@
   - Users can now create and install custom plugins to add new features.
   - Provided documentation and examples for creating plugins.
 
+<hr>
 
 ## [1.0.0] - 2023-04
 
@@ -25,3 +53,5 @@
 
 - Initial release of the project with core functionalities.
 - Basic mathematical operations support.
+
+<hr>

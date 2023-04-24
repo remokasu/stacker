@@ -21,18 +21,19 @@ If you don't have Python 3 installed, please install it beforehand.
 Here are the installation instructions for `stacker`:
 
 1. Install
-~~~ bash
-> pip install pystacker
-~~~
+    ~~~ bash
+    > pip install pystacker
+    ~~~
 
 2. Run the program
-~~~ bash
-> stacker
-~~~
+    ~~~ bash
+    > stacker
+    ~~~
+
 * or
-~~~ bash
-> python -m stacker
-~~~
+    ~~~ bash
+    > python -m stacker
+    ~~~
 
 <br>
 
@@ -107,32 +108,32 @@ Here are the installation instructions for `stacker`:
 <hr>
 
 ## Input like this.
-(Example) 3 4 +
-~~~ bash
-stacker:0> 3 4 +
-[7]
-~~~
+
+* (Example) 3 4 +
+    ~~~ bash
+    stacker:0> 3 4 +
+    [7]
+    ~~~
 
 * Or,
+    ~~~ bash
+    stacker:0> 3
+    [3]
+    stacker:1> 4
+    [3, 4]
+    stacker:2> +
+    [7]
+    ~~~
 
-~~~ bash
-stacker:0> 3
-[3]
-stacker:1> 4
-[3, 4]
-stacker:2> +
-[7]
-~~~
+* You can use triple quotes `"""` to enter multi-line input. When you enclose your input with triple quotes, you can continue entering text even after pressing Enter. Here's an example:
+    ~~~
+    stacker:0> """
+    stacker:1> This is a multi-line
+    stacker:2> input example.
+    stacker:3> """
+    ['\nThis is a multi-line\ninput example.\n']
+    ~~~
 
-You can use triple quotes `"""` to enter multi-line input. When you enclose your input with triple quotes, you can continue entering text even after pressing Enter. Here's an example:
-
-~~~
-stacker:0> """
-stacker:1> This is a multi-line
-stacker:2> input example.
-stacker:3> """
-['\nThis is a multi-line\ninput example.\n']
-~~~
 The input will be treated as a single string containing line breaks:
 
 
@@ -143,12 +144,12 @@ The input will be treated as a single string containing line breaks:
 
 ## Custom Functions::
 
-### Example 2: Function to calculate the average of two numbers (average)
-~~~ bash
-stacker:0> x y average => x y + 2 /
-stacker:1> 2 6 average
-[4.0]
-~~~
+### Example 1: Function to calculate the average of two numbers (average)
+    ~~~ bash
+    stacker:0> x y average => x y + 2 /
+    stacker:1> 2 6 average
+    [4.0]
+    ~~~
 
 
 (Note that the function definition syntax is a custom RPN-like syntax）
@@ -162,52 +163,53 @@ stacker:1> 2 6 average
 To create a plugin for Stacker, follow these steps:
 
 1. Create a new Python file (e.g., `my_plugin.py`) in the `plugins` directory.
-~~~
-stacker/
-│
-├── stacker/
-│   ├── plugins/
-│   │   ├── my_plugin.py
-│   │   └── ...
-│   │
-│   ├── data/
-│   ├── stacker.py
-│   ├── test.py
-│   └── ...
-│
-└── ...
-~~~
+    ~~~
+    stacker/
+    │
+    ├── stacker/
+    │   ├── plugins/
+    │   │   ├── my_plugin.py
+    │   │   └── ...
+    │   │
+    │   ├── data/
+    │   ├── stacker.py
+    │   ├── test.py
+    │   └── ...
+    │
+    └── ...
+    ~~~
 
 
 2. Define any functions or classes required for your plugin.
 3. Define a `setup` function in your plugin file that takes a single argument: `stacker_core`.
 4. In the `setup` function, use the `register_plugin` method of `stacker_core` to register your custom commands. For example:
+    ~~~python
+    description_en = "Returns the Collatz sequence for the given number."
+    description_jp = "与えられた数値のコラッツ数列を返します。"
 
-~~~python
-description_en = "Returns the Collatz sequence for the given number."
-description_jp = "与えられた数値のコラッツ数列を返します。"
+    def collatz_sequence(n):
+        seq = [n]
+        while n != 1:
+            if n % 2 == 0:
+                n //= 2
+            else:
+                n = n * 3 + 1
+            seq.append(n)
+        return seq
 
-def collatz_sequence(n):
-    seq = [n]
-    while n != 1:
-        if n % 2 == 0:
-            n //= 2
-        else:
-            n = n * 3 + 1
-        seq.append(n)
-    return seq
+    def setup(stacker_core):
+        stacker_core.register_plugin(
+            "collatz", lambda x: collatz_sequence(x),
+            description_en=description_en,  #  Please comment out if not necessary.
+            description_jp=description_jp   #  不要な場合はコメントアウト
+        )
+    ~~~
 
-def setup(stacker_core):
-    stacker_core.register_plugin(
-        "collatz", lambda x: collatz_sequence(x),
-        description_en=description_en,  #  Please comment out if not necessary.
-        description_jp=description_jp   #  不要な場合はコメントアウト
-    )
-~~~
 5. Reinstall Stacker by running the following command:
-~~~bash
-python setup.py install
-~~~
+    ~~~bash
+    python setup.py install
+    ~~~
+
 5. Save your plugin file in the plugins directory.
 6. When Stacker starts, it will automatically load your plugin, and your custom command will be available for use.
 
@@ -216,29 +218,29 @@ python setup.py install
 <hr>
 
 ## clear
-Clear the stack with 'clear'
-~~~ bash
-stacker:0> clear
-[]
-~~~
+* Clear the stack with 'clear'
+    ~~~ bash
+    stacker:0> clear
+    []
+    ~~~
 
 <br>
 <hr>
 
 ## help
-Display usage instructions with `help`
-~~~ bash
-stacker:0> help
-~~~
+* Display usage instructions with `help`
+    ~~~ bash
+    stacker:0> help
+    ~~~
 
 <br>
 <hr>
 
 ## exit
-Exit the program with 'exit'
-~~~ bash
-stacker:0> exit
-~~~
+* Exit the program with 'exit'
+    ~~~ bash
+    stacker:0> exit
+    ~~~
 
 <br>
 
@@ -265,55 +267,55 @@ The following explanation will be provided in Japanese.
 
 <br>
 
-`学生A（焦りながら）`
-~~~
-先生、電卓を忘れちゃったんですが、お借りできますか？
-~~~
+* 学生A（焦りながら）
+    ~~~
+    先生、電卓を忘れちゃったんですが、お借りできますか？
+    ~~~
 
-`教授（待ってました！と言いたげな表情で）`
-~~~
-もちろんだ。特別に君にコレを貸してあげよう。
-ヒューレットパッカードの稀代の名機 「hp 50G」！！
-とっくに生産終了してしまって今では新品で買うことなど不可能なシロモノだ。
-Amaz●nではプレミアがついて10倍の値段で取引されている。
-このでっかい画面にはグラフも描画できちゃうぞ！
-さらにこの小さな端子はなななななんとRS-232！シリアル通信だってできちゃう！
-電卓のくせに一体何と通信するんだろうねぇ！？
-まあ、何故かコネクタは公式から発売されることは無かったから実質幻の機能だがな...
-どうだ？凄いだろう？
-~~~
+* 教授（待ってました！と言いたげな表情で）
+    ~~~
+    もちろんだ。特別に君にコレを貸してあげよう。
+    ヒューレットパッカードの稀代の名機 「hp 50G」！！
+    とっくに生産終了してしまって今では新品で買うことなど不可能なシロモノだ。
+    Amaz●nではプレミアがついて10倍の値段で取引されている。
+    このでっかい画面にはグラフも描画できちゃうぞ！
+    さらにこの小さな端子はなななななんとRS-232！シリアル通信だってできちゃう！
+    電卓のくせに一体何と通信するんだろうねぇ！？
+    まあ、何故かコネクタは公式から発売されることは無かったから実質幻の機能だがな...
+    どうだ？凄いだろう？
+    ~~~
 
-`学生A（顔を輝かせつつ）`
-~~~
-ええっ！なにそれチートアイテムぅ！？（よく分かんないけど凄そう！デカイし！)
-やったあ...これで試験も余裕です！！(泣）
-~~~
+* 学生A（顔を輝かせつつ）
+    ~~~
+    ええっ！なにそれチートアイテムぅ！？（よく分かんないけど凄そう！デカイし！)
+    やったあ...これで試験も余裕です！！(泣）
+    ~~~
 
-`教授（ニヤリと笑いながら）`
-~~~
-ただし、これは逆ポーランド記法の電卓だぞ
-~~~
+* 教授（ニヤリと笑いながら）
+    ~~~
+    ただし、これは逆ポーランド記法の電卓だぞ
+    ~~~
 
-`学生A（戸惑いつつ）`
-~~~
-逆ポ...？逆ポーランドって何です？よく分かんないけど、なんかカッコいいですね！
-~~~
+* 学生A（戸惑いつつ）
+    ~~~
+    逆ポ...？逆ポーランドって何です？よく分かんないけど、なんかカッコいいですね！
+    ~~~
 
-`教授（クスクス笑い）`
-~~~
-ちょっと普通の電卓とは扱い方が異なるだけだ。
-なに、心配することはないよ。普通の電卓のようなモードにも切り替えられるからね。
-~~~
+* 教授（クスクス笑い）
+    ~~~
+    ちょっと普通の電卓とは扱い方が異なるだけだ。
+    なに、心配することはないよ。普通の電卓のようなモードにも切り替えられるからね。
+    ~~~
 
-`学生A（安心しながら）`
-~~~
-なるほど！ありがとうございます！！たすかりましたああ！！
-~~~
+* 学生A（安心しながら）
+    ~~~
+    なるほど！ありがとうございます！！たすかりましたああ！！
+    ~~~
 
-`教授（声には出さず）`
-~~~
-（ただし切り替え方は初見では分かり難いだろうねｸｸｸ...）
-~~~
+* 教授（声には出さず）
+    ~~~
+    （ただし切り替え方は初見では分かり難いだろうねｸｸｸ...）
+    ~~~
 
 
 <br>
@@ -331,25 +333,25 @@ python3が無ければ事前にインストールしてください。
 以下は`stacker`のインストール方法です。
 
 1. ダウンロード & インストール
-~~~ bash
-> pip install pystacker
-~~~
+    ~~~ bash
+    > pip install pystacker
+    ~~~
 
 2. 起動
-~~~ bash
-> stacker
-~~~
+    ~~~ bash
+    > stacker
+    ~~~
 
 * または
-~~~ bash
-> python -m stacker
-~~~
+    ~~~ bash
+    > python -m stacker
+    ~~~
 
 
 * 遊び終わったら削除しましょう
-~~~ bash
-> pip uninstall pystacker
-~~~
+    ~~~ bash
+    > pip uninstall pystacker
+    ~~~
 
 
 # 使い方
@@ -422,31 +424,31 @@ python3が無ければ事前にインストールしてください。
 <hr>
 
 ## 入力
-(例) 3 4 +
-~~~ bash
-stacker:0> 3 4 +
-[7]
-~~~
+* (例) 3 4 +
+    ~~~ bash
+    stacker:0> 3 4 +
+    [7]
+    ~~~
 
 * または
+    ~~~ bash
+    stacker:0> 3
+    [3]
+    stacker:1> 4
+    [3, 4]
+    stacker:2> +
+    [7]
+    ~~~
 
-~~~ bash
-stacker:0> 3
-[3]
-stacker:1> 4
-[3, 4]
-stacker:2> +
-[7]
-~~~
+* `"""`を使って複数行の入力ができます。`"""`で囲むことで、Enterキーを押しても入力が継続されます。以下に例を示します。
+    ~~~
+    stacker:0> """
+    stacker:1> これは複数行の
+    stacker:2> 入力の例です。
+    stacker:3> """
+    ['\nこれは複数行の\n入力の例です。\n']
+    ~~~
 
-`"""`を使って複数行の入力ができます。`"""`で囲むことで、Enterキーを押しても入力が継続されます。以下に例を示します。
-~~~
-stacker:0> """
-stacker:1> これは複数行の
-stacker:2> 入力の例です。
-stacker:3> """
-['\nこれは複数行の\n入力の例です。\n']
-~~~
 入力は改行を含む1つの文字列として扱われます。
 
 
@@ -456,11 +458,11 @@ stacker:3> """
 ## 自作関数:
 
 ### 例 1: 二つの数の平均を計算する関数 (average)
-~~~ bash
-stacker:0> x y average => x y + 2 /
-stacker:1> 2 6 average
-[4.0]
-~~~
+    ~~~ bash
+    stacker:0> x y average => x y + 2 /
+    stacker:1> 2 6 average
+    [4.0]
+    ~~~
 
 (関数定義の構文はRPN構文っぽい独自定義の構文)
 
@@ -472,54 +474,52 @@ stacker:1> 2 6 average
 Stackerのプラグインを作成するには、以下の手順に従ってください。
 
 1. `plugins`ディレクトリに新しいPythonファイル（例：`my_plugin.py`）を作成します。
-
-~~~
-stacker/
-│
-├── stacker/
-│   ├── plugins/
-│   │   ├── my_plugin.py
-│   │   └── ...
-│   │
-│   ├── data/
-│   ├── stacker.py
-│   ├── test.py
-│   └── ...
-│
-└── ...
-~~~
+    ~~~
+    stacker/
+    │
+    ├── stacker/
+    │   ├── plugins/
+    │   │   ├── my_plugin.py
+    │   │   └── ...
+    │   │
+    │   ├── data/
+    │   ├── stacker.py
+    │   ├── test.py
+    │   └── ...
+    │
+    └── ...
+    ~~~
 
 
 2. プラグインに必要な関数やクラスを定義します。
 3. プラグインファイル内に、引数として`stacker_core`を1つ取る`setup`関数を定義します。
 4. `setup`関数内で、`stacker_core`の`register_plugin`メソッドを使って、カスタムコマンドを登録します。例：
+    ~~~ python
+    description_en = "Returns the Collatz sequence for the given number."
+    description_jp = "与えられた数値のコラッツ数列を返します。"
 
-~~~ python
-description_en = "Returns the Collatz sequence for the given number."
-description_jp = "与えられた数値のコラッツ数列を返します。"
+    def collatz_sequence(n):
+        seq = [n]
+        while n != 1:
+            if n % 2 == 0:
+                n //= 2
+            else:
+                n = n * 3 + 1
+            seq.append(n)
+        return seq
 
-def collatz_sequence(n):
-    seq = [n]
-    while n != 1:
-        if n % 2 == 0:
-            n //= 2
-        else:
-            n = n * 3 + 1
-        seq.append(n)
-    return seq
-
-def setup(stacker_core):
-    stacker_core.register_plugin(
-        "collatz", lambda x: collatz_sequence(x),
-        description_en=description_en,  #  不要な場合はコメントアウトしてください。
-        description_jp=description_jp   #  不要な場合はコメントアウトしてください。
-    )
-~~~
+    def setup(stacker_core):
+        stacker_core.register_plugin(
+            "collatz", lambda x: collatz_sequence(x),
+            description_en=description_en,  #  不要な場合はコメントアウトしてください。
+            description_jp=description_jp   #  不要な場合はコメントアウトしてください。
+        )
+    ~~~
 
 5. 以下のコマンドを実行してStackerを再インストールします：
-~~~ bash
-python setup.py install
-~~~
+    ~~~ bash
+    python setup.py install
+    ~~~
 
 6. Stackerが起動すると、自動的にプラグインが読み込まれ、カスタムコマンドが利用可能になります。
 
@@ -531,29 +531,29 @@ python setup.py install
 
 
 ## clear
-`clear` でスタックを初期化
-~~~ bash
-stacker:0> clear
-[]
-~~~
+* `clear` でスタックを初期化
+    ~~~ bash
+    stacker:0> clear
+    []
+    ~~~
 
 <br>
 <hr>
 
 ## help
-`help` で使い方を表示
-~~~ bash
-stacker:0> help
-~~~
+* `help` で使い方を表示
+    ~~~ bash
+    stacker:0> help
+    ~~~
 
 <br>
 <hr>
 
 ## exit
-`exit` で終了
-~~~ bash
-stacker:0> exit
-~~~
+* `exit` で終了
+    ~~~ bash
+    stacker:0> exit
+    ~~~
 
 
 <br>
@@ -561,30 +561,30 @@ stacker:0> exit
 # おまけ
 
 ## eval (逆ポーランドなんてクソ喰らえだ)
-シングルコーテーションで囲った文字列を `eval` で評価できる。
+* シングルコーテーションで囲った文字列を `eval` で評価できる。
 やはり中置記法こそ正義なのです。
 ところで、なんで君はStackerを使ってるんですか？
-~~~
-stacker:0> '3 + 5' eval
-[8]
-~~~
+    ~~~
+    stacker:0> '3 + 5' eval
+    [8]
+    ~~~
 
 ## exec (Pythonが使いたい)
-`"""` または `'''` で囲まれた範囲は、改行しても連続した文字列として扱われます。そこにPythonコードを入れ込んでexecで実行することができます。ただし、execはどんな処理でも結果がNoneになるため、スタックには入りません。結果を表示したい場合は、print文を式に埋め込んでみましょう。このように、文字列に対してexecを使うことで、Pythonの処理として実行できます。
+* `"""` または `'''` で囲まれた範囲は、改行しても連続した文字列として扱われます。そこにPythonコードを入れ込んでexecで実行することができます。ただし、execはどんな処理でも結果がNoneになるため、スタックには入りません。結果を表示したい場合は、print文を式に埋め込んでみましょう。このように、文字列に対してexecを使うことで、Pythonの処理として実行できます。
+    ~~~
+    stacker:0> '''
+    stacker:0> def f(x):
+    stacker:0>      return x**2
+    stacker:0> print(f(4))
+    stacker:0> '''
+    ['\ndef f(x):\n\treturn x**2\nprint(f(4))\n']
+    stacker:7> exec
+    16
+    []
+    ~~~
 
-~~~
-stacker:0> '''
-stacker:0> def f(x):
-stacker:0>      return x**2
-stacker:0> print(f(4))
-stacker:0> '''
-['\ndef f(x):\n\treturn x**2\nprint(f(4))\n']
-stacker:7> exec
-16
-[]
-~~~
-
-・→ あなたが真に求めるもの：
-~~~ bash
-> python
-~~~
+* → あなたが真に求めるもの：
+    ~~~ bash
+    stacker:0> exit
+    > python
+    ~~~
