@@ -26,20 +26,6 @@ CONVERSIONS = {
     ('c', 'f'): (1.8, 32),          # Celsius to Fahrenheit
     ('f', 'c'): (1 / 1.8, -32 / 1.8), # Fahrenheit to Celsius
 
-    # Pressure
-    ('Pa', 'hPa'): 0.01,            # pascals to hectopascals
-    ('hPa', 'Pa'): 100,             # hectopascals to pascals
-    ('Pa', 'psi'): 0.000145038,     # pascals to pounds per square inch
-    ('psi', 'Pa'): 6894.76,         # pounds per square inch to pascals
-    ('hPa', 'psi'): 0.0145038,      # hectopascals to pounds per square inch
-    ('psi', 'hPa'): 68.9476,        # pounds per square inch to hectopascals
-    ('Pa', 'atm'): 9.86923e-6,      # pascals to atmospheres
-    ('atm', 'Pa'): 101325,          # atmospheres to pascals
-    ('hPa', 'atm'): 0.000986923,    # hectopascals to atmospheres
-    ('atm', 'hPa'): 1013.25,        # atmospheres to hectopascals
-    ('psi', 'atm'): 0.068046,       # pounds per square inch to atmospheres
-    ('atm', 'psi'): 14.6959,        # atmospheres to pounds per square inch
-
     # Area
     ('sq_m', 'sq_km'): 1e-6,         # square meters to square kilometers
     ('sq_km', 'sq_m'): 1e6,          # square kilometers to square meters
@@ -61,30 +47,6 @@ CONVERSIONS = {
     ('minute', 'hour'): 1 / 60,      # minutes to hours
     ('hour', 'sec'): 3600,           # hours to seconds
     ('sec', 'hour'): 1 / 3600,       # seconds to hours
-
-    # Computer units
-    ('B', 'KB'): 1 / 1024,          # bytes to kilobytes
-    ('KB', 'B'): 1024,              # kilobytes to bytes
-    ('KB', 'MB'): 1 / 1024,         # kilobytes to megabytes
-    ('MB', 'KB'): 1024,             # megabytes to kilobytes
-    ('MB', 'GB'): 1 / 1024,         # megabytes to gigabytes
-    ('GB', 'MB'): 1024,             # gigabytes to megabytes
-    ('GB', 'TB'): 1 / 1024,         # gigabytes to terabytes
-    ('TB', 'GB'): 1024,             # terabytes to gigabytes
-
-    ('bit', 'B'): 1 / 8,            # bits to bytes
-    ('B', 'bit'): 8,                # bytes to bits
-    ('bit', 'KB'): 1 / (8 * 1024),  # bits to kilobytes
-    ('KB', 'bit'): 8 * 1024,        # kilobytes to bits
-    ('bit', 'MB'): 1 / (8 * 1024 * 1024), # bits to megabytes
-    ('MB', 'bit'): 8 * 1024 * 1024, # megabytes to bits
-    ('bit', 'GB'): 1 / (8 * 1024 * 1024 * 1024), # bits to gigabytes
-    ('GB', 'bit'): 8 * 1024 * 1024 * 1024, # gigabytes to bits
-
-    ('bit', 'Kb'): 1 / 1024,        # bits to kilobits
-    ('Kb', 'bit'): 1024,            # kilobits to bits
-    ('bit', 'Mb'): 1 / (1024 * 1024), # bits to megabits
-    ('Mb', 'bit'): 1024 * 1024,     # megabits to bits
 
     # Additional unit conversions can be added here
 }
