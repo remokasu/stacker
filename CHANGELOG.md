@@ -1,6 +1,15 @@
 
 # CHANGE LOG
 
+## [1.2.5a] - 2023-04-30
+
+### Removed
+
+- Removed unnecessary files from the project.
+  - This helps to keep the project clean and organized.
+
+<hr>
+
 ## [1.2.5] - 2023-04-30
 
 ### Fixed

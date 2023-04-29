@@ -31,3 +31,6 @@ venv/
 
 stacker/plugins/*
 !set_color.py
+
+# swap
+*.swp
