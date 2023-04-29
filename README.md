@@ -71,6 +71,7 @@ Here are the installation instructions for `stacker`:
 | ceil     | Ceiling                                               | `3.2 ceil`                 | math.ceil(3.2)           |
 | floor    | Floor                                                 | `3.8 floor`                | math.floor(3.8)          |
 | round    | Round                                                 | `3.5 round`                | round(3.5)               |
+| roundn   | Round to specified decimal places                     | `3.51 1 roundn`            | round(3.51, 1)           |
 | float    | Convert to floating-point number                      | `5 float`                  | 5.0                      |
 | int      | Convert to integer                                    | `3.14 int`                 | 3                        |
 | ==       | Equal                                                 | `1 1 ==`                   | True                     |
@@ -92,7 +93,6 @@ Here are the installation instructions for `stacker`:
 | gcd      | Greatest common divisor                               | `4 2 gcd`                  | math.gcd(4, 2)           |
 | !        | Factorial                                             | `4 !`                      | math.factorial(4)        |
 | radians  | Convert degrees to radians                            | `180 radians`              | math.radians(180)        |
-| roundn   | Round to specified decimal places                     | `3.51 1 roundn`            | round(3.51, 1)           |
 | random   | Generate a random floating-point number between 0 and 1| `random`                   | random.random()          |
 | randint  | Generate a random integer within a specified range    | `1 6 randint`              | random.randint(1, 6)     |
 | uniform  | Generate a random floating-point number within a specified range | `1 2 uniform` | random.uniform(1, 2) |
@@ -145,12 +145,12 @@ The input will be treated as a single string containing line breaks:
 ## Custom Functions::
 
 ### Example 1: Function to calculate the average of two numbers (average)
-    ~~~ bash
-    stacker:0> x y average => x y + 2 /
-    stacker:1> 2 6 average
-    [4.0]
-    ~~~
 
+~~~ bash
+stacker:0> x y average => x y + 2 /
+stacker:1> 2 6 average
+[4.0]
+~~~
 
 (Note that the function definition syntax is a custom RPN-like syntax）
 
@@ -387,6 +387,7 @@ python3が無ければ事前にインストールしてください。
 | ceil   | 切り上げ                                              | `3.2 ceil`                 | math.ceil(3.2)           |
 | floor  | 切り捨て                                              | `3.8 floor`                | math.floor(3.8)          |
 | round  | 四捨五入                                              | `3.5 round`                | round(3.5)               |
+| roundn | 指定した小数点以下の桁数で四捨五入                    | `3.51 1 roundn`            | round(3.51, 1)           |
 | float  | 浮動小数点数に変換                                    | `5 float`                  | 5.0                      |
 | int    | 整数に変換                                            | `3.14 int`                 | 3                        |
 | ==     | 等しい                                                | `1 1 ==`                   | True                     |
@@ -408,7 +409,6 @@ python3が無ければ事前にインストールしてください。
 | gcd    | 最大公約数                                            | `4 2 gcd`                  | math.gcd(4, 2)           |
 | !      | 階乗                                                  | `4 !`                      | math.factorial(4)        |
 | radians| 度数法から弧度法へ変換                                | `180 radians`              | math.radians(180)        |
-| roundn | 指定した小数点以下の桁数で四捨五入                    | `3.51 1 roundn`            | round(3.51, 1)           |
 | random | 0と1の間の乱数を生成                                  | `random`                   | random.random()          |
 | randint| 指定した範囲内の整数乱数を生成                        | `1 6 randint`              | random.randint(1, 6)     |
 | uniform| 指定した範囲内の浮動小数点数乱数を生成                | `1 2 uniform`              | random.uniform(1, 2)     |
@@ -458,11 +458,11 @@ python3が無ければ事前にインストールしてください。
 ## 自作関数:
 
 ### 例 1: 二つの数の平均を計算する関数 (average)
-    ~~~ bash
-    stacker:0> x y average => x y + 2 /
-    stacker:1> 2 6 average
-    [4.0]
-    ~~~
+~~~ bash
+stacker:0> x y average => x y + 2 /
+stacker:1> 2 6 average
+[4.0]
+~~~
 
 (関数定義の構文はRPN構文っぽい独自定義の構文)
 
