@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import cmath
 import copy
 import importlib
@@ -86,12 +87,17 @@ def delete_history():
         history_file_path.unlink()
 
 
-def evaluate_token_or_return_str(input_str: str) -> int | float | str:
+# def evaluate_token_or_return_str(input_str: str) -> int | float | str:
+#     try:
+#         return eval(input_str)
+#     except (SyntaxError, NameError, TypeError, ZeroDivisionError):
+#         pass
+#     return input_str
+def evaluate_token_or_return_str(token):
     try:
-        return eval(input_str)
-    except (SyntaxError, NameError, TypeError, ZeroDivisionError):
-        pass
-    return input_str
+        return ast.literal_eval(token)
+    except (ValueError, SyntaxError):
+        return token
 
 
 def convert_to_base(value, base):
@@ -170,71 +176,71 @@ class StackerCore:
         self.stack = []  # スタックを追加
         self.last_pop = None  # pop コマンド(ユーザー入力)で取り出した値を一時的に格納。演算でpopする場合は対象外
         self.operator = {
-            "==": (lambda x1, x2: x1 == x2),  # 等しい
-            "!=": (lambda x1, x2: x1 != x2),  # 等しくない
-            "<": (lambda x1, x2: x1 < x2),  # より小さい
-            "<=": (lambda x1, x2: x1 <= x2),  # 以下
-            ">": (lambda x1, x2: x1 > x2),  # より大きい
-            ">=": (lambda x1, x2: x1 >= x2),  # 以上
-            "and": (lambda x1, x2: x1 and x2),  # 論理積
-            "or": (lambda x1, x2: x1 or x2),  # 論理和
-            "not": (lambda x: not x),  # 否定
-            "band": (lambda x1, x2: int(x1) & int(x2)),  # ビット毎の and
-            "bor": (lambda x1, x2: int(x1) | int(x2)),  # ビット毎の or
-            "bxor": (lambda x1, x2: int(x1) ^ int(x2)),  # ビット毎の xor
-            "bin": (lambda value: convert_to_base(value, 2)),  # 2進数表示
-            "oct": (lambda value: convert_to_base(value, 8)),  # 8進数表
-            "dec": (lambda value: convert_to_base(value, 10)),  # 10進数表示
-            "hex": (lambda value: convert_to_base(value, 16)),  # 16進表示
-            "+": (lambda x1, x2: x1 + x2),  # 加算
-            "-": (lambda x1, x2: x1 - x2),  # 減算
-            "*": (lambda x1, x2: x1 * x2),  # 乗算
-            "/": (lambda x1, x2: x1 / x2),  # 除算
-            "//": (lambda x1, x2: x1 // x2),  # 整数除算
-            "%": (lambda x1, x2: x1 % x2),  # 剰余
-            "^": (lambda x1, x2: math_pow(x1, x2)),  # べき乗
-            "gcd": (lambda x1, x2: math.gcd(int(x1), int(x2))),  # 最大公約数
+            "==": (lambda x1, x2: x1 == x2),    # Equal
+            "!=": (lambda x1, x2: x1 != x2),    # Not equal
+            "<": (lambda x1, x2: x1 < x2),      # Less than
+            "<=": (lambda x1, x2: x1 <= x2),    # Less than or equal to
+            ">": (lambda x1, x2: x1 > x2),      # Greater than
+            ">=": (lambda x1, x2: x1 >= x2),    # Greater than or equal to
+            "and": (lambda x1, x2: x1 and x2),  # Logical and
+            "or": (lambda x1, x2: x1 or x2),    # Logical or
+            "not": (lambda x: not x),           # Logical not
+            "band": (lambda x1, x2: int(x1) & int(x2)),  # Bitwise and
+            "bor": (lambda x1, x2: int(x1) | int(x2)),   # Bitwise or
+            "bxor": (lambda x1, x2: int(x1) ^ int(x2)),  # Bitwise xor
+            "bin": (lambda value: convert_to_base(value, 2)),   # Binary representation
+            "oct": (lambda value: convert_to_base(value, 8)),   # Octal representation
+            "dec": (lambda value: convert_to_base(value, 10)),  # Decimal representation
+            "hex": (lambda value: convert_to_base(value, 16)),  # Hexadecimal representation
+            "+": (lambda x1, x2: x1 + x2),    # Add
+            "-": (lambda x1, x2: x1 - x2),    # Subtract
+            "*": (lambda x1, x2: x1 * x2),    # Multiply
+            "/": (lambda x1, x2: x1 / x2),    # Divide
+            "//": (lambda x1, x2: x1 // x2),  # Integer divide
+            "%": (lambda x1, x2: x1 % x2),    # Modulus
+            "^": (lambda x1, x2: math_pow(x1, x2)),  # Power
+            "gcd": (lambda x1, x2: math.gcd(int(x1), int(x2))),  # Greatest common divisor
             "lcm": (lambda x1, x2: math.lcm(int(x1), int(x2))),  # 最小公倍数
-            "neg": (lambda x: -x),  # 符号反転
-            "abs": (lambda x: abs(x)),  # 絶対値
-            "exp": (lambda x: math_exp(x)),  # 指数関数
-            "log": (lambda x: math_log(x)),  # 自然対数
-            "log10": (lambda x: math_log10(x)),  # 常用対数（底が10）
-            "log2": (lambda x: math_log2(x)),  # 常用対数（底が10）
-            "sin": (lambda x: math_sin(x)),  # 正弦関数
-            "cos": (lambda x: math_cos(x)),  # 余弦関数
-            "tan": (lambda x: math_tan(x)),  # 正接関数
-            "asin": (lambda x: math_asin(x)),  # アークサイン
-            "acos": (lambda x: math_acos(x)),  # アークコサイン
-            "atan": (lambda x: math_atan(x)),  # アークタンジェント
-            "sinh": (lambda x: math_sinh(x)),  # 双曲線正弦
-            "cosh": (lambda x: math_cosh(x)),  # 双曲線余弦
-            "tanh": (lambda x: math_tanh(x)),  # 双曲線正接
-            "asinh": (lambda x: math_asinh(x)),  # 双曲線正弦の逆関数
-            "acosh": (lambda x: math_acosh(x)),  # 双曲線余弦の逆関数
-            "atanh": (lambda x: math_atanh(x)),  # 双曲線正接の逆関数
-            "sqrt": (lambda x: math_sqrt(x)),  # 平方根
-            "radians":  (lambda deg: math.radians(deg)),  # ディグリー(度、Degree)からラジアン(弧度、Radian)に変換
-            "!": (lambda x: math.factorial(int(x))),  # 階乗
+            "neg": (lambda x: -x),  # Negate
+            "abs": (lambda x: abs(x)),  # Absolute value
+            "exp": (lambda x: math_exp(x)),  # Exponential
+            "log": (lambda x: math_log(x)),  # Natural logarithm
+            "log10": (lambda x: math_log10(x)),  # Common logarithm (base 10)
+            "log2": (lambda x: math_log2(x)),  # Logarithm base 2
+            "sin": (lambda x: math_sin(x)),  # Sine
+            "cos": (lambda x: math_cos(x)),  # Cosine
+            "tan": (lambda x: math_tan(x)),  # Tangent
+            "asin": (lambda x: math_asin(x)),  # Arcsine
+            "acos": (lambda x: math_acos(x)),  # Arccosine
+            "atan": (lambda x: math_atan(x)),  # Arctangent
+            "sinh": (lambda x: math_sinh(x)),  # Hyperbolic sine
+            "cosh": (lambda x: math_cosh(x)),  # Hyperbolic cosine
+            "tanh": (lambda x: math_tanh(x)),  # Hyperbolic tangent
+            "asinh": (lambda x: math_asinh(x)),  # Inverse hyperbolic sine
+            "acosh": (lambda x: math_acosh(x)),  # Inverse hyperbolic cosine
+            "atanh": (lambda x: math_atanh(x)),  # Inverse hyperbolic tangent
+            "sqrt": (lambda x: math_sqrt(x)),  # Square root
+            "radians": (lambda deg: math.radians(deg)),  # Convert degrees to radians
+            "!": (lambda x: math.factorial(int(x))),  # Factorial
             "cbrt": (lambda x: pow(x, 1/3)),  # 立方根
             "ncr": (lambda n, k: math.comb(int(n), int(k))),  # 組み合わせ (nCr)
             "npr": (lambda n, k: math.perm(int(n), int(k))),  # 順列 (nPr)
-            "float": (lambda x: float(x)),  # 整数を浮動小数点数に変換
-            "int": (lambda x: int(x)),  # 浮動小数点数を整数に変換
-            "ceil": (lambda x: math.ceil(x)),    # 小数点以下を切り上げた最小の整数
-            "floor": (lambda x: math.floor(x)),  # 小数点以下を切り捨てた最大の整数
-            "round": (lambda x: round(x)),  # 最も近い整数に四捨五入
-            "roundn": (lambda x1, x2: round(x1, int(x2))),  # 任意の桁数で丸める
-            "random": (lambda: random.random()),  # 0から1までの範囲でランダムな浮動小数点数を生成
-            "randint": (lambda x1, x2: random.randint(int(x1), int(x2))),  # 指定された範囲でランダムな整数を生成
-            "uniform": (lambda x1, x2: random.uniform(x1, x2)),  # 指定された範囲でランダムな浮動小数点数を生成
-            "dice": (lambda num_dice, num_faces: sum(random.randint(1, int(num_faces)) for _ in range(int(num_dice)))),  # ダイスロール(例 3d6)
-            "delete": (lambda index: self.stack.pop(index)),  # 指定のindexを削除
-            "pluck": (lambda index: self.stack.pop(index)),  # 指定のindexを削除し、スタックのトップに移動
-            "pick": (lambda index: self.stack.append((self.stack[index]))),  # 指定されたインデックスの要素をスタックのトップにコピー
+            "float": (lambda x: float(x)),  # Convert to floating-point number
+            "int": (lambda x: int(x)),  # Convert to integer
+            "ceil": (lambda x: math.ceil(x)),    # Ceiling
+            "floor": (lambda x: math.floor(x)),  # Floor
+            "round": (lambda x: round(x)),  # Round
+            "roundn": (lambda x1, x2: round(x1, int(x2))),  # Round to specified decimal places
+            "random": (lambda: random.random()),  # Generate a random floating-point number between 0 and 1|
+            "randint": (lambda x1, x2: random.randint(int(x1), int(x2))),  # Generate a random integer within a specified range
+            "uniform": (lambda x1, x2: random.uniform(x1, x2)),  # Generate a random floating-point number within a specified range
+            "dice": (lambda num_dice, num_faces: sum(random.randint(1, int(num_faces)) for _ in range(int(num_dice)))),  # Roll dice (e.g., 3d6) 
+            "delete": (lambda index: self.stack.pop(index)),  # Remove the element at the specified index
+            "pluck": (lambda index: self.stack.pop(index)),  # Remove the element at the specified index and move it to the top of the stack
+            "pick": (lambda index: self.stack.append((self.stack[index]))),  # Copy the element at the specified index to the top of the stack
             "pop": (lambda: self.stack.pop()),  # pop
-            "exec": (lambda command: exec(command, globals())),  # 指定のPythonコードを実行
-            "eval": (lambda command: eval(command)),  # 指定のPython式を評価
+            "exec": (lambda command: exec(command, globals())),  # Execute the specified Python code
+            "eval": (lambda command: eval(command)),  # Evaluate the specified Python expression
         }
         self.plugins = {}
         self.plugin_descriptions = {}
@@ -278,7 +284,15 @@ class StackerCore:
         if stack is None:
             stack = []
 
-        # tokens = expression.split()
+        # List or Tuple
+        try:
+            value = ast.literal_eval(expression)
+            if isinstance(value, (list, tuple)):
+                stack.append(value)
+                return stack
+        except (ValueError, SyntaxError):
+            pass  # 入力がリテラルではない場合、処理を継続
+
         tokens = shlex.split(expression)
         for token in tokens:
             # token: (str)

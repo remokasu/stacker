@@ -1,6 +1,21 @@
 
 # CHANGE LOG
 
+## [1.2.5] - 2023-04-30
+
+### Fixed
+
+- Fixed an issue where multi-dimensional arrays could not be entered as input.
+  - Users can now input multi-dimensional arrays as expected.
+
+- Changed input evaluation from `eval()` to `ast.literal_eval()`.
+  - This improves the safety and reliability of input handling.
+
+- Corrected typos in the README.
+  - Improved readability and understanding of the documentation.
+
+<hr>
+
 ## [1.2.4] - 2023-04-24
 
 ### Added
