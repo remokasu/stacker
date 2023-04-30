@@ -1,6 +1,35 @@
 
 # CHANGE LOG
 
+## [1.2.7] - 2023-04-31
+
+### Added
+
+- Added a new matrix input method.
+  Example:
+    ~~~ bash
+    stacker:0> [1 2 3; 4 5 6; 7 8 9]
+    [[[1, 2, 3], [4, 5, 6], [7, 8, 9]]]
+    ~~~
+
+- The traditional input method is still available.
+
+  Example:
+    ~~~ bash
+    stacker:0> [[1,2,3], [4,5,6], [7,8,9]]
+    [[[1, 2, 3], [4, 5, 6], [7, 8, 9]]]
+    stacker:1>
+    ~~~
+
+### Changed
+
+  - Changed input handling to allow continuing input on a new line while entering a matrix.
+
+  - Changed output to display colors for improved readability.
+    - Different colors are used to distinguish between different types of output.
+
+<hr>
+
 ## [1.2.5a] - 2023-04-30
 
 ### Removed

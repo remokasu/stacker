@@ -17,6 +17,8 @@ from pkg_resources import get_distribution, resource_stream
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.lexers import SimpleLexer
+from prompt_toolkit.styles import Style
 
 history_file = ".stacker_history"
 history_file_path = Path.home() / history_file
@@ -98,6 +100,42 @@ def evaluate_token_or_return_str(token):
         return ast.literal_eval(token)
     except (ValueError, SyntaxError):
         return token
+
+
+def validate_custom_array_format(token):
+    # Check if the token matches the custom array format
+    if not re.match(r'^\[(.*?)\]$', token):
+        return False
+
+    # Extract the content inside the outer brackets
+    inner_str = re.match(r'^\[(.*?)\]$', token).group(1)
+
+    # Check if there are any invalid characters
+    if re.search(r'[^\d\s;]', inner_str):
+        return False
+
+    # Validate the structure of the custom array format
+    rows = inner_str.split(';')
+    row_lengths = [len(row.strip().split()) for row in rows]
+
+    if len(set(row_lengths)) > 1:
+        return False
+
+    return True
+
+
+def is_parentheses_balanced(s):
+    stack = []
+    for char in s:
+        if char in ('(', '['):
+            stack.append(char)
+        elif char in (')', ']'):
+            if not stack:
+                return False
+            last_bracket = stack.pop()
+            if (char == ')' and last_bracket != '(') or (char == ']' and last_bracket != '['):
+                return False
+    return not stack
 
 
 def convert_to_base(value, base):
@@ -284,14 +322,46 @@ class StackerCore:
         if stack is None:
             stack = []
 
-        # List or Tuple
+        # str to List or Tuple
         try:
+            """
+            # list
+                stacker:2> [[1, 2, 3], [4, 5, 6]]
+                [[[1, 2, 3], [4, 5, 6]]]
+            """
+            """
+            # tuple
+                stacker:3> (1, 2, 3)
+                [(1, 2, 3)]
+            """
             value = ast.literal_eval(expression)
             if isinstance(value, (list, tuple)):
                 stack.append(value)
                 return stack
         except (ValueError, SyntaxError):
-            pass  # 入力がリテラルではない場合、処理を継続
+            """
+            # custum list format, like matlab.
+                stacker:0> [1 2 3; 4 5 6]
+                [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]
+            """
+            if re.match(r'^\[(.*?)\]$', expression):
+                if validate_custom_array_format(expression):
+                    # Convert custom array format to list of lists
+                    inner_str = re.match(r'^\[(.*?)\]$', expression).group(1)
+                    rows = inner_str.split(';')
+                    array = [list(map(evaluate_token_or_return_str, row.strip().split())) for row in rows]
+
+                    if len(array) == 1:
+                        stack.append(array[0])
+                    else:
+                        stack.append(array)
+                    return stack
+                else:
+                    raise ValueError(f"Invalid array format: '{expression}'")
+            # pass  # 入力がリテラルではない場合、処理を継続
+
+        if is_parentheses_balanced(expression) is False:
+            raise ValueError(f"Invalid token '{expression}'")
 
         tokens = shlex.split(expression)
         for token in tokens:
@@ -314,7 +384,6 @@ class StackerCore:
                     stack.append(evaluate_token_or_return_str(token))
                 except ValueError:
                     raise ValueError(f"Invalid token '{token}'")
-
         return stack
 
     def register_operator(self, operator_name, operator_func):
@@ -416,7 +485,6 @@ class Stacker(StackerCore):
 
     def process_variable_assignment(self, expression):
         name, value_expression = [s.strip() for s in expression.split("=", 1)]
-        print(name, value_expression)
         if name in self.operator:
             raise ValueError(f"Invalid variable name '{name}'")
         self.validate_name(name)
@@ -433,7 +501,8 @@ class Stacker(StackerCore):
             return self.process_variable_assignment(expression)
         else:  # RPN式の評価と結果の表示
             ans = self.evaluate(expression, stack=self.stack)
-            return colored(f"{ans}",  self.stack_color)
+            # return colored(f"{ans}",  self.stack_color)
+            return ans
 
 
 def load_plugins(stacker_core: StackerCore):
@@ -472,6 +541,7 @@ class ExecutionMode:
         self._reserved_word = copy.deepcopy(self.rpn_calculator.reserved_word)
         self._reserved_word = (self._reserved_word + self._operator_key + self._variable_key)
         self.completer = WordCompleter(self._reserved_word)
+        self.color_print = True
 
     def get_multiline_input(prompt=""):
         lines = []
@@ -491,6 +561,44 @@ class ExecutionMode:
 
 
 class InteractiveMode(ExecutionMode):
+
+    def is_array_input(self, expression):
+        return expression.strip().startswith("[")
+
+    def is_array_balanced(self, expression):
+        open_brackets = expression.count('[')
+        close_brackets = expression.count(']')
+        return open_brackets == close_brackets
+
+    # def print_colored_output(self, stack_list):
+    #     for item in stack_list:
+    #         item_str = str(item)
+    #         if item_str.startswith('[') or item_str.endswith(']'):
+    #             print(colored(item_str, 'red'), end=' ')
+    #         elif item_str.replace('.', '', 1).isdigit() or (item_str.startswith('-') and item_str[1:].replace('.', '', 1).isdigit()):
+    #             print(colored(item_str, 'default'), end=' ')
+    #         else:
+    #             print(colored(item_str, 'blue'), end=' ')
+    #     print()
+
+    def print_colored_output(self, stack_list):
+        stack_str = colored("[", 'yellow')
+        for item in stack_list:
+            item_str = str(item)
+            if item_str.startswith('[') or item_str.endswith(']'):
+                stack_str += colored(item_str, 'red')
+                stack_str += ", "
+            elif item_str.replace('.', '', 1).isdigit() or (item_str.startswith('-') and item_str[1:].replace('.', '', 1).isdigit()):
+                stack_str += colored(item_str, 'default')
+                stack_str += ", "
+            else:
+                stack_str += colored(item_str, 'blue')
+                stack_str += ", "
+        stack_str = stack_str[0:-2]
+        stack_str += colored("]", 'yellow')
+        print(stack_str)
+        # print()
+
     def run(self):
         line_count = 0
         while True:
@@ -499,15 +607,47 @@ class InteractiveMode(ExecutionMode):
                     f"stacker:{line_count}> ",
                     history=FileHistory(history_file_path),
                     completer=self.completer,
+                    multiline=False
                 )
+
+                if self.is_array_input(expression):
+                    """
+                        stacker:0> [1 2 3
+                                    3 4 5]
+                        [[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]]
+                    """
+                    while not self.is_array_balanced(expression):
+                        next_line = prompt(
+                            " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> ",
+                            history=FileHistory(history_file_path),
+                        )
+                        if not expression.endswith(";"):
+                            expression += "; " + next_line
+                        else:
+                            expression += next_line
+
+                    # Convert the array expression to proper list format
+                    expression = re.sub(r"(\d+(\.\d+)?)\s+", r"\1, ", expression)
+                    expression = re.sub(r";\s+", r"], [", expression)
+
+                # Check if there is more than one list, then add outer brackets
+                if expression.count('[') > 1 and not expression.startswith('[['):
+                    expression = f'[{expression}]'
 
                 # ダブルコーテーションまたはシングルコーテーションで始まる入力が閉じられるまで継続する処理
                 while (
                     (expression.startswith('"""') and expression.count('"""') % 2 != 0) or
                     (expression.startswith("'''") and expression.count("'''") % 2 != 0)
                 ):
+                    """
+                        stacker:0> '''
+                        stacker:0> This is a multi-line
+                        stacker:0> input example.
+                        stacker:0> '''
+                        ['\nThis is a multi-line\ninput example.\n']
+                    """
                     next_line = prompt(
-                        f"stacker:{line_count}> ",
+                        " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> ",
                         history=FileHistory(history_file_path),
                         completer=self.completer,
                     )
@@ -546,7 +686,11 @@ class InteractiveMode(ExecutionMode):
                     continue
 
                 stack_str = self.rpn_calculator.process_expression(expression)
-                print(stack_str)  # stackを全表示
+                # stackを全表示
+                if self.color_print is True:
+                    self.print_colored_output(stack_str)
+                else:
+                    print(stack_str)
 
             except Exception as e:
                 print(colored(f"[ERROR]: {e}", "red"))
