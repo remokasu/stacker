@@ -30,7 +30,7 @@ venv/
 .stacker_history
 
 stacker/plugins/*
-!set_color.py
+# !set_color.py
 
 # swap
 *.swp
