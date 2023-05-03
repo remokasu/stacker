@@ -136,6 +136,25 @@ Here are the installation instructions for `stacker`:
 
 The input will be treated as a single string containing line breaks:
 
+<br>
+<hr>
+
+## Array Input
+
+You can input arrays in Stacker using the following format:
+~~~ bash
+stacker:0> [1 2 3; 4 5 6]
+~~~
+
+Multi-line array input is also possible. For example, you can enter an array as follows:
+
+~~~ bash
+stacker:0> [1 2 3;
+... > 4 5 6]
+~~~
+
+The input will be considered complete when the array is closed with a matching bracket. However, if you want to forcibly go back while in multi-line input mode, type `end`.
+
 
 
 <br>
@@ -185,7 +204,7 @@ To create a plugin for Stacker, follow these steps:
 4. In the `setup` function, use the `register_plugin` method of `stacker_core` to register your custom commands. For example:
     ~~~python
     description_en = "Returns the Collatz sequence for the given number."
-    description_jp = "与えられた数値のコラッツ数列を返します。"
+    description_jp = ""
 
     def collatz_sequence(n):
         seq = [n]
@@ -451,6 +470,25 @@ python3が無ければ事前にインストールしてください。
 
 入力は改行を含む1つの文字列として扱われます。
 
+<br>
+<hr>
+
+## 配列の入力
+
+配列は次のように入力します。
+~~~ bash
+stacker:0> [1 2 3; 4 5 6]
+~~~
+
+複数行にわたる配列の入力も可能です。例えば、以下のように入力できます。
+
+~~~ bash
+stacker:0> [1 2 3;
+... > 4 5 6]
+~~~
+
+複数行入力中に配列が閉じられたとき、入力が終了します。ただし、複数行入力中に強制的に戻るには、`end`と入力してください。
+
 
 <br>
 <hr>
@@ -525,6 +563,13 @@ Stackerのプラグインを作成するには、以下の手順に従ってく�
 
 英語（description_en）と日本語（description_jp）の説明の提供は任意です。必要がない場合は、それらの行をコメントアウトまたは削除してください。
 
+<br>
+
+### 開発中プラグイン
+
+* [シェルモード](https://github.com/remokasu/stacker-plugins/blob/main/sh.py)
+* [行列演算](https://github.com/remokasu/stacker-plugins/blob/main/matrix.py)
+
 
 <br>
 <hr>
@@ -561,30 +606,10 @@ Stackerのプラグインを作成するには、以下の手順に従ってく�
 # おまけ
 
 ## eval (逆ポーランドなんてクソ喰らえだ)
-* シングルコーテーションで囲った文字列を `eval` で評価できる。
+* {...}で囲った文字列を `eval` で評価できる。
 やはり中置記法こそ正義なのです。
 ところで、なんで君はStackerを使ってるんですか？
     ~~~
-    stacker:0> '3 + 5' eval
+    stacker:0> {3 + 5} eval
     [8]
-    ~~~
-
-## exec (Pythonが使いたい)
-* `"""` または `'''` で囲まれた範囲は、改行しても連続した文字列として扱われます。そこにPythonコードを入れ込んでexecで実行することができます。ただし、execはどんな処理でも結果がNoneになるため、スタックには入りません。結果を表示したい場合は、print文を式に埋め込んでみましょう。このように、文字列に対してexecを使うことで、Pythonの処理として実行できます。
-    ~~~
-    stacker:0> '''
-    stacker:0> def f(x):
-    stacker:0>      return x**2
-    stacker:0> print(f(4))
-    stacker:0> '''
-    ['\ndef f(x):\n\treturn x**2\nprint(f(4))\n']
-    stacker:7> exec
-    16
-    []
-    ~~~
-
-* → あなたが真に求めるもの：
-    ~~~ bash
-    stacker:0> exit
-    > python
     ~~~
