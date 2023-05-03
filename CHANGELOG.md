@@ -1,6 +1,29 @@
 
 # CHANGE LOG
 
+## [1.2.8] - 2023-05-04
+
+### Added
+
+- Added support for inputting multiple arrays on a single line.
+
+- Added a command `rev` to reverse arrays.
+
+- Added a feature to treat the content within {...} as a string.
+
+- Increased the variety of test cases.
+
+### Changed
+
+- Changed the matrix input method.
+  Example:
+    stacker:0> [1 2 3; 4 5 6; 7 8 9]
+    [[[1, 2, 3], [4, 5, 6], [7, 8, 9]]]
+
+- Please note that the traditional Python input method is no longer supported.
+
+
+
 ## [1.2.7] - 2023-04-31
 
 ### Added
