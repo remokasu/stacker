@@ -6,69 +6,69 @@
 ### Added
 
 - Added a new plugin, matrix.py, which adds support for matrix operations.
-  - 加算
+  - 加算：Addition
     ~~~
     stacker:0> A = [[1, 2], [3, 4]]
     stacker:1> B = [[5, 6], [7, 8]]
     stacker:2> A B +
     [[[6, 8], [10, 12]]]
     ~~~
-  - 乗算
+  - 乗算：Multiplication
     ~~~
     stacker:0> A = [[1, 2], [3, 4]]
     stacker:1> B = [[5, 6], [7, 8]]
     stacker:2> A B *
     [[[19, 22], [43, 50]]]
     ~~~
-  - 要素ごとの乗算
+  - 要素ごとの乗算：Element-wise multiplication
     ~~~
     stacker:0> A = [[1, 2], [3, 4]]
     stacker:1> B = [[5, 6], [7, 8]]
     stacker:2> A B .*
     [[[5, 12], [21, 32]]]
     ~~~
-  - 要素ごとの除算
+  - 要素ごとの除算：Element-wise division
     ~~~
     stacker:0> A = [[1, 2], [3, 4]]
     stacker:1> B = [[5, 6], [7, 8]]
     stacker:2> A B ./
     [[[0.2, 0.3333333333333333], [0.42857142857142855, 0.5]]]
     ~~~
-  - 転置
+  - 転置：Transpose
     ~~~
     stacker:0> A = [[1, 2], [3, 4]]
     stacker:1> A '
     [[[1, 3], [2, 4]]]
     ~~~
-  - 逆行列
+  - 逆逆行列：Inverse matrix
     ~~~
     stacker:0> A = [[1, 2], [3, 4]]
     stacker:1> A inv
     [[[-2.0, 1.0], [1.5, -0.5]]]
     ~~~
-  - ランク
+  - ランク：Rank
     ~~~
     stacker:0> A = [[1, 2], [3, 4]]
     stacker:1> A rank
     2
     ~~~
-  - トレース
+  - トレース：Trace
     ~~~
     stacker:0> A = [[1, 2], [3, 4]]
     stacker:1> A trace
     5
     ~~~
-  - 単位行列
+  - 単位行列：Identity matrix
     ~~~
     stacker:0> 2 2 ones
     [[[1.0, 1.0], [1.0, 1.0]]]
     ~~~
-  - ゼロ行列
+  - ゼロ行列：Zero matrix
     ~~~
     stacker:0> 2 2 zeros
     [[[0.0, 0.0], [0.0, 0.0]]]
     ~~~
-  - 対角行列
+  - 対角行列：Diagonal matrix
     ~~~
     stacker:0> A = [[1, 2], [3, 4]]
     stacker:1> A diag
