@@ -2,7 +2,7 @@ import cmath
 import math
 import unittest
 
-from stacker import Stacker
+from stacker.stacker import Stacker
 
 
 def cpow(x1, x2):
@@ -102,6 +102,12 @@ class TestStacker(unittest.TestCase):
             self.assertAlmostEqual(self.stacker.stack[-1], expected)
         print("!")
 
+    def test_long_rpn(self):
+        self.stacker.stack.clear()
+        expression = " 8 3 5 * 2 / + 7 4 + neg 2 ^ 1 3 + * -"
+        self.stacker.process_expression(expression)
+        self.assertEqual(self.stacker.stack[-1], -468.5)
+
     def test_stack_operations(self):
         # Test 'delete' operation
         self.stacker.stack.clear()
@@ -130,6 +136,7 @@ class TestStacker(unittest.TestCase):
         # Test 'rev' operation
         self.stacker.stack.clear()
         self.stacker.process_expression("1 2 3 4 5")
+        self.assertEqual(self.stacker.stack, [1, 2, 3, 4, 5])
         self.stacker.process_expression("rev")
         self.assertEqual(self.stacker.stack, [5, 4, 3, 2, 1])
 
