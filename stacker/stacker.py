@@ -8,7 +8,6 @@ import math
 import os
 import random
 import re
-import shlex
 import sys
 from pathlib import Path
 from typing import Any, Optional
@@ -259,14 +258,20 @@ class StackerCore:
             "pluck": (lambda index: self.stack.pop(index)),  # Remove the element at the specified index and move it to the top of the stack
             "pick": (lambda index: self.stack.append((self.stack[index]))),  # Copy the element at the specified index to the top of the stack
             "pop": (lambda: self.stack.pop()),  # pop
+            "insert": (lambda index, value: self.stack.insert(index, value)),  # insert
             "rev": (lambda: self.stack.reverse()),  # reverse
             "exec": (lambda command: exec(command, globals())),  # Execute the specified Python code
             "eval": (lambda command: eval(command)),  # Evaluate the specified Python expression
             "echo": (lambda value: print(value)),
+            "ans": (lambda: self.get_last_ans()),
         }
+        self.non_destructive_operator = {"exec", "delete", "pick", "rev", "echo", "insert"} # このコマンド実行時は戻り値をStackしない
         self.plugins = {}
         self.plugin_descriptions = {}
         self.plugin_dir = plugin_dir
+
+    def get_last_ans(self):
+        return self.stack[-1]
 
     def split_expression(self, expression: str) -> list:
         operator_pattern = "|".join(re.escape(op) for op in self.operator.keys())
@@ -306,7 +311,10 @@ class StackerCore:
     def get_n_args_for_operator(self, token: str) -> int:
         # token(演算子)に必要な引数の数
         if token in self.operator:
-            return self.operator[token].__code__.co_argcount
+            op = self.operator[token]
+            arg_count = op.arg_count if hasattr(op, 'arg_count') else op.__code__.co_argcount
+            return arg_count
+            # return self.operator[token].__code__.co_argcount
         else:
             raise KeyError(f"Invalid token {token}")
 
@@ -323,7 +331,7 @@ class StackerCore:
         args = [stack.pop() for _ in range(n_args)]
         args.reverse()  # 引数の順序を逆にする
         ans = self.operator[token](*args)
-        if token in {"exec", "delete", "pick", "rev", "echo"}:  # このコマンド実行時は戻り値NoneをStackしない
+        if token in self.non_destructive_operator:
             return
         elif token == "pop":  # popの場合は戻り値を保存
             self.last_pop = ans
@@ -361,17 +369,52 @@ class StackerCore:
                     raise ValueError(f"Invalid token '{token}'")
         return stack
 
-    def register_operator(self, operator_name: str, operator_func: callable) -> None:
+    # def register_operator(self, operator_name: str, operator_func: callable, push_result_to_stack: bool) -> None:
+    #     if not push_result_to_stack:
+    #         self.non_destructive_operator.add(operator_name)
+    #     self.operator[operator_name] = operator_func
+
+    # def register_plugin(
+    #         self,
+    #         operator_name: str,
+    #         operator_func: callable,
+    #         push_result_to_stack: True = True,
+    #         description_en: str | None = None,
+    #         description_jp: str | None = None
+    # ):
+    #     self.register_operator(operator_name, operator_func, push_result_to_stack)
+    #     self.plugin_descriptions[operator_name] = {"en": description_en, "jp": description_jp}
+
+    def register_operator(
+        self,
+        operator_name: str,
+        operator_func: callable,
+        push_result_to_stack: bool
+    ) -> None:
+        if not push_result_to_stack:
+            self.non_destructive_operator.add(operator_name)
         self.operator[operator_name] = operator_func
 
     def register_plugin(
             self,
             operator_name: str,
             operator_func: callable,
+            push_result_to_stack: bool = True,
+            pass_core: bool = False,
             description_en: str | None = None,
             description_jp: str | None = None
     ):
-        self.register_operator(operator_name, operator_func)
+
+        if pass_core:
+            original_operator_func = operator_func
+
+            def wrapped_operator_func(*args, **kwargs):
+                wraped = original_operator_func(self, *args, **kwargs)
+                return wraped
+            wrapped_operator_func.arg_count = original_operator_func.__code__.co_argcount - 1
+            operator_func = wrapped_operator_func
+
+        self.register_operator(operator_name, operator_func, push_result_to_stack)
         self.plugin_descriptions[operator_name] = {"en": description_en, "jp": description_jp}
 
 
@@ -479,12 +522,10 @@ class Stacker(StackerCore):
         expression = self.parse_expression(expression)
         if "=>" in expression:  # 関数定義 (it is not RPN su)
             self.process_function_definition(expression)
-            return None
         elif re.search(r"\b\w+\s*=(?!=)", expression): # 代入処理
             self.process_variable_assignment(expression)
-            return None
         else:  # RPN式の評価と結果の表示
-            return self.evaluate(expression, stack=self.stack)
+            self.evaluate(expression, stack=self.stack)
 
     # List
     def correct_bracket_structure(self, token: str) -> str:
@@ -774,7 +815,8 @@ class InteractiveMode(ExecutionMode):
                     self.rpn_calculator.clear_stack()
                     continue
 
-                stack = self.rpn_calculator.process_expression(expression)
+                self.rpn_calculator.process_expression(expression)
+                stack = self.rpn_calculator.stack
                 if stack is not None:
                     # stackを全表示
                     if self.color_print is True:

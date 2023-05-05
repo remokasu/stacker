@@ -1,5 +1,9 @@
 import os
 
+from stacker import stacker
+
+__all__ = ["stacker"]
+
 # リソースフォルダへのパスを取得する
 resource_path = os.path.join(os.path.dirname(__file__), 'data')
 

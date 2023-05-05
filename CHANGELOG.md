@@ -1,6 +1,118 @@
 
 # CHANGE LOG
 
+## [1.2.9] - 2023-05-06
+
+### Added
+
+- Added a new plugin, matrix.py, which adds support for matrix operations.
+  - 加算
+    ~~~
+    stacker:0> A = [[1, 2], [3, 4]]
+    stacker:1> B = [[5, 6], [7, 8]]
+    stacker:2> A B +
+    [[[6, 8], [10, 12]]]
+    ~~~
+  - 乗算
+    ~~~
+    stacker:0> A = [[1, 2], [3, 4]]
+    stacker:1> B = [[5, 6], [7, 8]]
+    stacker:2> A B *
+    [[[19, 22], [43, 50]]]
+    ~~~
+  - 要素ごとの乗算
+    ~~~
+    stacker:0> A = [[1, 2], [3, 4]]
+    stacker:1> B = [[5, 6], [7, 8]]
+    stacker:2> A B .*
+    [[[5, 12], [21, 32]]]
+    ~~~
+  - 要素ごとの除算
+    ~~~
+    stacker:0> A = [[1, 2], [3, 4]]
+    stacker:1> B = [[5, 6], [7, 8]]
+    stacker:2> A B ./
+    [[[0.2, 0.3333333333333333], [0.42857142857142855, 0.5]]]
+    ~~~
+  - 転置
+    ~~~
+    stacker:0> A = [[1, 2], [3, 4]]
+    stacker:1> A '
+    [[[1, 3], [2, 4]]]
+    ~~~
+  - 逆行列
+    ~~~
+    stacker:0> A = [[1, 2], [3, 4]]
+    stacker:1> A inv
+    [[[-2.0, 1.0], [1.5, -0.5]]]
+    ~~~
+  - ランク
+    ~~~
+    stacker:0> A = [[1, 2], [3, 4]]
+    stacker:1> A rank
+    2
+    ~~~
+  - トレース
+    ~~~
+    stacker:0> A = [[1, 2], [3, 4]]
+    stacker:1> A trace
+    5
+    ~~~
+  - 単位行列
+    ~~~
+    stacker:0> 2 2 ones
+    [[[1.0, 1.0], [1.0, 1.0]]]
+    ~~~
+  - ゼロ行列
+    ~~~
+    stacker:0> 2 2 zeros
+    [[[0.0, 0.0], [0.0, 0.0]]]
+    ~~~
+  - 対角行列
+    ~~~
+    stacker:0> A = [[1, 2], [3, 4]]
+    stacker:1> A diag
+    [[1, 4]]
+    ~~~
+
+
+- Added a new plugin, range.py, which adds support for custom range functionality.
+  ~~~
+  stacker:0> 10:
+  [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]]
+
+  stacker:1> (3 10):
+  [[3, 4, 5, 6, 7, 8, 9]]
+
+  stacker:2> (0 1 0.2):
+  [[0.0, 0.2, 0.4, 0.6000000000000001, 0.8]]
+  ~~~
+
+- Added a new plugin, tolist.py, which adds support for converting specified ranges to lists and expanding lists.
+  - tolist
+    ~~~
+    stacker:0> 1 2 3 4 5 6 7 8 9 10
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    stacker:1> 4 8 tolist
+    [1, 2, 3, 4, [5, 6, 7, 8], 9, 10]
+    ~~~
+  - unlist
+    ~~~
+    [1, 2, 3, 4, [5, 6, 7, 8], 9, 10]
+    stacker:3> 4 unlist
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    ~~~
+
+### Changed
+
+- Added numpy to requirements.txt.
+- Made the following changes to stacker/stacker.py:
+   * Added insert and ans operators.
+   * Added a non_destructive_operator set, which includes operators that do not store their return values on the stack.
+   * Updated the get_n_args_for_operator method, allowing it to retrieve the number of arguments for operators.
+
+<hr>
+
 ## [1.2.8] - 2023-05-04
 
 ### Added
@@ -22,7 +134,7 @@
 
 - Please note that the traditional Python input method is no longer supported.
 
-
+<hr>
 
 ## [1.2.7] - 2023-04-31
 
