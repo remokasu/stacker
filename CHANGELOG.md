@@ -1,80 +1,99 @@
 
 # CHANGE LOG
 
+## [1.2.10] - 2023-05-07
+
+### Added
+
+- Added new stack operations, such as:
+  * `dup`: Duplicates the top element of the stack.
+  * `swap`: Swaps the top two elements of the stack.
+
+<hr>
+
 ## [1.2.9] - 2023-05-06
 
 ### Added
 
 - Added a new plugin, matrix.py, which adds support for matrix operations.
-  - 加算：Addition
+  - Addition 加算
     ~~~
-    stacker:0> A = [[1, 2], [3, 4]]
-    stacker:1> B = [[5, 6], [7, 8]]
+    stacker:0> A = [1 2; 3 4]
+    stacker:1> B = [5 6; 7 8]
     stacker:2> A B +
     [[[6, 8], [10, 12]]]
     ~~~
-  - 乗算：Multiplication
+
+  - Multiplication 乗算
     ~~~
-    stacker:0> A = [[1, 2], [3, 4]]
-    stacker:1> B = [[5, 6], [7, 8]]
+    stacker:0> A = [1 2; 3 4]
+    stacker:1> B = [5 6; 7 8]
     stacker:2> A B *
     [[[19, 22], [43, 50]]]
     ~~~
-  - 要素ごとの乗算：Element-wise multiplication
+
+  - Element-wise multiplication 要素ごとの乗算
     ~~~
-    stacker:0> A = [[1, 2], [3, 4]]
-    stacker:1> B = [[5, 6], [7, 8]]
+    stacker:0> A = [1 2; 3 4]
+    stacker:1> B = [5 6; 7 8]
     stacker:2> A B .*
     [[[5, 12], [21, 32]]]
     ~~~
-  - 要素ごとの除算：Element-wise division
+
+  - Element-wise division 要素ごとの除算
     ~~~
-    stacker:0> A = [[1, 2], [3, 4]]
-    stacker:1> B = [[5, 6], [7, 8]]
+    stacker:0> A = [1 2; 3 4]
+    stacker:1> B = [5 6; 7 8]
     stacker:2> A B ./
     [[[0.2, 0.3333333333333333], [0.42857142857142855, 0.5]]]
     ~~~
-  - 転置：Transpose
+
+  - Transpose 転置
     ~~~
-    stacker:0> A = [[1, 2], [3, 4]]
+    stacker:0> A = [1 2; 3 4]
     stacker:1> A '
     [[[1, 3], [2, 4]]]
     ~~~
-  - 逆逆行列：Inverse matrix
+
+  - Inverse matrix 逆逆行列
     ~~~
-    stacker:0> A = [[1, 2], [3, 4]]
+    stacker:0> A = [1 2; 3 4]
     stacker:1> A inv
     [[[-2.0, 1.0], [1.5, -0.5]]]
     ~~~
-  - ランク：Rank
+
+  - Rank ランク
     ~~~
-    stacker:0> A = [[1, 2], [3, 4]]
+    stacker:0> A = [1 2; 3 4]
     stacker:1> A rank
     2
     ~~~
-  - トレース：Trace
+
+  - Trace トレース
     ~~~
-    stacker:0> A = [[1, 2], [3, 4]]
+    stacker:0> A = [1 2; 3 4]
     stacker:1> A trace
     5
     ~~~
-  - 単位行列：Identity matrix
+
+  - Identity matrix 単位行列
     ~~~
     stacker:0> 2 2 ones
     [[[1.0, 1.0], [1.0, 1.0]]]
     ~~~
-  - ゼロ行列：Zero matrix
+
+  - Zero matrix ゼロ行列
     ~~~
     stacker:0> 2 2 zeros
     [[[0.0, 0.0], [0.0, 0.0]]]
     ~~~
-  - 対角行列：Diagonal matrix
+
+  - Diagonal matrix 対角行列
     ~~~
     stacker:0> A = [[1, 2], [3, 4]]
     stacker:1> A diag
     [[1, 4]]
     ~~~
-
 
 - Added a new plugin, range.py, which adds support for custom range functionality.
   ~~~

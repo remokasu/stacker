@@ -252,6 +252,22 @@ class TestStacker(unittest.TestCase):
         self.assertEqual(self.stacker.stack[-2], 5)
         self.assertEqual(self.stacker.stack[-3], ((1, 2, 3), (4, 5, 6), (7, 8, 9)))
 
+    # valiable
+    def test_variable_assign_1(self):
+        self.stacker.stack.clear()
+        self.stacker.process_expression("a = 123")
+        self.stacker.process_expression("a")
+        self.assertEqual(self.stacker.stack[-1], 123)
+
+    def test_variable_assign_2(self):
+        self.stacker.stack.clear()
+        self.stacker.process_expression("b = 30 50 +")
+        self.stacker.process_expression("b")
+        self.assertEqual(self.stacker.stack[-1], 80)
+
+
+
+
 
 if __name__ == "__main__":
     unittest.main()

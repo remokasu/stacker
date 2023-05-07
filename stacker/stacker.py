@@ -93,17 +93,29 @@ def evaluate_token_or_return_str(token: str) -> Any:
         return token
 
 
-def is_array_input(expression: str) -> bool:
-    return expression.strip().startswith("[")
+def is_array(expression: str) -> bool:
+    try:
+        return expression.strip().startswith("[")
+    except Exception:
+        return False
 
 
-def is_tuple_input(expression: str) -> bool:
-    return expression.strip().startswith("(")
+def is_tuple(expression: str) -> bool:
+    try:
+        return expression.strip().startswith("(")
+    except Exception:
+        return False
 
 
 def is_array_balanced(expression: str) -> bool:
     open_brackets = expression.count('[')
     close_brackets = expression.count(']')
+    return open_brackets == close_brackets
+
+
+def is_tuple_balanced(expression: str) -> bool:
+    open_brackets = expression.count('(')
+    close_brackets = expression.count(')')
     return open_brackets == close_brackets
 
 
@@ -113,10 +125,14 @@ def is_single_array(expression: str) -> bool:
     return False
 
 
-def is_tuple_balanced(expression: str) -> bool:
-    open_brackets = expression.count('(')
-    close_brackets = expression.count(')')
-    return open_brackets == close_brackets
+def is_single_tuple(expression: str) -> bool:
+    if is_tuple_balanced(expression):
+        return expression.count('(') == 1 and expression.count(')') == 1
+    return False
+
+
+def is_assignment(expression: str) -> bool:
+    return re.search(r"\b\w+\s*=(?!=)", expression)
 
 
 def convert_to_base(value: str | int, base: int) -> str | int:
@@ -246,6 +262,7 @@ class StackerCore:
             "npr": (lambda n, k: math.perm(int(n), int(k))),  # 順列 (nPr)
             "float": (lambda x: float(x)),  # Convert to floating-point number
             "int": (lambda x: int(x)),  # Convert to integer
+            "string": (lambda x: str(x)),  # Convert to integer
             "ceil": (lambda x: math.ceil(x)),    # Ceiling
             "floor": (lambda x: math.floor(x)),  # Floor
             "roundn": (lambda x1, x2: round(x1, int(x2))),  # Round to specified decimal places
@@ -258,6 +275,8 @@ class StackerCore:
             "pluck": (lambda index: self.stack.pop(index)),  # Remove the element at the specified index and move it to the top of the stack
             "pick": (lambda index: self.stack.append((self.stack[index]))),  # Copy the element at the specified index to the top of the stack
             "pop": (lambda: self.stack.pop()),  # pop
+            "dup": (lambda: self._dup()),  # Duplicate the top element of the stack
+            "swap": (lambda: self._swap()),  # # Swap the top two elements of the stack
             "insert": (lambda index, value: self.stack.insert(index, value)),  # insert
             "rev": (lambda: self.stack.reverse()),  # reverse
             "exec": (lambda command: exec(command, globals())),  # Execute the specified Python code
@@ -265,10 +284,16 @@ class StackerCore:
             "echo": (lambda value: print(value)),
             "ans": (lambda: self.get_last_ans()),
         }
-        self.non_destructive_operator = {"exec", "delete", "pick", "rev", "echo", "insert"} # このコマンド実行時は戻り値をStackしない
+        self.non_destructive_operator = {"exec", "delete", "pick", "rev", "echo", "insert", "dup", "swap"} # このコマンド実行時は戻り値をStackしない
         self.plugins = {}
         self.plugin_descriptions = {}
         self.plugin_dir = plugin_dir
+
+    def _dup(self):
+        self.stack.append(self.stack[-1])
+
+    def _swap(self):
+        self.stack[-1], self.stack[-2] = self.stack[-2], self.stack[-1]
 
     def get_last_ans(self):
         return self.stack[-1]
@@ -300,7 +325,8 @@ class StackerCore:
                     if value in ignore_tokens:
                         continue
                     if value.startswith("{") and value.endswith("}"):
-                        tokens.append(str(value[1:-1]))
+                        value = f"'{str(value[1:-1])}'"
+                        tokens.append(value)
                         break
                     tokens.append(value)
                     break
@@ -345,8 +371,8 @@ class StackerCore:
         """
         if stack is None:
             stack = []
-
         tokens = self.split_expression(expression)
+
         for token in tokens:
             # token: (str)
             if token in self.operator:
@@ -362,6 +388,11 @@ class StackerCore:
                     raise ValueError(f"Not enough arguments for function '{token}'")
                 args = [stack.pop() for _ in range(len(self.functions[token][0]))][::-1]
                 stack.append(self.evaluate_function(token, *args))
+            elif (
+                (token.startswith("'") and token.endswith("'")) or
+                (token.startswith('"') and token.endswith('"'))
+            ):
+                stack.append(token[1:-1])
             else:
                 try:
                     stack.append(evaluate_token_or_return_str(token))
@@ -481,6 +512,12 @@ class Stacker(StackerCore):
         """
         Assigns a value to a variable with the given name.
         """
+        if is_array(value):
+            value = self.convert_custom_array_to_proper_list(value)
+            value = evaluate_token_or_return_str(value)
+        elif is_tuple(value):
+            value = self.convert_custom_tuple_to_proper_tuple(value)
+            value = evaluate_token_or_return_str(value)
         self.variables[name] = value
 
     def evaluate_function(self, name, *args):
@@ -515,36 +552,17 @@ class Stacker(StackerCore):
         self.validate_name(name)
         value = self.evaluate(value_expression)[0]
         self.assign_variable(name, value)
-        highlighted_value_expression = self.highlight_syntax(value_expression)
-        print(colored(f"Variable '{name}' assigned with value: ", "blue") + highlighted_value_expression)
 
     def process_expression(self, expression):
         expression = self.parse_expression(expression)
         if "=>" in expression:  # 関数定義 (it is not RPN su)
             self.process_function_definition(expression)
-        elif re.search(r"\b\w+\s*=(?!=)", expression): # 代入処理
+        elif is_assignment(expression): # 代入処理
             self.process_variable_assignment(expression)
         else:  # RPN式の評価と結果の表示
             self.evaluate(expression, stack=self.stack)
 
     # List
-    def correct_bracket_structure(self, token: str) -> str:
-        """
-        Ensures that the custom list token has a matching number of open and close brackets.
-
-        :param token: The custom list token to be checked.
-        :return: The corrected token with balanced brackets.
-
-        Example:
-        Input:  "[1 2 3; 4 5 6"
-        Output: "[1 2 3; 4 5 6]"
-        """
-        open_brackets = token.count('[')
-        close_brackets = token.count(']')
-        if open_brackets > close_brackets:
-            token += ']' * (open_brackets - close_brackets)
-        return token
-
     def convert_custom_array_to_proper_list(self, token: str) -> str:
         """
         Converts a custom list token into a proper Python list.
@@ -558,26 +576,16 @@ class Stacker(StackerCore):
         """
         token = re.sub(r"(\d+(\.\d+)?)\s+", r"\1, ", token)
         token = re.sub(r";\s+", r"], [", token)
+
+        open_brackets = token.count('[')
+        close_brackets = token.count(']')
+        if open_brackets > close_brackets:
+            token += ']' * (open_brackets - close_brackets)
+        if is_array(token) and not is_single_array(token):
+            token = f"[{token}]"
         return token
 
     # Tuple
-    def correct_parenthesis_structure(self, token: str) -> str:
-        """
-        Ensures that the custom tuple token has a matching number of open and close parentheses.
-
-        :param token: The custom tuple token to be checked.
-        :return: The corrected token with balanced parentheses.
-
-        Example:
-        Input:  "(1 2 3; 4 5 6"
-        Output: "(1 2 3; 4 5 6)"
-        """
-        open_parenthesis = token.count('(')
-        close_parenthesis = token.count(')')
-        if open_parenthesis > close_parenthesis:
-            token += ')' * (open_parenthesis - close_parenthesis)
-        return token
-
     def convert_custom_tuple_to_proper_tuple(self, token: str) -> str:
         """
         Converts a custom tuple token into a proper Python tuple.
@@ -591,11 +599,18 @@ class Stacker(StackerCore):
         """
         token = re.sub(r"(\d+(\.\d+)?)\s+", r"\1, ", token)
         token = re.sub(r";\s+", r"), (", token)
+
+        open_parenthesis = token.count('(')
+        close_parenthesis = token.count(')')
+        if open_parenthesis > close_parenthesis:
+            token += ')' * (open_parenthesis - close_parenthesis)
+        if is_tuple(token) and not is_single_tuple(token):
+            token = f"({token})"
         return token
 
     def parse_expression(self, expression):
         new_expression = ""
-        if is_array_input(expression):  # custom list notation
+        if is_array(expression):  # custom list notation
             if "," in expression:
                 raise ValueError(
                     f"Invalid expression: {expression}. Please use Stacker's list notation instead of Python-style lists."
@@ -607,15 +622,12 @@ class Stacker(StackerCore):
             new_tokens = []
             for token in tokens:
                 token = self.convert_custom_array_to_proper_list(token)
-                token = self.correct_bracket_structure(token)
-                if is_array_input(token) and not is_single_array(token):
-                    token = f"[{token}]"
                 new_tokens.append(token)
             new_expression = ", ".join(new_tokens)
             if new_expression[len(new_expression)-2:-1] == ",":
                 new_expression = new_expression[:-2]
 
-        elif is_tuple_input(expression):  # custom tuple notation
+        elif is_tuple(expression):  # custom tuple notation
             if "," in expression:
                 raise ValueError(
                     f"Invalid expression: {expression}. Please use Stacker's tuple notation instead of Python-style tuples."
@@ -626,9 +638,6 @@ class Stacker(StackerCore):
             new_tokens = []
             for token in tokens:
                 token = self.convert_custom_tuple_to_proper_tuple(token)
-                token = self.correct_parenthesis_structure(token)
-                if is_tuple_input(token):
-                    token = f"({token})"
                 new_tokens.append(token)
             new_expression = ", ".join(new_tokens)
             if new_expression[len(new_expression)-2:-1] == ",":
@@ -717,6 +726,11 @@ class InteractiveMode(ExecutionMode):
         print(stack_str)
 
     def run(self):
+        show_top()
+        stacker_version = get_distribution('pystacker').version
+        print(f"Stacker {stacker_version} on {sys.platform}")
+        print('Type "help" or "help-jp" to get more information.')
+
         line_count = 0
         while True:
             try:
@@ -730,7 +744,7 @@ class InteractiveMode(ExecutionMode):
                     closer = expression[-1]
                     expression = expression[:-2] + closer
 
-                if is_array_input(expression) or is_tuple_input(expression):
+                if is_array(expression) or is_tuple(expression):
                     """
                         # List
                         stacker:0> [1 2 3
@@ -818,61 +832,49 @@ class InteractiveMode(ExecutionMode):
                 self.rpn_calculator.process_expression(expression)
                 stack = self.rpn_calculator.stack
                 if stack is not None:
-                    # stackを全表示
-                    if self.color_print is True:
-                        self.print_colored_output(stack)
-                    else:
-                        print(stack)
+                    if not is_assignment(expression):
+                        # stackを全表示
+                        if self.color_print is True:
+                            self.print_colored_output(stack)
+                        else:
+                            print(stack)
 
             except Exception as e:
                 print(colored(f"[ERROR]: {e}", "red"))
 
             line_count += 1
 
-# 機能拡張予定
-# class ScriptMode(ExecutionMode):
-#     def __init__(self, rpn_calculator, filename):
-#         super().__init__(rpn_calculator)
-#         self.filename = filename
 
-#     def run(self):
-#         with open(self.filename, 'r') as file:
-#             for line in file:
-#                 line = line.strip()
-#                 if not line or line.startswith("#"):
-#                     continue
+class ScriptMode(ExecutionMode):
+    def __init__(self, rpn_calculator: Stacker):
+        super().__init__(rpn_calculator)
 
-#                 try:
-#                     result = self.rpn_calculator.process_expression(line)
-#                     print(result)
-#                 except Exception as e:
-#                     print(f"Error: {e}")
+    def run(self, file_path: str):
+        path = Path(file_path)
+        if not path.is_file() or not path.suffix == '.sk':
+            raise ValueError("Invalid file path or file type. Please provide a valid '.sk' file.")
+
+        with path.open('r') as script_file:
+            for line in script_file:
+                line = line.strip()
+
+                if not line.startswith('#') and line:
+                    self.rpn_calculator.process_expression(line)
 
 
 def main():
-    show_top()
-
-    stacker_version = get_distribution('pystacker').version
-    print(f"Stacker {stacker_version} on {sys.platform}")
-    print('Type "help" or "help-jp" to get more information.')
-
     rpn_calculator = Stacker()
+    load_plugins(rpn_calculator)
 
-    # 機能拡張予定
-    # if len(sys.argv) > 1:  # 追加
-    #     script_filename = sys.argv[1]
-    #     # スクリプトモードの実行
-    #     script_mode = ScriptMode(rpn_calculator, script_filename)
-    #     script_mode.run()
-    # else:
-    #     # インタラクティブモードの実行
-    #     interactive_mode = InteractiveMode(rpn_calculator)
-    #     interactive_mode.run()
-
-    # インタラクティブモードの実行
-    load_plugins(rpn_calculator)  # プラグインの読み込み
-    interactive_mode = InteractiveMode(rpn_calculator)
-    interactive_mode.run()
+    if len(sys.argv) > 1:
+        script_filename = sys.argv[1]
+        # Script Mode
+        script_mode = ScriptMode(rpn_calculator)
+        script_mode.run(script_filename)
+    else:
+        # Interactive mode
+        interactive_mode = InteractiveMode(rpn_calculator)
+        interactive_mode.run()
 
 
 if __name__ == "__main__":
