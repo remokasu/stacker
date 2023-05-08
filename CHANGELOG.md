@@ -9,6 +9,22 @@
   * `dup`: Duplicates the top element of the stack.
   * `swap`: Swaps the top two elements of the stack.
 
+  Example:
+  ~~~
+  stacker:0> 1 2 3 4 5
+  [1, 2, 3, 4, 5]
+  stacker:1> dup
+  [1, 2, 3, 4, 5, 5]
+  stacker:2>
+  ~~~
+
+  ~~~
+  stacker:0> 1 2 3 4 5
+  [1, 2, 3, 4, 5]
+  stacker:1> swap
+  [1, 2, 3, 5, 4]
+  stacker:2>
+  ~~~
 <hr>
 
 ## [1.2.9] - 2023-05-06

@@ -29,7 +29,5 @@ venv/
 # stacker log file
 .stacker_history
 
-stacker/plugins/*
-
 # swap
 *.swp
