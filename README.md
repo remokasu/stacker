@@ -101,6 +101,8 @@ Here are the installation instructions for `stacker`:
 | pluck    | Remove the element at the specified index and move it to the top of the stack | `2 pluck`              | Remove the element at index 2 and move it to the top of the stack  |
 | pick     | Copy the element at the specified index to the top of the stack | `2 pick`                   | Copy the element at index 2 to the top of the stack  |
 | pop      | Remove the top element from the stack. The value popped can be referred to as `last_pop`.   | `pop`  | Remove the top element from the stack  |
+| dup      | Duplicate the top element of the stack                | `dup`                   | Duplicate the top element of the stack |
+| swap     | Swap the top two elements of the stack                | `swap`                  | Swap the top two elements of the stack |
 | exec     | Execute the specified Python code                    | `{print(1+1)} exec`        | Execute 1+1 and print 2 |
 | eval     | Evaluate the specified Python expression             | `{1+1} eval`               | Add 2 to the stack       |
 | echo     | Print the specified value to stdout without adding it to the stack | `3 4 + echo` | Print the result of 3+4 (7) to stdout without adding it to the stack |
@@ -451,6 +453,8 @@ python3が無ければ事前にインストールしてください。
 | pluck    | 指定のindexを削除し、スタックのトップに移動           | `2 pluck`                | index 2の要素を削除し、スタックのトップに移動  |
 | pick     | 指定されたインデックスの要素をスタックのトップにコピー | `2 pick`                | index 2の要素をスタックのトップにコピー  |
 | pop      | スタックのトップを削除。popした値は`last_pop`で参照できます。 | `pop`            | スタックのトップを削除  |
+| dup      | スタックのトップの要素を複製する                       | `dup`                   | スタックのトップの要素を複製 |
+| swap     | スタックのトップの２つの要素を入れ替える               | `swap`                  | スタックのトップの２つの要素を入れ替え |
 | exec     | 指定のPythonコードを実行                             | `{print(1+1)} exec`       | 1+1を出力し、2をプリント |
 | eval     | 指定のPython式を評価                                 | `{1+1} eval`              | スタックに2を追加       |
 | echo | 指定された値をstdoutに出力し、スタックには追加しない	| `3 4 + echo`	| 3+4の結果（7）をstdoutに出力し、スタックには追加しない |
