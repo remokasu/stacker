@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import ast
 import cmath
 import copy
@@ -8,7 +9,9 @@ import math
 import os
 import random
 import re
+import shutil
 import sys
+from distutils.sysconfig import get_python_lib
 from pathlib import Path
 from typing import Any, Optional
 
@@ -719,7 +722,7 @@ class InteractiveMode(ExecutionMode):
                 stack_str += colored(item_str, 'default')
                 stack_str += ", "
             else:
-                stack_str += colored(item_str, 'blue')
+                stack_str += colored(item_str, 'lightblue')
                 stack_str += ", "
         stack_str = stack_str[0:-2]
         stack_str += colored("]", 'yellow')
@@ -862,7 +865,35 @@ class ScriptMode(ExecutionMode):
                     self.rpn_calculator.process_expression(line)
 
 
+def copy_plugin_to_install_dir(plugin_path: str) -> None:
+    try:
+        # Get the installation directory of Stacker
+        stacker_dist = get_distribution("pystacker")
+        plugin_dir = stacker_dist.location + "/stacker/plugins"
+
+        # Check if the plugin file exists
+        if not os.path.isfile(plugin_path):
+            print(f"Error: The file '{plugin_path}' does not exist.")
+            return
+
+        # Copy the plugin file to the Stacker's installation directory
+        assert Path(plugin_dir).exists
+        shutil.copy(plugin_path, plugin_dir)
+        print(f"Successfully added the plugin '{plugin_path}' to Stacker.")
+        print(plugin_dir)
+    except Exception as e:
+        print(f"An error occurred while adding the plugin: {str(e)}")
+
+
 def main():
+    # add plugin
+    parser = argparse.ArgumentParser(description='Stacker command line interface.')
+    parser.add_argument('--addplugin', metavar='path', type=str, help='Path to the plugin to add.')
+    args = parser.parse_args()
+    if args.addplugin:
+        copy_plugin_to_install_dir(args.addplugin)
+        return
+
     rpn_calculator = Stacker()
     load_plugins(rpn_calculator)
 
