@@ -134,6 +134,60 @@ def is_single_tuple(expression: str) -> bool:
     return False
 
 
+def convert_custom_array_to_proper_list(token: str) -> str:
+    """
+    Converts a custom list token into a proper Python list.
+
+    :param token: The custom list token to be converted.
+    :return: The converted token as a proper Python list.
+
+    Example:
+    Input:  "[1 2 3; 4 5 6]"
+    Output: "[[1, 2, 3], [4, 5, 6]]"
+    """
+    token = re.sub(r"(\d+(\.\d+)?)\s+", r"\1, ", token)
+    token = re.sub(r";\s+", r"], [", token)
+
+    open_brackets = token.count('[')
+    close_brackets = token.count(']')
+    if open_brackets > close_brackets:
+        token += ']' * (open_brackets - close_brackets)
+    if is_array(token) and not is_single_array(token):
+        token = f"[{token}]"
+    return token
+
+
+def convert_custom_tuple_to_proper_tuple(token: str) -> str:
+    """
+    Converts a custom tuple token into a proper Python tuple.
+
+    :param token: The custom tuple token to be converted.
+    :return: The converted token as a proper Python tuple.
+
+    Example:
+    Input:  "(1 2 3; 4 5 6)"
+    Output: "((1, 2, 3), (4, 5, 6))"
+    """
+    token = re.sub(r"(\d+(\.\d+)?)\s+", r"\1, ", token)
+    token = re.sub(r";\s+", r"), (", token)
+
+    open_parenthesis = token.count('(')
+    close_parenthesis = token.count(')')
+    if open_parenthesis > close_parenthesis:
+        token += ')' * (open_parenthesis - close_parenthesis)
+    if is_tuple(token) and not is_single_tuple(token):
+        token = f"({token})"
+    return token
+
+
+def is_block(expression: str) -> bool:
+    if not isinstance(expression, str):
+        return False
+    opener = expression.count('{')
+    closer = expression.count('}')
+    return opener == closer
+
+
 def is_assignment(expression: str) -> bool:
     return re.search(r"\b\w+\s*=(?!=)", expression)
 
@@ -210,7 +264,7 @@ math_sqrt = wrap(math.sqrt, cmath.sqrt)
 
 
 class StackerCore:
-    def __init__(self, plugin_dir: str = plugins_dir_path):
+    def __init__(self):
         self.stack = []  # スタックを追加
         self.last_pop = None  # pop コマンド(ユーザー入力)で取り出した値を一時的に格納。演算でpopする場合は対象外
         self.operator = {
@@ -287,10 +341,24 @@ class StackerCore:
             "echo": (lambda value: print(value)),
             "ans": (lambda: self.get_last_ans()),
         }
-        self.non_destructive_operator = {"exec", "delete", "pick", "rev", "echo", "insert", "dup", "swap"} # このコマンド実行時は戻り値をStackしない
+        self.variables = {
+            "pi": math.pi,
+            "tau": math.tau,
+            "e": math.e,
+            "true": True,
+            "false": False,
+            "inf": float("inf"),
+            "nan": math.nan,
+        }
+        self.functions = {}
+        self.reserved_word = [
+            "help", "help-jp", "about", "exit",
+            "delete_history", "last_pop", "end", "clear"
+        ]
+        # このコマンド実行時は戻り値をStackしない
+        self.non_destructive_operator = {"exec", "delete", "pick", "rev", "echo", "insert", "dup", "swap"}
         self.plugins = {}
         self.plugin_descriptions = {}
-        self.plugin_dir = plugin_dir
 
     def _dup(self):
         self.stack.append(self.stack[-1])
@@ -298,44 +366,14 @@ class StackerCore:
     def _swap(self):
         self.stack[-1], self.stack[-2] = self.stack[-2], self.stack[-1]
 
+    def clear_stack(self):
+        self.stack = []
+
+    def pop(self):
+        self.stack.pop()
+
     def get_last_ans(self):
         return self.stack[-1]
-
-    def split_expression(self, expression: str) -> list:
-        operator_pattern = "|".join(re.escape(op) for op in self.operator.keys())
-        token_pattern = re.compile(
-            r"(?P<curly_bracket_string>\{(?:[^\{\}\\]|\\.|(?:\{[^\{\}\\]*\}))*\})|"
-            r"(?P<triple_quoted_string>(\"\"\"(?:[^\"\\]|\\.|[\n\r])*\"\"\")|(\'\'\'(?:[^\'\\]|\\.|[\n\r])*\'\'\'))|"
-            fr"(?P<operator>({operator_pattern}))|"
-            r"(?P<multidim_array>\[\[.*?\]\])|"
-            r"(?P<array>\[.*?\])|"
-            r"(?P<multidim_tuple>\(\(.*?\)\))|"
-            r"(?P<tuple>\(.*?\))|"
-            r"(?P<complex>-?\d+(?:\.\d*)?(?:[eE][-+]?\d+)?[jJ])|"
-            r"(?P<binary>-?0b[01]+)|"
-            r"(?P<octal>-?0o[0-7]+)|"
-            r"(?P<hex>-?0x[\da-fA-F]+)|"
-            r"(?P<float>-?\d+(?:\.\d*)?(?:[eE][-+]?\d+)?(?:[jJ])?)|"
-            r"(?P<operator_or_identifier>[^\s,]+)|"
-            r"(?P<string>(?:'[^']*')|(?:\"[^\"]*\"))"
-            r"(?P<brace_string>{(?:[^{}]|\{.*\})*})"  # Brace string
-        )
-        ignore_tokens = ['"""', "'''"]
-        tokens = []
-        for match in token_pattern.finditer(expression):
-            for group, value in match.groupdict().items():
-                if value is not None:
-                    if value in ignore_tokens:
-                        continue
-                    if value.startswith("{") and value.endswith("}"):
-                        value = f"'{str(value[1:-1])}'"
-                        tokens.append(value)
-                        break
-                    tokens.append(value)
-                    break
-            else:
-                raise ValueError(f"Invalid token found in expression: {expression}")
-        return tokens
 
     def get_n_args_for_operator(self, token: str) -> int:
         # token(演算子)に必要な引数の数
@@ -346,6 +384,101 @@ class StackerCore:
             # return self.operator[token].__code__.co_argcount
         else:
             raise KeyError(f"Invalid token {token}")
+
+    # def split_expression(self, expression: str) -> list:
+    #     operator_pattern = "|".join(re.escape(op) for op in self.operator.keys())
+    #     token_pattern = re.compile(
+    #         r"(?P<curly_bracket_string>\{(?:[^\{\}\\]|\\.|(?:\{[^\{\}\\]*\}))*\})|"
+    #         r"(?P<triple_quoted_string>(\"\"\"(?:[^\"\\]|\\.|[\n\r])*\"\"\")|(\'\'\'(?:[^\'\\]|\\.|[\n\r])*\'\'\'))|"
+    #         fr"(?P<operator>({operator_pattern}))|"
+    #         r"(?P<multidim_array>\[\[.*?\]\])|"
+    #         r"(?P<array>\[.*?\])|"
+    #         r"(?P<multidim_tuple>\(\(.*?\)\))|"
+    #         r"(?P<tuple>\(.*?\))|"
+    #         r"(?P<complex>-?\d+(?:\.\d*)?(?:[eE][-+]?\d+)?[jJ])|"
+    #         r"(?P<binary>-?0b[01]+)|"
+    #         r"(?P<octal>-?0o[0-7]+)|"
+    #         r"(?P<hex>-?0x[\da-fA-F]+)|"
+    #         r"(?P<float>-?\d+(?:\.\d*)?(?:[eE][-+]?\d+)?(?:[jJ])?)|"
+    #         r"(?P<operator_or_identifier>[^\s,]+)|"
+    #         r"(?P<string>(?:'[^']*')|(?:\"[^\"]*\"))"
+    #         r"(?P<brace_string>{(?:[^{}]|\{.*\})*})"  # Brace string
+    #     )
+    #     ignore_tokens = ['"""', "'''"]
+    #     tokens = []
+    #     for match in token_pattern.finditer(expression):
+    #         for group, value in match.groupdict().items():
+    #             if value is not None:
+    #                 if value in ignore_tokens:
+    #                     continue
+    #                 if value.startswith("{") and value.endswith("}"):
+    #                     value = f"'{str(value[1:-1])}'"
+    #                     tokens.append(value)
+    #                     break
+    #                 tokens.append(value)
+    #                 break
+    #         else:
+    #             raise ValueError(f"Invalid token found in expression: {expression}")
+    #     return tokens
+
+    def parse_expression(self, expression: str) -> list:
+        """
+            input(str)  : [1 2 3] 4 5 a
+            output(list): [[1, 2, 3], 4, 5, 'a']
+        """
+        pattern = r'\[.*?\]|\(.*?\)|\{.*?\}|\'[^\']*\'|\S+'
+        ignore_tokens = ['"""', "'''"]
+        tokens = []
+        for token in re.findall(pattern, expression):
+            if token in ignore_tokens:
+                continue
+            elif is_array(token):
+                token = convert_custom_array_to_proper_list(token)
+                tokens.append(evaluate_token_or_return_str(token))
+            elif is_tuple(token):
+                token = convert_custom_tuple_to_proper_tuple(token)
+                tokens.append(evaluate_token_or_return_str(token))
+            else:
+                tokens.append(evaluate_token_or_return_str(token))
+        return tokens
+
+    def define_function(self, name, arg_labels: str, tokens: list) -> None:
+        self.validate_name(name)
+        self.functions[name] = (arg_labels, tokens)
+
+    def validate_name(self, name):
+        """
+        Validates if a given name is not a reserved word or an operator.
+        Raises a ValueError if the name is invalid.
+        """
+        if name in self.operator or name.lower() in self.reserved_word:
+            raise ValueError(f"Invalid name '{name}', it is a reserved word.")
+        return name
+
+    def assign_variable(self, name, value):
+        """
+        Assigns a value to a variable with the given name.
+        """
+        if is_array(value):
+            value = convert_custom_array_to_proper_list(value)
+            value = evaluate_token_or_return_str(value)
+        elif is_tuple(value):
+            value = self.convert_custom_tuple_to_proper_tuple(value)
+            value = evaluate_token_or_return_str(value)
+        self.variables[name] = value
+
+    def evaluate_function(self, name, *args):
+        """
+        Evaluates a function with the given name and arguments.
+        Returns the result of the evaluation.
+        """
+        arg_labels, expression = self.functions[name]  # 引数のラベルと式を取得
+        if len(arg_labels) != len(args):
+            raise ValueError(f"Function '{name}' requires {len(arg_labels)} arguments, {len(args)} provided")
+        for label, arg in zip(arg_labels, args):  # 引数の値を割り当てる
+            self.assign_variable(label, arg)
+        result = self.evaluate(expression)
+        return result[-1]  # 評価された関数の結果だけを返す
 
     def apply_operator(self, token: str, stack: list):
         """
@@ -367,18 +500,19 @@ class StackerCore:
         else:
             stack.append(ans)  # stackは参照渡し
 
-    def evaluate(self, expression: str, stack=None) -> list:
+    def evaluate(self, tokens: list, stack=None) -> list:
         """
         Evaluates a given RPN expression.
         Returns the result of the evaluation.
         """
         if stack is None:
             stack = []
-        tokens = self.split_expression(expression)
-
+        assert isinstance(tokens, list) is True
+        # tokens = self.split_expression(expression)
         for token in tokens:
-            # token: (str)
-            if token in self.operator:
+            if not isinstance(token, str):
+                stack.append(token)
+            elif token in self.operator:
                 self.apply_operator(token, stack)
             elif token == "=>":
                 continue
@@ -391,34 +525,12 @@ class StackerCore:
                     raise ValueError(f"Not enough arguments for function '{token}'")
                 args = [stack.pop() for _ in range(len(self.functions[token][0]))][::-1]
                 stack.append(self.evaluate_function(token, *args))
-            elif (
-                (token.startswith("'") and token.endswith("'")) or
-                (token.startswith('"') and token.endswith('"'))
-            ):
-                stack.append(token[1:-1])
             else:
-                try:
-                    stack.append(evaluate_token_or_return_str(token))
-                except ValueError:
-                    raise ValueError(f"Invalid token '{token}'")
+                stack.append(token)
         return stack
 
-    # def register_operator(self, operator_name: str, operator_func: callable, push_result_to_stack: bool) -> None:
-    #     if not push_result_to_stack:
-    #         self.non_destructive_operator.add(operator_name)
-    #     self.operator[operator_name] = operator_func
 
-    # def register_plugin(
-    #         self,
-    #         operator_name: str,
-    #         operator_func: callable,
-    #         push_result_to_stack: True = True,
-    #         description_en: str | None = None,
-    #         description_jp: str | None = None
-    # ):
-    #     self.register_operator(operator_name, operator_func, push_result_to_stack)
-    #     self.plugin_descriptions[operator_name] = {"en": description_en, "jp": description_jp}
-
+class Stacker(StackerCore):
     def register_operator(
         self,
         operator_name: str,
@@ -438,7 +550,6 @@ class StackerCore:
             description_en: str | None = None,
             description_jp: str | None = None
     ):
-
         if pass_core:
             original_operator_func = operator_func
 
@@ -450,25 +561,6 @@ class StackerCore:
 
         self.register_operator(operator_name, operator_func, push_result_to_stack)
         self.plugin_descriptions[operator_name] = {"en": description_en, "jp": description_jp}
-
-
-class Stacker(StackerCore):
-    def __init__(self):
-        super().__init__()
-        self.variables = {
-            "pi": math.pi,
-            "tau": math.tau,
-            "e": math.e,
-            "true": True,
-            "false": False,
-            "inf": float("inf"),
-            "nan": math.nan,
-        }
-        self.functions = {}
-        self.reserved_word = [
-            "help", "help-jp", "about", "exit",
-            "delete_history", "last_pop", "end", "clear"
-        ]
 
     def highlight_syntax(self, expression):
         """
@@ -495,160 +587,37 @@ class Stacker(StackerCore):
 
         return " ".join(highlighted_tokens)
 
-    def clear_stack(self):
-        self.stack = []
-
-    def define_function(self, name, arg_labels, expression):
-        self.validate_name(name)
-        self.functions[name] = (arg_labels, expression)
-
-    def validate_name(self, name):
-        """
-        Validates if a given name is not a reserved word or an operator.
-        Raises a ValueError if the name is invalid.
-        """
-        if name in self.operator or name.lower() in self.reserved_word:
-            raise ValueError(f"Invalid name '{name}', it is a reserved word.")
-        return name
-
-    def assign_variable(self, name, value):
-        """
-        Assigns a value to a variable with the given name.
-        """
-        if is_array(value):
-            value = self.convert_custom_array_to_proper_list(value)
-            value = evaluate_token_or_return_str(value)
-        elif is_tuple(value):
-            value = self.convert_custom_tuple_to_proper_tuple(value)
-            value = evaluate_token_or_return_str(value)
-        self.variables[name] = value
-
-    def evaluate_function(self, name, *args):
-        """
-        Evaluates a function with the given name and arguments.
-        Returns the result of the evaluation.
-        """
-        arg_labels, expression = self.functions[name]  # 引数のラベルと式を取得
-        if len(arg_labels) != len(args):
-            raise ValueError(f"Function '{name}' requires {len(arg_labels)} arguments, {len(args)} provided")
-        for label, arg in zip(arg_labels, args):  # 引数の値を割り当てる
-            self.assign_variable(label, arg)
-        result = self.evaluate(expression)
-        return result[-1]  # 評価された関数の結果だけを返す
-
-    def process_function_definition(self, expression):
-        tokens = expression.split()
+    def process_function_definition(self, tokens: list) -> None:
         name = tokens[tokens.index("=>") - 1]
         self.validate_name(name)
         arg_labels = tokens[:tokens.index("=>") - 1]  # 引数のラベルを取得
         function_expression = " ".join(tokens[tokens.index("=>") + 1:])
+        function_expressions = tokens[tokens.index("=>") + 1:]
         if name in self.operator:
             raise ValueError(f"Invalid function name '{name}'")
-        self.define_function(name, arg_labels, function_expression)  # 引数を追加
+        self.define_function(name, arg_labels, function_expressions)  # 引数を追加
         highlighted_function = self.highlight_syntax(function_expression)
         print(colored(f"Function '{name}' defined: ", "magenta") + highlighted_function)
 
-    def process_variable_assignment(self, expression):
-        name, value_expression = [s.strip() for s in expression.split("=", 1)]
+    def process_variable_assignment(self, tokens: list) -> None:
+        name = tokens[0]
+        value_expression = tokens[2:]
+        # value_expression = tokens[-1]
         if name in self.operator:
             raise ValueError(f"Invalid variable name '{name}'")
         self.validate_name(name)
-        value = self.evaluate(value_expression)[0]
-        self.assign_variable(name, value)
+        values = self.evaluate(value_expression)
+        self.assign_variable(name, values[0])
 
-    def process_expression(self, expression):
-        expression = self.parse_expression(expression)
-        if "=>" in expression:  # 関数定義 (it is not RPN su)
-            self.process_function_definition(expression)
-        elif is_assignment(expression): # 代入処理
-            self.process_variable_assignment(expression)
+    def process_expression(self, expression) -> None:
+        tokens = self.parse_expression(expression)
+        if "=>" in tokens:  # 関数定義 (it is not RPN su)
+            self.process_function_definition(tokens)
+        elif is_assignment(expression):  # 代入処理
+            self.process_variable_assignment(tokens)
         else:  # RPN式の評価と結果の表示
-            self.evaluate(expression, stack=self.stack)
-
-    # List
-    def convert_custom_array_to_proper_list(self, token: str) -> str:
-        """
-        Converts a custom list token into a proper Python list.
-
-        :param token: The custom list token to be converted.
-        :return: The converted token as a proper Python list.
-
-        Example:
-        Input:  "[1 2 3; 4 5 6]"
-        Output: "[[1, 2, 3], [4, 5, 6]]"
-        """
-        token = re.sub(r"(\d+(\.\d+)?)\s+", r"\1, ", token)
-        token = re.sub(r";\s+", r"], [", token)
-
-        open_brackets = token.count('[')
-        close_brackets = token.count(']')
-        if open_brackets > close_brackets:
-            token += ']' * (open_brackets - close_brackets)
-        if is_array(token) and not is_single_array(token):
-            token = f"[{token}]"
-        return token
-
-    # Tuple
-    def convert_custom_tuple_to_proper_tuple(self, token: str) -> str:
-        """
-        Converts a custom tuple token into a proper Python tuple.
-
-        :param token: The custom tuple token to be converted.
-        :return: The converted token as a proper Python tuple.
-
-        Example:
-        Input:  "(1 2 3; 4 5 6)"
-        Output: "((1, 2, 3), (4, 5, 6))"
-        """
-        token = re.sub(r"(\d+(\.\d+)?)\s+", r"\1, ", token)
-        token = re.sub(r";\s+", r"), (", token)
-
-        open_parenthesis = token.count('(')
-        close_parenthesis = token.count(')')
-        if open_parenthesis > close_parenthesis:
-            token += ')' * (open_parenthesis - close_parenthesis)
-        if is_tuple(token) and not is_single_tuple(token):
-            token = f"({token})"
-        return token
-
-    def parse_expression(self, expression):
-        new_expression = ""
-        if is_array(expression):  # custom list notation
-            if "," in expression:
-                raise ValueError(
-                    f"Invalid expression: {expression}. Please use Stacker's list notation instead of Python-style lists."
-                    f"For example, use '[1 2 3]' for a one-dimensional array, "
-                    f"or '[1 2 3; 4 5 6]' for a two-dimensional array."
-                )
-            tokens = expression.split("]")
-            tokens = [t.strip() for t in tokens]
-            new_tokens = []
-            for token in tokens:
-                token = self.convert_custom_array_to_proper_list(token)
-                new_tokens.append(token)
-            new_expression = ", ".join(new_tokens)
-            if new_expression[len(new_expression)-2:-1] == ",":
-                new_expression = new_expression[:-2]
-
-        elif is_tuple(expression):  # custom tuple notation
-            if "," in expression:
-                raise ValueError(
-                    f"Invalid expression: {expression}. Please use Stacker's tuple notation instead of Python-style tuples."
-                    f"For example, use '(1 2 3)' for a one-dimensional tuple."
-                )
-            tokens = expression.split(")")
-            tokens = [t.strip() for t in tokens]
-            new_tokens = []
-            for token in tokens:
-                token = self.convert_custom_tuple_to_proper_tuple(token)
-                new_tokens.append(token)
-            new_expression = ", ".join(new_tokens)
-            if new_expression[len(new_expression)-2:-1] == ",":
-                new_expression = new_expression[:-2]
-
-        else:
-            new_expression = expression
-        return new_expression
+            # tokens = self.split_expression(expression)
+            self.evaluate(tokens, stack=self.stack)
 
 
 def load_plugins(stacker_core: StackerCore):
@@ -752,12 +721,12 @@ class InteractiveMode(ExecutionMode):
                         # List
                         stacker:0> [1 2 3
                                     3 4 5]
-                        [[1, 2, 3], [3, 4, 5]]
+                        [1 2 3; 3 4 5]
 
                         # Tuple
                         stacker:0> (1 2 3
                                     3 4 5)
-                        [(1, 2, 3), (3, 4, 5)]
+                        (1 2 3; 3 4 5)
                     """
                     while not is_array_balanced(expression) or not is_tuple_balanced(expression):
                         next_line = prompt(

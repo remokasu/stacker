@@ -1,6 +1,6 @@
 import numpy as np
 
-from stacker.stacker import StackerCore
+from stacker.stacker import Stacker
 
 description_en = "Matrix operations plugin for Stacker, similar to MATLAB."
 
@@ -105,21 +105,21 @@ def diag(a):
 #     print(np.shape(a))
 
 
-def setup(stacker_core: StackerCore):
-    stacker_core.register_plugin("+", matrix_add, description_en=description_en)
-    stacker_core.register_plugin("-", matrix_sub, description_en=description_en)
-    stacker_core.register_plugin("*", matrix_mul, description_en=description_en)
-    stacker_core.register_plugin(".*", elementwise_mul, description_en=description_en)
-    stacker_core.register_plugin("./", elementwise_div, description_en=description_en)
-    stacker_core.register_plugin(".\\", elementwise_div_inv, description_en=description_en)
-    stacker_core.register_plugin("'", matrix_transpose, description_en=description_en)
-    stacker_core.register_plugin("inv", matrix_inverse, description_en=description_en)
-    stacker_core.register_plugin("det", matrix_determinant, description_en=description_en)
-    stacker_core.register_plugin("rank", matrix_rank, description_en=description_en)
-    stacker_core.register_plugin("trace", matrix_trace, description_en=description_en)
-    stacker_core.register_plugin("ones", ones, description_en=description_en)
-    stacker_core.register_plugin("zeros", zeros, description_en=description_en)
-    stacker_core.register_plugin("diag", diag, description_en=description_en)
+def setup(stacker: Stacker):
+    stacker.register_plugin("+", matrix_add, description_en=description_en)
+    stacker.register_plugin("-", matrix_sub, description_en=description_en)
+    stacker.register_plugin("*", matrix_mul, description_en=description_en)
+    stacker.register_plugin(".*", elementwise_mul, description_en=description_en)
+    stacker.register_plugin("./", elementwise_div, description_en=description_en)
+    stacker.register_plugin(".\\", elementwise_div_inv, description_en=description_en)
+    stacker.register_plugin("'", matrix_transpose, description_en=description_en)
+    stacker.register_plugin("inv", matrix_inverse, description_en=description_en)
+    stacker.register_plugin("det", matrix_determinant, description_en=description_en)
+    stacker.register_plugin("rank", matrix_rank, description_en=description_en)
+    stacker.register_plugin("trace", matrix_trace, description_en=description_en)
+    stacker.register_plugin("ones", ones, description_en=description_en)
+    stacker.register_plugin("zeros", zeros, description_en=description_en)
+    stacker.register_plugin("diag", diag, description_en=description_en)
     # stacker_core.register_plugin("ndim", ndim, push_result_to_stack=False, description_en=description_en)
     # stacker_core.register_plugin("size", size, push_result_to_stack=False, description_en=description_en)
     # stacker_core.register_plugin("shape", shape, push_result_to_stack=False, description_en=description_en)
