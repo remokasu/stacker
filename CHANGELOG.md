@@ -1,6 +1,20 @@
 
 # CHANGE LOG
 
+## [1.3.0] - 2023-05-15
+
+### Added
+
+- Added traceback, which prints detailed error information when an error occurs.
+- Added the blockstack feature. This treats the area enclosed by `{...}` as a single block and stacks it.
+- Added a debug mode command line option `--dmode` for debugging purposes.
+
+### Changed
+
+- `{...}` previously meant a string, but with this update, it is changed to the blockstack function. Strings can now be expressed by enclosing them in single quotes.
+
+<hr>
+
 ## [1.2.10] - 2023-05-07
 
 ### Added
@@ -71,7 +85,7 @@
     [[[1, 3], [2, 4]]]
     ~~~
 
-  - Inverse matrix 逆逆行列
+  - Inverse matrix 逆行列
     ~~~
     stacker:0> A = [1 2; 3 4]
     stacker:1> A inv
