@@ -5,13 +5,14 @@ import ast
 import cmath
 import copy
 import importlib
+import logging
 import math
 import os
 import random
 import re
 import shutil
 import sys
-from distutils.sysconfig import get_python_lib
+import traceback
 from pathlib import Path
 from typing import Any, Optional
 
@@ -44,6 +45,33 @@ COLORS = {
     "white": "\033[97m",
     "reset": "\033[0m",
 }
+
+
+def parse_string(s):
+    result = []
+    current_token = ""
+    brackets = {"[": "]", "(": ")", "{": "}", "'": "'", '"': '"'}
+    bracket_stack = []
+    for char in s:
+        if char in brackets:
+            bracket_stack.append(char)
+            current_token += char
+        elif bracket_stack:
+            current_token += char
+            if char == brackets[bracket_stack[-1]]:
+                bracket_stack.pop()
+                if not bracket_stack:
+                    result.append(current_token)
+                    current_token = ""
+        elif char.isspace():
+            if current_token:
+                result.append(current_token)
+                current_token = ""
+        else:
+            current_token += char
+    if current_token:  # add the last token if any
+        result.append(current_token)
+    return result
 
 
 def colored(text: str, color: Optional[str] = "default", end: str = "\n") -> None:
@@ -96,42 +124,59 @@ def evaluate_token_or_return_str(token: str) -> Any:
         return token
 
 
-def is_array(expression: str) -> bool:
+def starts_with_char(expression: str, char: str) -> bool:
     try:
-        return expression.strip().startswith("[")
+        return expression.strip().startswith(char)
     except Exception:
         return False
+
+
+def is_balanced(expression: str, open_char: str, close_char: str) -> bool:
+    open_count = expression.count(open_char)
+    close_count = expression.count(close_char)
+    return open_count == close_count
+
+
+def is_single(expression: str, open_char: str, close_char: str) -> bool:
+    if is_balanced(expression, open_char, close_char):
+        return expression.count(open_char) == 1 and expression.count(close_char) == 1
+    return False
+
+
+def is_array(expression: str) -> bool:
+    return starts_with_char(expression, "[")
 
 
 def is_tuple(expression: str) -> bool:
-    try:
-        return expression.strip().startswith("(")
-    except Exception:
-        return False
+    return starts_with_char(expression, "(")
+
+
+def is_brace(expression: str) -> bool:
+    return starts_with_char(expression, "{")
 
 
 def is_array_balanced(expression: str) -> bool:
-    open_brackets = expression.count('[')
-    close_brackets = expression.count(']')
-    return open_brackets == close_brackets
+    return is_balanced(expression, "[", "]")
 
 
 def is_tuple_balanced(expression: str) -> bool:
-    open_brackets = expression.count('(')
-    close_brackets = expression.count(')')
-    return open_brackets == close_brackets
+    return is_balanced(expression, "(", ")")
+
+
+def is_brace_balanced(expression: str) -> bool:
+    return is_balanced(expression, "{", "}")
 
 
 def is_single_array(expression: str) -> bool:
-    if is_array_balanced(expression):
-        return expression.count('[') == 1 and expression.count(']') == 1
-    return False
+    return is_single(expression, "[", "]")
 
 
 def is_single_tuple(expression: str) -> bool:
-    if is_tuple_balanced(expression):
-        return expression.count('(') == 1 and expression.count(')') == 1
-    return False
+    return is_single(expression, "(", ")")
+
+
+def is_single_brace(expression: str) -> bool:
+    return is_single(expression, "{", "}")
 
 
 def convert_custom_array_to_proper_list(token: str) -> str:
@@ -185,6 +230,8 @@ def is_block(expression: str) -> bool:
         return False
     opener = expression.count('{')
     closer = expression.count('}')
+    if opener == 0 and closer == 0:
+        return False
     return opener == closer
 
 
@@ -372,6 +419,12 @@ class StackerCore:
     def pop(self):
         self.stack.pop()
 
+    def get_stack(self):
+        return copy.deepcopy(self.stack)
+
+    def get_stack_length(self):
+        return len(self.stack)
+
     def get_last_ans(self):
         return self.stack[-1]
 
@@ -426,10 +479,14 @@ class StackerCore:
             input(str)  : [1 2 3] 4 5 a
             output(list): [[1, 2, 3], 4, 5, 'a']
         """
-        pattern = r'\[.*?\]|\(.*?\)|\{.*?\}|\'[^\']*\'|\S+'
         ignore_tokens = ['"""', "'''"]
+
+        # pattern = r'\[.*?\]|\(.*?\)|\{.*?\}|\'[^\']*\'|\S+'
+        # parsed_expressions = re.findall(pattern, expression)
+        parsed_expressions = parse_string(expression)
+        logging.debug(f"parsed_expressions: {parsed_expressions}")
         tokens = []
-        for token in re.findall(pattern, expression):
+        for token in parsed_expressions:
             if token in ignore_tokens:
                 continue
             elif is_array(token):
@@ -531,6 +588,14 @@ class StackerCore:
 
 
 class Stacker(StackerCore):
+    depth_counter = 0
+
+    def __init__(self):
+        super().__init__()
+        self.depth = Stacker.depth_counter
+        Stacker.depth_counter += 1
+        self.child = None
+
     def register_operator(
         self,
         operator_name: str,
@@ -618,6 +683,46 @@ class Stacker(StackerCore):
         else:  # RPN式の評価と結果の表示
             # tokens = self.split_expression(expression)
             self.evaluate(tokens, stack=self.stack)
+
+    def evaluate(self, tokens: list, stack=None) -> list:
+        """
+        Evaluates a given RPN expression.
+        Returns the result of the evaluation.
+        """
+        if stack is None:
+            stack = []
+        assert isinstance(tokens, list) is True
+        # tokens = self.split_expression(expression)
+        for token in tokens:
+            if not isinstance(token, str):
+                logging.debug(f"stack: {token}")
+                stack.append(token)
+            elif token in self.operator:
+                logging.debug(f"operator: {token}")
+                self.apply_operator(token, stack)
+            elif token == "=>":
+                continue
+            elif token == "last_pop":  # popコマンドでpopした値
+                stack.append(self.last_pop)
+            elif token in self.variables:
+                stack.append(self.variables[token])  # 定数をスタックにプッシュ
+            elif token in self.functions:
+                if len(stack) < len(self.functions[token][0]):
+                    raise ValueError(f"Not enough arguments for function '{token}'")
+                args = [stack.pop() for _ in range(len(self.functions[token][0]))][::-1]
+                stack.append(self.evaluate_function(token, *args))
+            elif is_block(token):  # substack
+                logging.debug(f"sub block: {token}")
+                self.child = Stacker()
+                expression = token[1:-1]
+                self.child.process_expression(expression)
+                substack = self.child.get_stack()
+                if len(substack) > 0:
+                    for i in range(len(substack)):
+                        self.stack.append(substack[i])
+            else:
+                stack.append(token)
+        return stack
 
 
 def load_plugins(stacker_core: StackerCore):
@@ -769,6 +874,8 @@ class InteractiveMode(ExecutionMode):
                     )
                     expression += "\n" + next_line
 
+                logging.debug(f"input expression: {expression}")
+
                 if expression.lower() == "exit":
                     break
                 if expression.lower() == "help":
@@ -813,6 +920,7 @@ class InteractiveMode(ExecutionMode):
 
             except Exception as e:
                 print(colored(f"[ERROR]: {e}", "red"))
+                traceback.print_exc()
 
             line_count += 1
 
@@ -852,25 +960,33 @@ def copy_plugin_to_install_dir(plugin_path: str) -> None:
         print(plugin_dir)
     except Exception as e:
         print(f"An error occurred while adding the plugin: {str(e)}")
+        traceback.print_exc()
 
 
 def main():
     # add plugin
     parser = argparse.ArgumentParser(description='Stacker command line interface.')
     parser.add_argument('--addplugin', metavar='path', type=str, help='Path to the plugin to add.')
+    parser.add_argument('--dmode', action='store_true', help='Enable debug mode')
+    parser.add_argument('script', nargs='?', default=None, help='Script file to run.')
     args = parser.parse_args()
+
     if args.addplugin:
         copy_plugin_to_install_dir(args.addplugin)
         return
 
+    if args.dmode:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
     rpn_calculator = Stacker()
     load_plugins(rpn_calculator)
 
-    if len(sys.argv) > 1:
-        script_filename = sys.argv[1]
+    if args.script:
         # Script Mode
         script_mode = ScriptMode(rpn_calculator)
-        script_mode.run(script_filename)
+        script_mode.run(args.script)
     else:
         # Interactive mode
         interactive_mode = InteractiveMode(rpn_calculator)

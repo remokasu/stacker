@@ -265,8 +265,11 @@ class TestStacker(unittest.TestCase):
         self.stacker.process_expression("b")
         self.assertEqual(self.stacker.stack[-1], 80)
 
-
-
+    # blockstack
+    def test_blockstack(self):
+        self.stacker.stack.clear()
+        self.stacker.process_expression("1 {3 {4 5 +} *} +")
+        self.assertEqual(self.stacker.stack[-1], 28)
 
 
 if __name__ == "__main__":
