@@ -71,6 +71,8 @@ def parse_string(s):
             current_token += char
     if current_token:  # add the last token if any
         result.append(current_token)
+    logging.debug(f"parse string: {s}")
+    logging.debug(f"parsed: {result}")
     return result
 
 
@@ -384,7 +386,7 @@ class StackerCore:
             "insert": (lambda index, value: self.stack.insert(index, value)),  # insert
             "rev": (lambda: self.stack.reverse()),  # reverse
             "exec": (lambda command: exec(command, globals())),  # Execute the specified Python code
-            "eval": (lambda command: eval(command)),  # Evaluate the specified Python expression
+            "eval": (lambda command: self._eval(command)),  # Evaluate the specified Python expression
             "echo": (lambda value: print(value)),
             "ans": (lambda: self.get_last_ans()),
         }
@@ -413,11 +415,19 @@ class StackerCore:
     def _swap(self):
         self.stack[-1], self.stack[-2] = self.stack[-2], self.stack[-1]
 
+    def _eval(self, expression: str):
+        logging.debug(f"eval: {expression}")
+        if isinstance(expression, str):
+            return eval(expression)
+
     def clear_stack(self):
         self.stack = []
 
-    def pop(self):
-        self.stack.pop()
+    def pop(self, stack: list = None):
+        if stack is None:
+            return self.stack.pop()
+        else:
+            return stack.pop()
 
     def get_stack(self):
         return copy.deepcopy(self.stack)
@@ -547,7 +557,8 @@ class StackerCore:
             raise ValueError(f"Unknown operator '{token}'")
         if len(stack) < n_args:
             raise ValueError(f"Not enough operands for operator '{token}'")
-        args = [stack.pop() for _ in range(n_args)]
+        # args = [stack.pop() for _ in range(n_args)]
+        args = [self.pop(stack) for _ in range(n_args)]
         args.reverse()  # 引数の順序を逆にする
         ans = self.operator[token](*args)
         if token in self.non_destructive_operator:
@@ -580,7 +591,8 @@ class StackerCore:
             elif token in self.functions:
                 if len(stack) < len(self.functions[token][0]):
                     raise ValueError(f"Not enough arguments for function '{token}'")
-                args = [stack.pop() for _ in range(len(self.functions[token][0]))][::-1]
+                # args = [stack.pop() for _ in range(len(self.functions[token][0]))][::-1]
+                args = [self.pop(stack) for _ in range(len(self.functions[token][0]))][::-1]
                 stack.append(self.evaluate_function(token, *args))
             else:
                 stack.append(token)
@@ -590,10 +602,11 @@ class StackerCore:
 class Stacker(StackerCore):
     depth_counter = 0
 
-    def __init__(self):
+    def __init__(self, blocklabel: str | None = None):
         super().__init__()
         self.depth = Stacker.depth_counter
         Stacker.depth_counter += 1
+        self.blocklabel = blocklabel
         self.child = None
 
     def register_operator(
@@ -653,6 +666,7 @@ class Stacker(StackerCore):
         return " ".join(highlighted_tokens)
 
     def process_function_definition(self, tokens: list) -> None:
+        logging.debug(f"process_function_definition: {tokens}")
         name = tokens[tokens.index("=>") - 1]
         self.validate_name(name)
         arg_labels = tokens[:tokens.index("=>") - 1]  # 引数のラベルを取得
@@ -665,6 +679,10 @@ class Stacker(StackerCore):
         print(colored(f"Function '{name}' defined: ", "magenta") + highlighted_function)
 
     def process_variable_assignment(self, tokens: list) -> None:
+        logging.debug(f"process_variable_assignment: {tokens}")
+        # if len(tokens) == 1 and is_block(tokens[0]):
+        #     self.substack(tokens[0])
+        #     return
         name = tokens[0]
         value_expression = tokens[2:]
         # value_expression = tokens[-1]
@@ -676,6 +694,8 @@ class Stacker(StackerCore):
 
     def process_expression(self, expression) -> None:
         tokens = self.parse_expression(expression)
+        logging.debug(f"process_expression expression: {expression}")
+        logging.debug(f"process_expression tokens: {tokens}")
         if "=>" in tokens:  # 関数定義 (it is not RPN su)
             self.process_function_definition(tokens)
         elif is_assignment(expression):  # 代入処理
@@ -683,6 +703,35 @@ class Stacker(StackerCore):
         else:  # RPN式の評価と結果の表示
             # tokens = self.split_expression(expression)
             self.evaluate(tokens, stack=self.stack)
+
+    def substack(self, token: str) -> None:
+        logging.debug(f"sub block: {token}")
+        self.child = Stacker()
+        self.child.blocklabel = token
+        expression = token[1:-1]
+        if expression == {}:
+            self.stack.append(None)
+        else:
+            self.stack.append(self.child)
+
+    def pop(self, stack: list = None):
+        if stack is None:
+            stack = self.stack
+        value = stack.pop()
+        if not isinstance(value, Stacker):
+            return value
+        # block
+        token = value.blocklabel  # {...}
+        expression = token[1:-1]
+        if expression == {}:
+            stack.append(None)
+        else:
+            value.process_expression(expression)
+            substack = value.get_stack()
+            if len(substack) > 0:
+                for i in range(len(substack)):
+                    stack.append(substack[i])
+            return stack.pop()
 
     def evaluate(self, tokens: list, stack=None) -> list:
         """
@@ -693,7 +742,9 @@ class Stacker(StackerCore):
             stack = []
         assert isinstance(tokens, list) is True
         # tokens = self.split_expression(expression)
+        logging.debug(f"evaluate tokens: {tokens}")
         for token in tokens:
+            logging.debug(f"tokens: {token}, type: {type(token)}")
             if not isinstance(token, str):
                 logging.debug(f"stack: {token}")
                 stack.append(token)
@@ -709,19 +760,14 @@ class Stacker(StackerCore):
             elif token in self.functions:
                 if len(stack) < len(self.functions[token][0]):
                     raise ValueError(f"Not enough arguments for function '{token}'")
-                args = [stack.pop() for _ in range(len(self.functions[token][0]))][::-1]
+                # args = [stack.pop() for _ in range(len(self.functions[token][0]))][::-1]
+                args = [self.pop(stack) for _ in range(len(self.functions[token][0]))][::-1]
                 stack.append(self.evaluate_function(token, *args))
             elif is_block(token):  # substack
-                logging.debug(f"sub block: {token}")
-                self.child = Stacker()
-                expression = token[1:-1]
-                self.child.process_expression(expression)
-                substack = self.child.get_stack()
-                if len(substack) > 0:
-                    for i in range(len(substack)):
-                        self.stack.append(substack[i])
+                self.substack(token)
             else:
                 stack.append(token)
+            logging.debug(f"stack: {stack}")
         return stack
 
 
@@ -778,6 +824,22 @@ class ExecutionMode:
 
     def run(self):
         raise NotImplementedError("Subclasses must implement the 'run' method")
+
+    def show_stack(self) -> None:
+        tokens = self.rpn_calculator.get_stack()
+        if len(tokens) == 0:
+            return
+        stack = []
+        for token in tokens:
+            if isinstance(token, Stacker):
+                stack.append(token.blocklabel)
+            else:
+                stack.append(token)
+
+        if self.color_print is True:
+            self.print_colored_output(stack)
+        else:
+            print(stack)
 
 
 class InteractiveMode(ExecutionMode):
@@ -909,14 +971,7 @@ class InteractiveMode(ExecutionMode):
                     continue
 
                 self.rpn_calculator.process_expression(expression)
-                stack = self.rpn_calculator.stack
-                if stack is not None:
-                    if not is_assignment(expression):
-                        # stackを全表示
-                        if self.color_print is True:
-                            self.print_colored_output(stack)
-                        else:
-                            print(stack)
+                self.show_stack()
 
             except Exception as e:
                 print(colored(f"[ERROR]: {e}", "red"))
