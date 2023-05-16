@@ -1,6 +1,14 @@
 
 # CHANGE LOG
 
+## [1.3.1] - 2023-05-16
+
+### Changed
+
+- Changed blockstack (the range enclosed by `{...}`) to be lazily evaluated. Blockstack is evaluated when popped, and the results are expanded onto the stack.
+
+<hr>
+
 ## [1.3.0] - 2023-05-15
 
 ### Added
