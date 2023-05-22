@@ -1,11 +1,22 @@
 
 def tolist(stacker_core, start, end):
+    """
+    stacker:0> 1 2 3 4 5 6 7 8 9 10
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    stacker:1> 4 8 tolist
+    [1, 2, 3, 4, [5, 6, 7, 8], 9, 10]
+    """
     sublist = stacker_core.stack[start:end]
     new_stack = (stacker_core.stack[:start] + [sublist] + stacker_core.stack[end:])
     stacker_core.stack = new_stack
 
 
 def unlist(stacker_core, index: int) -> None:
+    """
+    [1, 2, 3, 4, [5, 6, 7, 8], 9, 10]
+    stacker:3> 4 unlist
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    """
     if not stacker_core.stack:
         raise ValueError("Stack is empty")
     if index < 0 or index >= len(stacker_core.stack):

@@ -1,3 +1,14 @@
+## [1.４.0] - 2023-05-22
+
+### Added
+
+- Added the variable definition command (`set`). For instance, `a = 123` can be written as `123 a set`.
+
+### Changed
+
+- Changed the syntax for function definitions. Functions are now defined using the `fn` command, for instance, `(x y) {x y + 2 /} average fn`. Please note that the new syntax is not compatible with the previous one.
+
+<hr>
 
 # CHANGE LOG
 

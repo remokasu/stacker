@@ -163,18 +163,76 @@ The input will be considered complete when the array is closed with a matching b
 <br>
 <hr>
 
+## Variables in Stacker
 
-## Custom Functions::
+In Stacker, you can define your own variables. This is done by using the `def` operator. The general syntax for variable definition is as follows:
 
-### Example 1: Function to calculate the average of two numbers (average)
-
-~~~ bash
-stacker:0> x y average => x y + 2 /
-stacker:1> 2 6 average
-[4.0]
+~~~
+value variableName set
 ~~~
 
-(Note that the function definition syntax is a custom RPN-like syntax）
+
+Here's how each part of the variable definition works:
+
+1. `value`: This is the value that you want to assign to the variable.
+
+2. `variableName`: This is the name you're giving to your variable. It can be any valid identifier.
+
+3. `set`: This is the operator that tells Stacker you're defining a variable.
+
+Here's an example of a variable definition:
+
+~~~ bash
+stacker 0:> 10 myVariable set
+~~~
+
+This defines a variable named `myVariable` that holds the value `10`. 
+
+You can use this variable just like you'd use any other value:
+
+~~~ bash
+stacker 1:> myVariable 20 +
+~~~
+
+This will push `30` (the result of `10 + 20`) onto the stack.
+
+<br>
+<hr>
+
+
+## Function Definitions in Stacker
+
+In Stacker, you can define your own functions using the `fn` operator. The general syntax for function definition is as follows:
+
+~~~ bash
+(arg1 arg2 ... argN) {body} functionName fn
+~~~
+
+Here's how each part of the function definition works:
+
+1. `(arg1 arg2 ... argN)`: This is a list of arguments that your function will accept. You can define as many arguments as needed. The arguments should be space-separated and enclosed in parentheses.
+
+2. `{body}`: This is the body of your function, which is written in Stacker's Reverse Polish Notation (RPN) syntax. The body should be enclosed in curly braces `{}`.
+
+3. `functionName`: This is the name you're giving to your function. It can be any valid identifier.
+
+4. `fn`: This is the operator that tells Stacker you're defining a function.
+
+Here's an example of a function definition:
+
+~~~ bash
+stacker 0:> (x y) {x y *} multiply fn
+~~~
+
+This defines a function named `multiply` that takes two arguments `x` and `y` and multiplies them together. 
+
+You can call this function just like you'd call any other operator:
+
+~~~ bash
+stacker 1:> 10 20 multiply
+~~~
+
+This will push `200` (the result of `10 * 20`) onto the stack.
 
 <br>
 <hr>
@@ -513,16 +571,77 @@ stacker:0> [1 2 3;
 <br>
 <hr>
 
-## 自作関数:
+## Stackerにおける変数
 
-### 例 1: 二つの数の平均を計算する関数 (average)
+Stackerでは、ユーザー自身が変数を定義することができます。これは`set`オペレータを用いて行います。変数定義の一般的な構文は以下の通りです：
+
 ~~~ bash
-stacker:0> x y average => x y + 2 /
-stacker:1> 2 6 average
-[4.0]
+値 変数名 set
 ~~~
 
-(関数定義の構文はRPN構文っぽい独自定義の構文)
+
+変数定義の各部分がどのように機能するかを以下に説明します：
+
+1. `値`: これは変数に割り当てたい値です。
+
+2. `変数名`: これは変数につける名前です。任意の有効な識別子を使用できます。
+
+3. `set`: これはStackerに変数を定義していることを伝えるオペレータです。
+
+変数定義の例を以下に示します：
+
+~~~ bash
+stacker 0:> 10 myVariable set
+~~~
+
+これにより、`10`という値を持つ`myVariable`という名前の変数が定義されます。 
+
+この変数は他の任意の値と同様に使用することができます：
+
+~~~ bash
+stacker 1:> myVariable 20 +
+~~~
+
+これにより`30` ( `10 + 20`の結果)がスタックにプッシュされます。
+
+
+<br>
+<hr>
+
+## Stackerにおける関数定義
+
+
+Stackerでは、`fn`オペレータを使って自分自身の関数を定義することができます。関数定義の一般的な構文は次のようになります：
+
+~~~ bash
+(arg1 arg2 ... argN) {本体} 関数名 fn
+~~~
+
+以下に関数定義の各部分の働きを説明します：
+
+1. `(arg1 arg2 ... argN)`: これは関数が受け入れる引数のリストです。必要なだけ引数を定義することができます。引数はスペースで区切られ、括弧で囲まれるべきです。
+
+2. `{本体}`: これは関数の本体で、Stackerの逆ポーランド記法（RPN）構文で書かれます。本体は中括弧`{}`で囲むべきです。
+
+3. `関数名`: これは関数に付ける名前です。有効な識別子であれば何でも良いです。
+
+4. `fn`: これは関数を定義しているとStackerに指示するオペレータです。
+
+関数定義の例を以下に示します：
+
+~~~ bash
+stacker 0:> (x y) {x y *} 掛け算 fn
+~~~
+
+これは`掛け算`という名前の関数を定義し、引数`x`と`y`を取り、それらを掛け合わせるというものです。
+
+この関数は他のオペレータを呼び出すのと同じように呼び出すことができます：
+
+~~~ bash
+stacker 1:> 10 20 掛け算
+~~~
+
+これは`200`（`10 * 20`の結果）をスタックにプッシュします。
 
 <br>
 <hr>
@@ -582,14 +701,6 @@ Stackerのプラグインを作成するには、以下の手順に従ってく�
 6. Stackerが起動すると、自動的にプラグインが読み込まれ、カスタムコマンドが利用可能になります。
 
 英語（description_en）と日本語（description_jp）の説明の提供は任意です。必要がない場合は、それらの行をコメントアウトまたは削除してください。
-
-<br>
-
-### 開発中プラグイン
-
-* [シェルモード](https://github.com/remokasu/stacker-plugins/blob/main/sh.py)
-* [行列演算](https://github.com/remokasu/stacker-plugins/blob/main/matrix.py)
-
 
 <br>
 <hr>
