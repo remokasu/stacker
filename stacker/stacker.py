@@ -120,9 +120,12 @@ def delete_history() -> None:
 
 
 def evaluate_token_or_return_str(token: str) -> Any:
+    logging.debug(f"evaluate_token_or_return_str: {token}")
     try:
         return ast.literal_eval(token)
-    except (ValueError, SyntaxError):
+    except (ValueError, SyntaxError) as e:
+        logging.debug(f"token ({token}) is str")
+        logging.debug(f"{e}")
         return token
 
 
@@ -224,6 +227,59 @@ def convert_custom_tuple_to_proper_tuple(token: str) -> str:
         token += ')' * (open_parenthesis - close_parenthesis)
     if is_tuple(token) and not is_single_tuple(token):
         token = f"({token})"
+    return token
+
+
+def convert_custom_numeric_tuple_to_proper_tuple(token: str) -> str:
+    """
+    Converts a custom tuple token into a proper Python tuple.
+
+    :param token: The custom tuple token to be converted.
+    :return: The converted token as a proper Python tuple.
+
+    Example:
+    Input:  "(1 2 3; 4 5 6)"
+    Output: "((1, 2, 3), (4, 5, 6))"
+    """
+    token = re.sub(r"(\d+(\.\d+)?)\s+", r"\1, ", token)
+    token = re.sub(r";\s+", r"), (", token)
+
+    open_parenthesis = token.count('(')
+    close_parenthesis = token.count(')')
+    if open_parenthesis > close_parenthesis:
+        token += ')' * (open_parenthesis - close_parenthesis)
+    if is_tuple(token) and not is_single_tuple(token):
+        token = f"({token})"
+    return token
+
+
+def convert_custom_string_tuple_to_proper_tuple(token: str) -> str:
+    """
+    Converts a custom tuple token with string elements into a proper Python tuple.
+
+    :param token: The custom tuple token to be converted.
+    :return: The converted token as a proper Python tuple.
+
+    Example:
+    Input:  "(a b)"
+    Output: "("a", "b")"
+    """
+    # Convert sequences of non-number, non-punctuation characters to
+    #    use commas and surround with quotes
+    token = re.sub(r"([a-zA-Z_]\w*)\s*", r'"\1", ', token)
+    # Change semicolons to tuple separators
+    token = re.sub(r";\s*", r"), (", token)
+
+    open_parenthesis = token.count('(')
+    close_parenthesis = token.count(')')
+    if open_parenthesis > close_parenthesis:
+        token += ')' * (open_parenthesis - close_parenthesis)
+    if is_tuple(token) and not is_single_tuple(token):
+        token = f"({token})"
+
+    # Clean up any trailing commas and quotes
+    token = re.sub(r", \)", r")", token)
+    token = re.sub(r'", ', r'",', token)
     return token
 
 
@@ -380,15 +436,19 @@ class StackerCore:
             "delete": (lambda index: self.stack.pop(index)),  # Remove the element at the specified index
             "pluck": (lambda index: self.stack.pop(index)),  # Remove the element at the specified index and move it to the top of the stack
             "pick": (lambda index: self.stack.append((self.stack[index]))),  # Copy the element at the specified index to the top of the stack
-            "pop": (lambda: self.stack.pop()),  # pop
-            "dup": (lambda: self._dup()),  # Duplicate the top element of the stack
-            "swap": (lambda: self._swap()),  # # Swap the top two elements of the stack
+            # "pop": (lambda: self.stack.pop()),  # pop
+            "pop": (lambda: self.pop()),  # pop
+            "dup": (lambda: self.dup()),  # Duplicate the top element of the stack
+            "swap": (lambda: self.swap()),  # # Swap the top two elements of the stack
+            "peek": (lambda: self.peek()),  # Refer to the topmost element (the "top" of the stack) without deleting it
             "insert": (lambda index, value: self.stack.insert(index, value)),  # insert
             "rev": (lambda: self.stack.reverse()),  # reverse
             "exec": (lambda command: exec(command, globals())),  # Execute the specified Python code
             "eval": (lambda command: self._eval(command)),  # Evaluate the specified Python expression
             "echo": (lambda value: print(value)),
             "ans": (lambda: self.get_last_ans()),
+            "set": (lambda name, value: self._set(value, name)),
+            "fn": (lambda func_name, fargs, body: self.fn_operator(func_name, fargs, body))
         }
         self.variables = {
             "pi": math.pi,
@@ -405,20 +465,29 @@ class StackerCore:
             "delete_history", "last_pop", "end", "clear"
         ]
         # このコマンド実行時は戻り値をStackしない
-        self.non_destructive_operator = {"exec", "delete", "pick", "rev", "echo", "insert", "dup", "swap"}
+        self.non_destructive_operator = {
+            "exec", "delete", "pick", "rev", "echo",
+            "insert", "dup", "swap", "set", "show_all_valiables", "whos", "fn"}
         self.plugins = {}
         self.plugin_descriptions = {}
 
-    def _dup(self):
+    def dup(self):
         self.stack.append(self.stack[-1])
 
-    def _swap(self):
+    def swap(self):
         self.stack[-1], self.stack[-2] = self.stack[-2], self.stack[-1]
+
+    def peek(self):
+        return self.stack[-1]
 
     def _eval(self, expression: str):
         logging.debug(f"eval: {expression}")
         if isinstance(expression, str):
             return eval(expression)
+
+    def _set(self, value, name):
+        logging.debug(f"{name} {value} set")
+        self.variables[name] = value
 
     def clear_stack(self):
         self.stack = []
@@ -428,6 +497,14 @@ class StackerCore:
             return self.stack.pop()
         else:
             return stack.pop()
+
+    def fn_operator(self, func_name, fargs, blockstack: Stacker):
+        logging.debug(f"fn_operator: func_name:{func_name}, args: {fargs}, expression: {blockstack.blocklabel}")
+        # self.operator[func_name] = (lambda *args: self._debug(*args))
+        function = StackerFunction(fargs, blockstack)
+        if func_name in self.operator.keys():
+            del self.operator[func_name]
+        self.register_operator(func_name, function, push_result_to_stack=True)
 
     def get_stack(self):
         return copy.deepcopy(self.stack)
@@ -448,41 +525,69 @@ class StackerCore:
         else:
             raise KeyError(f"Invalid token {token}")
 
-    # def split_expression(self, expression: str) -> list:
-    #     operator_pattern = "|".join(re.escape(op) for op in self.operator.keys())
-    #     token_pattern = re.compile(
-    #         r"(?P<curly_bracket_string>\{(?:[^\{\}\\]|\\.|(?:\{[^\{\}\\]*\}))*\})|"
-    #         r"(?P<triple_quoted_string>(\"\"\"(?:[^\"\\]|\\.|[\n\r])*\"\"\")|(\'\'\'(?:[^\'\\]|\\.|[\n\r])*\'\'\'))|"
-    #         fr"(?P<operator>({operator_pattern}))|"
-    #         r"(?P<multidim_array>\[\[.*?\]\])|"
-    #         r"(?P<array>\[.*?\])|"
-    #         r"(?P<multidim_tuple>\(\(.*?\)\))|"
-    #         r"(?P<tuple>\(.*?\))|"
-    #         r"(?P<complex>-?\d+(?:\.\d*)?(?:[eE][-+]?\d+)?[jJ])|"
-    #         r"(?P<binary>-?0b[01]+)|"
-    #         r"(?P<octal>-?0o[0-7]+)|"
-    #         r"(?P<hex>-?0x[\da-fA-F]+)|"
-    #         r"(?P<float>-?\d+(?:\.\d*)?(?:[eE][-+]?\d+)?(?:[jJ])?)|"
-    #         r"(?P<operator_or_identifier>[^\s,]+)|"
-    #         r"(?P<string>(?:'[^']*')|(?:\"[^\"]*\"))"
-    #         r"(?P<brace_string>{(?:[^{}]|\{.*\})*})"  # Brace string
-    #     )
-    #     ignore_tokens = ['"""', "'''"]
-    #     tokens = []
-    #     for match in token_pattern.finditer(expression):
-    #         for group, value in match.groupdict().items():
-    #             if value is not None:
-    #                 if value in ignore_tokens:
-    #                     continue
-    #                 if value.startswith("{") and value.endswith("}"):
-    #                     value = f"'{str(value[1:-1])}'"
-    #                     tokens.append(value)
-    #                     break
-    #                 tokens.append(value)
-    #                 break
-    #         else:
-    #             raise ValueError(f"Invalid token found in expression: {expression}")
-    #     return tokens
+    def register_operator(
+        self,
+        operator_name: str,
+        operator_func: callable,
+        push_result_to_stack: bool
+    ) -> None:
+        if not push_result_to_stack:
+            self.non_destructive_operator.add(operator_name)
+        self.operator[operator_name] = operator_func
+
+    def register_plugin(
+            self,
+            operator_name: str,
+            operator_func: callable,
+            push_result_to_stack: bool = True,
+            pass_core: bool = False,
+            description_en: str | None = None,
+            description_jp: str | None = None
+    ):
+        if pass_core:
+            original_operator_func = operator_func
+            def wrapped_operator_func(*args, **kwargs):
+                wraped = original_operator_func(self, *args, **kwargs)
+                return wraped
+            wrapped_operator_func.arg_count = original_operator_func.__code__.co_argcount - 1
+            operator_func = wrapped_operator_func
+
+        self.register_operator(operator_name, operator_func, push_result_to_stack)
+        self.plugin_descriptions[operator_name] = {"en": description_en, "jp": description_jp}
+
+    def highlight_syntax(self, expression):
+        """
+        Highlights the syntax of the given RPN expression.
+        Returns a colored string of the input expression.
+        """
+        tokens = expression.split()
+        highlighted_tokens = []
+        for token in tokens:
+            if token in self.operator:
+                color = "cyan"
+                if token in {"==", "!=", "<", "<=", ">", ">="}:
+                    color = "yellow"
+                elif token in {"and", "or"}:
+                    color = "green"
+                highlighted_tokens.append(colored(token, color))
+            else:
+                try:
+                    float(token)
+                    highlighted_tokens.append(colored(token, "white"))
+                except ValueError:
+                    highlighted_tokens.append(colored(token, "red"))
+        return " ".join(highlighted_tokens)
+
+
+class Stacker(StackerCore):
+    depth_counter = 0
+
+    def __init__(self, blocklabel: str | None = None):
+        super().__init__()
+        self.depth = Stacker.depth_counter
+        Stacker.depth_counter += 1
+        self.blocklabel = blocklabel
+        self.child = None
 
     def parse_expression(self, expression: str) -> list:
         """
@@ -509,200 +614,11 @@ class StackerCore:
                 tokens.append(evaluate_token_or_return_str(token))
         return tokens
 
-    def define_function(self, name, arg_labels: str, tokens: list) -> None:
-        self.validate_name(name)
-        self.functions[name] = (arg_labels, tokens)
-
-    def validate_name(self, name):
-        """
-        Validates if a given name is not a reserved word or an operator.
-        Raises a ValueError if the name is invalid.
-        """
-        if name in self.operator or name.lower() in self.reserved_word:
-            raise ValueError(f"Invalid name '{name}', it is a reserved word.")
-        return name
-
-    def assign_variable(self, name, value):
-        """
-        Assigns a value to a variable with the given name.
-        """
-        if is_array(value):
-            value = convert_custom_array_to_proper_list(value)
-            value = evaluate_token_or_return_str(value)
-        elif is_tuple(value):
-            value = self.convert_custom_tuple_to_proper_tuple(value)
-            value = evaluate_token_or_return_str(value)
-        self.variables[name] = value
-
-    def evaluate_function(self, name, *args):
-        """
-        Evaluates a function with the given name and arguments.
-        Returns the result of the evaluation.
-        """
-        arg_labels, expression = self.functions[name]  # 引数のラベルと式を取得
-        if len(arg_labels) != len(args):
-            raise ValueError(f"Function '{name}' requires {len(arg_labels)} arguments, {len(args)} provided")
-        for label, arg in zip(arg_labels, args):  # 引数の値を割り当てる
-            self.assign_variable(label, arg)
-        result = self.evaluate(expression)
-        return result[-1]  # 評価された関数の結果だけを返す
-
-    def apply_operator(self, token: str, stack: list):
-        """
-        Applies an operator to the top elements on the stack.
-        Modifies the stack in-place.
-        """
-        n_args = self.get_n_args_for_operator(token)
-        if n_args is None:
-            raise ValueError(f"Unknown operator '{token}'")
-        if len(stack) < n_args:
-            raise ValueError(f"Not enough operands for operator '{token}'")
-        # args = [stack.pop() for _ in range(n_args)]
-        args = [self.pop(stack) for _ in range(n_args)]
-        args.reverse()  # 引数の順序を逆にする
-        ans = self.operator[token](*args)
-        if token in self.non_destructive_operator:
-            return
-        elif token == "pop":  # popの場合は戻り値を保存
-            self.last_pop = ans
-        else:
-            stack.append(ans)  # stackは参照渡し
-
-    def evaluate(self, tokens: list, stack=None) -> list:
-        """
-        Evaluates a given RPN expression.
-        Returns the result of the evaluation.
-        """
-        if stack is None:
-            stack = []
-        assert isinstance(tokens, list) is True
-        # tokens = self.split_expression(expression)
-        for token in tokens:
-            if not isinstance(token, str):
-                stack.append(token)
-            elif token in self.operator:
-                self.apply_operator(token, stack)
-            elif token == "=>":
-                continue
-            elif token == "last_pop":  # popコマンドでpopした値
-                stack.append(self.last_pop)
-            elif token in self.variables:
-                stack.append(self.variables[token])  # 定数をスタックにプッシュ
-            elif token in self.functions:
-                if len(stack) < len(self.functions[token][0]):
-                    raise ValueError(f"Not enough arguments for function '{token}'")
-                # args = [stack.pop() for _ in range(len(self.functions[token][0]))][::-1]
-                args = [self.pop(stack) for _ in range(len(self.functions[token][0]))][::-1]
-                stack.append(self.evaluate_function(token, *args))
-            else:
-                stack.append(token)
-        return stack
-
-
-class Stacker(StackerCore):
-    depth_counter = 0
-
-    def __init__(self, blocklabel: str | None = None):
-        super().__init__()
-        self.depth = Stacker.depth_counter
-        Stacker.depth_counter += 1
-        self.blocklabel = blocklabel
-        self.child = None
-
-    def register_operator(
-        self,
-        operator_name: str,
-        operator_func: callable,
-        push_result_to_stack: bool
-    ) -> None:
-        if not push_result_to_stack:
-            self.non_destructive_operator.add(operator_name)
-        self.operator[operator_name] = operator_func
-
-    def register_plugin(
-            self,
-            operator_name: str,
-            operator_func: callable,
-            push_result_to_stack: bool = True,
-            pass_core: bool = False,
-            description_en: str | None = None,
-            description_jp: str | None = None
-    ):
-        if pass_core:
-            original_operator_func = operator_func
-
-            def wrapped_operator_func(*args, **kwargs):
-                wraped = original_operator_func(self, *args, **kwargs)
-                return wraped
-            wrapped_operator_func.arg_count = original_operator_func.__code__.co_argcount - 1
-            operator_func = wrapped_operator_func
-
-        self.register_operator(operator_name, operator_func, push_result_to_stack)
-        self.plugin_descriptions[operator_name] = {"en": description_en, "jp": description_jp}
-
-    def highlight_syntax(self, expression):
-        """
-        Highlights the syntax of the given RPN expression.
-        Returns a colored string of the input expression.
-        """
-        tokens = expression.split()
-        highlighted_tokens = []
-
-        for token in tokens:
-            if token in self.operator:
-                color = "cyan"
-                if token in {"==", "!=", "<", "<=", ">", ">="}:
-                    color = "yellow"
-                elif token in {"and", "or"}:
-                    color = "green"
-                highlighted_tokens.append(colored(token, color))
-            else:
-                try:
-                    float(token)
-                    highlighted_tokens.append(colored(token, "white"))
-                except ValueError:
-                    highlighted_tokens.append(colored(token, "red"))
-
-        return " ".join(highlighted_tokens)
-
-    def process_function_definition(self, tokens: list) -> None:
-        logging.debug(f"process_function_definition: {tokens}")
-        name = tokens[tokens.index("=>") - 1]
-        self.validate_name(name)
-        arg_labels = tokens[:tokens.index("=>") - 1]  # 引数のラベルを取得
-        function_expression = " ".join(tokens[tokens.index("=>") + 1:])
-        function_expressions = tokens[tokens.index("=>") + 1:]
-        if name in self.operator:
-            raise ValueError(f"Invalid function name '{name}'")
-        self.define_function(name, arg_labels, function_expressions)  # 引数を追加
-        highlighted_function = self.highlight_syntax(function_expression)
-        print(colored(f"Function '{name}' defined: ", "magenta") + highlighted_function)
-
-    def process_variable_assignment(self, tokens: list) -> None:
-        logging.debug(f"process_variable_assignment: {tokens}")
-        # if len(tokens) == 1 and is_block(tokens[0]):
-        #     self.substack(tokens[0])
-        #     return
-        name = tokens[0]
-        value_expression = tokens[2:]
-        # value_expression = tokens[-1]
-        if name in self.operator:
-            raise ValueError(f"Invalid variable name '{name}'")
-        self.validate_name(name)
-        values = self.evaluate(value_expression)
-        self.assign_variable(name, values[0])
-
     def process_expression(self, expression) -> None:
         tokens = self.parse_expression(expression)
         logging.debug(f"process_expression expression: {expression}")
         logging.debug(f"process_expression tokens: {tokens}")
-        if "=>" in tokens:  # 関数定義 (it is not RPN su)
-            self.process_function_definition(tokens)
-        elif is_assignment(expression):  # 代入処理
-            self.process_variable_assignment(tokens)
-        else:  # RPN式の評価と結果の表示
-            # tokens = self.split_expression(expression)
-            self.evaluate(tokens, stack=self.stack)
+        self.evaluate(tokens, stack=self.stack)
 
     def substack(self, token: str) -> None:
         logging.debug(f"sub block: {token}")
@@ -718,7 +634,14 @@ class Stacker(StackerCore):
         if stack is None:
             stack = self.stack
         value = stack.pop()
+        logging.debug(f"pop: {value}")
         if not isinstance(value, Stacker):
+            if isinstance(value, list) or isinstance(value, tuple):
+                return value
+            if value in self.variables.keys():
+                logging.debug(f"variables {self.variables}")
+                logging.debug(f"valiable {value}: {self.variables[value]}")
+                return self.variables[value]
             return value
         # block
         token = value.blocklabel  # {...}
@@ -740,35 +663,100 @@ class Stacker(StackerCore):
         """
         if stack is None:
             stack = []
+
+        # Ensure tokens is a list
         assert isinstance(tokens, list) is True
-        # tokens = self.split_expression(expression)
         logging.debug(f"evaluate tokens: {tokens}")
+
+        # Iterate over each token in the token list
         for token in tokens:
             logging.debug(f"tokens: {token}, type: {type(token)}")
+            # If the token is not a string (e.g. it's a number), add it to the stack
             if not isinstance(token, str):
-                logging.debug(f"stack: {token}")
                 stack.append(token)
-            elif token in self.operator:
-                logging.debug(f"operator: {token}")
+            # If the token is an operator and we're not in a function definition ("fn" is not in the tokens)
+            # apply the operator to the current stack
+            elif token in self.operator and not "fn" in tokens:
                 self.apply_operator(token, stack)
-            elif token == "=>":
-                continue
-            elif token == "last_pop":  # popコマンドでpopした値
+            # If we're defining a function (token is "fn"), also apply the operator
+            elif token == "fn":
+                self.apply_operator(token, stack)
+            # If the token is "last_pop", append the last popped value from the stack.
+            # This is a special command to retrieve the last popped value.
+            elif token == "last_pop":
                 stack.append(self.last_pop)
-            elif token in self.variables:
-                stack.append(self.variables[token])  # 定数をスタックにプッシュ
-            elif token in self.functions:
-                if len(stack) < len(self.functions[token][0]):
-                    raise ValueError(f"Not enough arguments for function '{token}'")
-                # args = [stack.pop() for _ in range(len(self.functions[token][0]))][::-1]
-                args = [self.pop(stack) for _ in range(len(self.functions[token][0]))][::-1]
-                stack.append(self.evaluate_function(token, *args))
-            elif is_block(token):  # substack
+            # If the token is a block (substack), evaluate the substack
+            elif is_block(token):
                 self.substack(token)
+            # If none of the above conditions are met, just add the token to the stack
             else:
                 stack.append(token)
             logging.debug(f"stack: {stack}")
         return stack
+
+    def apply_operator(self, token: str, stack: list):
+        """
+        Applies an operator to the top elements on the stack.
+        Modifies the stack in-place.
+        """
+        n_args = self.get_n_args_for_operator(token)
+        if n_args is None:
+            raise ValueError(f"Unknown operator '{token}'")
+        if len(stack) < n_args:
+            raise ValueError(f"Not enough operands for operator '{token}'")
+        # args = [stack.pop() for _ in range(n_args)]
+        if token == "set":
+            # 代入操作の場合、self.pop()ではなく、stack.pop()する
+            # self.pop()は, popと同時に評価するため、定義済み変数に再割当て時に
+            # 変数値に対し代入してしまうため
+            args = []
+            name = self.stack.pop()  # not evaluate
+            value = self.pop(stack)
+            args.append(value)
+            args.append(name)
+        elif token == "fn":
+            args = []
+            name = self.stack.pop()  # not evaluate
+            body = self.stack.pop()  # not evaluate  blockstack
+            fargs = self.pop(stack)
+            fargs = convert_custom_string_tuple_to_proper_tuple(fargs)  # TODO Refacotring
+            fargs = ast.literal_eval(fargs)  # TODO Refacotring
+            logging.debug(f"define function")
+            logging.debug(f"name: {name}, args: {fargs}, body: {body}")
+            args.append(body)
+            args.append(fargs)
+            args.append(name)
+        else:
+            args = [self.pop(stack) for _ in range(n_args)]
+        args.reverse()  # 引数の順序を逆にする
+        ans = self.operator[token](*args)
+        if token in self.non_destructive_operator:
+            return
+        elif token == "pop":  # popの場合は戻り値を保存
+            self.last_pop = ans
+        else:
+            stack.append(ans)  # stackは参照渡し
+
+
+class StackerFunction:
+    def __init__(self, args: list[str], blockstack: Stacker):
+        self.args = args
+        self.blockstack = blockstack
+        self.arg_count = len(args)
+
+    def __call__(self, *values):
+        values = list(values)
+        if len(values) != len(self.args):
+            raise ValueError(f"Expected {len(self.args)} arguments, got {len(values)}")
+        # Create a new stack for the function call
+        # Bind the arguments to the values
+        for arg, value in zip(self.args, values):
+            # stacker.variables[arg] = value
+            self.blockstack._set(value, arg)
+            self.blockstack.stack.append(arg)
+        self.blockstack.stack.append(self.blockstack)
+        result = self.blockstack.pop()
+        return result
 
 
 def load_plugins(stacker_core: StackerCore):
@@ -825,6 +813,30 @@ class ExecutionMode:
     def run(self):
         raise NotImplementedError("Subclasses must implement the 'run' method")
 
+    def print_colored_output(self, stack_list):
+        stack_str = colored("[", 'yellow')
+        for item in stack_list:
+            item_str = str(item)
+            # print(item_str)
+            if item_str.startswith('[') or item_str.endswith(']'):
+                stack_str += colored(item_str, 'red')
+                stack_str += ", "
+            elif item_str.startswith('(') or item_str.endswith(')'):
+                stack_str += colored(item_str, 'green')
+                stack_str += ", "
+            elif item_str.replace('.', '', 1).isdigit() or (item_str.startswith('-') and item_str[1:].replace('.', '', 1).isdigit()):
+                stack_str += colored(item_str, 'default')
+                stack_str += ", "
+            elif item_str in list(self.rpn_calculator.variables.keys()):
+                stack_str += colored(item_str, 'lightblue')
+                stack_str += ", "
+            else:
+                stack_str += colored(item_str, 'default')
+                stack_str += ", "
+        stack_str = stack_str[0:-2]
+        stack_str += colored("]", 'yellow')
+        print(stack_str)
+
     def show_stack(self) -> None:
         tokens = self.rpn_calculator.get_stack()
         if len(tokens) == 0:
@@ -843,26 +855,6 @@ class ExecutionMode:
 
 
 class InteractiveMode(ExecutionMode):
-
-    def print_colored_output(self, stack_list):
-        stack_str = colored("[", 'yellow')
-        for item in stack_list:
-            item_str = str(item)
-            if item_str.startswith('[') or item_str.endswith(']'):
-                stack_str += colored(item_str, 'red')
-                stack_str += ", "
-            elif item_str.startswith('(') or item_str.endswith(')'):
-                stack_str += colored(item_str, 'green')
-                stack_str += ", "
-            elif item_str.replace('.', '', 1).isdigit() or (item_str.startswith('-') and item_str[1:].replace('.', '', 1).isdigit()):
-                stack_str += colored(item_str, 'default')
-                stack_str += ", "
-            else:
-                stack_str += colored(item_str, 'lightblue')
-                stack_str += ", "
-        stack_str = stack_str[0:-2]
-        stack_str += colored("]", 'yellow')
-        print(stack_str)
 
     def run(self):
         show_top()

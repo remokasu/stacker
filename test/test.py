@@ -142,12 +142,12 @@ class TestStacker(unittest.TestCase):
 
     def test_variable_assignment(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("a = 5")
+        self.stacker.process_expression("5 a set")
         self.assertEqual(self.stacker.variables["a"], 5)
 
     def test_function_definition_and_call(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("x f => x x *")
+        self.stacker.process_expression("(x) {x x *} f fn")
         self.stacker.process_expression("4 f")
         self.assertEqual(self.stacker.stack[-1], 16)
 
@@ -255,15 +255,17 @@ class TestStacker(unittest.TestCase):
     # valiable
     def test_variable_assign_1(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("a = 123")
+        self.stacker.process_expression("123 a set")
         self.stacker.process_expression("a")
-        self.assertEqual(self.stacker.stack[-1], 123)
+        self.stacker.process_expression("pop")
+        self.assertEqual(self.stacker.last_pop, 123)
 
     def test_variable_assign_2(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("b = 30 50 +")
+        self.stacker.process_expression("{30 50 +} b set")
         self.stacker.process_expression("b")
-        self.assertEqual(self.stacker.stack[-1], 80)
+        self.stacker.process_expression("pop")
+        self.assertEqual(self.stacker.last_pop, 80)
 
     # blockstack
     def test_blockstack(self):
