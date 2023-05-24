@@ -1,4 +1,14 @@
-## [1.４.0] - 2023-05-22
+# CHANGE LOG
+
+## [1.4.1] - 2023-05-24
+
+### Fixed
+
+- Fixed a bug in the parser.
+
+<hr>
+
+## [1.4.0] - 2023-05-22
 
 ### Added
 
@@ -9,8 +19,6 @@
 - Changed the syntax for function definitions. Functions are now defined using the `fn` command, for instance, `(x y) {x y + 2 /} average fn`. Please note that the new syntax is not compatible with the previous one.
 
 <hr>
-
-# CHANGE LOG
 
 ## [1.3.1] - 2023-05-16
 

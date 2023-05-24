@@ -2,11 +2,31 @@ import cmath
 import math
 import unittest
 
-from stacker.stacker import Stacker
+from stacker.stacker import Stacker, parse_string
 
 
 def cpow(x1, x2):
     return cmath.exp(x2 * cmath.log(x1))
+
+
+class TestUnit(unittest.TestCase):
+    def setUp(self):
+        self.stacker = Stacker()
+
+    def test_parse_string(self):
+        expr = "1 2 3 [4 5 6] 7 8 (9 10 11) a1 b1 c1 {1 2 +} '1+1' eval"
+        exprs = [
+            "1", "2", "3", "[4 5 6]", "7", "8", "(9 10 11)",
+            "a1", "b1", "c1", "{1 2 +}", "1+1", "eval"]
+        result = parse_string(expr)
+        self.assertEqual(result, exprs)
+
+    def test_parse_string_2(self):
+        expr = "'1+1' eval"
+        exprs = ["1+1", "eval"]
+        result = parse_string(expr)
+        print(result)
+        self.assertEqual(result, exprs)
 
 
 class TestStacker(unittest.TestCase):
@@ -272,6 +292,12 @@ class TestStacker(unittest.TestCase):
         self.stacker.stack.clear()
         self.stacker.process_expression("1 {3 {4 5 +} *} +")
         self.assertEqual(self.stacker.stack[-1], 28)
+
+    # eval
+    def test_eval(self):
+        self.stacker.stack.clear()
+        self.stacker.process_expression("'1 + 1' eval")
+        self.assertEqual(self.stacker.peek(), 2)
 
 
 if __name__ == "__main__":
