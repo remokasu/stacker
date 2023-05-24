@@ -54,14 +54,27 @@ def parse_string(s):
     bracket_stack = []
     for char in s:
         if char in brackets:
-            bracket_stack.append(char)
-            current_token += char
+            if bracket_stack and brackets[bracket_stack[-1]] == char:
+                current_token += char
+                bracket_stack.pop()
+                if not bracket_stack:
+                    if current_token[0] == "'" or current_token[0] == '"':
+                        result.append(current_token[1:-1])  # remove quotes
+                    else:
+                        result.append(current_token)
+                    current_token = ""
+            else:
+                bracket_stack.append(char)
+                current_token += char
         elif bracket_stack:
             current_token += char
             if char == brackets[bracket_stack[-1]]:
                 bracket_stack.pop()
                 if not bracket_stack:
-                    result.append(current_token)
+                    if current_token[0] == "'" or current_token[0] == '"':
+                        result.append(current_token[1:-1])  # remove quotes
+                    else:
+                        result.append(current_token)
                     current_token = ""
         elif char.isspace():
             if current_token:
@@ -184,6 +197,16 @@ def is_single_brace(expression: str) -> bool:
     return is_single(expression, "{", "}")
 
 
+def is_block(expression: str) -> bool:
+    if not isinstance(expression, str):
+        return False
+    opener = expression.count('{')
+    closer = expression.count('}')
+    if opener == 0 and closer == 0:
+        return False
+    return opener == closer
+
+
 def convert_custom_array_to_proper_list(token: str) -> str:
     """
     Converts a custom list token into a proper Python list.
@@ -208,29 +231,6 @@ def convert_custom_array_to_proper_list(token: str) -> str:
 
 
 def convert_custom_tuple_to_proper_tuple(token: str) -> str:
-    """
-    Converts a custom tuple token into a proper Python tuple.
-
-    :param token: The custom tuple token to be converted.
-    :return: The converted token as a proper Python tuple.
-
-    Example:
-    Input:  "(1 2 3; 4 5 6)"
-    Output: "((1, 2, 3), (4, 5, 6))"
-    """
-    token = re.sub(r"(\d+(\.\d+)?)\s+", r"\1, ", token)
-    token = re.sub(r";\s+", r"), (", token)
-
-    open_parenthesis = token.count('(')
-    close_parenthesis = token.count(')')
-    if open_parenthesis > close_parenthesis:
-        token += ')' * (open_parenthesis - close_parenthesis)
-    if is_tuple(token) and not is_single_tuple(token):
-        token = f"({token})"
-    return token
-
-
-def convert_custom_numeric_tuple_to_proper_tuple(token: str) -> str:
     """
     Converts a custom tuple token into a proper Python tuple.
 
@@ -281,20 +281,6 @@ def convert_custom_string_tuple_to_proper_tuple(token: str) -> str:
     token = re.sub(r", \)", r")", token)
     token = re.sub(r'", ', r'",', token)
     return token
-
-
-def is_block(expression: str) -> bool:
-    if not isinstance(expression, str):
-        return False
-    opener = expression.count('{')
-    closer = expression.count('}')
-    if opener == 0 and closer == 0:
-        return False
-    return opener == closer
-
-
-def is_assignment(expression: str) -> bool:
-    return re.search(r"\b\w+\s*=(?!=)", expression)
 
 
 def convert_to_base(value: str | int, base: int) -> str | int:
@@ -459,7 +445,6 @@ class StackerCore:
             "inf": float("inf"),
             "nan": math.nan,
         }
-        self.functions = {}
         self.reserved_word = [
             "help", "help-jp", "about", "exit",
             "delete_history", "last_pop", "end", "clear"
@@ -499,7 +484,7 @@ class StackerCore:
             return stack.pop()
 
     def fn_operator(self, func_name, fargs, blockstack: Stacker):
-        logging.debug(f"fn_operator: func_name:{func_name}, args: {fargs}, expression: {blockstack.blocklabel}")
+        logging.debug(f"fn_operator: func_name:{func_name}, args: {fargs}, expression: {blockstack.expression}")
         # self.operator[func_name] = (lambda *args: self._debug(*args))
         function = StackerFunction(fargs, blockstack)
         if func_name in self.operator.keys():
@@ -582,11 +567,11 @@ class StackerCore:
 class Stacker(StackerCore):
     depth_counter = 0
 
-    def __init__(self, blocklabel: str | None = None):
+    def __init__(self, expression: str | None = None):
         super().__init__()
         self.depth = Stacker.depth_counter
         Stacker.depth_counter += 1
-        self.blocklabel = blocklabel
+        self.expression = expression
         self.child = None
 
     def parse_expression(self, expression: str) -> list:
@@ -595,9 +580,6 @@ class Stacker(StackerCore):
             output(list): [[1, 2, 3], 4, 5, 'a']
         """
         ignore_tokens = ['"""', "'''"]
-
-        # pattern = r'\[.*?\]|\(.*?\)|\{.*?\}|\'[^\']*\'|\S+'
-        # parsed_expressions = re.findall(pattern, expression)
         parsed_expressions = parse_string(expression)
         logging.debug(f"parsed_expressions: {parsed_expressions}")
         tokens = []
@@ -623,7 +605,7 @@ class Stacker(StackerCore):
     def substack(self, token: str) -> None:
         logging.debug(f"sub block: {token}")
         self.child = Stacker()
-        self.child.blocklabel = token
+        self.child.expression = token
         expression = token[1:-1]
         if expression == {}:
             self.stack.append(None)
@@ -644,7 +626,7 @@ class Stacker(StackerCore):
                 return self.variables[value]
             return value
         # block
-        token = value.blocklabel  # {...}
+        token = value.expression  # {...}
         expression = token[1:-1]
         if expression == {}:
             stack.append(None)
@@ -681,10 +663,6 @@ class Stacker(StackerCore):
             # If we're defining a function (token is "fn"), also apply the operator
             elif token == "fn":
                 self.apply_operator(token, stack)
-            # If the token is "last_pop", append the last popped value from the stack.
-            # This is a special command to retrieve the last popped value.
-            elif token == "last_pop":
-                stack.append(self.last_pop)
             # If the token is a block (substack), evaluate the substack
             elif is_block(token):
                 self.substack(token)
@@ -721,8 +699,6 @@ class Stacker(StackerCore):
             fargs = self.pop(stack)
             fargs = convert_custom_string_tuple_to_proper_tuple(fargs)  # TODO Refacotring
             fargs = ast.literal_eval(fargs)  # TODO Refacotring
-            logging.debug(f"define function")
-            logging.debug(f"name: {name}, args: {fargs}, body: {body}")
             args.append(body)
             args.append(fargs)
             args.append(name)
@@ -844,7 +820,7 @@ class ExecutionMode:
         stack = []
         for token in tokens:
             if isinstance(token, Stacker):
-                stack.append(token.blocklabel)
+                stack.append(token.expression)
             else:
                 stack.append(token)
 
@@ -980,11 +956,9 @@ class ScriptMode(ExecutionMode):
         path = Path(file_path)
         if not path.is_file() or not path.suffix == '.sk':
             raise ValueError("Invalid file path or file type. Please provide a valid '.sk' file.")
-
         with path.open('r') as script_file:
             for line in script_file:
                 line = line.strip()
-
                 if not line.startswith('#') and line:
                     self.rpn_calculator.process_expression(line)
 
