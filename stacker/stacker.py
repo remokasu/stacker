@@ -283,6 +283,29 @@ def convert_custom_string_tuple_to_proper_tuple(token: str) -> str:
     return token
 
 
+def parse_expression(expression: str) -> list:
+    """
+        input(str)  : [1 2 3] 4 5 a
+        output(list): [[1, 2, 3], 4, 5, 'a']
+    """
+    ignore_tokens = ['"""', "'''"]
+    parsed_expressions = parse_string(expression)
+    logging.debug(f"parsed_expressions: {parsed_expressions}")
+    tokens = []
+    for token in parsed_expressions:
+        if token in ignore_tokens:
+            continue
+        elif is_array(token):
+            token = convert_custom_array_to_proper_list(token)
+            tokens.append(evaluate_token_or_return_str(token))
+        elif is_tuple(token):
+            token = convert_custom_tuple_to_proper_tuple(token)
+            tokens.append(evaluate_token_or_return_str(token))
+        else:
+            tokens.append(evaluate_token_or_return_str(token))
+    return tokens
+
+
 def convert_to_base(value: str | int, base: int) -> str | int:
     value = str(value)
 
@@ -371,10 +394,15 @@ class StackerCore:
             "band": (lambda x1, x2: int(x1) & int(x2)),  # Bitwise and
             "bor": (lambda x1, x2: int(x1) | int(x2)),   # Bitwise or
             "bxor": (lambda x1, x2: int(x1) ^ int(x2)),  # Bitwise xor
+            ">>": (lambda value, n: value >> n),  # bitshit right
+            "<<": (lambda value, n: value << n),  # bitshift left
+            "~": (lambda value: ~value),          # bit inversion
             "bin": (lambda value: convert_to_base(value, 2)),   # Binary representation
             "oct": (lambda value: convert_to_base(value, 8)),   # Octal representation
             "dec": (lambda value: convert_to_base(value, 10)),  # Decimal representation
             "hex": (lambda value: convert_to_base(value, 16)),  # Hexadecimal representation
+            "++": (lambda x1: x1 + 1),        # Increment
+            "--": (lambda x1: x1 - 1),        # Decrement
             "+": (lambda x1, x2: x1 + x2),    # Add
             "-": (lambda x1, x2: x1 - x2),    # Subtract
             "*": (lambda x1, x2: x1 * x2),    # Multiply
@@ -434,7 +462,9 @@ class StackerCore:
             "echo": (lambda value: print(value)),
             "ans": (lambda: self.get_last_ans()),
             "set": (lambda name, value: self._set(value, name)),
-            "fn": (lambda func_name, fargs, body: self.fn_operator(func_name, fargs, body))
+            "fn": (lambda func_name, fargs, body: self.fn_operator(func_name, fargs, body)),
+            # "seq": (lambda start_value, end_value: list(range(start_value, end_value))),
+            # "for": (lambda sequence, block, loop_var_symbol: self.execute_for(sequence, block, loop_var_symbol)),
         }
         self.variables = {
             "pi": math.pi,
@@ -449,10 +479,11 @@ class StackerCore:
             "help", "help-jp", "about", "exit",
             "delete_history", "last_pop", "end", "clear"
         ]
-        # このコマンド実行時は戻り値をStackしない
+        # このコマンド実行時は戻り値をpushしない
+        # forの場合、execute_for内でpushする
         self.non_destructive_operator = {
             "exec", "delete", "pick", "rev", "echo",
-            "insert", "dup", "swap", "set", "show_all_valiables", "whos", "fn"}
+            "insert", "dup", "swap", "set", "show_all_valiables", "whos", "fn", "for"}
         self.plugins = {}
         self.plugin_descriptions = {}
 
@@ -483,13 +514,31 @@ class StackerCore:
         else:
             return stack.pop()
 
+    def push(self, value, stack=None):
+        if stack is None:
+            stack = self.stack
+        stack.append(value)
+
     def fn_operator(self, func_name, fargs, blockstack: Stacker):
-        logging.debug(f"fn_operator: func_name:{func_name}, args: {fargs}, expression: {blockstack.expression}")
+        logging.debug(f"fn_operator: func_name:{func_name}, args: {fargs}, expression: {blockstack.sub_expression}")
         # self.operator[func_name] = (lambda *args: self._debug(*args))
         function = StackerFunction(fargs, blockstack)
         if func_name in self.operator.keys():
             del self.operator[func_name]
         self.register_operator(func_name, function, push_result_to_stack=True)
+
+    def execute_for(self, sequence: list, blockstack: Stacker, loop_var_symbol: str):
+        for_expression = blockstack.sub_expression
+        tokens = parse_expression(for_expression)
+        for i in sequence:
+            blockstack._set(i, loop_var_symbol)
+            result = blockstack.evaluate(tokens, stack=blockstack.stack)
+        if isinstance(result, list):
+            # self.stack.append(result[-1])
+            for i in range(len(result)):
+                self.stack.append(result[i])
+        else:
+            self.stack.append(result)
 
     def get_stack(self):
         return copy.deepcopy(self.stack)
@@ -540,29 +589,6 @@ class StackerCore:
         self.register_operator(operator_name, operator_func, push_result_to_stack)
         self.plugin_descriptions[operator_name] = {"en": description_en, "jp": description_jp}
 
-    def highlight_syntax(self, expression):
-        """
-        Highlights the syntax of the given RPN expression.
-        Returns a colored string of the input expression.
-        """
-        tokens = expression.split()
-        highlighted_tokens = []
-        for token in tokens:
-            if token in self.operator:
-                color = "cyan"
-                if token in {"==", "!=", "<", "<=", ">", ">="}:
-                    color = "yellow"
-                elif token in {"and", "or"}:
-                    color = "green"
-                highlighted_tokens.append(colored(token, color))
-            else:
-                try:
-                    float(token)
-                    highlighted_tokens.append(colored(token, "white"))
-                except ValueError:
-                    highlighted_tokens.append(colored(token, "red"))
-        return " ".join(highlighted_tokens)
-
 
 class Stacker(StackerCore):
     depth_counter = 0
@@ -571,71 +597,50 @@ class Stacker(StackerCore):
         super().__init__()
         self.depth = Stacker.depth_counter
         Stacker.depth_counter += 1
-        self.expression = expression
+        self.sub_expression = expression
         self.child = None
-
-    def parse_expression(self, expression: str) -> list:
-        """
-            input(str)  : [1 2 3] 4 5 a
-            output(list): [[1, 2, 3], 4, 5, 'a']
-        """
-        ignore_tokens = ['"""', "'''"]
-        parsed_expressions = parse_string(expression)
-        logging.debug(f"parsed_expressions: {parsed_expressions}")
-        tokens = []
-        for token in parsed_expressions:
-            if token in ignore_tokens:
-                continue
-            elif is_array(token):
-                token = convert_custom_array_to_proper_list(token)
-                tokens.append(evaluate_token_or_return_str(token))
-            elif is_tuple(token):
-                token = convert_custom_tuple_to_proper_tuple(token)
-                tokens.append(evaluate_token_or_return_str(token))
-            else:
-                tokens.append(evaluate_token_or_return_str(token))
-        return tokens
-
-    def process_expression(self, expression) -> None:
-        tokens = self.parse_expression(expression)
-        logging.debug(f"process_expression expression: {expression}")
-        logging.debug(f"process_expression tokens: {tokens}")
-        self.evaluate(tokens, stack=self.stack)
 
     def substack(self, token: str) -> None:
         logging.debug(f"sub block: {token}")
         self.child = Stacker()
-        self.child.expression = token
-        expression = token[1:-1]
-        if expression == {}:
+        self.child.sub_expression = token[1:-1]
+        self.child.variables = self.variables  # TODO Refactoring
+        if self.child.sub_expression == {}:
             self.stack.append(None)
         else:
             self.stack.append(self.child)
 
-    def pop(self, stack: list = None):
+    def process_expression(self, expression) -> None:
+        tokens = parse_expression(expression)
+        logging.debug(f"process_expression expression: {expression}")
+        logging.debug(f"process_expression tokens: {tokens}")
+        self.evaluate(tokens, stack=self.stack)
+
+    def pop(self, stack: list = None, evaluate_on_pop: bool = True):
         if stack is None:
             stack = self.stack
         value = stack.pop()
+        if evaluate_on_pop is False:
+            return value
         logging.debug(f"pop: {value}")
         if not isinstance(value, Stacker):
             if isinstance(value, list) or isinstance(value, tuple):
                 return value
-            if value in self.variables.keys():
+            if value in self.variables.keys(): # TODO Fix
                 logging.debug(f"variables {self.variables}")
                 logging.debug(f"valiable {value}: {self.variables[value]}")
                 return self.variables[value]
             return value
         # block
-        token = value.expression  # {...}
-        expression = token[1:-1]
+        expression = value.sub_expression  # {...}
         if expression == {}:
             stack.append(None)
         else:
             value.process_expression(expression)
-            substack = value.get_stack()
-            if len(substack) > 0:
-                for i in range(len(substack)):
-                    stack.append(substack[i])
+            sub = value.get_stack()
+            if len(sub) > 0:
+                for i in range(len(sub)):
+                    stack.append(sub[i])
             return stack.pop()
 
     def evaluate(self, tokens: list, stack=None) -> list:
@@ -688,20 +693,28 @@ class Stacker(StackerCore):
             # self.pop()は, popと同時に評価するため、定義済み変数に再割当て時に
             # 変数値に対し代入してしまうため
             args = []
-            name = self.stack.pop()  # not evaluate
+            name = self.pop(stack, evaluate_on_pop=False)  # not evaluate
             value = self.pop(stack)
             args.append(value)
             args.append(name)
         elif token == "fn":
             args = []
-            name = self.stack.pop()  # not evaluate
-            body = self.stack.pop()  # not evaluate  blockstack
+            name = self.pop(stack, evaluate_on_pop=False)  # not evaluate
+            body = self.pop(stack, evaluate_on_pop=False)  # not evaluate
             fargs = self.pop(stack)
             fargs = convert_custom_string_tuple_to_proper_tuple(fargs)  # TODO Refacotring
             fargs = ast.literal_eval(fargs)  # TODO Refacotring
             args.append(body)
             args.append(fargs)
             args.append(name)
+        elif token == "for":
+            args = []
+            loop_var_symbol = self.pop(stack, evaluate_on_pop=False)  # not evaluate
+            body = self.pop(stack, evaluate_on_pop=False)  # not evaluate
+            rng = self.pop()
+            args.append(loop_var_symbol)
+            args.append(body)
+            args.append(rng)
         else:
             args = [self.pop(stack) for _ in range(n_args)]
         args.reverse()  # 引数の順序を逆にする
@@ -820,7 +833,7 @@ class ExecutionMode:
         stack = []
         for token in tokens:
             if isinstance(token, Stacker):
-                stack.append(token.expression)
+                stack.append(token.sub_expression)
             else:
                 stack.append(token)
 

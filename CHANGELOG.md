@@ -1,5 +1,18 @@
 # CHANGE LOG
 
+## [1.4.2] - 2023-06-12
+
+### Added
+
+- `>>`: Right bitwise shift. Shifts a number to the right by the specified number of bits. For example, "8 2 >>" means shifting 8 (represented in bits as 1000) two bits to the right. The result would be 10 (2 in decimal).
+
+- `<<`: Left bitwise shift. Shifts a number to the left by the specified number of bits. For example, "2 2 <<" means shifting 2 (represented in bits as 10) two bits to the left. The result would be 1000 (8 in decimal).
+
+- `~`: Bitwise NOT. Inverts each bit (turns 1 into 0 and 0 into 1). For example, "5 ~" means performing a bitwise NOT operation on 5 (represented in bits as 101). The result would be 010 (-6 in decimal). Note: The bitwise NOT operation uses two's complement representation, and the result may be negative.
+
+These operations are only valid for integer values.
+
+
 ## [1.4.1] - 2023-05-24
 
 ### Fixed
