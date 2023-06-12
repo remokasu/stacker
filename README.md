@@ -86,6 +86,9 @@ Here are the installation instructions for `stacker`:
 | band     | Bitwise and                                           | `3 2 band`                 | 3 & 2                    |
 | bor      | Bitwise or                                            | `3 2 bor`                  | 3 | 2                    |
 | bxor     | Bitwise xor                                           | `3 2 bxor`                 | 3 ^ 2                    |
+| >>       | Right bit shit                                        | `8 2 >>`                   | 2                        |
+| <<       | Left bit shit                                         | `2 2 <<`                   | 8                        |
+| ~        | Bitwise not                                           | `5 ~`                      | ~5                       |
 | bin      | Binary representation (result is a string)            | `5 bin`                    | '0b101'                  |
 | oct      | Octal representation (result is a string)             | `10 oct`                   | '0o12'                   |
 | dec      | Decimal representation (result is an integer)         | `0b101010 dec`             | 42                       |
@@ -496,6 +499,9 @@ python3が無ければ事前にインストールしてください。
 | band   | ビットごとの論理積                                    | `3 2 band`                 | 3 & 2                    |
 | bor    | ビットごとの論理和                                    | `3 2 bor`                  | 3 | 2                    |
 | bxor   | ビットごとの排他的論理和                              | `3 2 bxor`                 | 3 ^ 2                    |
+| >>     | 右ビットシフト                                        | `8 2 >>`                   | 2                        |
+| <<     | 左ビットシ ト                                         | `2 2 <<`                   | 8                        |
+| ~      | ビット反転                                            | `5 ~`                      | ~5                       |
 | bin    | ２進数表示 (結果はstring)                             | `5 bin`                    | '0b101'                  |
 | oct    | 8進数表示 (結果はstring)                              | `10 oct`                   | '0o12'                   |
 | dec    | 10進数表示 (結果はinteger)                            | `0b101010 dec`             | 42                       |
