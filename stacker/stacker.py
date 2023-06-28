@@ -463,8 +463,8 @@ class StackerCore:
             "ans": (lambda: self.get_last_ans()),
             "set": (lambda name, value: self._set(value, name)),
             "fn": (lambda func_name, fargs, body: self.fn_operator(func_name, fargs, body)),
-            # "seq": (lambda start_value, end_value: list(range(start_value, end_value))),
-            # "for": (lambda sequence, block, loop_var_symbol: self.execute_for(sequence, block, loop_var_symbol)),
+            "seq": (lambda start_value, end_value: list(range(start_value, end_value))),
+            "for": (lambda sequence, block, loop_var_symbol: self.execute_for(sequence, block, loop_var_symbol)),
         }
         self.variables = {
             "pi": math.pi,
@@ -626,7 +626,7 @@ class Stacker(StackerCore):
         if not isinstance(value, Stacker):
             if isinstance(value, list) or isinstance(value, tuple):
                 return value
-            if value in self.variables.keys(): # TODO Fix
+            if value in self.variables.keys():  # TODO Fix
                 logging.debug(f"variables {self.variables}")
                 logging.debug(f"valiable {value}: {self.variables[value]}")
                 return self.variables[value]
@@ -969,11 +969,29 @@ class ScriptMode(ExecutionMode):
         path = Path(file_path)
         if not path.is_file() or not path.suffix == '.sk':
             raise ValueError("Invalid file path or file type. Please provide a valid '.sk' file.")
+
         with path.open('r') as script_file:
+            expression = ''
             for line in script_file:
                 line = line.strip()
-                if not line.startswith('#') and line:
-                    self.rpn_calculator.process_expression(line)
+                if line.startswith('#') or not line:  # ignore comments and empty lines
+                    continue
+                expression += line + ' '
+                if self._is_balanced(expression):
+                    if expression[-2:] in {";]", ";)"}:
+                        closer = expression[-1]
+                        expression = expression[:-2] + closer
+                    self.rpn_calculator.process_expression(expression)
+                    expression = ''
+
+    def _is_balanced(self, expression: str) -> bool:
+        return (
+            is_array_balanced(expression) and
+            is_tuple_balanced(expression) and
+            is_brace_balanced(expression) and
+            (expression.count('"""') % 2 == 0) and
+            (expression.count("'''") % 2 == 0)
+        )
 
 
 def copy_plugin_to_install_dir(plugin_path: str) -> None:
