@@ -1023,6 +1023,13 @@ def main():
     parser.add_argument('script', nargs='?', default=None, help='Script file to run.')
     args = parser.parse_args()
 
+    """
+        interactive:    stacker
+        plugin install: stacker --addplugin <path>
+        debug mode:     stacker --dmode
+        script mode:    stacker ***.sk
+    """
+
     if args.addplugin:
         copy_plugin_to_install_dir(args.addplugin)
         return
@@ -1047,3 +1054,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
