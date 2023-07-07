@@ -18,7 +18,7 @@ ans echo
 [1 2 3] A set
 [4 5 6] B set
 
-{result: } A B .* string + echo
+{result: } A B .* str + echo
 
 #######################
 # example 3
@@ -50,10 +50,21 @@ D echo
 
 0 4 seq {
     0 4 seq {
-        i j ^ a set
+        0 5 seq {
+            i j k + + a set
+        } k for
     } j for
 } i for
 
-i echo
-j echo
-a echo
+
+#######################
+# example 6
+#######################
+"example 6" echo
+
+0 s set
+0 101 seq {
+    s i 2 ^ + s set
+    s echo
+} i for
+s echo

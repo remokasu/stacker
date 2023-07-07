@@ -438,7 +438,7 @@ class StackerCore:
             "npr": (lambda n, k: math.perm(int(n), int(k))),  # 順列 (nPr)
             "float": (lambda x: float(x)),  # Convert to floating-point number
             "int": (lambda x: int(x)),  # Convert to integer
-            "string": (lambda x: str(x)),  # Convert to integer
+            "str": (lambda x: str(x)),  # Convert to integer
             "ceil": (lambda x: math.ceil(x)),    # Ceiling
             "floor": (lambda x: math.floor(x)),  # Floor
             "roundn": (lambda x1, x2: round(x1, int(x2))),  # Round to specified decimal places
@@ -465,6 +465,7 @@ class StackerCore:
             "fn": (lambda func_name, fargs, body: self.fn_operator(func_name, fargs, body)),
             "seq": (lambda start_value, end_value: list(range(start_value, end_value))),
             "for": (lambda sequence, block, loop_var_symbol: self.execute_for(sequence, block, loop_var_symbol)),
+            "show": (lambda: self.show)
         }
         self.variables = {
             "pi": math.pi,
@@ -482,7 +483,7 @@ class StackerCore:
         # このコマンド実行時は戻り値をpushしない
         # forの場合、execute_for内でpushする
         self.non_destructive_operator = {
-            "exec", "delete", "pick", "rev", "echo",
+            "exec", "delete", "pick", "rev", "echo", "show",
             "insert", "dup", "swap", "set", "show_all_valiables", "whos", "fn", "for"}
         self.plugins = {}
         self.plugin_descriptions = {}
@@ -539,6 +540,9 @@ class StackerCore:
                 self.stack.append(result[i])
         else:
             self.stack.append(result)
+
+    def show(self):
+        print(self.get_stack())
 
     def get_stack(self):
         return copy.deepcopy(self.stack)
@@ -1054,5 +1058,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
