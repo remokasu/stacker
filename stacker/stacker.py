@@ -50,7 +50,8 @@ COLORS = {
 def parse_string(s):
     result = []
     current_token = ""
-    brackets = {"[": "]", "(": ")", "{": "}", "'": "'", '"': '"'}
+    # brackets = {"[": "]", "(": ")", "{": "}", "'": "'", '"': '"'}
+    brackets = {"[": "]", "(": ")", "{": "}"}
     bracket_stack = []
     for char in s:
         if char in brackets:
@@ -849,6 +850,18 @@ class ExecutionMode:
 
 class InteractiveMode(ExecutionMode):
 
+    def get_input(self, prompt_text: str, multiline: bool):
+        try:
+            return prompt(
+                prompt_text,
+                history=FileHistory(history_file_path),
+                completer=self.completer,
+                multiline=multiline
+            )
+        except EOFError:
+            print("\nSee you!")
+            sys.exit()
+
     def run(self):
         show_top()
         stacker_version = get_distribution('pystacker').version
@@ -858,12 +871,7 @@ class InteractiveMode(ExecutionMode):
         line_count = 0
         while True:
             try:
-                expression = prompt(
-                    f"stacker:{line_count}> ",
-                    history=FileHistory(history_file_path),
-                    completer=self.completer,
-                    multiline=False
-                )
+                expression = self.get_input(f"stacker:{line_count}> ", multiline=False)
                 if expression[-2:] in {";]", ";)"}:
                     closer = expression[-1]
                     expression = expression[:-2] + closer
@@ -881,10 +889,8 @@ class InteractiveMode(ExecutionMode):
                         (1 2 3; 3 4 5)
                     """
                     while not is_array_balanced(expression) or not is_tuple_balanced(expression):
-                        next_line = prompt(
-                            " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> ",
-                            history=FileHistory(history_file_path),
-                        )
+                        prompt_text = " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> "
+                        next_line = self.get_input(prompt_text, multiline=False)
                         if next_line.lower() == ('end'):
                             break
                         if next_line in {"]", ")"}:
@@ -914,12 +920,15 @@ class InteractiveMode(ExecutionMode):
                         stacker:0> '''
                         ['\nThis is a multi-line\ninput example.\n']
                     """
-                    next_line = prompt(
-                        " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> ",
-                        history=FileHistory(history_file_path),
-                        completer=self.completer,
-                    )
+                    prompt_text = " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> "
+                    next_line = self.get_input(prompt_text, multiline=False)
                     expression += "\n" + next_line
+
+                # if (
+                #     (expression.startswith('"""') and expression.endswith('"""')) or
+                #     (expression.startswith("'''") and expression.endswith("'''"))
+                # ):
+                #     expression = expression.strip("\n")
 
                 logging.debug(f"input expression: {expression}")
 
@@ -957,6 +966,10 @@ class InteractiveMode(ExecutionMode):
 
                 self.rpn_calculator.process_expression(expression)
                 self.show_stack()
+
+            except EOFError:
+                print("\nSee you!")
+                break
 
             except Exception as e:
                 print(colored(f"[ERROR]: {e}", "red"))
