@@ -1,5 +1,12 @@
 # CHANGE LOG
 
+## [1.4.3] - 2023-07-11
+
+### Added
+
+- Resolved an issue where an EOFError was thrown when using Ctrl+D to exit the interactive mode of Stacker. Now, using Ctrl+D will cleanly exit the program just as the "exit" command does.
+
+
 ## [1.4.2] - 2023-06-12
 
 ### Added
