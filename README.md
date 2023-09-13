@@ -131,17 +131,6 @@ Here are the installation instructions for `stacker`:
     [7]
     ~~~
 
-* You can use triple quotes `"""` to enter multi-line input. When you enclose your input with triple quotes, you can continue entering text even after pressing Enter. Here's an example:
-    ~~~
-    stacker:0> """
-    stacker:1> This is a multi-line
-    stacker:2> input example.
-    stacker:3> """
-    ['\nThis is a multi-line\ninput example.\n']
-    ~~~
-
-The input will be treated as a single string containing line breaks:
-
 <br>
 <hr>
 
@@ -240,6 +229,101 @@ This will push `200` (the result of `10 * 20`) onto the stack.
 <br>
 <hr>
 
+## Looping
+⚠ This feature is provisionally implemented and may change in future versions.
+
+You can perform loop operations using `times` or `for`.
+
+### times
+~~~ bash
+{loop body} count times
+~~~
+The loop body is treated as a single operation enclosed in `{}`.
+
+- Example
+    Increment variable `x` 10 times and output its value.
+    ~~~ bash
+    0 x set
+    {x ++ x set x echo} 10 times
+    ~~~
+
+<br>
+<hr>
+
+### for
+~~~ bash
+start end seq {loop body} i for
+~~~
+Here, `i` is a variable that represents the number of iterations. You can use any variable name.
+The loop body is also treated as a single operation enclosed in `{}`.
+Within the loop body enclosed in `{}`, `i` is replaced by the current iteration number.
+
+- Example
+    Find the sum of squares from 1 to 100.
+
+    \( S = 1^2 + 2^2 + 3^2 + ... + 100^2 = \sum_{i=1}^{100} i^2 \)
+
+    ~~~ bash
+    0 s set
+    1 100 seq {
+        s i 2 ^ + s set
+    } i for
+    s echo
+    ~~~
+
+<br>
+<hr>
+
+## Conditional Statements
+⚠ This feature is provisionally implemented and may change in future versions. If you have any feedback regarding its specifications, please contact us at [Issues](https://github.com/remokasu/stacker/issues).
+
+You can use `if` or `ifelse` for conditional branching.
+
+### if
+~~~ bash
+{true block} {condition} if
+~~~
+
+- Example
+    ~~~ bash
+    0 x set
+    {...} {x 0 >=} if
+    ~~~
+In this example, `{...}` will be executed if `x` is greater than or equal to 0.
+Both {true block} and {condition} must be enclosed in {}.
+
+### ifelse
+⚠ This feature is provisionally implemented and may change in future versions. If you have any feedback regarding its specifications, please contact us at [Issues](https://github.com/remokasu/stacker/issues).
+
+If the condition is true, it executes the true block; otherwise, it executes the false block.
+~~~ bash
+{true block} {false block} {condition} ifelse
+~~~
+
+- Example
+    ~~~ bash
+    0 x set
+    {...} {...} {x 0 >=} ifelse
+    ~~~
+In this example, `{...}` will be executed if `x` is greater than or equal to 0, and `{...}` will be executed if it's less than 0.
+
+<br>
+<hr>
+
+## FizzBuzz Example
+Here is an example of implementing FizzBuzz using loops and conditional statements.
+~~~ bash
+1 100 seq {
+    {i str " fizzbuzz" + echo} {
+        {i str " fizz" + echo} {i 3 % 0 ==} if
+        {i str " buzz" + echo} {i 5 % 0 ==} if
+    } {i 3 % 0 == i 5 % 0 == and} ifelse
+} i for
+~~~
+
+
+<br>
+<hr>
 
 ## Plugin Usage
 
@@ -295,6 +379,25 @@ To create a plugin for Stacker, follow these steps:
 
 5. Save your plugin file in the plugins directory.
 6. When Stacker starts, it will automatically load your plugin, and your custom command will be available for use.
+
+
+<br>
+<hr>
+
+## Run in Script Mode
+⚠ This feature is under development and may behave unexpectedly. If you have any feedback regarding its specifications, please contact us at [Issues](https://github.com/remokasu/stacker/issues).
+
+Create a text file with the `.stk` extension and write as follows:
+
+- script.stk
+~~~bash
+1 2 + echo
+~~~
+
+To execute this file, run the following command:
+~~~bash
+> stacker script.stk
+~~~
 
 
 <br>
@@ -543,17 +646,6 @@ python3が無ければ事前にインストールしてください。
     [7]
     ~~~
 
-* `"""`を使って複数行の入力ができます。`"""`で囲むことで、Enterキーを押しても入力が継続されます。以下に例を示します。
-    ~~~
-    stacker:0> """
-    stacker:1> これは複数行の
-    stacker:2> 入力の例です。
-    stacker:3> """
-    ['\nこれは複数行の\n入力の例です。\n']
-    ~~~
-
-入力は改行を含む1つの文字列として扱われます。
-
 <br>
 <hr>
 
@@ -652,6 +744,101 @@ stacker 1:> 10 20 掛け算
 <br>
 <hr>
 
+## 繰り返し処理
+⚠ この機能は仮実装です。今後のバージョンで変更される可能性があります。
+
+`times`, または `for` を使うことで繰り返し処理を行うことができます。
+
+### times
+~~~ bash
+{繰り返し処理} 回数 times
+~~~
+繰り返し処理は、`{}` で囲まれた部分を1つの処理として扱います。
+
+- 例
+    変数 `x` に対して、10回 をインクリメントし、その値を出力する処理を行う。
+    ~~~ bash
+    0 x set
+    {x ++ x set x echo} 10 times
+    ~~~
+
+<br>
+<hr>
+
+### for
+~~~ bash
+初期値 終了値 seq {繰り返し処理} i for
+~~~
+ここで `i` は、繰り返し処理の回数を表す変数です。任意の変数名を使用することができます。<br>
+繰り返し処理は、`{}` で囲まれた部分を1つの処理として扱います。<br>
+`{}` で囲まれた繰り返し処理の中では、`i` が現在の回数を表す値に置き換えられます。<br>
+
+- 例
+    1 から 100 までの２乗の和を求める。
+
+    $ S = 1^2 + 2^2 + 3^3 + ... + 100^2 = \sum_{i=1}^{100} i^2 $
+
+    ~~~ bash
+    0 s set
+    1 100 seq {
+        s i 2 ^ + s set
+    } i for
+    s echo
+    ~~~
+
+<br>
+<hr>
+
+## 条件分岐
+⚠ この機能は仮実装です。今後のバージョンで変更される可能性があります。もし、仕様に関してご意見があれば、[Issues](https://github.com/remokasu/stacker/issues) までご連絡ください。
+
+`if`、または `ifelse` を使うことで条件分岐を行うことができます。
+
+### if
+~~~ bash
+{真の場合の処理} {条件} if
+~~~
+
+- 例
+    ~~~ bash
+    0 x set
+    {...} {x 0 >==} if
+    ~~~
+この例では、`x`が0以上の場合に`{...}`が実行されます。
+{真の場合の処理} と {条件} は、かならず {} で囲む必要があります。
+
+### ifelse
+⚠ この機能は仮実装です。今後のバージョンで変更される可能性があります。もし、仕様に関してご意見があれば、[Issues](https://github.com/remokasu/stacker/issues) までご連絡ください。
+
+条件式が真の場合、真の場合の処理を実行し、偽の場合、偽の場合の処理を実行します。
+~~~ bash
+{真の場合の処理} {偽の場合の処理} {条件} ifelse
+~~~
+
+- 例
+    ~~~ bash
+    0 x set
+    {...} {...} {x 0 >==} ifelse
+    ~~~
+この例では、`x`が0以上の場合に`{...}`が実行され、0未満の場合に`{...}`が実行されます。
+
+<br>
+<hr>
+
+## FizzBuzz の例
+繰り返し処理と、条件分岐を使ってFizzBuzzを実装する例を示します。
+~~~ bash
+1 100 seq {
+    {i str " fizzbuzz" + echo} {
+        {i str " fizz" + echo} {i 3 % 0 ==} if
+        {i str " buzz" + echo} {i 5 % 0 ==} if
+    } {i 3 % 0 == i 5 % 0 == and} ifelse
+} i for
+~~~
+
+<br>
+<hr>
+
 ## プラグインの使い方
 
 Stackerのプラグインを作成するには、以下の手順に従ってください。
@@ -701,7 +888,7 @@ Stackerのプラグインを作成するには、以下の手順に従ってく�
 
 5. 以下のコマンドを実行してStackerを再インストールします：
     ~~~ bash
-    python setup.py install
+    > python setup.py install
     ~~~
 
 6. Stackerが起動すると、自動的にプラグインが読み込まれ、カスタムコマンドが利用可能になります。
@@ -711,6 +898,25 @@ Stackerのプラグインを作成するには、以下の手順に従ってく�
 <br>
 <hr>
 
+## スクリプトモードで実行
+⚠ この機能は開発中につき、よきせぬ挙動をする可能性があります。もし、仕様に関してご意見があれば、[Issues](https://github.com/remokasu/stacker/issues) までご連絡ください。
+
+拡張子が `.stk` のテキストファイルを作成し、以下のように記述します。
+
+- script.stk
+~~~ bash
+1 2 + echo
+...
+~~~
+
+このファイルを、以下のように実行します。
+~~~ bash
+> stacker script.stk
+~~~
+
+
+<br>
+<hr>
 
 ## clear
 * `clear` でスタックを初期化

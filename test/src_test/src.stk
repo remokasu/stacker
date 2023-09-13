@@ -1,5 +1,5 @@
 #
-# stacker src.sk
+# stacker src.stk
 #
 
 #######################
@@ -61,10 +61,49 @@ D echo
 # example 6
 #######################
 "example 6" echo
-
+clear
 0 s set
-0 101 seq {
+1 100 seq {
     s i 2 ^ + s set
     s echo
 } i for
 s echo
+
+show
+
+#######################
+# example 7
+#######################
+"example 7" echo
+1 x set
+{x echo} {x 0 >} if
+{0 echo} {x 0 ==} if
+{x neg echo} {x 0 <} if
+
+0 x set
+{x echo} {x 0 >} if
+{0 echo} {x 0 ==} if
+{x neg echo} {x 0 <} if
+
+-4 x set
+{x echo} {x 0 >} if
+{0 echo} {x 0 ==} if
+{x neg echo} {x 0 <} if
+
+-4 x set
+{x echo} {x neg echo} {x 0 >} ifelse
+{x} {x neg} {x 0 >} ifelse
+
+1 100 seq {
+    {i str " fizzbuzz" + echo} {
+        {i str " fizz" + echo} {i 3 % 0 ==} if
+        {i str " buzz" + echo} {i 5 % 0 ==} if
+    } {i 3 % 0 == i 5 % 0 == and} ifelse
+} i for
+
+clear
+0 x set
+{
+    x ++ x set
+    x echo
+} 5 times
