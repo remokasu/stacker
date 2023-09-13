@@ -1,9 +1,10 @@
 import cmath
 import math
 import unittest
+import numpy as np
 
-from stacker.stacker import Stacker, parse_string
-
+from stacker.stacker import Stacker
+from stacker.util.string_parser import parse_string
 
 def cpow(x1, x2):
     return cmath.exp(x2 * cmath.log(x1))
@@ -44,11 +45,11 @@ class TestStacker(unittest.TestCase):
             ("5 neg", -5),
             ("3 neg abs", 3),
             ("3 2 ^", 9),
-            ("3 exp", math.exp(3)),
-            ("2 log", math.log(2)),
-            ("30 radians sin", math.sin(math.radians(30))),
-            ("45 radians cos", math.cos(math.radians(45))),
-            ("60 radians tan", math.tan(math.radians(60))),
+            ("3 exp", np.exp(3)),
+            ("2 log", np.log(2)),
+            ("30 radians sin", np.sin(np.radians(30))),
+            ("45 radians cos", np.cos(np.radians(45))),
+            ("60 radians tan", np.tan(np.radians(60))),
             ("5 float", 5.0),
             ("3.14 int", 3),
             ("1 1 ==", True),
@@ -70,13 +71,13 @@ class TestStacker(unittest.TestCase):
             ("10 oct", '0o12'),
             ("0b101010 dec", 42),
             ("255 hex", '0xff'),
-            ("4 2 gcd", math.gcd(4, 2)),
-            ("4 log10", math.log10(4)),
-            ("4 log2", math.log2(4)),
+            ("4 2 gcd", np.gcd(4, 2)),
+            ("4 log10", np.log10(4)),
+            ("4 log2", np.log2(4)),
             ("4 !", math.factorial(4)),
-            ("9 sqrt", math.sqrt(9)),
-            ("3.2 ceil", math.ceil(3.2)),
-            ("3.8 floor", math.floor(3.8)),
+            ("9 sqrt", np.sqrt(9)),
+            ("3.2 ceil", np.ceil(3.2)),
+            ("3.8 floor", np.floor(3.8)),
             ("3.5 round", round(3.5)),
             ("3.51 1 roundn", round(3.51, 1)),
             # Add complex number test cases
@@ -84,24 +85,24 @@ class TestStacker(unittest.TestCase):
             ("(1+2j) (2+3j) -", complex(1, 2) - complex(2, 3)),
             ("(1+2j) (2+3j) *", complex(1, 2) * complex(2, 3)),
             ("(1+2j) (2+3j) /", complex(1, 2) / complex(2, 3)),
-            ("(1+2j) 2 ^", cpow(complex(1, 2), 2)),
-            ("(1+2j) exp", cmath.exp(complex(1, 2))),
-            ("(1+2j) log", cmath.log(complex(1, 2))),
-            ("(1+2j) sin", cmath.sin(complex(1, 2))),
-            ("(1+2j) cos", cmath.cos(complex(1, 2))),
-            ("(1+2j) tan", cmath.tan(complex(1, 2))),
-            ("(1+2j) sqrt", cmath.sqrt(complex(1, 2))),
-            ("(1+2j) sinh", cmath.sinh(complex(1, 2))),
-            ("(1+2j) cosh", cmath.cosh(complex(1, 2))),
-            ("(1+2j) tanh", cmath.tanh(complex(1, 2))),
-            ("(1+2j) asin", cmath.asin(complex(1, 2))),
-            ("(1+2j) acos", cmath.acos(complex(1, 2))),
-            ("(1+2j) atan", cmath.atan(complex(1, 2))),
-            ("(1+2j) asinh", cmath.asinh(complex(1, 2))),
-            ("(1+2j) acosh", cmath.acosh(complex(1, 2))),
-            ("(1+2j) atanh", cmath.atanh(complex(1, 2))),
-            ("4 2 lcm", math.lcm(4, 2)),
-            ("27 cbrt", pow(27, 1/3)),
+            ("(1+2j) 2 ^", np.power(complex(1, 2), 2)),
+            ("(1+2j) exp", np.exp(complex(1, 2))),
+            ("(1+2j) log", np.log(complex(1, 2))),
+            ("(1+2j) sin", np.sin(complex(1, 2))),
+            ("(1+2j) cos", np.cos(complex(1, 2))),
+            ("(1+2j) tan", np.tan(complex(1, 2))),
+            ("(1+2j) sqrt", np.sqrt(complex(1, 2))),
+            ("(1+2j) sinh", np.sinh(complex(1, 2))),
+            ("(1+2j) cosh", np.cosh(complex(1, 2))),
+            ("(1+2j) tanh", np.tanh(complex(1, 2))),
+            ("(1+2j) asin", np.arcsin(complex(1, 2))),
+            ("(1+2j) acos", np.arccos(complex(1, 2))),
+            ("(1+2j) atan", np.arctan(complex(1, 2))),
+            ("(1+2j) asinh", np.arcsinh(complex(1, 2))),
+            ("(1+2j) acosh", np.arccosh(complex(1, 2))),
+            ("(1+2j) atanh", np.arctanh(complex(1, 2))),
+            ("4 2 lcm", np.lcm(4, 2)),
+            ("27 cbrt", np.power(27, 1/3)),
             ("5 2 ncr", math.comb(5, 2)),
             ("5 2 npr", math.perm(5, 2)),
         ]

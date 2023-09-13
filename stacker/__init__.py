@@ -1,8 +1,9 @@
 import os
 
 from stacker import stacker
+from stacker import error
 
-__all__ = ["stacker"]
+__all__ = ["stacker", "error"]
 
 # リソースフォルダへのパスを取得する
 resource_path = os.path.join(os.path.dirname(__file__), 'data')

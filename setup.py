@@ -18,7 +18,7 @@ with open('requirements.txt', 'r', encoding='utf-8') as f:
 setup(
     author='remokasu',
     name="pystacker",
-    version="1.4.3",
+    version="1.4.4",
     license=license,
     url='https://github.com/remokasu/stacker',
     install_requires=install_requires,
@@ -30,7 +30,7 @@ setup(
     keywords='reverse-polish-calculator rpn terminal-app',
     entry_points={
         "console_scripts": [
-            "stacker = stacker.stacker:main",
+            "stacker = stacker.__main__:main",
         ],
     },
 )
