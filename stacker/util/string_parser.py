@@ -187,6 +187,11 @@ def is_block(expression: str) -> bool:
         return False
     return opener == closer
 
+def is_string(expression: str) -> bool:
+    return (
+        (expression.startswith("'") and expression.endswith("'")) or
+        (expression.startswith('"') and expression.endswith('"'))
+    )
 
 def convert_custom_array_to_proper_list(token: str) -> str:
     """

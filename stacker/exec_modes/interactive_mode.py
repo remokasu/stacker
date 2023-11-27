@@ -26,9 +26,13 @@ from stacker.exec_modes.excution_mode import ExecutionMode
 from pkg_resources import get_distribution
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit import prompt
+from prompt_toolkit.completion import WordCompleter
 
 
 class InteractiveMode(ExecutionMode):
+
+    def update_completer(self):
+        self.completer = WordCompleter(self.get_completer())
 
     def get_input(self, prompt_text: str, multiline: bool):
         try:
@@ -162,5 +166,5 @@ class InteractiveMode(ExecutionMode):
                 print(colored(f"[ERROR]: {e}", "red"))
                 if self.dmode:
                     traceback.print_exc()
-
+            # self.update_completer()
             line_count += 1
