@@ -14,6 +14,9 @@ from stacker.util.string_parser import (
     convert_custom_string_tuple_to_proper_tuple,
     is_block
 )
+from stacker.include import include_stacker_script
+from stacker.file import read_file, write_file
+from stacker.compiler import py_eval
 
 
 class Stacker:
@@ -113,8 +116,9 @@ class Stacker:
             "echo": (lambda value: print(value)),
             "ans": (lambda: self.get_last_ans()),
             "set": (lambda name, value: self._set(value, name)),
-            "fn": (lambda func_name, fargs, body: self.fn_operator(func_name, fargs, body)),
-            "seq": (lambda start_value, end_value: list(range(start_value, end_value))),
+            "defun": (lambda func_name, fargs, body: self.fn_operator(func_name, fargs, body)),
+            "alias": (lambda label, body: self.define_macro(label, body)),
+            "seq": (lambda start_value, end_value: list(range(start_value, end_value + 1))),
             "for": (lambda sequence, block, loop_var_symbol: self.execute_for(sequence, block, loop_var_symbol)),
             "times": (lambda n_times, block: self.execute_times(block, n_times)),
             "if": (lambda condition, block: self.execute_if(condition, block)),
@@ -122,6 +126,13 @@ class Stacker:
             # "cond": (lambda block: self.execute_cond(block)),
             "show": (lambda: self.show()),
             "clear": (lambda: self.clear_stack()),
+            "include": (lambda filename: self.include(filename)),
+            "read": (lambda filename, mode: self.raad(filename, mode)),
+            "write": (lambda content, filename, mode: self.write(filename, content, mode)),
+            # "ipy": (lambda code: py_eval(code, globals=globals())),
+            # "py": (lambda code: py_eval(code)),
+            # "sfunc": (lambda func, n_args: self.sfunc(func, n_args)),
+            # "rf": (lambda func_name, func_body: self.register_function(func_name, func_body)), 
         }
         self.variables = {
             "pi": parameter.pi,
@@ -132,6 +143,10 @@ class Stacker:
             "inf": parameter.inf,
             "nan": parameter.nan,
         }
+        self.macros = {}
+        self.plugins = {}
+        self.functions = {}
+        self.plugin_descriptions = {}
         self.reserved_word = [
             "help", "help-jp", "about", "exit",
             "delete_history", "last_pop", "end",
@@ -145,9 +160,43 @@ class Stacker:
         self.non_destructive_operator = {
             "exec", "delete", "pick", "rev", "echo", "show",
             "insert", "dup", "swap", "set", "push", "show_all_valiables",
-            "whos", "fn", "for", "times", "ifelse", "if"}
-        self.plugins = {}
-        self.plugin_descriptions = {}
+            "whos", "alias", "defun", "for", "times", "ifelse", "if", "include",
+            "write", "ipy"
+        }
+
+    def get_macros(self):
+        return self.macros
+
+    def get_variables(self):
+        return self.variables
+
+    def get_operator(self):
+        return self.operator
+
+    def raad(self, filename: str, mode: str) -> str:
+        """ Reads a file.
+        """
+        logging.debug(f"read: {filename}")
+        content = read_file(filename, mode=mode,interactive_mode=True)
+        return content
+
+    def write(self, filename: str, content, mode: str) -> None:
+        """ Writes a file.
+        """
+        logging.debug(f"write: {filename}")
+        write_file(filename, content, mode=mode, interactive_mode=True)
+
+    def include(self, filename: str) -> None:
+        """ Includes another stacker script.
+        """
+        logging.debug(f"include: {filename}")
+        _stacker = include_stacker_script(filename)
+        _operator = _stacker.get_operator()
+        _macros = _stacker.get_macros()
+        _variables = _stacker.get_variables()
+        self.operator.update(_operator)
+        self.macros.update(_macros)
+        self.variables.update(_variables)
 
     def substack(self, token: str) -> None:
         """ Creates a substack.
@@ -177,7 +226,7 @@ class Stacker:
         if self.parent is not None:
             return self.parent.peek()
         else:
-            raise StackerError("Cannot pdup from root stacker")
+            raise StackerSyntaxError("Cannot pdup from root stacker")
 
     def _eval(self, expression: str):
         logging.debug(f"eval: {expression}")
@@ -223,13 +272,26 @@ class Stacker:
             stack = self.stack
         stack.append(value)
 
+    def define_macro(self, label: str, body: Stacker) -> None:
+        """ Defines a macro.
+        """
+        self.macros[label] = body
+        macro = StackerMacro(label, body)
+        self.register_macro(label, macro)
+
+    def expand_macro(self, label: str) -> None:
+        """ Executes a macro.
+        """
+        macro = self.macros[label]
+        expression = macro.blockstack.sub_expression
+        tokens = parse_expression(expression)
+        self.evaluate(tokens, stack=self.stack)
+
     def fn_operator(self, func_name, fargs, blockstack: Stacker):
         logging.debug(f"fn_operator: func_name:{func_name}, args: {fargs}, \
             expression: {blockstack.sub_expression}")
         # self.operator[func_name] = (lambda *args: self._debug(*args))
         function = StackerFunction(fargs, blockstack)
-        if func_name in self.operator.keys():
-            del self.operator[func_name]
         self.register_operator(func_name, function, push_result_to_stack=True)
 
     def execute_for(self, sequence: list, blockstack: Stacker, loop_var_symbol: str):
@@ -298,7 +360,12 @@ class Stacker:
             else:  # e.g. a numeric object
                 self.stack.append(blockstack)
 
-    def execute_if_else(self, condition: Stacker | bool, true_block: Stacker | Any, false_block: Stacker | Any) -> None:
+    def execute_if_else(
+        self,
+        condition: Stacker | bool,
+        true_block: Stacker | Any,
+        false_block: Stacker | Any
+    ) -> None:
         """ Executes a block of code if a condition is true, otherwise executes another block of code.
         """
         if isinstance(condition, Stacker):
@@ -398,9 +465,12 @@ class Stacker:
         logging.debug("evaluate tokens: %s", tokens)
 
         # Iterate over each token in the token list
+        index = 0
         for token in tokens:
             logging.debug("tokens: %s, type: %s", token, type(token))
-
+            next_token = None
+            if index < len(tokens) - 1:
+                next_token = tokens[index + 1]
             if isinstance(token, set):  # TODO Refactoring
                 # {}
                 logging.debug("Convert set to string")
@@ -409,20 +479,28 @@ class Stacker:
             # If the token is not a string (e.g. it's a number), add it to the stack
             if not isinstance(token, str):
                 stack.append(token)
-            # If the token is an operator and we're not in a function definition ("fn" is not in the tokens)
-            # apply the operator to the current stack
-            elif token in self.operator and not "fn" in tokens:
+            elif token in self.macros and next_token != "alias":
+                self.expand_macro(token)
+            elif token in self.operator and next_token != "defun":
                 self.apply_operator(token, stack)
-            # If we're defining a function (token is "fn"), also apply the operator
-            elif token == "fn":
+            elif token == "defun" or token == "alias":
                 self.apply_operator(token, stack)
             # If the token is a block (substack), evaluate the substack
             elif is_block(token):
                 self.substack(token)
             # If none of the above conditions are met, just add the token to the stack
+            elif token in self.variables:
+                stack.append(self.variables[token])
             else:
+                # try:
+                #     # execute python code
+                #     token = eval(token)
+                # except Exception as e:
+                #     # just a string
+                #     print(e)
                 stack.append(token)
             logging.debug("stack: %s", str(stack))
+            index += 1
         return stack
 
     def apply_operator(self, token: str, stack: list):
@@ -445,7 +523,7 @@ class Stacker:
             value = self.pop(stack)
             args.append(value)
             args.append(name)
-        elif token == "fn":
+        elif token == "defun":
             args = []
             name = self.pop(stack, evaluate_on_pop=False)  # not evaluate
             body = self.pop(stack, evaluate_on_pop=False)  # not evaluate
@@ -455,6 +533,12 @@ class Stacker:
             args.append(body)
             args.append(fargs)
             args.append(name)
+        elif token == "alias":
+            args = []
+            label = self.pop(stack, evaluate_on_pop=False)
+            body = self.pop(stack, evaluate_on_pop=False)
+            args.append(body)
+            args.append(label)
         elif token == "for":
             args = []
             loop_var_symbol = self.pop(stack, evaluate_on_pop=False)  # not evaluate
@@ -483,6 +567,18 @@ class Stacker:
             args.append(false_block)
             args.append(true_block)
             args.append(condition)
+        elif token == "rf":  # regisgter_function
+            args = []
+            func_name = self.pop(stack, evaluate_on_pop=False)  # not evaluate
+            func_body = self.pop(stack, evaluate_on_pop=False)  # not evaluate
+            args.append(func_body)
+            args.append(func_name)
+        elif token in ["py", "ipy"]:
+            args = []
+            code = self.pop(stack, evaluate_on_pop=False)
+            if isinstance(code, Stacker):
+                code = code.sub_expression 
+            args.append(code)
         # elif token == "cond":
         #     args = []
         #     body = self.pop(stack, evaluate_on_pop=False)  # not evaluate
@@ -490,6 +586,10 @@ class Stacker:
         else:
             args = [self.pop(stack) for _ in range(n_args)]
         args.reverse()  # 引数の順序を逆にする
+        # if token in self.functions:
+        #     ans = self.functions[token](*args)
+        # else:
+        #     ans = self.operator[token](*args)
         ans = self.operator[token](*args)
         if token in self.non_destructive_operator:
             return
@@ -508,14 +608,47 @@ class Stacker:
             self.non_destructive_operator.add(operator_name)
         self.operator[operator_name] = operator_func
 
+    def register_macro(
+        self,
+        macro_name: str,
+        macro_body: Callable
+    ):
+        if macro_name in self.macros:
+            del self.macros[macro_name]
+        self.macros[macro_name] = macro_body
+
+    def register_parameter(
+        self,
+        parameter_name: str,
+        parameter_value: Any
+    ):
+        if parameter_name in self.variables:
+            del self.variables[parameter_name]
+        self.variables[parameter_name] = parameter_value
+
+    # def register_function(
+    #     self,
+    #     function_name: str,
+    #     function_body: Callable
+    # ):
+    #     # if function_name in self.functions:
+    #     #     del self.functions[function_name]
+    #     # self.functions[function_name] = function_body
+    #     print("function_name", function_name)
+    #     print("function_body", function_body)
+    #     if function_name in self.operator:
+    #         del self.operator[function_name]
+    #     self.operator[function_name] = function_body
+    #     logging.debug(f"register function: {function_name}")
+
     def register_plugin(
-            self,
-            operator_name: str,
-            operator_func: Callable,
-            push_result_to_stack: bool = True,
-            pass_core: bool = False,
-            description_en: str | None = None,
-            description_jp: str | None = None
+        self,
+        operator_name: str,
+        operator_func: Callable,
+        push_result_to_stack: bool = True,
+        pass_core: bool = False,
+        description_en: str | None = None,
+        description_jp: str | None = None
     ):
         if pass_core:
             original_operator_func = operator_func
@@ -524,9 +657,15 @@ class Stacker:
                 return wraped
             wrapped_operator_func.arg_count = original_operator_func.__code__.co_argcount - 1
             operator_func = wrapped_operator_func
-
         self.register_operator(operator_name, operator_func, push_result_to_stack)
         self.plugin_descriptions[operator_name] = {"en": description_en, "jp": description_jp}
+
+    # def sfunc(self, func: Callable, n_args: int):
+    #     def wrapped_operator_func(*args, **kwargs):
+    #         wraped = func(self, *args, **kwargs)
+    #         return wraped
+    #     wrapped_operator_func.arg_count = n_args
+    #     return wrapped_operator_func
 
 
 class StackerFunction:
@@ -550,3 +689,15 @@ class StackerFunction:
         self.blockstack.stack.append(self.blockstack)
         result = self.blockstack.pop()
         return result
+
+
+class StackerMacro:
+    """ A callable object that represents a macro defined in Stacker.
+    """
+    def __init__(self, label: str, blockstack: Stacker):
+        self.label = label
+        self.blockstack = blockstack
+        self.arg_count = 0
+
+    def __call__(self):
+        return self.blockstack
