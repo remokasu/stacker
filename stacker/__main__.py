@@ -23,19 +23,19 @@ parser.add_argument('script', nargs='?', default=None, help='Script file to run.
 argv = parser.parse_args()
 
 
-def load_plugins(stacker: Stacker):
+def load_plugins(stacker: Stacker, plugins_dir_path):
     """ Load plugins from the plugins directory.
     :param stacker: The Stacker instance to pass to the plugins.
     :return: None
     """
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    plugins_dir = os.path.join(script_dir, plugins_dir_path)
+    # script_dir = os.path.dirname(os.path.abspath(__file__))
+    # plugins_dir = os.path.join(script_dir, plugins_dir_path)
     # プラグインディレクトリにパスを追加
-    sys.path.insert(0, plugins_dir)
+    sys.path.insert(0, plugins_dir_path)
 
     try:
         # プラグインディレクトリ内のファイルを走査
-        for filename in os.listdir(plugins_dir):
+        for filename in os.listdir(plugins_dir_path):
             try:
                 if filename.endswith(".py") and not filename.startswith("__"):
                     # ファイル名から拡張子を除いた名前を取得
@@ -91,7 +91,15 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     rpn_calculator = Stacker()
-    load_plugins(rpn_calculator)
+
+    # load plugins
+    plugins_dir = os.path.join(os.getcwd(), plugins_dir_path)
+    if Path(plugins_dir).exists():  # カレントディレクトリにpluginsディレクトリがある場合
+        load_plugins(rpn_calculator, plugins_dir)
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    plugins_dir = os.path.join(script_dir, plugins_dir_path)
+    load_plugins(rpn_calculator, plugins_dir)
 
     if argv.script:
         # Script Mode

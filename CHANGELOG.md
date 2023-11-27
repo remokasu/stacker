@@ -1,5 +1,19 @@
 # CHANGE LOG
 
+## [1.4.5] - 2023-11-27
+
+### Added
+
+- Introduced macro functionality. Macros can be used with `{...} macroName alias`.
+- Added the ability to include external scripts with `{path} include`.
+- Added new documentation for the latest features.
+
+### Changed
+- If a `plugins` directory exists in the stacker execution directory, the application now loads plugin files from this directory at runtime.
+- The command for function definition has been changed from `fn` to `defun`. (Apologies for the change. If you have any suitable name suggestions, please propose them in the issues.)
+
+
+
 ## [1.4.4] - 2023-09-12
 
 ### Added

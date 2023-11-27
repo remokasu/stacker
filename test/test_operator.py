@@ -171,7 +171,7 @@ class TestStacker(unittest.TestCase):
 
     def test_function_definition_and_call(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("(x) {x x *} f fn")
+        self.stacker.process_expression("(x) {x x *} f defun")
         self.stacker.process_expression("4 f")
         self.assertEqual(self.stacker.stack[-1], 16)
 
@@ -303,6 +303,16 @@ class TestStacker(unittest.TestCase):
         self.stacker.process_expression("'1 + 1' eval")
         self.assertEqual(self.stacker.peek(), 2)
 
+class TestImportStacker(unittest.TestCase):
+    def setUp(self):
+        self.stacker = Stacker()
+
+    def test_include(self):
+        filename = "test/src_test/sample.stk"
+        self.stacker.stack.clear()
+        self.stacker.process_expression(f"'{filename}' include")
+        self.stacker.process_expression(f"5 increment")
+        self.assertEqual(self.stacker.stack[-1], 6)
 
 if __name__ == "__main__":
     unittest.main()
