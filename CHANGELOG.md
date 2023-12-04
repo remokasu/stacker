@@ -1,5 +1,12 @@
 # CHANGE LOG
 
+## [1.4.6] - 2023-12-05
+
+### Fixed
+
+- Fixed an issue where errors were not being displayed when there was a problem during plugin loading.
+
+
 ## [1.4.5] - 2023-11-27
 
 ### Added

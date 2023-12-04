@@ -34,17 +34,14 @@ def load_plugins(stacker: Stacker, plugins_dir_path):
     sys.path.insert(0, plugins_dir_path)
 
     try:
-        # プラグインディレクトリ内のファイルを走査
         for filename in os.listdir(plugins_dir_path):
             try:
                 if filename.endswith(".py") and not filename.startswith("__"):
-                    # ファイル名から拡張子を除いた名前を取得
-                    module_name = os.path.splitext(filename)[0]
-                    # モジュールをインポート
+                    module_name = os.path.splitext(filename)[0]  # remove .py extension
                     plugin_module = importlib.import_module(module_name)
-                    # プラグインのセットアップ関数を呼び出し
                     plugin_module.setup(stacker)
-            except AttributeError as e:
+                    logging.debug(f"Loaded plugin '{module_name}'.")
+            except Exception as e:
                 print(colored(f"[ERROR]{e}", "red"))
             finally:
                 continue
