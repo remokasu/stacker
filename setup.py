@@ -18,7 +18,7 @@ with open('requirements.txt', 'r', encoding='utf-8') as f:
 setup(
     author='remokasu',
     name="pystacker",
-    version="1.4.5",
+    version="1.4.6",
     license=license,
     url='https://github.com/remokasu/stacker',
     install_requires=install_requires,
