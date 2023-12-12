@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 """
 SyntaxError:
 This error is thrown during syntax parsing when an unexpected token is found, or an expected token is not found.
@@ -27,7 +26,11 @@ ValidationError:
 This error is thrown during the validation of input values when an invalid value is detected.
 It applies when the input value is not of the expected type or is outside the allowable range.
 
-Each of these errors occurs in specific situations, enabling appropriate handling and response.
+LoadPluginError:
+This error is thrown when an error occurs while loading a plugin.
+
+UndefinedVariableError:
+This error is thrown when an undefined variable is referenced.
 
 ------------------------------------------------------------------------------
 
@@ -55,8 +58,11 @@ ValidationError:
 入力値の検証中に不正な値が検出された場合にこのエラーが投げられる。
 入力値が期待する型でない、あるいは許容範囲外である場合などが該当する。
 
+LoadPluginError:
+プラグインの読み込み中にエラーが発生した場合にこのエラーが投げられる。
 
-このように、各エラーはそれぞれの特定の状況で発生するもので、適切な処理と対応を可能にします。
+UndefinedVariableError:
+未定義の変数が参照された場合にこのエラーが投げられる。
 """
 
 
@@ -66,6 +72,7 @@ class StackerError(Exception):
 
 class StackerSyntaxError(StackerError):
     """Syntax error"""
+
     def __init__(self, message):
         if message is None:
             message = "Syntax error: An error occurred while parsing the expression."
@@ -74,6 +81,7 @@ class StackerSyntaxError(StackerError):
 
 class UnexpectedTokenError(SyntaxError):
     """Unexpected token error"""
+
     def __init__(self, token, message=None):
         if message is None:
             message = f"Unexpected token: {token}"
@@ -82,14 +90,18 @@ class UnexpectedTokenError(SyntaxError):
 
 class SemanticError(StackerError):
     """Semantic error"""
+
     def __init__(self, message=None):
         if message is None:
-            message = "Semantic error: An error occurred while evaluating the expression."
+            message = (
+                "Semantic error: An error occurred while evaluating the expression."
+            )
         super().__init__(message)
 
 
 class StackerRuntimeError(StackerError):
     """Runtime error"""
+
     def __init__(self, message=None):
         if message is None:
             message = "Runtime error: An error occurred during execution."
@@ -98,6 +110,7 @@ class StackerRuntimeError(StackerError):
 
 class ResourceError(StackerError):
     """Resource error"""
+
     def __init__(self, message=None):
         if message is None:
             message = "Resource error: An error occurred while allocating resources."
@@ -106,7 +119,35 @@ class ResourceError(StackerError):
 
 class ValidationError(StackerError):
     """Validation error"""
+
     def __init__(self, message=None):
         if message is None:
             message = "Validation error: An error occurred while validating the input."
+        super().__init__(message)
+
+
+class LoadPluginError(StackerError):
+    """Load plugin error"""
+
+    def __init__(self, message=None):
+        if message is None:
+            message = "Load plugin error: An error occurred while loading the plugin."
+        super().__init__(message)
+
+
+class IncludeError(StackerError):
+    """Include error"""
+
+    def __init__(self, message=None):
+        if message is None:
+            message = "Include error: An error occurred while including the file."
+        super().__init__(message)
+
+
+class ScriptReadError(StackerError):
+    """Script read error"""
+
+    def __init__(self, message=None):
+        if message is None:
+            message = "Script read error: An error occurred while reading the script."
         super().__init__(message)

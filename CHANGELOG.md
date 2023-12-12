@@ -1,5 +1,129 @@
 # CHANGE LOG
 
+## [1.5.0] - 2023-12-12
+
+### Changed
+
+- The `Stack` command modification: `pop` has been changed to `drop`.
+
+- The input format for strings has been changed to `"..."` or `'...'`. Previously, there was no distinction between non-spaced strings and symbols such as variable names, but now they will be distinctly separated.
+  ~~~
+  stacker:0> "abc"
+  [abc]
+  stacker:1> 'efg'
+  [abc, efg]
+  ~~~
+  - This change has also changed the usage of the `eval` command.
+    - Previous usage:
+      ```
+      stacker:0> 1+1 eval
+      ```
+    - New usage:
+      ```
+      stacker:0> "1+1" eval
+      ```
+      (Note: `eval` is intended to execute Python syntax, and the example uses infix notation. `eval` cannot be written in Stacker syntax.)
+
+- An error will now be thrown when an undefined symbol is pushed.
+
+- However, when pushing an undefined symbol in the syntax for variable definition or function definition, you can push an undefined symbol by prefixing the symbol name with a dollar sign ($).
+  ~~~
+  stacker:0> 0 $a set
+  stacker:1> (args) {...} $funcName debun
+  stacker:2> {...} $macroName alias
+  ~~~
+
+- The loop control syntax has been changed from `for` to `do`.
+  
+    ~~~
+    0 10 $i {i echo} do
+    ~~~
+
+- When using `include`, the path to the target script file should now be specified as a string (`"..."` or `'...'`).
+
+- The definition of commands has been moved from `stacker.py` to `lib/functions.py`, and the files have been divided into sections. However, the commands for looping and conditional branching remain in `stacker.py`.
+
+- The `slib` directory has been added. If you place a Stacker script file (*.stk) in this directory, it will be automatically loaded at startup and the functions, macros, and variables will be available. Currently, `mean` has been added as an example.
+
+- Functions defined in Stacker are now called `sfunction`. This is to distinguish between Stacker functions and Python functions.
+
+### Added
+
+- Added the ability to convert characters to ASCII codes with `asc`. Only one character can be converted at a time.
+- Added the ability to convert ASCII codes to characters with `chr`. This also only converts one character at a time.
+- Added test code to the `tests` directory. However, not all features are covered yet.
+
+### Fixed
+- REPL mode now displays the length of the stack instead of line numbers.
+- REPL mode no longer displays commas between stack elements.
+
+### Removed
+- Removed the Japanese description (`description`).
+- Removed the ability to specify a Japanese `description` when defining a plugin.
+  (It was becoming too difficult to manage.)
+
+<hr>
+
+### (In Japanese)
+
+### Changed
+
+- `Stack` コマンドの変更: `pop` が `drop` に変更されました。
+
+- 文字列の入力フォーマットが `"..."` または `'...'` に変更されました。以前は空白のない文字列と変数名等のシンボルの区別をしていませんでしたが、今後はこれらを明確に区別します。
+  ~~~
+  stacker:0> "abc"
+  [abc]
+  stacker:1> 'efg'
+  [abc, efg]
+  ~~~
+  - この変更により、`eval` コマンドの使用方法が変更されました。
+    - 以前の使用方法：
+      ```
+      stacker:0> 1+1 eval
+      ```
+    - 新しい使用方法：
+      ```
+      stacker:0> "1+1" eval
+      ```
+      (注意: `eval` はPython構文を実行することを想定しており、例では中置記法を使用しています。`eval` はStacker構文で書くことはできません。)
+
+- 未定義のシンボルを `push` した際にエラーが発生するように変更されました。
+
+- ただし、変数定義や関数定義の構文で未定義のシンボルを `push` する際は、シンボル名の先頭にドル記号 ($) を付けることで、未定義のシンボルを `push` することが可能です。
+
+  ~~~
+  stacker:0> 0 $a set
+  stacker:1> (args) {...} $funcName debun
+  stacker:2> {...} $macroName alias
+  ~~~
+
+- 繰り返し制御構文が変更され、`for` から `do` に変更されました。
+
+  ~~~
+  0 10 $i {i echo} do
+  ~~~
+
+- `include` する際には、対象のスクリプトファイルのパスを文字列 (`"..."` または `'...'`) で指定するように変更されました。
+- コマンドの定義が `stacker.py` から `lib/functions.py` に移動され、項目ごとにファイルが分割されました。ただし、繰り返しと条件分岐のコマンドは `stacker.py` に残されています。
+- `slib` ディレクトリが追加されました。このディレクトリに Stacker のスクリプトファイル (*.stk) を置くと、起動時に自動的に読み込まれ、関数、マクロ、変数が利用可能になります。現在は `mean` が例として追加されています。
+- Stacker 上で定義した関数は `sfunction` という名称で呼ばれることになりました。これは、Stacker の関数と Python の関数を区別するためです。
+
+### Added
+- 文字をASCIIコードに変換する機能 `asc` が追加されました。一文字のみ変換可能です。
+- ASCIIコードを文字に変換する機能 `chr` が追加されました。こちらも一文字のみ変換可能です。
+- テストコードが `tests` ディレクトリに追加されました。ただし、まだ全ての機能を網羅しているわけではありません。
+
+### Fixed
+- REPLモードで行番号の代わりにスタックの長さを表示するように変更されました。
+- REPLモードで、スタックの要素間にカンマを表示していた問題を修正し、表示しないように変更しました。
+
+### Removed
+- 日本語の説明文 (`description`) を削除しました。
+- プラグイン定義時に日本語の `description` を指定する機能を削除しました。
+(管理が大変になってきたので...)
+
+
 ## [1.4.6] - 2023-12-05
 
 ### Fixed
@@ -64,7 +188,6 @@ These operations are only valid for integer values.
 - Fixed a bug in the parser.
 
 <hr>
-
 ## [1.4.0] - 2023-05-22
 
 ### Added

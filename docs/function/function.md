@@ -3,7 +3,7 @@
 In Stacker, you can define your own functions using the `defun` operator. The general syntax for function definition is as follows:
 
 ~~~ bash
-(arg1 arg2 ... argN) {body} functionName defun
+(arg1 arg2 ... argN) {body} $name defun
 ~~~
 
 Here's how each part of the function definition works:
@@ -12,14 +12,15 @@ Here's how each part of the function definition works:
 
 2. `{body}`: This is the body of your function, which is written in Stacker's Reverse Polish Notation (RPN) syntax. The body should be enclosed in curly braces `{}`.
 
-3. `functionName`: This is the name you're giving to your function. It can be any valid identifier.
+3. `name`: This is the name you're giving to your function. It can be any valid identifier. 
+If "name" is an undefined symbol, you need to prefix the symbol name with a dollar sign ($) at the beginning.
 
 4. `defun`: This is the operator that tells Stacker you're defining a function.
 
 Here's an example of a function definition:
 
 ~~~ bash
-stacker 0:> (x y) {x y *} multiply defun
+stacker 0:> (x y) {x y *} $multiply defun
 ~~~
 
 This defines a function named `multiply` that takes two arguments `x` and `y` and multiplies them together. 

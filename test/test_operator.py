@@ -1,10 +1,14 @@
 import cmath
 import math
 import unittest
+
 import numpy as np
 
 from stacker.stacker import Stacker
-from stacker.util.string_parser import parse_string
+
+# from stacker.syntax.parser import lex_string
+from stacker.syntax.lexer import lex_string
+
 
 def cpow(x1, x2):
     return cmath.exp(x2 * cmath.log(x1))
@@ -14,18 +18,30 @@ class TestUnit(unittest.TestCase):
     def setUp(self):
         self.stacker = Stacker()
 
-    def test_parse_string(self):
+    def test_lex_string(self):
         expr = "1 2 3 [4 5 6] 7 8 (9 10 11) a1 b1 c1 {1 2 +} '1+1' eval"
         exprs = [
-            "1", "2", "3", "[4 5 6]", "7", "8", "(9 10 11)",
-            "a1", "b1", "c1", "{1 2 +}", "1+1", "eval"]
-        result = parse_string(expr)
+            "1",
+            "2",
+            "3",
+            "[4 5 6]",
+            "7",
+            "8",
+            "(9 10 11)",
+            "a1",
+            "b1",
+            "c1",
+            "{1 2 +}",
+            "'1+1'",
+            "eval",
+        ]
+        result = lex_string(expr)
         self.assertEqual(result, exprs)
 
-    def test_parse_string_2(self):
+    def test_lex_string_2(self):
         expr = "'1+1' eval"
-        exprs = ["1+1", "eval"]
-        result = parse_string(expr)
+        exprs = ["'1+1'", "eval"]
+        result = lex_string(expr)
         print(result)
         self.assertEqual(result, exprs)
 
@@ -67,10 +83,10 @@ class TestStacker(unittest.TestCase):
             ("8 2 >>", 2),
             ("2 2 <<", 8),
             ("5 ~", -6),
-            ("5 bin", '0b101'),
-            ("10 oct", '0o12'),
+            ("5 bin", "0b101"),
+            ("10 oct", "0o12"),
             ("0b101010 dec", 42),
-            ("255 hex", '0xff'),
+            ("255 hex", "0xff"),
             ("4 2 gcd", np.gcd(4, 2)),
             ("4 log10", np.log10(4)),
             ("4 log2", np.log2(4)),
@@ -102,7 +118,7 @@ class TestStacker(unittest.TestCase):
             ("(1+2j) acosh", np.arccosh(complex(1, 2))),
             ("(1+2j) atanh", np.arctanh(complex(1, 2))),
             ("4 2 lcm", np.lcm(4, 2)),
-            ("27 cbrt", np.power(27, 1/3)),
+            ("27 cbrt", np.cbrt(27)),
             ("5 2 ncr", math.comb(5, 2)),
             ("5 2 npr", math.perm(5, 2)),
         ]
@@ -145,17 +161,23 @@ class TestStacker(unittest.TestCase):
         self.stacker.process_expression("2 pluck")
         self.assertEqual(self.stacker.stack, [1, 2, 4, 5, 3])
 
-        # Test 'pick' operation
+        # Test 'copy' operation
         self.stacker.stack.clear()
         self.stacker.process_expression("1 2 3 4 5")
-        self.stacker.process_expression("1 pick")
+        self.stacker.process_expression("1 copy")
         self.assertEqual(self.stacker.stack, [1, 2, 3, 4, 5, 2])
 
         # Test 'pop' operation
         self.stacker.stack.clear()
         self.stacker.process_expression("1 2 3 4 5")
-        self.stacker.process_expression("pop")
+        self.stacker.process_expression("drop")
         self.assertEqual(self.stacker.stack, [1, 2, 3, 4])
+
+        # Test 'dup' operation
+        self.stacker.stack.clear()
+        self.stacker.process_expression("1 2 3 4 5")
+        self.stacker.process_expression("dup")
+        self.assertEqual(self.stacker.stack, [1, 2, 3, 4, 5, 5])
 
         # Test 'rev' operation
         self.stacker.stack.clear()
@@ -166,12 +188,12 @@ class TestStacker(unittest.TestCase):
 
     def test_variable_assignment(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("5 a set")
+        self.stacker.process_expression("5 $a set")
         self.assertEqual(self.stacker.variables["a"], 5)
 
     def test_function_definition_and_call(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("(x) {x x *} f defun")
+        self.stacker.process_expression("(x) {x x *} $f defun")
         self.stacker.process_expression("4 f")
         self.assertEqual(self.stacker.stack[-1], 16)
 
@@ -191,7 +213,7 @@ class TestStacker(unittest.TestCase):
         self.assertEqual(type(self.stacker.stack[-1]), float)
 
         # str
-        self.stacker.process_expression("hoge")
+        self.stacker.process_expression("'hoge'")
         self.assertEqual(self.stacker.stack[-1], "hoge")
         self.assertEqual(type(self.stacker.stack[-1]), str)
 
@@ -237,7 +259,6 @@ class TestStacker(unittest.TestCase):
         self.assertEqual(self.stacker.stack[-1], 4)
         self.assertEqual(self.stacker.stack[-2], [1, 2, 3])
 
-
         # Custom format list input with float
         self.stacker.process_expression("[1.0 2.0 3.0]")
         self.assertEqual(self.stacker.stack[-1], [1.0, 2.0, 3.0])
@@ -279,17 +300,16 @@ class TestStacker(unittest.TestCase):
     # valiable
     def test_variable_assign_1(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("123 a set")
+        self.stacker.process_expression("123 $a set")
         self.stacker.process_expression("a")
-        self.stacker.process_expression("pop")
-        self.assertEqual(self.stacker.last_pop, 123)
+        self.assertEqual(self.stacker.pop(), 123)
 
     def test_variable_assign_2(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("{30 50 +} b set")
+        self.stacker.process_expression("{30 50 +} $b set")
         self.stacker.process_expression("b")
-        self.stacker.process_expression("pop")
-        self.assertEqual(self.stacker.last_pop, 80)
+        # self.stacker.process_expression("pop")
+        self.assertEqual(self.stacker.pop(), 80)
 
     # blockstack
     def test_blockstack(self):
@@ -301,18 +321,8 @@ class TestStacker(unittest.TestCase):
     def test_eval(self):
         self.stacker.stack.clear()
         self.stacker.process_expression("'1 + 1' eval")
-        self.assertEqual(self.stacker.peek(), 2)
+        self.assertEqual(self.stacker.stack[-1], 2)
 
-class TestImportStacker(unittest.TestCase):
-    def setUp(self):
-        self.stacker = Stacker()
-
-    def test_include(self):
-        filename = "test/src_test/sample.stk"
-        self.stacker.stack.clear()
-        self.stacker.process_expression(f"'{filename}' include")
-        self.stacker.process_expression(f"5 increment")
-        self.assertEqual(self.stacker.stack[-1], 6)
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,78 +1,52 @@
 Enter RPN expression, variable assignment, or function definition.
 Type 'exit' to quit.
 
-Examples:
-  RPN expression: 3 4 +
-  Variable assignment: x = 5
-  Function definition: x y func => x y *
-  Function call: 4 5 func
-
-Supported operators and functions:
-    ==    Equal
-    !=    Not equal
-    <     Less than
-    <=    Less than or equal to
-    >     Greater than
-    >=    Greater than or equal to
-    and   Logical AND
-    or    Logical OR
-    not   Logical NOT
-    band  Bitwise AND
-    bor   Bitwise OR
-    bxor  Bitwise XOR
-    +     Addition
-    -     Subtraction
-    *     Multiplication
-    /     Division
-    //    Integer division
-    %     Modulus
-    ^     Exponentiation
-    gcd   Greatest common divisor
-    lcm   Least common multiple
-    neg   Negation
-    abs   Absolute value
-    exp   Exponential function
-    log   Natural logarithm
-    log10 Base 10 logarithm
-    log2  Base 2 logarithm
-    sin   Sine
-    cos   Cosine
-    tan   Tangent
-    asin  Arcsine
-    acos  Arccosine
-    atan  Arctangent
-    sinh  Hyperbolic sine
-    cosh  Hyperbolic cosine
-    tanh  Hyperbolic tangent
-    asinh Inverse hyperbolic sine
-    acosh Inverse hyperbolic cosine
-    atanh Inverse hyperbolic tangent
-    sqrt  Square root
-    radians Convert degrees to radians
-    !     Factorial
-    cbrt  Cube root
-    ncr   Combinations (nCr)
-    npr   Permutations (nPr)
-    float Convert integer to floating-point number
-    int   Convert floating-point number to integer
-    ceil  Ceiling (smallest integer greater than or equal to the number)
-    floor Floor (largest integer less than or equal to the number)
-    round Round to the nearest integer
-    roundn Round to a specified number of decimal places
-    random Generate a random floating-point number between 0 and 1
-    randint Generate a random integer in the specified range
-    uniform Generate a random floating-point number in the specified range
-    dice   Dice roll (e.g., 3d6)
-    delete Remove an item from the stack at the specified index
-    pluck  Remove an item from the stack at the specified index and move it to the top
-    pick   Copy an item from the specified index to the top of the stack
-    pop    Pop an item from the stack
-    exec   Execute specified Python code
-    eval   Evaluate specified Python expression
-
 Usage:
   Input numbers and operators in RPN notation, separated by spaces.
   Press Enter to evaluate the expression and display the result.
   The result will be pushed onto the stack.
   To use the result in a subsequent calculation, input the next expression.
   To clear the stack, type 'clear'.
+
+Examples:
+  RPN expression: 3 4 +
+  Variable assignment: 5 a set
+  Function definition: (x y) {x y ^ } funcName defun
+  Function call: 4 5 func
+  Macro definition: {2 ^ 5 +} macroName alias
+  Macro call: 3 macroName
+
+Numbwer input
+  integer: 3
+  float: 3.14
+  scientific notation: 1.23e-4
+  hexadecimal: 0x1a
+  binary: 0b1010
+  octal: 0o123
+  complex: 1+2j
+String input:
+  hogefoovar
+  "hoge foo var"
+Array input:
+  [1 2 3 4 5]
+  [1 2 3; 4 5 6; 7 8 9]
+Tuple input:
+  (1 2 3 4 5)
+  (1 2 3; 4 5 6; 7 8 9)
+
+parameters:
+  pi
+  e
+  inf
+  nan
+  true
+  false
+  null
+
+If statement:
+  {<true expr} condition ifelse
+  {<true expr} {<false expr>} condition ifelse
+
+Loop statement:
+  stat end loopVariable {<loop expr>} do
+  {<loop expr>} n times
