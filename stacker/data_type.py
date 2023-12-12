@@ -1,5 +1,3 @@
-
-
 # class Operator:
 #     def __init__(self, name, func):
 #         self.name = name

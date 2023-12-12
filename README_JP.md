@@ -104,7 +104,7 @@ Python 3がインストールされていることを確認してください。
 
 ## 依存関係
 
-StackerはNumPyやPython Prompt Toolkitなどの外部ライブラリを使用します。以下のコマンドでインストールしてください:
+Stackerは`NumPy`や`Python Prompt Toolkit`などの外部ライブラリを使用します。以下のコマンドでインストールしてください:
 ```bash
 pip install numpy prompt_toolkit
 ```
@@ -144,12 +144,19 @@ StackerのRPN入力の例を示します
 
 - 逆ポーランドなんてクソ喰らえだ
     
-    '...'で囲った文字列を eval で評価できます。 やはり中置記法こそ正義なのです。 <br>
-    ところで、なんで君はStackerを使ってるんですか？
+    中置記法を文字列として入力し、`eval`を使用して評価することができます。 
     ```
-    tacker:0> '3 + 5' eval
+    tacker:0> "3+5" eval
     [8]
     ```
+    中置記法式を入力する場合、このような入力は不可能です。
+    ```
+    tacker:0> 3 + 5 eval
+    [ERROR]: Not enough operands for operator '+'
+    ```
+    やはり中置記法こそ正義なのです。 <br>
+    ところで、なんで君はStackerを使ってるんですか？
+
 
 ### スクリプトの実行
 Stackerスクリプトは*stkファイルで作成できます。スクリプトを実行するには、次の様に実行ファイルを指定します。

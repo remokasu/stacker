@@ -5,29 +5,43 @@ from setuptools import find_packages, setup
 
 here = path.abspath(path.dirname(__file__))
 
-with open('README.md', 'r', encoding='utf-8') as f:
+with open("README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
 
-with open('LICENSE', 'r', encoding='utf-8') as f:
+with open("LICENSE", "r", encoding="utf-8") as f:
     license = f.read()
 
 
-with open('requirements.txt', 'r', encoding='utf-8') as f:
+with open("requirements.txt", "r", encoding="utf-8") as f:
     install_requires = f.read()
 
 setup(
-    author='remokasu',
+    author="remokasu",
     name="pystacker",
-    version="1.4.6",
+    version="1.5.0",
     license=license,
-    url='https://github.com/remokasu/stacker',
+    url="https://github.com/remokasu/stacker",
     install_requires=install_requires,
     packages=find_packages(),
-    package_data={'stacker': ['data/*', 'plugins/*', 'include/*', 'file/*', 'exec_modes/*', 'util/*', 'compiler/*']},
-    description='Stacker: RPN Calculator in Python',
+    package_data={
+        "stacker": [
+            "data/*",
+            "plugins/*",
+            "include/*",
+            "file/*",
+            "exec_modes/*",
+            "util/*",
+            "compiler/*",
+            "syntax/*",
+            "slib/*",
+            "lib/*",
+            "error/*",
+        ]
+    },
+    description="Stacker: RPN Calculator in Python",
     long_description=long_description,
-    long_description_content_type='text/markdown',
-    keywords='reverse-polish-calculator rpn terminal-app',
+    long_description_content_type="text/markdown",
+    keywords="reverse-polish-calculator rpn terminal-app",
     entry_points={
         "console_scripts": [
             "stacker = stacker.__main__:main",
