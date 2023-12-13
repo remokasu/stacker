@@ -1,0 +1,32 @@
+"""
+import time
+
+def calculate_pi(n_terms):
+    pi_approximation = 0
+    for k in range(n_terms):
+        pi_approximation += (-1) ** k / (2 * k + 1)
+
+    pi_approximation *= 4
+    return pi_approximation
+
+
+if __name__ == "__main__":
+    n = 100000000
+    s_t = time.time()
+    pi = calculate_pi(n)
+    e_t = time.time()
+    print(pi)
+    print(f"time: {(e_t - s_t)}")
+"""
+
+time $s_t set
+100000 $n set
+0 $p set
+0 n $k {
+    -1 k ^ 2 k * 1 + / p + p set
+} do
+p 4 * p set
+time $e_t set
+
+p echo
+"time: " e_t s_t - str + echo

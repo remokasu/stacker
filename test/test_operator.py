@@ -302,14 +302,14 @@ class TestStacker(unittest.TestCase):
         self.stacker.stack.clear()
         self.stacker.process_expression("123 $a set")
         self.stacker.process_expression("a")
-        self.assertEqual(self.stacker.pop(), 123)
+        self.assertEqual(self.stacker.pop_and_eval(self.stacker.stack), 123)
 
     def test_variable_assign_2(self):
         self.stacker.stack.clear()
         self.stacker.process_expression("{30 50 +} $b set")
         self.stacker.process_expression("b")
         # self.stacker.process_expression("pop")
-        self.assertEqual(self.stacker.pop(), 80)
+        self.assertEqual(self.stacker.pop_and_eval(self.stacker.stack), 80)
 
     # blockstack
     def test_blockstack(self):

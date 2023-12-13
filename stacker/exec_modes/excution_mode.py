@@ -99,7 +99,7 @@ class ExecutionMode:
         stack = []
         for token in _stack:
             if isinstance(token, Stacker):
-                stack.append("{" + f"{token.sub_expression}" + "}")
+                stack.append("{" + f"{token.expression}" + "}")
             else:
                 stack.append(token)
         if self.color_print is True:
