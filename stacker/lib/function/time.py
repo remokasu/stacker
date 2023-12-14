@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from time import time
 
+
 def _time() -> float:
     """Returns the current time in seconds since the Epoch."""
     return time()

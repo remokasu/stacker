@@ -8,7 +8,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(True)
         stacker.push(True)
-        self.assertEqual(stacker.stack, [True, True])
+        self.assertEqual(list(stacker.stack), [True, True])
         expr = "and"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], True)
@@ -23,7 +23,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(True)
         stacker.push(True)
-        self.assertEqual(stacker.stack, [True, True])
+        self.assertEqual(list(stacker.stack), [True, True])
         expr = "or"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], True)
@@ -37,7 +37,7 @@ class TestUnit(unittest.TestCase):
     def test_not(self):
         stacker = Stacker()
         stacker.push(True)
-        self.assertEqual(stacker.stack, [True])
+        self.assertEqual(list(stacker.stack), [True])
         expr = "not"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], False)

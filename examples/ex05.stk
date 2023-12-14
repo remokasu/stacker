@@ -25,7 +25,7 @@ time $s_t set
 0 n $k {
     -1 k ^ 2 k * 1 + / p + p set
 } do
-p 4 * p set
+4 p * p set
 time $e_t set
 
 p echo

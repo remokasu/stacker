@@ -7,7 +7,7 @@ class TestUnit(unittest.TestCase):
     def test_neg(self):
         stacker = Stacker()
         stacker.push(1)
-        self.assertEqual(stacker.stack, [1])
+        self.assertEqual(stacker.stack[-1], 1)
         expr = "neg"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], -1)

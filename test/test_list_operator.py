@@ -8,10 +8,10 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(5)
-        self.assertEqual(stacker.stack, [1, 5])
+        self.assertEqual(list(stacker.stack), [1, 5])
         expr = "seq"
         stacker.process_expression(expr)
-        self.assertEqual(stacker.stack, [[1, 2, 3, 4, 5]])
+        self.assertEqual(list(stacker.stack), [[1, 2, 3, 4, 5]])
         stacker.push(1.1)
         stacker.push(4.2)
         with self.assertRaises(TypeError):
@@ -21,10 +21,10 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(5)
-        self.assertEqual(stacker.stack, [1, 5])
+        self.assertEqual(list(stacker.stack), [1, 5])
         expr = "range"
         stacker.process_expression(expr)
-        self.assertEqual(stacker.stack, [[1, 2, 3, 4]])
+        self.assertEqual(list(stacker.stack), [[1, 2, 3, 4]])
         stacker.push(1.1)
         stacker.push(4.2)
         with self.assertRaises(TypeError):
@@ -33,10 +33,10 @@ class TestUnit(unittest.TestCase):
     def test_len(self):
         stacker = Stacker()
         stacker.push([1, 2, 3, 4, 5])
-        self.assertEqual(stacker.stack, [[1, 2, 3, 4, 5]])
+        self.assertEqual(list(stacker.stack), [[1, 2, 3, 4, 5]])
         expr = "len"
         stacker.process_expression(expr)
-        self.assertEqual(stacker.stack, [5])
+        self.assertEqual(list(stacker.stack), [5])
         stacker.push(1.1)
         with self.assertRaises(TypeError):
             stacker.process_expression(expr)
@@ -44,10 +44,10 @@ class TestUnit(unittest.TestCase):
     def test_min(self):
         stacker = Stacker()
         stacker.push([1, 2, 3, 4, 5])
-        self.assertEqual(stacker.stack, [[1, 2, 3, 4, 5]])
+        self.assertEqual(list(stacker.stack), [[1, 2, 3, 4, 5]])
         expr = "min"
         stacker.process_expression(expr)
-        self.assertEqual(stacker.stack, [1])
+        self.assertEqual(list(stacker.stack), [1])
         stacker.push(1.1)
         with self.assertRaises(TypeError):
             stacker.process_expression(expr)
@@ -55,10 +55,10 @@ class TestUnit(unittest.TestCase):
     def test_max(self):
         stacker = Stacker()
         stacker.push([1, 2, 3, 4, 5])
-        self.assertEqual(stacker.stack, [[1, 2, 3, 4, 5]])
+        self.assertEqual(list(stacker.stack), [[1, 2, 3, 4, 5]])
         expr = "max"
         stacker.process_expression(expr)
-        self.assertEqual(stacker.stack, [5])
+        self.assertEqual(list(stacker.stack), [5])
         stacker.push(1.1)
         with self.assertRaises(TypeError):
             stacker.process_expression(expr)
@@ -66,10 +66,10 @@ class TestUnit(unittest.TestCase):
     def test_sum(self):
         stacker = Stacker()
         stacker.push([1, 2, 3, 4, 5])
-        self.assertEqual(stacker.stack, [[1, 2, 3, 4, 5]])
+        self.assertEqual(list(stacker.stack), [[1, 2, 3, 4, 5]])
         expr = "sum"
         stacker.process_expression(expr)
-        self.assertEqual(stacker.stack, [15])
+        self.assertEqual(list(stacker.stack), [15])
         stacker.push(1.1)
         with self.assertRaises(TypeError):
             stacker.process_expression(expr)

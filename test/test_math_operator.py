@@ -8,7 +8,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(2)
         stacker.push(3)
-        self.assertEqual(stacker.stack, [2, 3])
+        self.assertEqual(list(stacker.stack), [2, 3])
         expr = "^"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], 8)

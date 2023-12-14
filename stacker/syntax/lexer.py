@@ -23,10 +23,6 @@ def lex_string(s: str) -> list:
                 current_token += char
                 bracket_stack.pop()
                 if not bracket_stack:
-                    # if current_token[0] == "'" or current_token[0] == '"':
-                    #     tokens.append(current_token[1:-1])  # remove quotes
-                    # else:
-                    #     tokens.append(current_token)
                     tokens.append(current_token)
                     current_token = ""
             else:
@@ -37,10 +33,6 @@ def lex_string(s: str) -> list:
             if char == delimiter_mapping[bracket_stack[-1]]:
                 bracket_stack.pop()
                 if not bracket_stack:
-                    # if current_token[0] == "'" or current_token[0] == '"':
-                    #     tokens.append(current_token[1:-1])  # remove quotes
-                    # else:
-                    #     tokens.append(current_token)
                     tokens.append(current_token)
                     current_token = ""
         elif char.isspace():

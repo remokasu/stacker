@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-import logging
 import re
 from typing import Any
 
@@ -10,11 +9,9 @@ from stacker.syntax.lexer import lex_string
 
 def evaluate_token_or_return_str(token: str) -> Any:
     """Evaluates a token if it is a number, otherwise returns the token as a string."""
-    logging.debug("evaluate_token_or_return_str: %s", token)
     try:
         return ast.literal_eval(token)
     except (ValueError, SyntaxError) as e:
-        logging.debug(f"{token} is not a number: {e}")
         return token
 
 
@@ -172,10 +169,12 @@ def convert_custom_array_to_proper_list(token: str) -> str:
     Example:
     Input:  "[1 2 3; 4 5 6]"
     Output: "[[1, 2, 3], [4, 5, 6]]"
+    Input:  "[1 2 3]"
+    Output: "[1, 2, 3]"
     """
-    token = re.sub(r"(\d+(\.\d+)?)\s+", r"\1, ", token)
-    token = re.sub(r";\s+", r"], [", token)
 
+    token = token.replace(";", "], [")
+    token = re.sub(r"(\d+(\.\d+)?)\s+", r"\1, ", token)
     open_brackets = token.count("[")
     close_brackets = token.count("]")
     if open_brackets > close_brackets:
@@ -218,6 +217,8 @@ def convert_custom_string_tuple_to_proper_tuple(token: str) -> str:
     Example:
     Input:  "(a b)"
     Output: "("a", "b")"
+    Input:  "(x)"
+    Output: "x"
     """
     # Convert sequences of non-number, non-punctuation characters to
     #    use commas and surround with quotes
@@ -245,7 +246,6 @@ def parse_expression(expression: str) -> list:
     """
     ignore_tokens = ['"""', "'''"]
     lexed_expression: list = lex_string(expression)
-    logging.debug("lexed expression: %s", lexed_expression)
     tokens = []
     for token in lexed_expression:
         if token in ignore_tokens:

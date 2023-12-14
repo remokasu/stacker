@@ -8,7 +8,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(2)
-        self.assertEqual(stacker.stack, [1, 2])
+        self.assertEqual(list(stacker.stack), [1, 2])
         expr = "bin"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], "0b10")
@@ -23,7 +23,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(2)
-        self.assertEqual(stacker.stack, [1, 2])
+        self.assertEqual(list(stacker.stack), [1, 2])
         expr = "oct"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], "0o2")
@@ -38,7 +38,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(2)
-        self.assertEqual(stacker.stack, [1, 2])
+        self.assertEqual(list(stacker.stack), [1, 2])
         expr = "dec"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], 2)
@@ -53,7 +53,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(255)
-        self.assertEqual(stacker.stack, [1, 255])
+        self.assertEqual(list(stacker.stack), [1, 255])
         expr = "hex"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], "0xff")
