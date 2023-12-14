@@ -117,10 +117,10 @@ Stacker scripts can be created in *stk files. To run a script, simply execute it
 ### Include Scripts
 Stacker scripts can be included in other scripts using the `include` command. For example:
 
-    ``` bash
-    stacker:0>  "my_script.stk" include
-    ```
-    All functions, macros and variables defined in "my_script.stk" are added to the current stack.
+``` bash
+stacker:0>  "my_script.stk" include
+```
+All functions, macros and variables defined in "my_script.stk" are added to the current stack.
 
 
 ## Creating Plugins
