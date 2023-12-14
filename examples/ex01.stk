@@ -1,16 +1,19 @@
-1 100 seq {
+"ex01" echo
+
+1 100 $i
+{
     {"fizzbuzz" echo}
     {
         {"buzz" echo}
         {
             {"fizz" echo}
             {i str echo}
-            i 3 % 0 ==
+            {i 3 % 0 ==}
             ifelse
         }
-        i 5 % 0 ==
+        {i 5 % 0 ==}
         ifelse
     }
-    i 3 % 0 == i 5 % 0 == and
+    {i 3 % 0 == i 5 % 0 == and}
     ifelse
-} i for
+} do

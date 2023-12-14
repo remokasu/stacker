@@ -73,9 +73,9 @@ To create and use plugins in Stacker, follow these steps:
 
     # Example of setting up custom commands and a parameter
     def setup(stacker: Stacker):
-        stacker.register_plugin("+", matrix_add, description_en="Matrix addition")
-        stacker.register_plugin("-", matrix_sub, description_en="Matrix subtraction")
-        stacker.register_plugin("*", matrix_mul, description_en="Matrix multiplication")
+        stacker.register_plugin("+", matrix_add, desc="Matrix addition")
+        stacker.register_plugin("-", matrix_sub, desc="Matrix subtraction")
+        stacker.register_plugin("*", matrix_mul, desc="Matrix multiplication")
         
         # Registering a custom parameter
         stacker.register_parameter("custom_param", custom_value)
@@ -83,7 +83,7 @@ To create and use plugins in Stacker, follow these steps:
         # Additional plugin setup can go here
         ...
     ```
-    You can specify the command description for the help command using description_en or description_jp. This field is optional.
+    You can specify the command description for the help command using desc. This field is optional.
 
     This example demonstrates how to register functions for matrix operations and how to set a custom parameter within a plugin. The register_parameter method is used to add a custom parameter to the Stacker environment, allowing for additional customization and control within your plugin.
 

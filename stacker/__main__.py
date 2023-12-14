@@ -1,38 +1,66 @@
 import argparse
-import traceback
-import os
-import sys
-import shutil
 import importlib
 import logging
-
-from pkg_resources import get_distribution
+import os
+import shutil
+import sys
+import traceback
 from pathlib import Path
 
-from stacker.util import colored
-from stacker.stacker import Stacker
-from stacker.lib.config import plugins_dir_path
-# from stacker.execution_mode import ScriptMode, InteractiveMode
-from stacker.exec_modes.interactive_mode import InteractiveMode
-from stacker.exec_modes.script_mode import ScriptMode
+from pkg_resources import get_distribution
 
-parser = argparse.ArgumentParser(description='Stacker command line interface.')
-parser.add_argument('--addplugin', metavar='path', type=str, help='Path to the plugin to add.')
-parser.add_argument('--dmode', action='store_true', help='Enable debug mode')
-parser.add_argument('script', nargs='?', default=None, help='Script file to run.')
+from stacker.error import LoadPluginError
+
+# from stacker.execution_mode import ScriptMode, ReplMode
+from stacker.exec_modes.repl_mode import ReplMode
+from stacker.exec_modes.script_mode import ScriptMode
+from stacker.lib.config import plugins_dir_path
+from stacker.stacker import Stacker
+from stacker.util import colored
+
+parser = argparse.ArgumentParser(description="Stacker command line interface.")
+parser.add_argument(
+    "--addplugin", metavar="path", type=str, help="Path to the plugin to add."
+)
+parser.add_argument("--dmode", action="store_true", help="Enable debug mode")
+parser.add_argument("script", nargs="?", default=None, help="Script file to run.")
 argv = parser.parse_args()
 
 
+def load_stacker_lib(stacker: Stacker, dir_path):
+    """Load the Stacker library from the specified directory.
+    :param stacker: The Stacker instance to pass to the plugins.
+    :param dir_path: The directory to load the Stacker library from.
+    :return: None
+    """
+    # Add the library directory path
+    sys.path.insert(0, dir_path)
+    try:
+        for filename in os.listdir(dir_path):
+            try:
+                if filename.endswith(".stk"):
+                    include_stacker_script = Path(dir_path) / filename
+                    stacker.include(str(include_stacker_script))
+            except Exception as e:
+                print(colored(f"Failed load slib ({filename}). {e}", "red"))
+                sys.exit(1)
+            finally:
+                continue
+    except FileNotFoundError:
+        print("Error: library folder not found. Skipping library loading.")
+        sys.exit(1)
+    finally:
+        # Remove the library directory path
+        sys.path.pop(0)
+
+
 def load_plugins(stacker: Stacker, plugins_dir_path):
-    """ Load plugins from the plugins directory.
+    """Load plugins from the plugins directory.
     :param stacker: The Stacker instance to pass to the plugins.
     :return: None
     """
-    # script_dir = os.path.dirname(os.path.abspath(__file__))
-    # plugins_dir = os.path.join(script_dir, plugins_dir_path)
-    # プラグインディレクトリにパスを追加
+    # Add the plugin directory path
     sys.path.insert(0, plugins_dir_path)
-
     try:
         for filename in os.listdir(plugins_dir_path):
             try:
@@ -42,13 +70,15 @@ def load_plugins(stacker: Stacker, plugins_dir_path):
                     plugin_module.setup(stacker)
                     logging.debug(f"Loaded plugin '{module_name}'.")
             except Exception as e:
-                print(colored(f"[ERROR]{e}", "red"))
+                print(colored(f"Failed load plugin ({filename}). {e}", "red"))
+                sys.exit(1)
             finally:
                 continue
     except FileNotFoundError:
-        print("Warning: plugins folder not found. Skipping plugin loading.")
+        print("Error: plugins folder not found. Skipping plugin loading.")
+        sys.exit(1)
     finally:
-        # プラグインディレクトリからパスを削除
+        # Remove the plugin directory path
         sys.path.pop(0)
 
 
@@ -69,14 +99,15 @@ def copy_plugin_to_install_dir(plugin_path: str, dmode: bool) -> None:
         print(f"Successfully added the plugin '{plugin_path}' to Stacker.")
         print(plugin_dir)
     except Exception as e:
-        print(f"An error occurred while adding the plugin: {str(e)}")
+        print(
+            f"An error occurred while adding the plugin ({str(plugin_path)}): {str(e)}"
+        )
         if dmode:
             traceback.print_exc()
 
 
 def main():
-    """ Main entry point for the Stacker CLI.
-    """
+    """Main entry point for the Stacker CLI."""
     # add plugin
     if argv.addplugin:
         copy_plugin_to_install_dir(argv.addplugin, argv.dmode)
@@ -89,14 +120,19 @@ def main():
 
     rpn_calculator = Stacker()
 
-    # load plugins
-    plugins_dir = os.path.join(os.getcwd(), plugins_dir_path)
-    if Path(plugins_dir).exists():  # カレントディレクトリにpluginsディレクトリがある場合
-        load_plugins(rpn_calculator, plugins_dir)
-
+    # load plugins from the Stacker's installation directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     plugins_dir = os.path.join(script_dir, plugins_dir_path)
     load_plugins(rpn_calculator, plugins_dir)
+
+    # load plugins from current directory
+    plugins_dir = os.path.join(os.getcwd(), plugins_dir_path)
+    if Path(plugins_dir).exists():
+        load_plugins(rpn_calculator, plugins_dir)
+
+    # load the Stacker library
+    library_dir = os.path.join(script_dir, "slib")
+    load_stacker_lib(rpn_calculator, library_dir)
 
     if argv.script:
         # Script Mode
@@ -106,10 +142,10 @@ def main():
         script_mode.run(argv.script)
     else:
         # Interactive mode
-        interactive_mode = InteractiveMode(rpn_calculator)
+        repl_mode = ReplMode(rpn_calculator)
         if argv.dmode:
-            interactive_mode.debug_mode()
-        interactive_mode.run()
+            repl_mode.debug_mode()
+        repl_mode.run()
 
 
 if __name__ == "__main__":

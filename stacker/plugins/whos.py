@@ -14,7 +14,7 @@ def whos(stacker):
         if isinstance(_value, list) or isinstance(_value, tuple):
             try:
                 # n dim (n > 1)
-                _size = ([len(v) for v in _value])
+                _size = [len(v) for v in _value]
             except TypeError:
                 # 1 dim
                 _size = len(_value)
@@ -26,5 +26,6 @@ def setup(stacker: Stacker):
         operator_name="whos",
         operator_func=whos,
         push_result_to_stack=False,
-        pass_core=True
+        pass_core=True,
+        desc="Show the variables in the stacker",
     )

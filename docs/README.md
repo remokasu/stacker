@@ -17,6 +17,9 @@
 - ## [Constants](./values/constants.md)
 - ## [Variables](./values/variables.md)
 
+# Variable
+- ## [Variable Definitions](./variable/variable.md)
+
 # Control Statements
 
 - ## [Conditionals](./control-statements/conditionals.md)
@@ -37,7 +40,3 @@
 <!-- # I/O
 - ## [Input](./io/input.md)
 - ## [Output](./io/output.md) -->
-
-# Examples
-
-- ## [Examples](./examples/example.md)

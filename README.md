@@ -1,7 +1,11 @@
 [**日本語  (Japanese)**](https://github.com/remokasu/stacker/blob/main/README_JP.md)
 
 
-# Stacker: An RPN Calculator
+# Stacker: An RPN Calculator and Extensible Programming Language
+
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![PyPI version](https://badge.fury.io/py/pystacker.svg)](https://badge.fury.io/py/pystacker)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 Stacker is a powerful Reverse Polish Notation (RPN) calculator built with Python, featuring basic mathematical operations and extensibility through plugins.
 
@@ -68,11 +72,55 @@ Stacker allows for straightforward RPN input. For example:
   [7]
   ```
 
+- Variables:
+
+  ```bash
+  stacker:0> 3 $x set
+  ```
+  This sets the variable `x` to `3`.
+
+- Define a macro:
+  ```bash
+  stacker:0> {2 ^ 3 * 5 +} $calculatePowerAndAdd alias
+  stacker:1> 5 calculatePowerAndAdd
+  [80]
+  ```
+    This defines a macro with the body `{2 ^ 3 * 5 +}` and assigns it the name `calculatePowerAndAdd`. This macro squares the number on the stack, multiplies it by 3, and then adds 5.
+
+- Define a function:
+  ```bash
+  stacker:0> (x y) {x y *} $multiply defun
+  stacker:1> 10 20 multiply
+  [200]
+  ```
+    This defines a function named `multiply` that takes two arguments `x` and `y` and multiplies them together.
+
 ### Running Scripts
 Stacker scripts can be created in *stk files. To run a script, simply execute it with Stacker. For example:
-```bash
-stacker my_script.stk
-```
+
+- my_script.stk:
+  ```bash
+    100000 $n set
+    0 $p set
+    0 n $k {
+        -1 k ^ 2 k * 1 + / p + p set
+    } do
+    4 p * p set
+    p echop echo
+  ```
+
+  Running the script:  
+  ```bash
+  stacker my_script.stk
+  ```
+
+### Include Scripts
+Stacker scripts can be included in other scripts using the `include` command. For example:
+    ``` bash
+    stacker:0>  "my_script.stk" include
+    ```
+    All functions, macros and variables defined in "my_script.stk" are added to the current stack.
+
 
 ## Creating Plugins
 
@@ -115,3 +163,7 @@ def setup(stacker: Stacker):
 
 ## Documentation
 For more detailed documentation, please refer to [`stacker/docs`](https://github.com/remokasu/stacker/blob/main/docs/README.md).
+
+
+## Supported Operations
+`+` `-` `*` `/` `//` `/` `%` `++` `--` `bin` `oct` `dec` `hex` `band` `bor` `bxor` `~` `>>` `<<` `==` `!=` `<=` `<` `>=` `>` `eq` `noq` `le` `lt` `ge` `gt` `echo` `print` `and` `or` `not` `&&` `||` `^` `log` `log2` `log10` `exp` `sin` `cos` `tan` `asin` `acos` `atan` `sinh` `cosh` `tanh` `asinh` `acosh` `atanh` `sqrt` `gcd` `lcm` `radians` `!` `ceil` `floor` `comb` `perm` `abs` `cbrt` `ncr` `npr` `roundn` `round` `rand` `randint` `uniform` `dice` `int` `float` `str` `bool` `seq` `range` `min` `sum` `max` `len` `drop` `dup` `swap` `pick` `rot` `rotl` `insert` `rev` `clear` `disp` `eval` `asc` `chr` `concat` `time` `if` `ifelse` `times` `do` `set` `defun` `alias` `include`
