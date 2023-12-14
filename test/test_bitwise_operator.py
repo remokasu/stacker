@@ -8,7 +8,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(2)
-        self.assertEqual(stacker.stack, [1, 2])
+        self.assertEqual(list(stacker.stack), [1, 2])
         expr = "band"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], 0)
@@ -24,7 +24,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(2)
-        self.assertEqual(stacker.stack, [1, 2])
+        self.assertEqual(list(stacker.stack), [1, 2])
         expr = "bor"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], 3)
@@ -40,7 +40,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(2)
-        self.assertEqual(stacker.stack, [1, 2])
+        self.assertEqual(list(stacker.stack), [1, 2])
         expr = "bxor"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], 3)
@@ -55,7 +55,7 @@ class TestUnit(unittest.TestCase):
     def test_bnot(self):
         stacker = Stacker()
         stacker.push(1)
-        self.assertEqual(stacker.stack, [1])
+        self.assertEqual(list(stacker.stack), [1])
         expr = "~"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], -2)
@@ -70,7 +70,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(2)
-        self.assertEqual(stacker.stack, [1, 2])
+        self.assertEqual(list(stacker.stack), [1, 2])
         expr = "<<"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], 4)
@@ -86,7 +86,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(8)
         stacker.push(2)
-        self.assertEqual(stacker.stack, [8, 2])
+        self.assertEqual(list(stacker.stack), [8, 2])
         expr = ">>"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], 2)

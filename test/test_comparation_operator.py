@@ -8,7 +8,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(1)
-        self.assertEqual(stacker.stack, [1, 1])
+        self.assertEqual(list(stacker.stack), [1, 1])
         expr = "=="
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], True)
@@ -23,7 +23,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(1)
-        self.assertEqual(stacker.stack, [1, 1])
+        self.assertEqual(list(stacker.stack), [1, 1])
         expr = "!="
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], False)
@@ -38,7 +38,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(1)
-        self.assertEqual(stacker.stack, [1, 1])
+        self.assertEqual(list(stacker.stack), [1, 1])
         expr = ">"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], False)
@@ -54,7 +54,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(1)
-        self.assertEqual(stacker.stack, [1, 1])
+        self.assertEqual(list(stacker.stack), [1, 1])
         expr = "<"
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], False)
@@ -70,7 +70,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(1)
-        self.assertEqual(stacker.stack, [1, 1])
+        self.assertEqual(list(stacker.stack), [1, 1])
         expr = ">="
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], True)
@@ -86,7 +86,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         stacker.push(1)
         stacker.push(1)
-        self.assertEqual(stacker.stack, [1, 1])
+        self.assertEqual(list(stacker.stack), [1, 1])
         expr = "<="
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], True)
