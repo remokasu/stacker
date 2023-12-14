@@ -4,33 +4,26 @@ import logging
 import sys
 import traceback
 
-from stacker.util import colored
-from stacker.lib.config import history_file_path
-from stacker.lib import (
-    show_about,
-    show_help,
-    show_help_jp,
-    show_top,
-    delete_history
-)
-from stacker.util.string_parser import (
-    is_brace_balanced,
-    is_tuple_balanced,
-    is_array_balanced,
-    is_brace,
-    is_tuple,
-    is_array
-)
-from stacker.exec_modes.excution_mode import ExecutionMode
-
 from pkg_resources import get_distribution
-from prompt_toolkit.history import FileHistory
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.history import FileHistory
+
+from stacker.exec_modes.excution_mode import ExecutionMode
+from stacker.lib import delete_history, show_about, show_help, show_top
+from stacker.lib.config import history_file_path
+from stacker.syntax.parser import (
+    is_array,
+    is_array_balanced,
+    is_brace,
+    is_brace_balanced,
+    is_tuple,
+    is_tuple_balanced,
+)
+from stacker.util import colored
 
 
-class InteractiveMode(ExecutionMode):
-
+class ReplMode(ExecutionMode):
     def update_completer(self):
         self.completer = WordCompleter(self.get_completer())
 
@@ -40,7 +33,7 @@ class InteractiveMode(ExecutionMode):
                 prompt_text,
                 history=FileHistory(history_file_path),
                 completer=self.completer,
-                multiline=multiline
+                multiline=multiline,
             )
         except EOFError:
             print("\nSee you!")
@@ -48,9 +41,9 @@ class InteractiveMode(ExecutionMode):
 
     def run(self):
         show_top()
-        stacker_version = get_distribution('pystacker').version
+        stacker_version = get_distribution("pystacker").version
         print(f"Stacker {stacker_version} on {sys.platform}")
-        print('Type "help" or "help-jp" to get more information.')
+        print('Type "help" to get more information.')
 
         line_count = 0
         while True:
@@ -69,7 +62,9 @@ class InteractiveMode(ExecutionMode):
                     #     {1 3 +}
                     # """
                     while not is_brace_balanced(expression):
-                        prompt_text = " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> "
+                        prompt_text = (
+                            " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> "
+                        )
                         next_line = self.get_input(prompt_text, multiline=False)
                         expression += " " + next_line
                         if next_line in {"}"}:
@@ -88,14 +83,20 @@ class InteractiveMode(ExecutionMode):
                     #                 3 4 5)
                     #     (1 2 3; 3 4 5)
                     # """
-                    while not is_array_balanced(expression) or not is_tuple_balanced(expression):
-                        prompt_text = " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> "
+                    while not is_array_balanced(expression) or not is_tuple_balanced(
+                        expression
+                    ):
+                        prompt_text = (
+                            " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> "
+                        )
                         next_line = self.get_input(prompt_text, multiline=False)
-                        if next_line.lower() == ('end'):
+                        if next_line.lower() == ("end"):
                             break
                         if next_line in {"]", ")"}:
                             expression += next_line
-                            if is_array_balanced(expression) or is_tuple_balanced(expression):
+                            if is_array_balanced(expression) or is_tuple_balanced(
+                                expression
+                            ):
                                 if expression[-2:] in {";]", ";)"}:
                                     closer = expression[-1]
                                     expression = expression[:-2] + closer
@@ -131,22 +132,19 @@ class InteractiveMode(ExecutionMode):
                 if expression.lower() == "help":
                     show_help()
                     print("")
-                    print("Plugin commands:")
-                    for plugin_name, plugin_descriptions in self.rpn_calculator.plugin_descriptions.items():
-                        en_description = plugin_descriptions.get("en", None)
-                        if en_description:
-                            print(f"  {plugin_name}: {en_description}")
-                    continue
-                if expression.lower() == "help-jp":
-                    show_help_jp()
+                    print("Supported operators and functions:")
+                    for (
+                        operator_name,
+                        operator_descriptions,
+                    ) in self.rpn_calculator.operator_descriptions.items():
+                        print(f"  {operator_name}:\t{operator_descriptions}")
                     print("")
-                    print("プラグインコマンド：")
-                    for plugin_name, plugin_descriptions in self.rpn_calculator.plugin_descriptions.items():
-                        jp_description = plugin_descriptions.get("jp", None)
-                        if jp_description:
-                            print(f"  {plugin_name}: {jp_description}")
-                        else:
-                            print(f"  {plugin_name}: {plugin_descriptions['en']} (日本語の説明はありません)")
+                    print("Plugin commands:")
+                    for (
+                        plugin_name,
+                        plugin_descriptions,
+                    ) in self.rpn_calculator.plugin_descriptions.items():
+                        print(f"  {plugin_name}: {plugin_descriptions}")
                     continue
                 if expression.lower() == "about":
                     show_about()
@@ -154,7 +152,9 @@ class InteractiveMode(ExecutionMode):
                 if expression.lower() == "delete_history":
                     delete_history()
                     continue
-
+                if expression.lower() == "vars":
+                    self.show_all_valiables()
+                    continue
                 self.rpn_calculator.process_expression(expression)
                 self.show_stack()
 
@@ -163,8 +163,8 @@ class InteractiveMode(ExecutionMode):
                 break
 
             except Exception as e:
-                print(colored(f"[ERROR]: {e}", "red"))
+                print(colored(f"{e}", "red"))
                 if self.dmode:
                     traceback.print_exc()
             # self.update_completer()
-            line_count += 1
+            line_count = self.rpn_calculator.get_stack_length()

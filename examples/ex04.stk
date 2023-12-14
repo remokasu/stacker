@@ -1,0 +1,10 @@
+"examples/macro.stk" include
+"examples/func.stk" include
+
+(x y) {x y +} $fadd defun
+{* 10 +} $mulmacro alias
+
+4 oneadd echo
+5 power echo
+10 10 fadd echo
+3 5 mulmacro echo

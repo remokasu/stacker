@@ -104,7 +104,7 @@ Python 3がインストールされていることを確認してください。
 
 ## 依存関係
 
-StackerはNumPyやPython Prompt Toolkitなどの外部ライブラリを使用します。以下のコマンドでインストールしてください:
+Stackerは`NumPy`や`Python Prompt Toolkit`などの外部ライブラリを使用します。以下のコマンドでインストールしてください:
 ```bash
 pip install numpy prompt_toolkit
 ```
@@ -141,21 +141,70 @@ StackerのRPN入力の例を示します
   stacker:2> +
   [7]
   ```
+- 変数定義:
+  ```bash
+  stacker:0> 3 $x set
+  ```
+  xに3を代入します。
+
+- マクロ作成:
+  ```bash
+  stacker:0> {2 ^ 3 * 5 +} $calculatePowerAndAdd alias
+  stacker:1> 5 calculatePowerAndAdd
+  [80]
+  ```
+    マクロ `{2 ^ 3 * 5 +}` を定義し、名前 `calculatePowerAndAdd` を割り当てます。このマクロは、スタック上の数値を2乗し、3倍し、5を加算します。
+
+- 関数定義:
+  ```bash
+  stacker:0> (x y) {x y *} $multiply defun
+  stacker:1> 10 20 multiply
+  [200]
+  ```
+    2つの引数 `x` と `y` を取り、それらを掛け合わせる関数 `multiply` を定義します。
+  
 
 - 逆ポーランドなんてクソ喰らえだ
     
-    '...'で囲った文字列を eval で評価できます。 やはり中置記法こそ正義なのです。 <br>
-    ところで、なんで君はStackerを使ってるんですか？
+    中置記法を文字列として入力し、`eval`を使用して評価することができます。 
     ```
-    tacker:0> '3 + 5' eval
+    tacker:0> "3+5" eval
     [8]
     ```
+    やはり中置記法こそ正義なのです。 <br>
+    さぁ、Stackerをアンインストールしましょう。 <br>
+    ~~~ bash
+    > pip uninstall pystacker
+    ~~~
 
 ### スクリプトの実行
 Stackerスクリプトは*stkファイルで作成できます。スクリプトを実行するには、次の様に実行ファイルを指定します。
-```bash
-stacker my_script.stk
+
+- my_script.stk:
+  ```bash
+    100000 $n set
+    0 $p set
+    0 n $k {
+        -1 k ^ 2 k * 1 + / p + p set
+    } do
+    4 p * p set
+    p echop echo
+  ```
+
+  これを実行するには、次のコマンドを使用します:
+
+    ```bash
+    stacker my_script.stk
+    ```
+
+### スクリプトのインクルード
+
+Stackerスクリプトは、`include`コマンドを使用して他のスクリプトにインクルードできます。
+``` bash
+stacker:0>  "my_script.stk" include
 ```
+"my_script.stk"で定義されたすべての関数とマクロと変数が現在のスタックに追加されます。
+
 
 ## プラグインの作成
 
@@ -197,3 +246,7 @@ def setup(stacker: Stacker):
 
 ## ドキュメント
 より詳細なドキュメントについては、[`stacker/docs`](https://github.com/remokasu/stacker/blob/main/docs/README.md)を参照してください。
+
+
+## 使用可能コマンド
+`+` `-` `*` `/` `//` `/` `%` `++` `--` `bin` `oct` `dec` `hex` `band` `bor` `bxor` `~` `>>` `<<` `==` `!=` `<=` `<` `>=` `>` `eq` `noq` `le` `lt` `ge` `gt` `echo` `print` `and` `or` `not` `&&` `||` `^` `log` `log2` `log10` `exp` `sin` `cos` `tan` `asin` `acos` `atan` `sinh` `cosh` `tanh` `asinh` `acosh` `atanh` `sqrt` `gcd` `lcm` `radians` `!` `ceil` `floor` `comb` `perm` `abs` `cbrt` `ncr` `npr` `roundn` `round` `rand` `randint` `uniform` `dice` `int` `float` `str` `bool` `seq` `range` `min` `sum` `max` `len` `drop` `dup` `swap` `pick` `rot` `rotl` `insert` `rev` `clear` `disp` `eval` `asc` `chr` `concat` `time` `if` `ifelse` `times` `do` `set` `defun` `alias` `include`

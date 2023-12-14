@@ -1,5 +1,0 @@
-0 test set
-
-{1 +} increment alias
-
-(x y) {x y} add_two defun
