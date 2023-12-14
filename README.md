@@ -106,7 +106,7 @@ Stacker scripts can be created in *stk files. To run a script, simply execute it
         -1 k ^ 2 k * 1 + / p + p set
     } do
     4 p * p set
-    p echop echo
+    p echo
   ```
 
   Running the script:  
