@@ -106,7 +106,7 @@ Stacker scripts can be created in *stk files. To run a script, simply execute it
         -1 k ^ 2 k * 1 + / p + p set
     } do
     4 p * p set
-    p echop echo
+    p echo
   ```
 
   Running the script:  
@@ -166,4 +166,4 @@ For more detailed documentation, please refer to [`stacker/docs`](https://github
 
 
 ## Supported Operations
-`+` `-` `*` `/` `//` `/` `%` `++` `--` `bin` `oct` `dec` `hex` `band` `bor` `bxor` `~` `>>` `<<` `==` `!=` `<=` `<` `>=` `>` `eq` `noq` `le` `lt` `ge` `gt` `echo` `print` `and` `or` `not` `&&` `||` `^` `log` `log2` `log10` `exp` `sin` `cos` `tan` `asin` `acos` `atan` `sinh` `cosh` `tanh` `asinh` `acosh` `atanh` `sqrt` `gcd` `lcm` `radians` `!` `ceil` `floor` `comb` `perm` `abs` `cbrt` `ncr` `npr` `roundn` `round` `rand` `randint` `uniform` `dice` `int` `float` `str` `bool` `seq` `range` `min` `sum` `max` `len` `drop` `dup` `swap` `pick` `rot` `rotl` `insert` `rev` `clear` `disp` `eval` `asc` `chr` `concat` `time` `if` `ifelse` `times` `do` `set` `defun` `alias` `include`
+`+` `-` `*` `/` `//` `/` `%` `++` `--` `neg` `bin` `oct` `dec` `hex` `band` `bor` `bxor` `~` `>>` `<<` `==` `!=` `<=` `<` `>=` `>` `eq` `noq` `le` `lt` `ge` `gt` `echo` `print` `and` `or` `not` `&&` `||` `^` `log` `log2` `log10` `exp` `sin` `cos` `tan` `asin` `acos` `atan` `sinh` `cosh` `tanh` `asinh` `acosh` `atanh` `sqrt` `gcd` `lcm` `radians` `!` `ceil` `floor` `comb` `perm` `abs` `cbrt` `ncr` `npr` `roundn` `round` `rand` `randint` `uniform` `dice` `int` `float` `str` `bool` `seq` `range` `min` `sum` `max` `len` `drop` `dup` `swap` `pick` `rot` `rotl` `insert` `rev` `clear` `disp` `eval` `asc` `chr` `concat` `time` `if` `ifelse` `times` `do` `set` `defun` `alias` `include`
