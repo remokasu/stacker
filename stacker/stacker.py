@@ -38,25 +38,6 @@ from stacker.syntax.parser import (
 )
 
 
-# def is_int_or_float_or_complex(value_str: str) -> bool:
-#     try:
-#         int(value_str)
-#         float(value_str)
-#         complex(value_str)
-#         return True
-#     except Exception:
-#         return False
-
-# def pop_last_n_elements(stack, n):
-#     if len(stack) <= n:
-#         popped_elements = stack[:]
-#         stack.clear()
-#         return popped_elements
-#     last_elements = stack[-n:]
-#     stack[-n:] = []
-#     return last_elements
-
-
 class Stacker:
     """A class for evaluating RPN expressions."""
 
@@ -72,8 +53,9 @@ class Stacker:
         self.child = None
         # self.stack: list[Any] = []
         self.stack: deque[Any] = deque()
-        if self.parent is not None:
+        if self.parent is not None:  # it is a substack of a parent stacker
             self.operators = self.parent.get_operators_ref()
+            self.priority_operators = self.parent.get_priority_operators_ref()
             self.macros = self.parent.get_macros_ref()
             self.variables = self.parent.get_variables_ref()
             self.sfunctions = self.parent.get_sfuntions_ref()
@@ -146,6 +128,11 @@ class Stacker:
         self.operators.update(self.condition_operators)
         self.operators.update(self.loop_operators)
         self.operators.update(self.special_operators)
+        self.priority_operators = {}
+        self.priority_operators.update(stack_operators)
+        self.priority_operators.update(self.loop_operators)
+        self.priority_operators.update(self.condition_operators)
+        self.priority_operators.update(self.special_operators)
         self.variables = {}
         self.variables.update(constants)
         self.macros = {}
@@ -176,7 +163,7 @@ class Stacker:
     # Substack
     # ========================
 
-    def substack(self, token: str, stack: list) -> None:
+    def substack(self, token: str, stack: deque) -> None:
         """Creates a substack.
         :param token: {...}.
         """
@@ -191,7 +178,7 @@ class Stacker:
     def push(self, value: Any) -> None:  # TODO: remove
         self.stack.append(value)
 
-    def pop_and_eval(self, stack) -> Any:
+    def pop_and_eval(self, stack: deque) -> Any:
         value = stack.pop()
         if isinstance(value, Stacker):
             value.evaluate(value.tokens, stack=value.stack)
@@ -213,29 +200,29 @@ class Stacker:
         start_value: int,
         end_value: int,
         symbol: str,
-        blockstack: Stacker,
-        stack: list,
+        block: Stacker,
+        stack: deque,
     ) -> None:
         result = []
         for i in range(start_value, end_value + 1):
-            blockstack.variables[symbol] = i
-            result += blockstack.evaluate(blockstack.tokens, stack=blockstack.stack)
+            block.variables[symbol] = i
+            result += block.evaluate(block.tokens, stack=block.stack)
         stack.extend(result)
 
     def execute_times(
-        self, n_times: int, blockstack: Stacker | Any, stack: list = None
+        self, n_times: int, block: Stacker | Any, stack: deque = None
     ) -> None:
         """Executes a block of code a specified number of times."""
-        if isinstance(blockstack, Stacker):
+        if isinstance(block, Stacker):
             i_count = 0
             stack.append(i_count)
             while stack[-1] < n_times:
                 stack.pop()
-                blockstack.evaluate(blockstack.tokens, stack=blockstack.stack)
-                sub_stack = blockstack.get_stack_ref()
+                block.evaluate(block.tokens, stack=block.stack)
+                sub_stack = block.get_stack_ref()
                 if len(sub_stack) > 0:
                     stack += sub_stack
-                blockstack.stack.clear()
+                block.stack.clear()
                 i_count = i_count + 1
                 stack.append(i_count)
             stack.pop()
@@ -244,7 +231,7 @@ class Stacker:
             stack.append(i_count)
             while stack[-1] < n_times:
                 stack.pop()
-                stack.append(blockstack)
+                stack.append(block)
                 i_count = i_count + 1
                 stack.append(i_count)
             stack.pop()
@@ -254,7 +241,7 @@ class Stacker:
     # ========================
 
     def execute_if(
-        self, condition: Stacker | bool, blockstack: Stacker | Any, stack: list
+        self, condition: Stacker | bool, blockstack: Stacker | Any, stack: deque
     ) -> None:
         """Executes a block of code if a condition is true."""
         if isinstance(condition, Stacker):
@@ -280,7 +267,7 @@ class Stacker:
         condition: Stacker | bool,
         true_block: Stacker | Any,
         false_block: Stacker | Any,
-        stack: list,
+        stack: deque,
     ) -> None:
         """Executes a block of code if a condition is true, otherwise executes another block of code."""
         if isinstance(condition, Stacker):
@@ -318,7 +305,7 @@ class Stacker:
         tokens = parse_expression(expression)
         self.evaluate(tokens, stack=self.stack)
 
-    def evaluate(self, tokens: list, stack=[]) -> list:
+    def evaluate(self, tokens: list, stack: deque = deque()) -> deque:
         """
         Evaluates a given RPN expression.
         Returns the result of the evaluation.
@@ -347,71 +334,71 @@ class Stacker:
                 raise UnexpectedTokenError(token)
         return stack
 
-    def _execute(self, token: str, stack: list) -> None:
+    def _execute(self, token: str, stack: deque) -> None:
         """
         Applies an operator to the top elements on the stack.
         Modifies the stack in-place.
         """
-        if token == "do":
-            body = stack.pop()  # not evaluate
-            symbol = stack.pop()
-            end_value = self.pop_and_eval(stack)
-            start_value = self.pop_and_eval(stack)
-            self.execute_do(start_value, end_value, symbol, body, stack)
-        elif token == "times":
-            n_times = self.pop_and_eval(stack)
-            body = stack.pop()
-            self.execute_times(body, n_times, stack)
-        elif token == "if":
-            condition = stack.pop()
-            true_block = stack.pop()
-            self.execute_if(condition, true_block, stack)
-        elif token == "ifelse":
-            condition = stack.pop()
-            false_block = stack.pop()
-            true_block = stack.pop()
-            self.execute_if_else(condition, true_block, false_block, stack)
-        elif token == "set":
-            name = stack.pop()
-            value = self.pop_and_eval(stack)
-            self.variables[name] = value
-        elif token == "defun":
-            name = stack.pop()
-            body = stack.pop()
-            fargs = self.pop_and_eval(stack)
-            fargs = convert_custom_string_tuple_to_proper_tuple(fargs)
-            fargs = ast.literal_eval(fargs)
-            self.defun_sfunction(name, fargs, body)
-        elif token == "alias":
-            name = stack.pop()
-            body = stack.pop()
-            self.define_macro(name, body)
-        elif token == "include":
-            filename = stack.pop()
-            self.include(filename)
-        elif token in stack_operators:  # stack operators
-            n_args = self.operators[token]["arg_count"]
-            args = [self.pop_and_eval(stack) for _ in range(n_args)]
-            args.reverse()
-            args.append(stack)
-            op = self.operators[token]
-            if op["push_result_to_stack"]:
-                stack.append(op["func"](*args))
-            else:
-                op["func"](*args)
+        if token in self.priority_operators:
+            if token == "do":
+                body = stack.pop()  # not evaluate
+                symbol = stack.pop()
+                end_value = self.pop_and_eval(stack)
+                start_value = self.pop_and_eval(stack)
+                self.execute_do(start_value, end_value, symbol, body, stack)
+            elif token == "times":
+                n_times = self.pop_and_eval(stack)
+                body = stack.pop()
+                self.execute_times(n_times, body, stack)
+            elif token == "if":
+                condition = stack.pop()
+                true_block = stack.pop()
+                self.execute_if(condition, true_block, stack)
+            elif token == "ifelse":
+                condition = stack.pop()
+                false_block = stack.pop()
+                true_block = stack.pop()
+                self.execute_if_else(condition, true_block, false_block, stack)
+            elif token == "set":
+                name = stack.pop()
+                value = self.pop_and_eval(stack)
+                self.variables[name] = value
+            elif token == "defun":
+                name = stack.pop()
+                body = stack.pop()
+                fargs = self.pop_and_eval(stack)
+                fargs = convert_custom_string_tuple_to_proper_tuple(fargs)
+                fargs = ast.literal_eval(fargs)
+                self.defun_sfunction(name, fargs, body)
+            elif token == "alias":
+                name = stack.pop()
+                body = stack.pop()
+                self.define_macro(name, body)
+            elif token == "include":
+                filename = stack.pop()
+                self.include(filename)
+            elif token in stack_operators:  # stack operators
+                args = [stack]
+                for _ in range(stack_operators[token]["arg_count"]):
+                    args.insert(0, self.pop_and_eval(stack))
+                op = stack_operators[token]
+                if op["push_result_to_stack"]:
+                    stack.append(op["func"](*args))
+                else:
+                    op["func"](*args)
         elif token in self.operators:  # Other operators
-            n_args = self.operators[token]["arg_count"]
-            args = [self.pop_and_eval(stack) for _ in range(n_args)]
-            args.reverse()
+            args = []
+            for _ in range(self.operators[token]["arg_count"]):
+                args.insert(0, self.pop_and_eval(stack))
             op = self.operators[token]
             if op["push_result_to_stack"]:
                 stack.append(op["func"](*args))
             else:
                 op["func"](*args)
         elif token in self.sfunctions:  # sfunctions
-            n_args = self.sfunctions[token]["arg_count"]
-            args = [self.pop_and_eval(stack) for _ in range(n_args)]
-            args.reverse()
+            args = []
+            for _ in range(self.sfunctions[token]["arg_count"]):
+                args.insert(0, self.pop_and_eval(stack))
             sfunc = self.sfunctions[token]
             if sfunc["push_result_to_stack"]:
                 stack.append(sfunc["func"](*args))
@@ -420,7 +407,7 @@ class Stacker:
         else:
             raise StackerSyntaxError(f"Unknown operator '{token}'")
 
-    def expand_macro(self, name: str, stack: list) -> None:
+    def expand_macro(self, name: str, stack: deque) -> None:
         """Executes a macro."""
         macro = self.macros[name]
         expression = macro.blockstack.expression
@@ -431,9 +418,8 @@ class Stacker:
     # Definition
     # ========================
 
-    def defun_sfunction(self, func_name: str, fargs, blockstack: Stacker) -> None:
-        # self.operators[func_name] = (lambda *args: self._debug(*args))
-        function = StackerFunction(fargs, blockstack)
+    def defun_sfunction(self, func_name: str, fargs, body: Stacker) -> None:
+        function = StackerFunction(fargs, body)
         args_count = len(fargs)
         self.register_sfunction(
             func_name, function, args_count, push_result_to_stack=True
@@ -487,7 +473,7 @@ class Stacker:
     def register_plugin(
         self,
         operator_name: str,
-        operator_func: Callable,
+        operator_func: Any,
         push_result_to_stack: bool = True,
         pass_core: bool = False,
         desc: str | None = None,
@@ -515,10 +501,10 @@ class Stacker:
     # Getter
     # ========================
 
-    def get_stack_ref(self) -> list:
+    def get_stack_ref(self) -> deque:
         return self.stack
 
-    def get_stack_copy(self) -> list:
+    def get_stack_copy(self) -> deque:
         return self.stack.copy()
 
     def get_macros_ref(self) -> dict:
@@ -539,6 +525,12 @@ class Stacker:
     def get_operators_copy(self) -> dict:
         return self.operators.copy()
 
+    def get_priority_operators_ref(self) -> dict:
+        return self.priority_operators
+
+    def get_priority_operators_copy(self) -> dict:
+        return self.priority_operators.copy()
+
     def get_sfuntions_ref(self) -> dict:
         return self.sfunctions
 
@@ -558,7 +550,7 @@ class Stacker:
     # Debug
     # ========================
 
-    def eval(self, expression: str):
+    def eval(self, expression: str) -> Any:
         """Evaluates a given RPN expression.
         Returns the result of the evaluation.
 
@@ -575,12 +567,12 @@ class Stacker:
 class StackerFunction:
     """A callable object that represents a function defined in Stacker."""
 
-    def __init__(self, args: list[str], blockstack: Stacker):
+    def __init__(self, args: list[str], blockstack: Stacker) -> None:
         self.args = args
         self.blockstack = blockstack
         self.arg_count = len(args)
 
-    def __call__(self, *values):
+    def __call__(self, *values) -> Any:
         values = list(values)
         if len(values) != len(self.args):
             raise ValueError(f"Expected {len(self.args)} arguments, got {len(values)}")
@@ -598,10 +590,10 @@ class StackerFunction:
 class StackerMacro:
     """A callable object that represents a macro defined in Stacker."""
 
-    def __init__(self, name: str, blockstack: Stacker):
+    def __init__(self, name: str, blockstack: Stacker) -> None:
         self.name = name
         self.blockstack = blockstack
         self.arg_count = 0
 
-    def __call__(self):
+    def __call__(self) -> Stacker:
         return self.blockstack
