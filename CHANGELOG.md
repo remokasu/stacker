@@ -1,5 +1,10 @@
 # CHANGE LOG
 
+## [1.5.1] - 2023-12-15
+
+### Fixed
+- Fix times command bug.
+
 ## [1.5.0] - 2023-12-12
 
 ### Changed
