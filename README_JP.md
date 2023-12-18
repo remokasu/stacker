@@ -120,7 +120,7 @@ stacker
 python -m stacker
 ```
 
-Stackerは標準的な算術演算（+、-、*、/）と高度な関数（sin、cos、tanなど）をサポートしています。ユーザーはRPN形式でコマンドを入力し、カスタムプラグインを使用して機能を拡張できます。
+Stackerは標準的な算術演算（+、-、*、/ など）の他、高度な関数（sin、cos、tanなど）をサポートしています。ユーザーはRPN形式でコマンドを入力し、カスタムプラグインを使用して機能を拡張できます。
 
 ### 入力例
 
@@ -141,38 +141,134 @@ StackerのRPN入力の例を示します
   stacker:2> +
   [7]
   ```
-- 変数定義:
-  ```bash
-  stacker:0> 3 $x set
-  ```
-  xに3を代入します。
 
-- マクロ作成:
-  ```bash
-  stacker:0> {2 ^ 3 * 5 +} $calculatePowerAndAdd alias
-  stacker:1> 5 calculatePowerAndAdd
-  [80]
-  ```
-    マクロ `{2 ^ 3 * 5 +}` を定義し、名前 `calculatePowerAndAdd` を割り当てます。このマクロは、スタック上の数値を2乗し、3倍し、5を加算します。
+- 変数定義:
+  - 構文:
+    ```bash
+    value $name set
+    ```
+  - 例:
+    ```bash
+    stacker:0> 3 $x set
+    ```
+    この例では, `x`に`3`を代入します。
+    未定義のシンボルを入力する場合、シンボル名の先頭にドル記号（$）を付ける必要があります。<br>
+    以後、xを使用すると`x`の文字がスタックにプッシュされ、pop時に評価され`3`が返されます。<br>
+    シンボルに@を付けると、シンボルの値をプッシュすることができます。<br>
+    例えば、`@x`は`3`をプッシュします。
+    ``` bash
+    stacker:0> 3 $x set
+    stacker:1> x
+    [x]
+    stacker:2> @x
+    [x, 3]
+    stacker:1> +
+    [6]
+    ```
+
+- 条件分岐
+  - if
+    - 構文:
+      ```bash
+      {true_block} condition if
+      ```
+    - 例:
+      ``` bash
+      stacker:0> 0 $x set
+      stacker:1> {3 4 +} {x 0 ==} ifelse
+      [7]
+      ```
+      ConditionがTrueの場合、{true_block}が実行されます。Falseの場合、何も実行されません。
+      この例では {3 4 +} が実行されます。
+
+  - ifelse
+    - 構文:
+      ```bash
+      {true_block} {false_block} condition ifelse
+      ```
+    - 例:
+      ``` bash
+      stacker:0> 0 $x set
+      stacker:1> {3 4 +} {3 4 -} {x 0 ==} ifelse
+      [7]
+      ```
+      ConditionがTrueの場合、`{true_block}`が実行されます。Falseの場合、`{false_block}`が実行されます。
+      この例では {3 4 +} が実行されます。
+
+- 繰り返し
+  - do
+    - 構文:
+      ```bash
+      start_value end_value $symbol {body} do
+      ```
+    - 例:
+      ```bash
+      stacker:0> 0 10 $i {i echo} do
+      0
+      1
+      2
+      3
+      4
+      5
+      6
+      7
+      8
+      9
+      10
+      ```
+  - times
+    - 構文:
+      ```bash
+      {body} n times
+      ```
+    - 例:
+      ```bash
+      stacker:0> 1 {dup ++} 10 times
+      [1 2 3 4 5 6 7 8 9 10 11]
+      ```
+      この例では、スタックに1をプッシュした後、{dup (トップの要素を複製)し、++ (トップの要素に1を加算)}を10回繰り返します。
 
 - 関数定義:
-  ```bash
-  stacker:0> (x y) {x y *} $multiply defun
-  stacker:1> 10 20 multiply
-  [200]
-  ```
+  - 構文:
+    ``` bash
+    (arg1 arg2 ... argN) {body} $name defun
+    ``` 
+
+  - 例
+    ```bash
+    stacker:0> (x y) {x y *} $multiply defun
+    stacker:1> 10 20 multiply
+    [200]
+    ```
     2つの引数 `x` と `y` を取り、それらを掛け合わせる関数 `multiply` を定義します。
-  
+
+- マクロ作成:
+  - 構文:
+    ```bash
+    {body} $name alias
+    ```
+
+  - 例:
+    ```bash
+    stacker:0> {2 ^ 3 * 5 +} $calculatePowerAndAdd alias
+    stacker:1> 5 calculatePowerAndAdd
+    [80]
+    ```
+    マクロ `{2 ^ 3 * 5 +}` を定義し、名前 `calculatePowerAndAdd` を割り当てます。このマクロは、スタック上の数値を2乗し、3倍し、5を加算します。
+
+
 
 - 逆ポーランドなんてクソ喰らえだ
     
-    中置記法を文字列として入力し、`eval`を使用して評価することができます。 
+    中置記法を文字列として入力し、`evalpy`を使用して評価することができます。 <br>
+    `evalpy`は`Python`の`eval`関数を使用しているため、`Python`の構文を使用できます。 <br>
+    オペレータの仕様は`Stacker`と`Python`では異なるため、注意してください。 <br>
     ```
-    tacker:0> "3+5" eval
+    tacker:0> "3+5" evalpy
     [8]
     ```
     やはり中置記法こそ正義なのです。 <br>
-    さぁ、Stackerをアンインストールしましょう。 <br>
+    さぁ、`Stacker`をアンインストールしましょう。 <br>
     ~~~ bash
     > pip uninstall pystacker
     ~~~

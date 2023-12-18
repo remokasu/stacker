@@ -73,40 +73,128 @@ Stacker allows for straightforward RPN input. For example:
   ```
 
 - Variables:
+  - syntax: 
+    ``` bash
+    value $name set
+    ```
+  - example:
+    ```bash
+    stacker:0> 3 $x set
+    ```
+    In this example, we assign `3` to `x`.
+    If you input an undefined symbol, you need to prefix the symbol name with a dollar sign ($). <br>
+    From now on, when using `x`, the character 'x' will be pushed onto the stack and evaluated to return `3` when popped. <br>
+    You can push the value of a symbol by prefixing it with @. <br>
+    For example, `@x` will push `3`.
+    ``` bash
+    stacker:0> 3 $x set
+    stacker:1> x
+    [x]
+    stacker:2> @x
+    [x, 3]
+    stacker:1> +
+    [6]
+    ```
 
-  ```bash
-  stacker:0> 3 $x set
-  ```
-  This sets the variable `x` to `3`.
+- Conditionals:
+  - if
+    - syntax:
+      ```bash
+      {true_block} {condition} if
+      ```
+    - example:
+      ``` bash
+      stacker:0> 0 $x set
+      stacker:1> {3 4 +} {x 0 ==} ifelse
+      [7]
+      ```
+      This example pushes `7` onto the stack because `x` is equal to `0`.
+  - ifelse
+    - syntax:
+      ```bash
+      {true_block} {false_block} {condition} ifelse
+      ```
+    - example:
+      ``` bash
+      stacker:0> 0 $x set
+      stacker:1> {3 4 +} {3 4 -} {x 0 ==} ifelse
+      [7]
+      ```
+      This example pushes `7` onto the stack because `x` is equal to `0`.
 
-- Define a macro:
-  ```bash
-  stacker:0> {2 ^ 3 * 5 +} $calculatePowerAndAdd alias
-  stacker:1> 5 calculatePowerAndAdd
-  [80]
-  ```
-    This defines a macro with the body `{2 ^ 3 * 5 +}` and assigns it the name `calculatePowerAndAdd`. This macro squares the number on the stack, multiplies it by 3, and then adds 5.
+- Loops:
+  - do
+    - syntax:
+      ```bash
+      start_value end_value $symbol {body} do
+      ```
+    - example:
+      ```bash
+      stacker:0> 0 10 $i {i echo} do
+      0
+      1
+      2
+      3
+      4
+      5
+      6
+      7
+      8
+      9
+      10
+      ```
+      This example prints the numbers from 0 to 10.
+  - times
+    - syntax:
+      ```bash
+      {body} n times
+      ```
+    - example:
+      ```bash
+      stacker:0> 1 {dup ++} 10 times
+      [1 2 3 4 5 6 7 8 9 10 11]
+      ```
+      In this example, we push 1 onto the stack and then repeat {dup (duplicate the top element) and ++ (add 1 to the top element)} 10 times.
 
 - Define a function:
-  ```bash
-  stacker:0> (x y) {x y *} $multiply defun
-  stacker:1> 10 20 multiply
-  [200]
-  ```
+  - syntax:
+    ```bash
+    (arg1 arg2 ... argN) {body} $name defun
+    ```
+  - example:
+    ```bash
+    stacker:0> (x y) {x y *} $multiply defun
+    stacker:1> 10 20 multiply
+    [200]
+    ```
     This defines a function named `multiply` that takes two arguments `x` and `y` and multiplies them together.
+
+- Define a macro:
+  - syntax:
+    ```bash
+    {body} $name alias
+    ```
+  - example:
+    ```bash
+    stacker:0> {2 ^ 3 * 5 +} $calculatePowerAndAdd alias
+    stacker:1> 5 calculatePowerAndAdd
+    [80]
+    ```
+    This defines a macro with the body `{2 ^ 3 * 5 +}` and assigns it the name `calculatePowerAndAdd`. This macro squares the number on the stack, multiplies it by 3, and then adds 5.
+
 
 ### Running Scripts
 Stacker scripts can be created in *stk files. To run a script, simply execute it with Stacker. For example:
 
 - my_script.stk:
   ```bash
-    100000 $n set
-    0 $p set
-    0 n $k {
-        -1 k ^ 2 k * 1 + / p + p set
-    } do
-    4 p * p set
-    p echo
+  100000 $n set
+  0 $p set
+  0 n $k {
+      -1 k ^ 2 k * 1 + / p + p set
+  } do
+  4 p * p set
+  p echo
   ```
 
   Running the script:  

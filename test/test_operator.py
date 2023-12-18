@@ -308,7 +308,13 @@ class TestStacker(unittest.TestCase):
     # eval
     def test_eval(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("'1 + 1' eval")
+        self.stacker.process_expression("'3 5 +' eval")
+        self.assertEqual(self.stacker.stack[-1], 8)
+
+    # evalpy
+    def test_evalpy(self):
+        self.stacker.stack.clear()
+        self.stacker.process_expression("'1 + 1' evalpy")
         self.assertEqual(self.stacker.stack[-1], 2)
 
 

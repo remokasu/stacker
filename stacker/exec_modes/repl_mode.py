@@ -109,7 +109,7 @@ class ReplMode(ExecutionMode):
                         else:
                             expression += " " + next_line
 
-                # # ダブルコーテーションまたはシングルコーテーションで始まる入力が閉じられるまで継続する処理
+                # # Process to continue until the input starting with double quotation or single quotation is closed
                 # while (
                 #     (expression.startswith('"""') and expression.count('"""') % 2 != 0) or
                 #     (expression.startswith("'''") and expression.count("'''") % 2 != 0)
