@@ -1,5 +1,34 @@
 # CHANGE LOG
 
+## [1.5.2] - 2023-12-19
+
+### Added
+- Added the `evalpy` command, which allows you to evaluate Python syntax.
+  - This command uses the `eval` function in Python, so you can use Python syntax.
+  - Please note that the specifications of the operators are different between Stacker and Python.
+  - Example:
+    ~~~ bash
+    stacker:0> "3+5" evalpy
+    [8]
+    ~~~
+    In this example, the string `"3+5"` is evaluated as Python syntax and the result is pushed onto the stack.
+
+- Added the `eval` command.
+  - This command is intended to evaluate Stacker syntax.
+  - Example:
+    ~~~ bash
+    stacker:0> "3 5 +" eval
+    [8]
+    ~~~
+    In this example, the string `"3 5 +"` is evaluated as Stacker syntax and the result is pushed onto the stack.
+
+
+
+### Changed
+- Originally, expressions inside blocks were evaluated using a new stack, and the results were passed to the main stack. However, this process has been changed so that expressions within blocks are now passed directly to the main stack for evaluation. As a result of this change, executions like "1 {dup ++} 10 times" have become possible. Previously, using 'dup' inside a block would result in a syntax error because the stack being processed within the block was independent.
+
+
+
 ## [1.5.1] - 2023-12-15
 
 ### Fixed
