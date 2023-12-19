@@ -72,7 +72,7 @@ Stacker allows for straightforward RPN input. For example:
   [7]
   ```
 
-- Variables:
+- #### Variables:
   - syntax: 
     ``` bash
     value $name set
@@ -96,7 +96,7 @@ Stacker allows for straightforward RPN input. For example:
     [6]
     ```
 
-- Conditionals:
+- #### Conditionals:
   - if
     - syntax:
       ```bash
@@ -122,7 +122,7 @@ Stacker allows for straightforward RPN input. For example:
       ```
       This example pushes `7` onto the stack because `x` is equal to `0`.
 
-- Loops:
+- #### Loops:
   - do
     - syntax:
       ```bash
@@ -156,7 +156,7 @@ Stacker allows for straightforward RPN input. For example:
       ```
       In this example, we push 1 onto the stack and then repeat {dup (duplicate the top element) and ++ (add 1 to the top element)} 10 times.
 
-- Define a function:
+- #### Define a function:
   - syntax:
     ```bash
     (arg1 arg2 ... argN) {body} $name defun
@@ -169,7 +169,7 @@ Stacker allows for straightforward RPN input. For example:
     ```
     This defines a function named `multiply` that takes two arguments `x` and `y` and multiplies them together.
 
-- Define a macro:
+- #### Define a macro:
   - syntax:
     ```bash
     {body} $name alias
