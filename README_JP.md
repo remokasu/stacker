@@ -175,7 +175,7 @@ StackerのRPN入力の例を示します
     - 例:
       ``` bash
       stacker:0> 0 $x set
-      stacker:1> {3 4 +} {x 0 ==} ifelse
+      stacker:1> {3 4 +} {x 0 ==} if
       [7]
       ```
       ConditionがTrueの場合、{true_block}が実行されます。Falseの場合、何も実行されません。
