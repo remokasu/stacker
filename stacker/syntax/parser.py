@@ -159,6 +159,10 @@ def is_undefined_symbol(expression: str) -> bool:
     return expression.startswith("$") and not expression.endswith("$")
 
 
+def is_reference_symbol(expression: str) -> bool:
+    return expression.startswith("@") and not expression.endswith("@")
+
+
 def convert_custom_array_to_proper_list(token: str) -> str:
     """
     Converts a custom list token into a proper Python list.
