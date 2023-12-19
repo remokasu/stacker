@@ -105,7 +105,7 @@ Stacker allows for straightforward RPN input. For example:
     - example:
       ``` bash
       stacker:0> 0 $x set
-      stacker:1> {3 4 +} {x 0 ==} ifelse
+      stacker:1> {3 4 +} {x 0 ==} if
       [7]
       ```
       This example pushes `7` onto the stack because `x` is equal to `0`.
