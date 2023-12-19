@@ -22,6 +22,8 @@
     ~~~
     In this example, the string `"3 5 +"` is evaluated as Stacker syntax and the result is pushed onto the stack.
 
+
+
 ### Changed
 - Originally, expressions inside blocks were evaluated using a new stack, and the results were passed to the main stack. However, this process has been changed so that expressions within blocks are now passed directly to the main stack for evaluation. As a result of this change, executions like "1 {dup ++} 10 times" have become possible. Previously, using 'dup' inside a block would result in a syntax error because the stack being processed within the block was independent.
 
