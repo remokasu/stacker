@@ -10,10 +10,10 @@ Usage:
 
 Examples:
   RPN expression: 3 4 +
-  Variable assignment: 5 a set
-  Function definition: (x y) {x y ^ } funcName defun
+  Variable assignment: 5 $a set
+  Function definition: (x y) {x y ^ } $funcName defun
   Function call: 4 5 func
-  Macro definition: {2 ^ 5 +} macroName alias
+  Macro definition: {2 ^ 5 +} $macroName alias
   Macro call: 3 macroName
 
 Numbwer input
@@ -25,7 +25,7 @@ Numbwer input
   octal: 0o123
   complex: 1+2j
 String input:
-  hogefoovar
+  "hogefoovar"
   "hoge foo var"
 Array input:
   [1 2 3 4 5]
