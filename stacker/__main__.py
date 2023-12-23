@@ -10,10 +10,10 @@ from pathlib import Path
 from pkg_resources import get_distribution
 
 from stacker.error import LoadPluginError
+from stacker.exec_modes import CommandLineMode, ReplMode, ScriptMode
 
 # from stacker.execution_mode import ScriptMode, ReplMode
-from stacker.exec_modes.repl_mode import ReplMode
-from stacker.exec_modes.script_mode import ScriptMode
+from stacker.lib import show_top
 from stacker.lib.config import plugins_dir_path
 from stacker.stacker import Stacker
 from stacker.util import colored
@@ -23,6 +23,7 @@ parser.add_argument(
     "--addplugin", metavar="path", type=str, help="Path to the plugin to add."
 )
 parser.add_argument("--dmode", action="store_true", help="Enable debug mode")
+parser.add_argument("-e", default=None, help="Execute the given command.")
 parser.add_argument("script", nargs="?", default=None, help="Script file to run.")
 argv = parser.parse_args()
 
@@ -69,6 +70,7 @@ def load_plugins(stacker: Stacker, plugins_dir_path):
                     plugin_module = importlib.import_module(module_name)
                     plugin_module.setup(stacker)
                     logging.debug(f"Loaded plugin '{module_name}'.")
+                    return
             except Exception as e:
                 print(colored(f"Failed load plugin ({filename}). {e}", "red"))
                 sys.exit(1)
@@ -134,6 +136,12 @@ def main():
     library_dir = os.path.join(script_dir, "slib")
     load_stacker_lib(rpn_calculator, library_dir)
 
+    if argv.e is not None:
+        # Execute the given command
+        commandline_mode = CommandLineMode(rpn_calculator)
+        commandline_mode.run(argv.e)
+        return
+
     if argv.script:
         # Script Mode
         script_mode = ScriptMode(rpn_calculator)
@@ -141,10 +149,11 @@ def main():
             script_mode.debug_mode()
         script_mode.run(argv.script)
     else:
-        # Interactive mode
+        # REPL mode
         repl_mode = ReplMode(rpn_calculator)
         if argv.dmode:
             repl_mode.debug_mode()
+        show_top()
         repl_mode.run()
 
 

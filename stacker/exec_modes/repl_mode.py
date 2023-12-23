@@ -10,7 +10,7 @@ from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import FileHistory
 
 from stacker.exec_modes.excution_mode import ExecutionMode
-from stacker.lib import delete_history, show_about, show_help, show_top
+from stacker.lib import delete_history, show_about, show_help
 from stacker.lib.config import history_file_path
 from stacker.syntax.parser import (
     is_array,
@@ -40,7 +40,6 @@ class ReplMode(ExecutionMode):
             sys.exit()
 
     def run(self):
-        show_top()
         stacker_version = get_distribution("pystacker").version
         print(f"Stacker {stacker_version} on {sys.platform}")
         print('Type "help" to get more information.')

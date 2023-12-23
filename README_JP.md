@@ -257,6 +257,14 @@ StackerのRPN入力の例を示します
     マクロ `{2 ^ 3 * 5 +}` を定義し、名前 `calculatePowerAndAdd` を割り当てます。このマクロは、スタック上の数値を2乗し、3倍し、5を加算します。
 
 
+- #### スクリプトのインクルード
+  Stackerスクリプトは、`include`コマンドを使用して他のスクリプトをインクルードできます。
+  ``` bash
+  stacker:0>  "my_script.stk" include
+  ```
+  "my_script.stk"で定義されたすべての関数とマクロと変数が現在のスタックに追加されます。
+
+
 
 - #### 逆ポーランドなんてクソ喰らえだ
     
@@ -272,6 +280,7 @@ StackerのRPN入力の例を示します
     ~~~ bash
     > pip uninstall pystacker
     ~~~
+
 
 ### スクリプトの実行
 Stackerスクリプトは*stkファイルで作成できます。スクリプトを実行するには、次の様に実行ファイルを指定します。
@@ -293,13 +302,13 @@ Stackerスクリプトは*stkファイルで作成できます。スクリプト
     stacker my_script.stk
     ```
 
-### スクリプトのインクルード
+### コマンドライン実行
+コマンドラインから、指定したRPN式を直接実行できます。
 
-Stackerスクリプトは、`include`コマンドを使用して他のスクリプトをインクルードできます。
-``` bash
-stacker:0>  "my_script.stk" include
+```bash
+stacker -e "3 4 + echo"
 ```
-"my_script.stk"で定義されたすべての関数とマクロと変数が現在のスタックに追加されます。
+
 
 
 ## プラグインの作成

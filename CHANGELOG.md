@@ -1,5 +1,19 @@
 # CHANGE LOG
 
+## [1.5.3] - 2023-12-23
+
+### Added
+- Added a mode to directly evaluate RPN expressions from the command line. For example, execute as follows:
+  ~~~ bash
+  stacker -e "3 4 + echo"
+  7
+  ~~~
+
+### Fixed
+- Fixed an issue where the processing of a plugin-added operator was not reflected when it overlapped with an existing operator.
+
+
+
 ## [1.5.2] - 2023-12-19
 
 ### Added
