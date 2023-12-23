@@ -182,6 +182,14 @@ Stacker allows for straightforward RPN input. For example:
     ```
     This defines a macro with the body `{2 ^ 3 * 5 +}` and assigns it the name `calculatePowerAndAdd`. This macro squares the number on the stack, multiplies it by 3, and then adds 5.
 
+- #### Include Scripts
+  Stacker scripts can be included in other scripts using the `include` command. For example:
+
+  ``` bash
+  stacker:0>  "my_script.stk" include
+  ```
+  All functions, macros and variables defined in "my_script.stk" are added to the current stack.
+
 
 ### Running Scripts
 Stacker scripts can be created in *stk files. To run a script, simply execute it with Stacker. For example:
@@ -202,13 +210,13 @@ Stacker scripts can be created in *stk files. To run a script, simply execute it
   stacker my_script.stk
   ```
 
-### Include Scripts
-Stacker scripts can be included in other scripts using the `include` command. For example:
 
-``` bash
-stacker:0>  "my_script.stk" include
+### Command Line Execution
+You can directly execute a specified RPN expression from the command line.
+
+```bash
+stacker -e "3 4 + echo"
 ```
-All functions, macros and variables defined in "my_script.stk" are added to the current stack.
 
 
 ## Creating Plugins
