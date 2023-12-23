@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import copy
-
 from collections import deque
 from typing import Any, Callable
 
@@ -24,17 +23,17 @@ from stacker.lib.function.logic import logic_operators
 from stacker.lib.function.math import math_operators
 from stacker.lib.function.random import random_operators
 from stacker.lib.function.stack import stack_operators
-from stacker.lib.function.types import type_operators
 from stacker.lib.function.string import string_operators
 from stacker.lib.function.time import time_operators
+from stacker.lib.function.types import type_operators
 from stacker.syntax.parser import (
     convert_custom_string_tuple_to_proper_tuple,
+    is_array,
     is_block,
+    is_reference_symbol,
     is_string,
     is_tuple,
-    is_array,
     is_undefined_symbol,
-    is_reference_symbol,
     parse_expression,
 )
 
@@ -60,6 +59,7 @@ class Stacker:
             self.macros = self.parent.get_macros_ref()
             self.variables = self.parent.get_variables_ref()
             self.sfunctions = self.parent.get_sfuntions_ref()
+            self.plugins = self.parent.get_plugins_ref()
             return
         self.loop_operators = {
             "times": {
@@ -116,24 +116,24 @@ class Stacker:
             },
         }
         self.operators = {}
-        self.operators.update(alge_operators)
-        self.operators.update(arith_operators)
-        self.operators.update(base_operators)
-        self.operators.update(bitwise_operators)
-        self.operators.update(compare_operators)
-        self.operators.update(io_operators)
-        self.operators.update(logic_operators)
-        self.operators.update(math_operators)
-        self.operators.update(random_operators)
-        self.operators.update(type_operators)
-        self.operators.update(list_operators)
-        self.operators.update(stack_operators)
-        self.operators.update(eval_operators)
-        self.operators.update(string_operators)
-        self.operators.update(time_operators)
-        self.operators.update(self.condition_operators)
-        self.operators.update(self.loop_operators)
-        self.operators.update(self.special_operators)
+        self.operators.update(copy.deepcopy(alge_operators))
+        self.operators.update(copy.deepcopy(arith_operators))
+        self.operators.update(copy.deepcopy(base_operators))
+        self.operators.update(copy.deepcopy(bitwise_operators))
+        self.operators.update(copy.deepcopy(compare_operators))
+        self.operators.update(copy.deepcopy(io_operators))
+        self.operators.update(copy.deepcopy(logic_operators))
+        self.operators.update(copy.deepcopy(math_operators))
+        self.operators.update(copy.deepcopy(random_operators))
+        self.operators.update(copy.deepcopy(type_operators))
+        self.operators.update(copy.deepcopy(list_operators))
+        self.operators.update(copy.deepcopy(stack_operators))
+        self.operators.update(copy.deepcopy(eval_operators))
+        self.operators.update(copy.deepcopy(string_operators))
+        self.operators.update(copy.deepcopy(time_operators))
+        self.operators.update(copy.deepcopy(self.condition_operators))
+        self.operators.update(copy.deepcopy(self.loop_operators))
+        self.operators.update(copy.deepcopy(self.special_operators))
         self.priority_operators = {}
         self.priority_operators.update(stack_operators)
         self.priority_operators.update(self.loop_operators)
@@ -302,7 +302,11 @@ class Stacker:
         for index, token in enum_tokens:
             if not isinstance(token, str):
                 stack.append(token)  # Literal value
-            elif token in self.operators or token in self.sfunctions:
+            elif (
+                token in self.operators
+                or token in self.sfunctions
+                or token in self.plugins
+            ):
                 self._execute(token, stack)
             elif token in self.macros:
                 self.expand_macro(token, stack)
@@ -330,7 +334,16 @@ class Stacker:
         Applies an operator to the top elements on the stack.
         Modifies the stack in-place.
         """
-        if token in self.priority_operators:
+        if token in self.plugins:
+            args = []
+            for _ in range(self.plugins[token]["arg_count"]):
+                args.insert(0, self.pop_and_eval(stack))
+            op = self.plugins[token]
+            if op["push_result_to_stack"]:
+                stack.append(op["func"](*args))
+            else:
+                op["func"](*args)
+        elif token in self.priority_operators:
             if token == "do":
                 body = stack.pop()  # not evaluate
                 symbol = stack.pop()
@@ -441,6 +454,16 @@ class Stacker:
         push_result_to_stack: bool,
         desc: str | None = None,
     ) -> None:
+        if operator_name in self.priority_operators:
+            del self.priority_operators[operator_name]
+            self.priority_operators[operator_name] = {
+                "func": operator_func,
+                "arg_count": arg_count,
+                "push_result_to_stack": push_result_to_stack,
+                "desc": desc,
+            }
+        if operator_name in self.operators:
+            del self.operators[operator_name]
         self.operators[operator_name] = {
             "func": operator_func,
             "arg_count": arg_count,
@@ -491,9 +514,17 @@ class Stacker:
             arg_count = wrapped_operator_func.arg_count
         else:
             arg_count = operator_func.__code__.co_argcount
-        self.register_operator(
-            operator_name, operator_func, arg_count, push_result_to_stack, desc
-        )
+        # self.register_operator(
+        #     operator_name, operator_func, arg_count, push_result_to_stack, desc
+        # )
+        if operator_name in self.plugins:
+            del self.plugins[operator_name]
+        self.plugins[operator_name] = {
+            "func": operator_func,
+            "arg_count": arg_count,
+            "push_result_to_stack": push_result_to_stack,
+            "desc": desc,
+        }
         self.plugin_descriptions[operator_name] = desc
 
     # ========================
