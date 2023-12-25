@@ -196,9 +196,8 @@ Stacker scripts can be created in *stk files. To run a script, simply execute it
 
 - my_script.stk:
   ```bash
-  100000 $n set
   0 $p set
-  0 n $k {
+  0 100000 $k {
       -1 k ^ 2 k * 1 + / p + p set
   } do
   4 p * p set
@@ -218,6 +217,46 @@ You can directly execute a specified RPN expression from the command line.
 stacker -e "3 4 + echo"
 ```
 
+
+## Settings
+- disable_plugin
+  Disable a specified plugin:
+  ```bash
+  stacker:0> "hoge" disable_plugin
+  ```
+  This command deactivates the `hoge` operator added as a plugin.
+  Note that it cannot be used on non-plugin oeratirs.
+
+- disable_all_plugins
+  Disable all plugins at once.
+  ```bash
+  stacker:0> disable_all_plugins
+  ```
+
+- enable_disp_stack
+  Enables the setting to display the stack contents each time. By default, this setting is already active.
+  ```bash
+  stacker:0> enable_disp_stack
+  ```
+
+- disable_disp_stack
+  Sets the display of stack contents to be disabled. When this setting is enabled, only the latest element of the stack is displayed.
+  ```bash
+  stacker:0> disable_disp_stack
+  ```
+
+- disable_disp_logo
+  Disables the display of the logo at startup.
+  ```bash
+  stacker:0> disable_disp_logo
+  ```
+
+## Configuration File
+You can automatically load settings at startup. The configuration file should be placed in ~/.stackerrc. For example, if you write the following contents in ~/.stackerrc, the disable_disp_logo and disable_disp_stack will be automatically activated at startup.
+```bash
+disable_disp_logo
+disable_disp_stack
+```
 
 ## Creating Plugins
 
@@ -257,6 +296,11 @@ def function(a, b):
 def setup(stacker: Stacker):
     stacker.register_plugin("command", function)
 ```
+
+## Disabling Plugins
+Use operatorName disable_plugin to disable a specific plugin.<br>
+Use disable_all_plugins to disable all plugins.<br>
+
 
 ## Documentation
 For more detailed documentation, please refer to [`stacker/docs`](https://github.com/remokasu/stacker/blob/main/docs/README.md).

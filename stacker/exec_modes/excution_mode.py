@@ -1,13 +1,22 @@
 from __future__ import annotations
 
 import copy
+from pathlib import Path
 
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
 
+from stacker.error import ScriptReadError
+from stacker.include.stk_file_read import readtxt
 from stacker.stacker import Stacker
 from stacker.util import colored
-
+from stacker.lib.config import stacker_dotfile, script_extension_name
+from stacker.syntax.parser import remove_start_end_quotes
+from stacker.syntax.parser import (
+    is_array_balanced,
+    is_brace_balanced,
+    is_tuple_balanced,
+)
 
 class ExecutionMode:
     def __init__(self, rpn_calculator: Stacker):
@@ -93,9 +102,9 @@ class ExecutionMode:
         stack_str += colored("]", "yellow")
         print(stack_str)
 
-    def show_stack(self) -> None:
+    def disp_stack(self) -> None:
         """Print the current stack to the console."""
-        _stack = self.rpn_calculator.get_stack_copy()
+        _stack = self.rpn_calculator.get_stack_copy_as_list()
         stack = []
         for token in _stack:
             if isinstance(token, Stacker):
@@ -107,7 +116,31 @@ class ExecutionMode:
         else:
             print(stack)
 
-    def show_all_valiables(self) -> None:
+    def disp_all_valiables(self) -> None:
         variables = self.rpn_calculator.get_variables_copy()
         for key in variables.keys():
             print(f"{key} = {variables[key]}")
+
+    def execute_stacker_dotfile(self, filename: str | Path) -> None:
+        """Import a stacker script and return the stacker object."""
+        path = Path(remove_start_end_quotes(str(filename)))
+        code = readtxt(path)
+        expression = ""
+        for line in code.splitlines():
+            line = line.strip()
+            expression += line + " "
+            if self._is_balanced(expression):
+                if expression[-2:] in {";]", ";)"}:
+                    closer = expression[-1]
+                    expression = expression[:-2] + closer
+                self.rpn_calculator.process_expression(expression)
+                expression = ""
+
+    def _is_balanced(self, expression: str) -> bool:
+        return (
+            is_array_balanced(expression)
+            and is_tuple_balanced(expression)
+            and is_brace_balanced(expression)
+            and (expression.count('"""') % 2 == 0)
+            and (expression.count("'''") % 2 == 0)
+        )
