@@ -5,6 +5,7 @@ from pathlib import Path
 from stacker.error import IncludeError
 from stacker.include.stk_file_read import readtxt
 from stacker.syntax.parser import parse_expression, remove_start_end_quotes
+# from stacker.util.config import stacker_dotfile, script_extension_name
 
 
 def include_stacker_script(filename: str | Path) -> "Stacker":

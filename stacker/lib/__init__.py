@@ -1,8 +1,8 @@
-from stacker.lib.ui_tools import delete_history, show_about, show_help, show_top
+from stacker.lib.ui_tools import delete_history, disp_about, disp_help, disp_logo
 
 __all__ = [
-    "show_top",
-    "show_about",
-    "show_help",
+    "disp_logo",
+    "disp_about",
+    "disp_help",
     "delete_history",
 ]

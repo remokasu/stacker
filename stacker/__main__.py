@@ -13,8 +13,8 @@ from stacker.error import LoadPluginError
 from stacker.exec_modes import CommandLineMode, ReplMode, ScriptMode
 
 # from stacker.execution_mode import ScriptMode, ReplMode
-from stacker.lib import show_top
-from stacker.lib.config import plugins_dir_path
+from stacker.lib import disp_logo
+from stacker.lib.config import plugins_dir_path, stacker_dotfile_path
 from stacker.stacker import Stacker
 from stacker.util import colored
 
@@ -28,7 +28,7 @@ parser.add_argument("script", nargs="?", default=None, help="Script file to run.
 argv = parser.parse_args()
 
 
-def load_stacker_lib(stacker: Stacker, dir_path):
+def load_stacker_lib(stacker: Stacker, dir_path) -> bool:
     """Load the Stacker library from the specified directory.
     :param stacker: The Stacker instance to pass to the plugins.
     :param dir_path: The directory to load the Stacker library from.
@@ -36,52 +36,54 @@ def load_stacker_lib(stacker: Stacker, dir_path):
     """
     # Add the library directory path
     sys.path.insert(0, dir_path)
-    try:
-        for filename in os.listdir(dir_path):
-            try:
-                if filename.endswith(".stk"):
-                    include_stacker_script = Path(dir_path) / filename
-                    stacker.include(str(include_stacker_script))
-            except Exception as e:
-                print(colored(f"Failed load slib ({filename}). {e}", "red"))
-                sys.exit(1)
-            finally:
-                continue
-    except FileNotFoundError:
-        print("Error: library folder not found. Skipping library loading.")
-        sys.exit(1)
-    finally:
-        # Remove the library directory path
-        sys.path.pop(0)
+    for filename in os.listdir(dir_path):
+        try:
+            if filename.endswith(".stk"):
+                include_stacker_script = Path(dir_path) / filename
+                stacker.include(str(include_stacker_script))
+        except Exception as e:
+            print(colored(f"Failed load slib ({filename}). {e}", "red"))
+            sys.path.pop(0)
+            return False
+    sys.path.pop(0)
+    return True
 
 
-def load_plugins(stacker: Stacker, plugins_dir_path):
+def load_plugins(stacker: Stacker, plugins_dir_path) -> bool:
     """Load plugins from the plugins directory.
     :param stacker: The Stacker instance to pass to the plugins.
     :return: None
     """
     # Add the plugin directory path
     sys.path.insert(0, plugins_dir_path)
+    for filename in os.listdir(plugins_dir_path):
+        try:
+            if filename.endswith(".py") and not filename.startswith("__"):
+                module_name = os.path.splitext(filename)[0]  # remove .py extension
+                plugin_module = importlib.import_module(module_name)
+                plugin_module.setup(stacker)
+                logging.debug(f"Loaded plugin '{module_name}'.")
+        except Exception as e:
+            print(colored(f"Failed load plugin ({filename}). {e}", "red"))
+            sys.path.pop(0)
+            return False
+    sys.path.pop(0)
+    return True
+
+
+def load_dotfile(stacker: Stacker, dotfile_path: str | Path) -> None:
+    """Load the dotfile.
+    :param stacker: The Stacker instance to pass to the plugins.
+    :param dotfile_path: The path to the dotfile.
+    :return: None
+    """
     try:
-        for filename in os.listdir(plugins_dir_path):
-            try:
-                if filename.endswith(".py") and not filename.startswith("__"):
-                    module_name = os.path.splitext(filename)[0]  # remove .py extension
-                    plugin_module = importlib.import_module(module_name)
-                    plugin_module.setup(stacker)
-                    logging.debug(f"Loaded plugin '{module_name}'.")
-                    return
-            except Exception as e:
-                print(colored(f"Failed load plugin ({filename}). {e}", "red"))
-                sys.exit(1)
-            finally:
-                continue
-    except FileNotFoundError:
-        print("Error: plugins folder not found. Skipping plugin loading.")
-        sys.exit(1)
-    finally:
-        # Remove the plugin directory path
-        sys.path.pop(0)
+        if not os.path.isfile(dotfile_path):
+            print(f"Error: The file '{dotfile_path}' does not exist.")
+            return
+        stacker.include(str(dotfile_path))
+    except Exception as e:
+        print(f"An error occurred while loading the dotfile: {str(e)}")
 
 
 def copy_plugin_to_install_dir(plugin_path: str, dmode: bool) -> None:
@@ -125,37 +127,49 @@ def main():
     # load plugins from the Stacker's installation directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     plugins_dir = os.path.join(script_dir, plugins_dir_path)
-    load_plugins(rpn_calculator, plugins_dir)
+    if not load_plugins(rpn_calculator, plugins_dir):
+        sys.exit(1)
 
     # load plugins from current directory
     plugins_dir = os.path.join(os.getcwd(), plugins_dir_path)
     if Path(plugins_dir).exists():
-        load_plugins(rpn_calculator, plugins_dir)
+        if not load_plugins(rpn_calculator, plugins_dir):
+            sys.exit(1)
 
     # load the Stacker library
     library_dir = os.path.join(script_dir, "slib")
-    load_stacker_lib(rpn_calculator, library_dir)
+    if not load_stacker_lib(rpn_calculator, library_dir):
+        sys.exit(1)
+
+
 
     if argv.e is not None:
         # Execute the given command
         commandline_mode = CommandLineMode(rpn_calculator)
+        if stacker_dotfile_path.exists():
+            commandline_mode.execute_stacker_dotfile(stacker_dotfile_path)
         commandline_mode.run(argv.e)
         return
 
     if argv.script:
         # Script Mode
         script_mode = ScriptMode(rpn_calculator)
+        if stacker_dotfile_path.exists():
+            script_mode.execute_stacker_dotfile(stacker_dotfile_path)
         if argv.dmode:
             script_mode.debug_mode()
         script_mode.run(argv.script)
     else:
         # REPL mode
         repl_mode = ReplMode(rpn_calculator)
+        # execute the dotfile
+        if stacker_dotfile_path.exists():
+            repl_mode.execute_stacker_dotfile(stacker_dotfile_path)
         if argv.dmode:
             repl_mode.debug_mode()
-        show_top()
+        if repl_mode.rpn_calculator.disp_logo_mode:
+            disp_logo()
         repl_mode.run()
-
 
 if __name__ == "__main__":
     main()

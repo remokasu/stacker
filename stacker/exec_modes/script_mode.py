@@ -58,11 +58,3 @@ class ScriptMode(ExecutionMode):
         #             self.rpn_calculator.process_expression(expression)
         #             expression = ''
 
-    def _is_balanced(self, expression: str) -> bool:
-        return (
-            is_array_balanced(expression)
-            and is_tuple_balanced(expression)
-            and is_brace_balanced(expression)
-            and (expression.count('"""') % 2 == 0)
-            and (expression.count("'''") % 2 == 0)
-        )
