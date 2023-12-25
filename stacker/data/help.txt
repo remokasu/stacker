@@ -44,8 +44,8 @@ parameters:
   null
 
 If statement:
-  {<true expr} condition ifelse
-  {<true expr} {<false expr>} condition ifelse
+  {<true expr>} condition ifelse
+  {<true expr>} {<false expr>} condition ifelse
 
 Loop statement:
   stat end loopVariable {<loop expr>} do

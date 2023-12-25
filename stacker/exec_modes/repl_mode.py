@@ -10,7 +10,7 @@ from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import FileHistory
 
 from stacker.exec_modes.excution_mode import ExecutionMode
-from stacker.lib import delete_history, show_about, show_help
+from stacker.lib import delete_history, disp_about, disp_help
 from stacker.lib.config import history_file_path
 from stacker.syntax.parser import (
     is_array,
@@ -129,7 +129,7 @@ class ReplMode(ExecutionMode):
                 if expression.lower() == "exit":
                     break
                 if expression.lower() == "help":
-                    show_help()
+                    disp_help()
                     print("")
                     print("Supported operators and functions:")
                     for (
@@ -146,16 +146,22 @@ class ReplMode(ExecutionMode):
                         print(f"  {plugin_name}: {plugin_descriptions}")
                     continue
                 if expression.lower() == "about":
-                    show_about()
+                    disp_about()
                     continue
                 if expression.lower() == "delete_history":
                     delete_history()
                     continue
                 if expression.lower() == "vars":
-                    self.show_all_valiables()
+                    self.disp_all_valiables()
                     continue
                 self.rpn_calculator.process_expression(expression)
-                self.show_stack()
+                if self.rpn_calculator.disp_stack_mode is True:
+                    self.disp_stack()
+                else:
+                    if self.rpn_calculator.get_stack_length() > 0:
+                        print(self.rpn_calculator.get_stack_copy_as_list()[-1])
+                    else:
+                        print(self.rpn_calculator.get_stack_copy_as_list())
 
             except EOFError:
                 print("\nSee you!")

@@ -40,42 +40,27 @@ To create and use plugins in Stacker, follow these steps:
 
     # Write your function definitions here
 
-    def _is_matrix_or_vector(value):
-        if not isinstance(value, list):
-            return False
-        if len(value) == 0:
-            return False
-        return isinstance(value[0], list) or isinstance(value[0], (int, float))
+    def _add(a, b):
+        return (np.array(a) + np.array(b)).tolist()
 
-    def matrix_add(a, b):
-        if _is_matrix_or_vector(a) and _is_matrix_or_vector(b):
-            return np.add(a, b).tolist()
-        elif not _is_matrix_or_vector(a) and not _is_matrix_or_vector(b):
-            return a + b
-        else:
-            raise ValueError("Both operands must be matrices (or vectors) for matrix addition.")
 
-    def matrix_sub(a, b):
-        if _is_matrix_or_vector(a) and _is_matrix_or_vector(b):
-            return np.subtract(a, b).tolist()
-        elif not _is_matrix_or_vector(a) and not _is_matrix_or_vector(b):
-            return a - b
-        else:
-            raise ValueError("Both operands must be matrices (or vectors) for matrix subtraction.")
+    def _sub(a, b):
+        return (np.array(a) - np.array(b)).tolist()
 
-    def matrix_mul(a, b):
-        if _is_matrix_or_vector(a) and _is_matrix_or_vector(b):
-            return np.matmul(a, b).tolist()
-        elif not _is_matrix_or_vector(a) and not _is_matrix_or_vector(b):
-            return a * b
-        else:
-            raise ValueError("Both operands must be matrices (or vectors) for matrix multiplication.")
+
+    def _mul(a, b):
+        return (np.array(a) * np.array(b)).tolist()
+
+
+    def _div(a, b):
+        return (np.array(a) / np.array(b)).tolist()
 
     # Example of setting up custom commands and a parameter
     def setup(stacker: Stacker):
         stacker.register_plugin("+", matrix_add, desc="Matrix addition")
         stacker.register_plugin("-", matrix_sub, desc="Matrix subtraction")
         stacker.register_plugin("*", matrix_mul, desc="Matrix multiplication")
+        stacker.register_plugin("/", matrix_div, desc="Matrix division")
         
         # Registering a custom parameter
         stacker.register_parameter("custom_param", custom_value)
@@ -100,3 +85,8 @@ To create and use plugins in Stacker, follow these steps:
 
 1. **Creating the Directory and Adding the Plugin**:
    Create a `plugins` directory in the directory where Stacker is executed and add your plugin there. The method for creating it is the same as described above. This method does not require reinstalling Stacker.
+
+
+## Disabling Plugins
+Use operatorName disable_plugin to disable a specific plugin.<br>
+Use disable_all_plugins to disable all plugins.<br>

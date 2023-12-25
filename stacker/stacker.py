@@ -58,8 +58,8 @@ class Stacker:
             self.priority_operators = self.parent.get_priority_operators_ref()
             self.macros = self.parent.get_macros_ref()
             self.variables = self.parent.get_variables_ref()
-            self.sfunctions = self.parent.get_sfuntions_ref()
             self.plugins = self.parent.get_plugins_ref()
+            self.sfunctions = self.parent.get_sfuntions_copy()
             return
         self.loop_operators = {
             "times": {
@@ -114,6 +114,31 @@ class Stacker:
                 "push_result_to_stack": True,
                 "desc": "Evaluates a given RPN expression.",
             },
+            "disable_plugin": {
+                "arg_count": 1,
+                "push_result_to_stack": False,
+                "desc": "Disables a plugin.",
+            },
+            "disable_all_plugins": {
+                "arg_count": 0,
+                "push_result_to_stack": False,
+                "desc": "Disables all plugins.",
+            },
+            "enable_disp_stack": {
+                "arg_count": 0,
+                "push_result_to_stack": False,
+                "desc": "Enables showing stack.",
+            },
+            "disable_disp_stack": {
+                "arg_count": 0,
+                "push_result_to_stack": False,
+                "desc": "Disables showing stack.",
+            },
+            "disable_disp_logo": {
+                "arg_count": 0,
+                "push_result_to_stack": False,
+                "desc": "Disables showing logo.",
+            },
         }
         self.operators = {}
         self.operators.update(copy.deepcopy(alge_operators))
@@ -148,6 +173,8 @@ class Stacker:
         for operator_name, operator_descriptions in self.operators.items():
             self.operator_descriptions[operator_name] = operator_descriptions["desc"]
         self.plugin_descriptions = {}
+        self._disp_stack_mode = True
+        self._disp_logo = True
 
     # ========================
     # Include
@@ -156,11 +183,11 @@ class Stacker:
     def include(self, filename: str) -> None:
         """Includes another stacker script."""
         _stacker = include_stacker_script(filename)
-        _operator = _stacker.get_operators_ref()
+        # _operator = _stacker.get_operators_ref()
         _macros = _stacker.get_macros_ref()
         _variables = _stacker.get_variables_copy()
         _sfunctions = _stacker.get_sfuntions_ref()
-        self.operators.update(_operator)
+        # self.operators.update(_operator)
         self.macros.update(_macros)
         self.variables.update(_variables)
         self.sfunctions.update(_sfunctions)
@@ -334,7 +361,16 @@ class Stacker:
         Applies an operator to the top elements on the stack.
         Modifies the stack in-place.
         """
-        if token in self.plugins:
+        if token in self.sfunctions:  # sfunctions
+            args = []
+            for _ in range(self.sfunctions[token]["arg_count"]):
+                args.insert(0, self.pop_and_eval(stack))
+            sfunc = self.sfunctions[token]
+            if sfunc["push_result_to_stack"]:
+                stack.append(sfunc["func"](*args))
+            else:
+                sfunc["func"](*args)
+        elif token in self.plugins:
             args = []
             for _ in range(self.plugins[token]["arg_count"]):
                 args.insert(0, self.pop_and_eval(stack))
@@ -393,6 +429,17 @@ class Stacker:
                     stack.append(op["func"](*args))
                 else:
                     op["func"](*args)
+            elif token == "disable_plugin":
+                operator_name = stack.pop()
+                self._disable_plugin(operator_name)
+            elif token == "disable_all_plugins":
+                self._disable_all_plugins()
+            elif token == "enable_disp_stack":
+                self._enable_disp_stack()
+            elif token == "disable_disp_stack":
+                self._disable_disp_stack()
+            elif token == "disable_disp_logo":
+                self._disable_disp_logo()
         elif token in self.operators:  # Other operators
             args = []
             for _ in range(self.operators[token]["arg_count"]):
@@ -402,15 +449,6 @@ class Stacker:
                 stack.append(op["func"](*args))
             else:
                 op["func"](*args)
-        elif token in self.sfunctions:  # sfunctions
-            args = []
-            for _ in range(self.sfunctions[token]["arg_count"]):
-                args.insert(0, self.pop_and_eval(stack))
-            sfunc = self.sfunctions[token]
-            if sfunc["push_result_to_stack"]:
-                stack.append(sfunc["func"](*args))
-            else:
-                sfunc["func"](*args)
         else:
             raise StackerSyntaxError(f"Unknown operator '{token}'")
 
@@ -528,6 +566,39 @@ class Stacker:
         self.plugin_descriptions[operator_name] = desc
 
     # ========================
+    # Setting
+    # ========================
+
+    def _disable_plugin(self, operator_name: str) -> None:
+        if operator_name in self.plugins:
+            del self.plugins[operator_name]
+        else:
+            print(f"Plugin '{operator_name}' is not registered.")
+
+    def _disable_all_plugins(self) -> None:
+        self.plugins = {}
+
+    def _enable_disp_stack(self) -> None:
+        self._disp_stack_mode = True
+
+    def _disable_disp_stack(self) -> None:
+        self._disp_stack_mode = False
+
+    def _enable_disp_logo(self) -> None:
+        self._disp_logo = True
+
+    def _disable_disp_logo(self) -> None:
+        self._disp_logo = False
+
+    @property
+    def disp_stack_mode(self) -> bool:
+        return self._disp_stack_mode
+
+    @property
+    def disp_logo_mode(self) -> bool:
+        return self._disp_logo
+
+    # ========================
     # Getter
     # ========================
 
@@ -536,6 +607,9 @@ class Stacker:
 
     def get_stack_copy(self) -> deque:
         return self.stack.copy()
+
+    def get_stack_copy_as_list(self) -> deque:
+        return list(self.stack.copy())
 
     def get_macros_ref(self) -> dict:
         return self.macros

@@ -1,5 +1,17 @@
 # CHANGE LOG
 
+## [1.5.4] - 2023-12-24
+
+### Added
+- Added a setting command and load at startup setting file "~/.stackerrc".
+  - The setting command is as follows:
+    - disable_plugin
+    - disable_all_plugins
+    - enable_disp_stack
+    - disable_disp_stack
+    - disable_disp_logo
+
+
 ## [1.5.3] - 2023-12-23
 
 ### Added
