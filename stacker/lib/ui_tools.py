@@ -6,7 +6,7 @@ from stacker.lib.config import history_file_path
 from stacker.util.color import colored
 
 
-def show_top() -> None:
+def disp_logo() -> None:
     """Prints the top message."""
     colors = ["red", "green", "yellow", "lightblue", "lightmagenta", "cyan"]
     with resource_stream("stacker", "data/top.txt") as f:
@@ -16,14 +16,14 @@ def show_top() -> None:
     print("")
 
 
-def show_about() -> None:
+def disp_about() -> None:
     """Prints the about message."""
     with resource_stream("stacker", "data/about.txt") as f:
         message = f.read().decode("utf-8")
     print(message)
 
 
-def show_help() -> None:
+def disp_help() -> None:
     """Prints the help message."""
     with resource_stream("stacker", "data/help.txt") as f:
         message = f.read().decode("utf-8")

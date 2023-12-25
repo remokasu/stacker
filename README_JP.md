@@ -82,21 +82,21 @@ Python 3がインストールされていることを確認してください。
 ### インストールオプション:
 
 - pip経由:
-    ```bash
-    pip install pystacker
-    ```
+  ```bash
+  pip install pystacker
+  ```
 
 - ソースから:
-    ```bash
-    git clone git@github.com:remokasu/stacker.git
-    cd stacker
-    python setup.py install
-    ```
+  ```bash
+  git clone git@github.com:remokasu/stacker.git
+  cd stacker
+  python setup.py install
+  ```
 
 - 遊び終わったら削除しましょう
-    ~~~ bash
-    > pip uninstall pystacker
-    ~~~
+  ~~~ bash
+  > pip uninstall pystacker
+  ~~~
 
 ## フィードバック
 
@@ -310,6 +310,55 @@ stacker -e "3 4 + echo"
 ```
 
 
+## 設定
+
+- disable_plugin
+
+  指定のプラグインを無効化します。
+  ```bash
+  stacker:0> "hoge" disable_plugin
+  ```
+  このコマンドは、プラグインとして追加されたhoge演算子を無効にします。
+  ただし、プラグイン以外の演算子には使えません。
+
+- disable_all_plugins
+
+  すべてのプラグインを一括で無効にします。
+  ```bash
+  stacker:0> disable_all_plugins
+  ```
+
+- enable_disp_stack
+
+  スタックの内容を毎回表示する設定を有効にします。デフォルトでは、この設定が既に有効になっています。
+  ```bash
+  stacker:0> enable_disp_stack
+  ```
+
+- disable_disp_stack
+
+  スタックの内容を表示しない設定にします。この設定を有効にすると、スタックの最新の要素のみが表示されます。
+  ```bash
+  stacker:0> disable_disp_stack
+  ```
+
+- disable_disp_logo
+
+  起動時にロゴの表示を無効にします。
+  ```bash
+  stacker:0> disable_disp_logo
+  ```
+
+
+## 設定ファイル
+
+  起動時に自動で設定を読み込むことができます。設定ファイルは~/.stackerrcに配置します。
+  例えば、~/.stackerrcに以下の内容を記述すると、起動時にdisable_disp_logoとdisable_disp_stackが自動で有効になります。
+  ```bash
+  disable_disp_logo
+  disable_disp_stack
+  ```
+
 
 ## プラグインの作成
 
@@ -349,10 +398,14 @@ def setup(stacker: Stacker):
     stacker.register_plugin("command", function)
 ```
 
+## プラグインの無効化
+特定のプラグインを無効にするには operatorName disable_plugin を使用します。<br>
+全てのプラグインを無効にするには disable_all_plugins を使用します。<br>
+
+
 ## ドキュメント
 より詳細なドキュメントについては、[`stacker/docs`](https://github.com/remokasu/stacker/blob/main/docs/README.md)を参照してください。
 
 
 ## 使用可能コマンド
-## Supported Operations
 `+` `-` `*` `/` `//` `/` `%` `++` `--` `neg` `bin` `oct` `dec` `hex` `band` `bor` `bxor` `~` `>>` `<<` `==` `!=` `<=` `<` `>=` `>` `eq` `noq` `le` `lt` `ge` `gt` `echo` `print` `and` `or` `not` `&&` `||` `^` `log` `log2` `log10` `exp` `sin` `cos` `tan` `asin` `acos` `atan` `sinh` `cosh` `tanh` `asinh` `acosh` `atanh` `sqrt` `gcd` `lcm` `radians` `!` `ceil` `floor` `comb` `perm` `abs` `cbrt` `ncr` `npr` `roundn` `round` `rand` `randint` `uniform` `dice` `int` `float` `str` `bool` `seq` `range` `min` `sum` `max` `len` `drop` `dup` `swap` `pick` `rot` `rotl` `insert` `rev` `clear` `disp` `eval` `asc` `chr` `concat` `time` `if` `ifelse` `times` `do` `set` `defun` `alias` `include`
