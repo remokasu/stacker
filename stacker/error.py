@@ -79,12 +79,12 @@ class StackerSyntaxError(StackerError):
         super().__init__(message)
 
 
-class UnexpectedTokenError(SyntaxError):
+class UnexpectedTokenError(StackerError):
     """Unexpected token error"""
 
     def __init__(self, token, message=None):
         if message is None:
-            message = f"Unexpected token: {token}"
+            message = f"Unexpected token `{token}`"
         super().__init__(message)
 
 

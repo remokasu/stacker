@@ -34,8 +34,10 @@ def _inv(a):
 def _det(a):
     return np.linalg.det(np.array(a)).tolist()
 
+
 def _dot(a, b):
     return np.dot(np.array(a), np.array(b)).tolist()
+
 
 def _rank(a):
     return np.linalg.matrix_rank(np.array(a))
@@ -55,7 +57,6 @@ def _zeros(rows, cols):
 
 def _diag(a):
     return np.diag(np.array(a)).tolist()
-
 
 
 # def ndim(a) -> int:

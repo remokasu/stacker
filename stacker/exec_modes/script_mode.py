@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from stacker.error import ScriptReadError
+from stacker.exec_modes.error import create_error_message
 from stacker.exec_modes.excution_mode import ExecutionMode
 from stacker.include.stk_file_read import readtxt
 from stacker.lib.config import script_extension_name
@@ -41,7 +42,16 @@ class ScriptMode(ExecutionMode):
                     self.rpn_calculator.process_expression(expression)
                     expression = ""
         except Exception as e:
-            print(e)
+            print(f"File: {Path(file_path).resolve()}")
+            print(f"{type(e).__name__}: {e}")
+            trace = self.rpn_calculator.get_trace_copy()
+            if len(trace) == 0:
+                sys.exit(1)
+            if len(trace) > 4:
+                error_trace = trace[-4:]
+            else:
+                error_trace = trace
+            print(create_error_message(error_trace))
             sys.exit(1)
 
         # with path.open('r') as script_file:
@@ -57,4 +67,3 @@ class ScriptMode(ExecutionMode):
         #                 expression = expression[:-2] + closer
         #             self.rpn_calculator.process_expression(expression)
         #             expression = ''
-
