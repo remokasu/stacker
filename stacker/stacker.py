@@ -17,6 +17,7 @@ from stacker.lib.function.base import base_operators
 from stacker.lib.function.bitwise import bitwise_operators
 from stacker.lib.function.comparison import compare_operators
 from stacker.lib.function.eval import eval_operators
+from stacker.lib.function.file import file_operators
 from stacker.lib.function.io import io_operators
 from stacker.lib.function.list import list_operators
 from stacker.lib.function.logic import logic_operators
@@ -37,6 +38,8 @@ from stacker.syntax.parser import (
     parse_expression,
 )
 
+__BREAK__ = "\b"
+
 
 class Stacker:
     """A class for evaluating RPN expressions."""
@@ -52,6 +55,7 @@ class Stacker:
             self.tokens = parse_expression(self.expression)
         self.child = None
         # self.stack: list[Any] = []
+        self.trace: list[Any] = []  # for error trace
         self.stack: deque[Any] = deque()
         if self.parent is not None:  # it is a substack of a parent stacker
             self.operators = self.parent.get_operators_ref()
@@ -60,6 +64,7 @@ class Stacker:
             self.variables = self.parent.get_variables_ref()
             self.plugins = self.parent.get_plugins_ref()
             self.sfunctions = self.parent.get_sfuntions_copy()
+            self.break_flag = False
             return
         self.loop_operators = {
             "times": {
@@ -114,6 +119,11 @@ class Stacker:
                 "push_result_to_stack": True,
                 "desc": "Evaluates a given RPN expression.",
             },
+            "break": {
+                "arg_count": 0,
+                "push_result_to_stack": False,
+                "desc": "",
+            },
             "disable_plugin": {
                 "arg_count": 1,
                 "push_result_to_stack": False,
@@ -146,6 +156,7 @@ class Stacker:
         self.operators.update(copy.deepcopy(base_operators))
         self.operators.update(copy.deepcopy(bitwise_operators))
         self.operators.update(copy.deepcopy(compare_operators))
+        self.operators.update(copy.deepcopy(file_operators))
         self.operators.update(copy.deepcopy(io_operators))
         self.operators.update(copy.deepcopy(logic_operators))
         self.operators.update(copy.deepcopy(math_operators))
@@ -191,6 +202,7 @@ class Stacker:
         self.macros.update(_macros)
         self.variables.update(_variables)
         self.sfunctions.update(_sfunctions)
+        self.clear_trace()
 
     # ========================
     # Substack
@@ -224,6 +236,12 @@ class Stacker:
                 return value
             return self.variables.get(value, value)
 
+    def _pop(self) -> Any:
+        try:
+            return self.stack.pop()
+        except IndexError:
+            raise StackerRuntimeError("Stack is empty.")
+
     # ========================
     # Loop (do, times)
     # ========================
@@ -239,6 +257,9 @@ class Stacker:
         for i in range(start_value, end_value + 1):
             block.variables[symbol] = i
             parent.evaluate(block.tokens, stack=parent.stack)
+            if len(parent.stack) > 0 and parent.stack[-1] == __BREAK__:
+                parent.stack.pop()
+                break
 
     def execute_times(
         self,
@@ -327,6 +348,7 @@ class Stacker:
         # Iterate over each token in the token list
         enum_tokens = enumerate(tokens)
         for index, token in enum_tokens:
+            self.trace.append(token)
             if not isinstance(token, str):
                 stack.append(token)  # Literal value
             elif (
@@ -356,7 +378,7 @@ class Stacker:
                 raise UnexpectedTokenError(token)
         return stack
 
-    def _execute(self, token: str, stack: deque) -> None:
+    def _execute(self, token: str, stack: deque) -> bool:
         """
         Applies an operator to the top elements on the stack.
         Modifies the stack in-place.
@@ -390,6 +412,8 @@ class Stacker:
                 n_times = self.pop_and_eval(stack)
                 body = stack.pop()
                 self.execute_times(n_times, body, self)
+            elif token == "break":
+                stack.append(__BREAK__)
             elif token == "if":
                 condition = stack.pop()
                 true_block = stack.pop()
@@ -432,14 +456,19 @@ class Stacker:
             elif token == "disable_plugin":
                 operator_name = stack.pop()
                 self._disable_plugin(operator_name)
+                self.clear_trace()
             elif token == "disable_all_plugins":
                 self._disable_all_plugins()
+                self.clear_trace()
             elif token == "enable_disp_stack":
                 self._enable_disp_stack()
+                self.clear_trace()
             elif token == "disable_disp_stack":
                 self._disable_disp_stack()
+                self.clear_trace()
             elif token == "disable_disp_logo":
                 self._disable_disp_logo()
+                self.clear_trace()
         elif token in self.operators:  # Other operators
             args = []
             for _ in range(self.operators[token]["arg_count"]):
@@ -451,6 +480,7 @@ class Stacker:
                 op["func"](*args)
         else:
             raise StackerSyntaxError(f"Unknown operator '{token}'")
+        return True
 
     def expand_macro(self, name: str, stack: deque) -> None:
         """Executes a macro."""
@@ -602,6 +632,16 @@ class Stacker:
     # Getter
     # ========================
 
+    def get_any_operator_arg_count(self, operator_name: str) -> int:
+        if operator_name in self.operators:
+            return self.operators[operator_name]["arg_count"]
+        elif operator_name in self.sfunctions:
+            return self.sfunctions[operator_name]["arg_count"]
+        elif operator_name in self.plugins:
+            return self.plugins[operator_name]["arg_count"]
+        else:
+            raise StackerSyntaxError(f"Unknown operator '{operator_name}'")
+
     def get_stack_ref(self) -> deque:
         return self.stack
 
@@ -649,6 +689,19 @@ class Stacker:
 
     def get_stack_length(self) -> int:
         return len(self.stack)
+
+    def get_trace_ref(self) -> list[Any]:
+        return self.trace
+
+    def get_trace_copy(self) -> list[Any]:
+        return self.trace.copy()
+
+    # ========================
+    # Clear
+    # ========================
+
+    def clear_trace(self) -> None:
+        self.trace = []
 
     # ========================
     # Debug
