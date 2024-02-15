@@ -35,6 +35,7 @@ from stacker.syntax.parser import (
     is_string,
     is_tuple,
     is_undefined_symbol,
+    is_label_symbol,
     parse_expression,
 )
 
@@ -124,6 +125,11 @@ class Stacker:
                 "push_result_to_stack": False,
                 "desc": "",
             },
+            "exit": {
+                "arg_count": 0,
+                "push_result_to_stack": False,
+                "desc": "",
+            },
             "disable_plugin": {
                 "arg_count": 1,
                 "push_result_to_stack": False,
@@ -180,6 +186,7 @@ class Stacker:
         self.macros = {}
         self.plugins = {}
         self.sfunctions = {}
+        self.labels = {}
         self.operator_descriptions = {}
         for operator_name, operator_descriptions in self.operators.items():
             self.operator_descriptions[operator_name] = operator_descriptions["desc"]
@@ -378,7 +385,7 @@ class Stacker:
                 raise UnexpectedTokenError(token)
         return stack
 
-    def _execute(self, token: str, stack: deque) -> bool:
+    def _execute(self, token: str, stack: deque) -> None:
         """
         Applies an operator to the top elements on the stack.
         Modifies the stack in-place.
@@ -469,6 +476,8 @@ class Stacker:
             elif token == "disable_disp_logo":
                 self._disable_disp_logo()
                 self.clear_trace()
+            elif token == "exit":
+                raise SystemExit
         elif token in self.operators:  # Other operators
             args = []
             for _ in range(self.operators[token]["arg_count"]):
@@ -480,7 +489,7 @@ class Stacker:
                 op["func"](*args)
         else:
             raise StackerSyntaxError(f"Unknown operator '{token}'")
-        return True
+        return
 
     def expand_macro(self, name: str, stack: deque) -> None:
         """Executes a macro."""
@@ -595,6 +604,9 @@ class Stacker:
         }
         self.plugin_descriptions[operator_name] = desc
 
+    def register_label(self, label_name: str, index: int) -> None:
+        self.labels[label_name] = index
+
     # ========================
     # Setting
     # ========================
@@ -695,6 +707,12 @@ class Stacker:
 
     def get_trace_copy(self) -> list[Any]:
         return self.trace.copy()
+
+    def get_labels_ref(self) -> dict:
+        return self.labels
+
+    def get_labels_copy(self) -> dict:
+        return self.labels.copy()
 
     # ========================
     # Clear

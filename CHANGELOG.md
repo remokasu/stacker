@@ -1,5 +1,40 @@
 # CHANGE LOG
 
+## [1.5.5] - 2024-02-15
+- Added file input and output functionality.
+  - Users can now read and write to files using the `read` and `write` commands.
+  - Example:
+    ~~~
+    stacker:0> "test.txt" read
+    [This is a test file.]
+    stacker:1>  "This is a test file." "test2.txt" write
+    ~~~
+
+- Added input command.
+  - Users can now input data from the command line using the `input` command.
+  - Example:
+    ~~~
+    stacker:0> "Enter a number: " input
+    123
+    [123]
+    ~~~
+
+- Added Error display.
+  - Errors are now displayed in red for better visibility
+
+- Added the `break` command.
+  - The `break` command can be used to exit a loop.
+  - Example:
+    ~~~
+    stacker:0> 0 10 $i {i echo {break} {i 5 ==} if} do
+    0
+    1
+    2
+    3
+    4
+    5
+    ~~~
+
 ## [1.5.4] - 2023-12-24
 
 ### Added

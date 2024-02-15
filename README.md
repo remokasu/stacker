@@ -1,6 +1,3 @@
-[**日本語  (Japanese)**](https://github.com/remokasu/stacker/blob/main/README_JP.md)
-
-
 # Stacker: An RPN Calculator and Extensible Programming Language
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
@@ -532,8 +529,11 @@ print(stacker.eval("3 4 +"))
 | eval     | Evaluate the specified RPN expression                 | `'3 5 +' eval`             |
 | evalpy   | Evaluate the specified Python expression              | `'3+5' evalpy`             |
 | echo     | Print the specified value to stdout without adding it to the stack | `3 4 + echo`  |
+| println  | Print the specified value to stdout without adding it to the stack | `3 4 + println`  |
+| print    | Print the specified value to stdout without adding a newline character at the end or adding it to the stack. | `3 4 + print`  |
+| input    | Get input from the user                               | `input`                    |
 | read     | Read the contents of the specified file               | `"file.txt" read`          |
-| write    | Write the specified value to the specified file       | `"file.txt" "hoge" write`  |
+| write    | Write the specified value to the specified file       | `"hoge" "file.txt" write`  |
 
 
 ## Constants

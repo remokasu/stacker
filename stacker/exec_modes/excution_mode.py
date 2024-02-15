@@ -27,7 +27,6 @@ class ExecutionMode:
         self.receved_word = [
             "help",
             "about",
-            "exit",
             "delete_history",
             "vars",
         ]
