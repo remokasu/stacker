@@ -9,6 +9,7 @@ from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import FileHistory
 
+from stacker.exec_modes.error import create_error_message
 from stacker.exec_modes.excution_mode import ExecutionMode
 from stacker.lib import delete_history, disp_about, disp_help
 from stacker.lib.config import history_file_path
@@ -126,8 +127,6 @@ class ReplMode(ExecutionMode):
 
                 logging.debug("input expression: %s", expression)
 
-                if expression.lower() == "exit":
-                    break
                 if expression.lower() == "help":
                     disp_help()
                     print("")
@@ -162,14 +161,25 @@ class ReplMode(ExecutionMode):
                         print(self.rpn_calculator.get_stack_copy_as_list()[-1])
                     else:
                         print(self.rpn_calculator.get_stack_copy_as_list())
+                self.rpn_calculator.clear_trace()
 
             except EOFError:
                 print("\nSee you!")
                 break
 
             except Exception as e:
-                print(colored(f"{e}", "red"))
+                print(f"{type(e).__name__}: {e}")
+                trace = self.rpn_calculator.get_trace_copy()
+                # print(colored(f"{e}", "red"))
+                if len(trace) == 0:
+                    sys.exit(1)
+                if len(trace) > 4:
+                    error_trace = trace[-4:]
+                else:
+                    error_trace = trace
+                print(create_error_message(error_trace))
                 if self.dmode:
                     traceback.print_exc()
+                self.rpn_calculator.clear_trace()
             # self.update_completer()
             line_count = self.rpn_calculator.get_stack_length()

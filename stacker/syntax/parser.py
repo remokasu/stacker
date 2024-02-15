@@ -159,6 +159,10 @@ def is_undefined_symbol(expression: str) -> bool:
     return expression.startswith("$") and not expression.endswith("$")
 
 
+def is_label_symbol(expression: str) -> bool:
+    return expression.endswith(":") and not expression.startswith(":")
+
+
 def is_reference_symbol(expression: str) -> bool:
     return expression.startswith("@") and not expression.endswith("@")
 
