@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 
-def write(filename: Path | str, content) -> None:
+def _write(content, filename: Path | str) -> None:
     filename = Path(filename).resolve()
     try:
         with open(filename, "w") as f:
@@ -12,7 +12,7 @@ def write(filename: Path | str, content) -> None:
         raise type(e)(f"Error writing to file {filename}: {e}")
 
 
-def append(filename: Path | str, content) -> None:
+def _append(content, filename: Path | str) -> None:
     filename = Path(filename).resolve()
     try:
         with open(filename, "a") as f:
@@ -21,7 +21,7 @@ def append(filename: Path | str, content) -> None:
         raise type(e)(f"Error writing to file {filename}: {e}")
 
 
-def read(filename: Path | str) -> str | None:
+def _read(filename: Path | str) -> str | None:
     filename = Path(filename).resolve()
     if not filename.is_file():
         raise FileNotFoundError(f"File {filename} not found.")
@@ -36,19 +36,19 @@ def read(filename: Path | str) -> str | None:
 
 file_operators = {
     "write": {
-        "func": (lambda filename, content: write(filename, content)),
+        "func": (lambda filename, content: _write(filename, content)),
         "arg_count": 2,
         "push_result_to_stack": False,
         "desc": "Write content to file",
     },
-    "append": {
-        "func": (lambda filename, content: append(filename, content)),
-        "arg_count": 2,
-        "push_result_to_stack": False,
-        "desc": "Append content to file",
-    },
+    # "append": {
+    #     "func": (lambda filename, content: _append(filename, content)),
+    #     "arg_count": 2,
+    #     "push_result_to_stack": False,
+    #     "desc": "Append content to file",
+    # },
     "read": {
-        "func": (lambda filename: read(filename)),
+        "func": (lambda filename: _read(filename)),
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Read content from file",

@@ -127,8 +127,6 @@ class ReplMode(ExecutionMode):
 
                 logging.debug("input expression: %s", expression)
 
-                if expression.lower() == "exit":
-                    break
                 if expression.lower() == "help":
                     disp_help()
                     print("")
