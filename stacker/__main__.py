@@ -141,8 +141,6 @@ def main():
     if not load_stacker_lib(rpn_calculator, library_dir):
         sys.exit(1)
 
-
-
     if argv.e is not None:
         # Execute the given command
         commandline_mode = CommandLineMode(rpn_calculator)
@@ -170,6 +168,7 @@ def main():
         if repl_mode.rpn_calculator.disp_logo_mode:
             disp_logo()
         repl_mode.run()
+
 
 if __name__ == "__main__":
     main()

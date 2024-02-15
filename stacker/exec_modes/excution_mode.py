@@ -8,15 +8,16 @@ from prompt_toolkit.completion import WordCompleter
 
 from stacker.error import ScriptReadError
 from stacker.include.stk_file_read import readtxt
+from stacker.lib.config import script_extension_name, stacker_dotfile
 from stacker.stacker import Stacker
-from stacker.util import colored
-from stacker.lib.config import stacker_dotfile, script_extension_name
-from stacker.syntax.parser import remove_start_end_quotes
 from stacker.syntax.parser import (
     is_array_balanced,
     is_brace_balanced,
     is_tuple_balanced,
+    remove_start_end_quotes,
 )
+from stacker.util import colored
+
 
 class ExecutionMode:
     def __init__(self, rpn_calculator: Stacker):
@@ -26,7 +27,6 @@ class ExecutionMode:
         self.receved_word = [
             "help",
             "about",
-            "exit",
             "delete_history",
             "vars",
         ]
