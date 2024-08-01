@@ -7,6 +7,7 @@ from typing import Any, Callable
 
 from stacker.constant import constants
 from stacker.error import (  # SemanticError,; StackerRuntimeError,; ResourceError,; ValidationError,; LoadPluginError,
+    StackerRuntimeError,
     StackerSyntaxError,
     UnexpectedTokenError,
 )
@@ -31,15 +32,18 @@ from stacker.syntax.parser import (
     convert_custom_string_tuple_to_proper_tuple,
     is_array,
     is_block,
+    is_contains_transpose_command,
+    # is_label_symbol,
     is_reference_symbol,
     is_string,
+    is_transpose_command,
     is_tuple,
     is_undefined_symbol,
-    is_label_symbol,
     parse_expression,
 )
 
 __BREAK__ = "\b"
+__TRANSPOSE__ = "transpose"
 
 
 class Stacker:
@@ -95,6 +99,11 @@ class Stacker:
             },
         }
         self.special_operators = {
+            "ans": {
+                "arg_count": 0,
+                "push_result_to_stack": True,
+                "desc": "Returns the last result.",
+            },
             "set": {
                 "arg_count": 2,
                 "push_result_to_stack": False,
@@ -129,7 +138,9 @@ class Stacker:
                 "arg_count": 0,
                 "push_result_to_stack": False,
                 "desc": "",
-            },
+            }
+        }
+        self.settings_operators = {
             "disable_plugin": {
                 "arg_count": 1,
                 "push_result_to_stack": False,
@@ -155,6 +166,11 @@ class Stacker:
                 "push_result_to_stack": False,
                 "desc": "Disables showing logo.",
             },
+            "enable_disp_logo": {
+                "arg_count": 0,
+                "push_result_to_stack": False,
+                "desc": "Enables showing logo.",
+            },
         }
         self.operators = {}
         self.operators.update(copy.deepcopy(alge_operators))
@@ -176,11 +192,13 @@ class Stacker:
         self.operators.update(copy.deepcopy(self.condition_operators))
         self.operators.update(copy.deepcopy(self.loop_operators))
         self.operators.update(copy.deepcopy(self.special_operators))
+        self.operators.update(copy.deepcopy(self.settings_operators))
         self.priority_operators = {}
         self.priority_operators.update(stack_operators)
         self.priority_operators.update(self.loop_operators)
         self.priority_operators.update(self.condition_operators)
         self.priority_operators.update(self.special_operators)
+        self.priority_operators.update(self.settings_operators)
         self.variables = {}
         self.variables.update(constants)
         self.macros = {}
@@ -368,6 +386,16 @@ class Stacker:
                 self.expand_macro(token, stack)
             elif token in self.variables or is_tuple(token) or is_array(token):
                 stack.append(token)
+            elif is_transpose_command(token):
+                # Example: [1 2; 3 4]^T
+                self._execute(__TRANSPOSE__, stack)
+            elif is_contains_transpose_command(token):
+                # Example: A^T
+                token = token[:-2]
+                if token in self.variables:
+                    print(self.variables[token])
+                    stack.append(self.variables[token])
+                    self._execute(__TRANSPOSE__, stack)
             elif is_undefined_symbol(token):
                 token = token[1:]
                 stack.append(token)
@@ -430,6 +458,8 @@ class Stacker:
                 false_block = stack.pop()
                 true_block = stack.pop()
                 self.execute_if_else(condition, true_block, false_block, self)
+            # elif token == "ans":  # TODO: 
+            #     stack.append(self.stack[-1])
             elif token == "set":
                 name = stack.pop()
                 value = self.pop_and_eval(stack)
@@ -475,6 +505,9 @@ class Stacker:
                 self.clear_trace()
             elif token == "disable_disp_logo":
                 self._disable_disp_logo()
+                self.clear_trace()
+            elif token == "enable_disp_logo":
+                self._enable_disp_logo()
                 self.clear_trace()
             elif token == "exit":
                 raise SystemExit

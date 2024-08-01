@@ -1,5 +1,8 @@
 # CHANGE LOG
 
+## [1.5.6] - 2024-03-17
+
+
 ## [1.5.5] - 2024-02-15
 - Added file input and output functionality.
   - Users can now read and write to files using the `read` and `write` commands.

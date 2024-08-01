@@ -155,6 +155,7 @@ class ReplMode(ExecutionMode):
                     continue
                 self.rpn_calculator.process_expression(expression)
                 if self.rpn_calculator.disp_stack_mode is True:
+                    self.disp_ans()
                     self.disp_stack()
                 else:
                     if self.rpn_calculator.get_stack_length() > 0:

@@ -6,6 +6,8 @@ from typing import Any
 
 from stacker.syntax.lexer import lex_string
 
+__transpose_symbol__ = "^T"
+
 
 def evaluate_token_or_return_str(token: str) -> Any:
     """Evaluates a token if it is a number, otherwise returns the token as a string."""
@@ -165,6 +167,16 @@ def is_label_symbol(expression: str) -> bool:
 
 def is_reference_symbol(expression: str) -> bool:
     return expression.startswith("@") and not expression.endswith("@")
+
+
+def is_transpose_command(expression: str) -> bool:
+    return expression == __transpose_symbol__
+
+
+def is_contains_transpose_command(expression: str) -> bool:
+    if len(expression) > len(__transpose_symbol__):
+        return expression[-len(__transpose_symbol__) :] == __transpose_symbol__
+    return False
 
 
 def convert_custom_array_to_proper_list(token: str) -> str:
