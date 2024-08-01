@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import numpy as np
+
 
 def _seq(x1, x2):
     """
@@ -85,6 +87,10 @@ def _extend(xs1, xs2):
         raise TypeError(f"Cannot extend {xs1} with {xs2}.")
 
 
+def _transpose(a):
+    return np.transpose(a).tolist()
+
+
 # def _insert(xs, i, x):
 #     """
 #     xs: list
@@ -164,5 +170,11 @@ list_operators = {
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Get length of list",
+    },
+    "transpose": {
+        "func": (lambda a: _transpose(a)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Transpose matrix",
     },
 }

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from stacker.exec_modes.excution_mode import ExecutionMode
-from stacker.exec_modes.error import create_error_message
 import sys
+
+from stacker.exec_modes.error import create_error_message
+from stacker.exec_modes.excution_mode import ExecutionMode
 
 
 class CommandLineMode(ExecutionMode):
