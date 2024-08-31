@@ -7,6 +7,7 @@ from typing import Any, Callable
 
 from stacker.constant import constants
 from stacker.error import (  # SemanticError,; StackerRuntimeError,; ResourceError,; ValidationError,; LoadPluginError,
+    StackerRuntimeError,
     StackerSyntaxError,
     UnexpectedTokenError,
 )
@@ -31,15 +32,18 @@ from stacker.syntax.parser import (
     convert_custom_string_tuple_to_proper_tuple,
     is_array,
     is_block,
+    is_contains_transpose_command,
+    # is_label_symbol,
     is_reference_symbol,
     is_string,
+    is_transpose_command,
     is_tuple,
     is_undefined_symbol,
-    is_label_symbol,
     parse_expression,
 )
 
 __BREAK__ = "\b"
+__TRANSPOSE__ = "transpose"
 
 
 class Stacker:
@@ -61,6 +65,7 @@ class Stacker:
         if self.parent is not None:  # it is a substack of a parent stacker
             self.operators = self.parent.get_operators_ref()
             self.priority_operators = self.parent.get_priority_operators_ref()
+            self.settings_operators = self.parent.get_settings_operators_ref()
             self.macros = self.parent.get_macros_ref()
             self.variables = self.parent.get_variables_ref()
             self.plugins = self.parent.get_plugins_ref()
@@ -95,6 +100,11 @@ class Stacker:
             },
         }
         self.special_operators = {
+            "ans": {
+                "arg_count": 0,
+                "push_result_to_stack": True,
+                "desc": "Returns the last result.",
+            },
             "set": {
                 "arg_count": 2,
                 "push_result_to_stack": False,
@@ -130,6 +140,8 @@ class Stacker:
                 "push_result_to_stack": False,
                 "desc": "",
             },
+        }
+        self.settings_operators = {
             "disable_plugin": {
                 "arg_count": 1,
                 "push_result_to_stack": False,
@@ -155,6 +167,21 @@ class Stacker:
                 "push_result_to_stack": False,
                 "desc": "Disables showing logo.",
             },
+            "enable_disp_logo": {
+                "arg_count": 0,
+                "push_result_to_stack": False,
+                "desc": "Enables showing logo.",
+            },
+            "enable_disp_ans": {
+                "arg_count": 0,
+                "push_result_to_stack": False,
+                "desc": "Enables showing ans.",
+            },
+            "disable_disp_ans": {
+                "arg_count": 0,
+                "push_result_to_stack": False,
+                "desc": "Disables showing ans.",
+            },
         }
         self.operators = {}
         self.operators.update(copy.deepcopy(alge_operators))
@@ -169,13 +196,14 @@ class Stacker:
         self.operators.update(copy.deepcopy(random_operators))
         self.operators.update(copy.deepcopy(type_operators))
         self.operators.update(copy.deepcopy(list_operators))
-        self.operators.update(copy.deepcopy(stack_operators))
+        # self.operators.update(copy.deepcopy(stack_operators))
         self.operators.update(copy.deepcopy(eval_operators))
         self.operators.update(copy.deepcopy(string_operators))
         self.operators.update(copy.deepcopy(time_operators))
-        self.operators.update(copy.deepcopy(self.condition_operators))
-        self.operators.update(copy.deepcopy(self.loop_operators))
-        self.operators.update(copy.deepcopy(self.special_operators))
+        # self.operators.update(copy.deepcopy(self.condition_operators))
+        # self.operators.update(copy.deepcopy(self.loop_operators))
+        # self.operators.update(copy.deepcopy(self.special_operators))
+        # self.settings_operators.update(copy.deepcopy(self.settings_operators))
         self.priority_operators = {}
         self.priority_operators.update(stack_operators)
         self.priority_operators.update(self.loop_operators)
@@ -193,6 +221,7 @@ class Stacker:
         self.plugin_descriptions = {}
         self._disp_stack_mode = True
         self._disp_logo = True
+        self._disp_ans = False
 
     # ========================
     # Include
@@ -360,6 +389,8 @@ class Stacker:
                 stack.append(token)  # Literal value
             elif (
                 token in self.operators
+                or token in self.priority_operators
+                or token in self.settings_operators
                 or token in self.sfunctions
                 or token in self.plugins
             ):
@@ -368,6 +399,16 @@ class Stacker:
                 self.expand_macro(token, stack)
             elif token in self.variables or is_tuple(token) or is_array(token):
                 stack.append(token)
+            elif is_transpose_command(token):
+                # Example: [1 2; 3 4]^T
+                self._execute(__TRANSPOSE__, stack)
+            elif is_contains_transpose_command(token):
+                # Example: A^T
+                token = token[:-2]
+                if token in self.variables:
+                    print(self.variables[token])
+                    stack.append(self.variables[token])
+                    self._execute(__TRANSPOSE__, stack)
             elif is_undefined_symbol(token):
                 token = token[1:]
                 stack.append(token)
@@ -430,6 +471,8 @@ class Stacker:
                 false_block = stack.pop()
                 true_block = stack.pop()
                 self.execute_if_else(condition, true_block, false_block, self)
+            # elif token == "ans":  # TODO:
+            #     stack.append(self.stack[-1])
             elif token == "set":
                 name = stack.pop()
                 value = self.pop_and_eval(stack)
@@ -460,7 +503,10 @@ class Stacker:
                     stack.append(op["func"](*args))
                 else:
                     op["func"](*args)
-            elif token == "disable_plugin":
+            elif token == "exit":
+                raise SystemExit
+        elif token in self.settings_operators:
+            if token == "disable_plugin":
                 operator_name = stack.pop()
                 self._disable_plugin(operator_name)
                 self.clear_trace()
@@ -476,8 +522,15 @@ class Stacker:
             elif token == "disable_disp_logo":
                 self._disable_disp_logo()
                 self.clear_trace()
-            elif token == "exit":
-                raise SystemExit
+            elif token == "enable_disp_logo":
+                self._enable_disp_logo()
+                self.clear_trace()
+            elif token == "enable_disp_ans":
+                self._enable_disp_ans()
+                self.clear_trace()
+            elif token == "disable_disp_ans":
+                self._disable_disp_ans()
+                self.clear_trace()
         elif token in self.operators:  # Other operators
             args = []
             for _ in range(self.operators[token]["arg_count"]):
@@ -632,6 +685,12 @@ class Stacker:
     def _disable_disp_logo(self) -> None:
         self._disp_logo = False
 
+    def _enable_disp_ans(self) -> None:
+        self._disp_ans = True
+
+    def _disable_disp_ans(self) -> None:
+        self._disp_ans = False
+
     @property
     def disp_stack_mode(self) -> bool:
         return self._disp_stack_mode
@@ -639,6 +698,10 @@ class Stacker:
     @property
     def disp_logo_mode(self) -> bool:
         return self._disp_logo
+
+    @property
+    def disp_ans_mode(self) -> bool:
+        return self._disp_ans
 
     # ========================
     # Getter
@@ -686,6 +749,12 @@ class Stacker:
 
     def get_priority_operators_copy(self) -> dict:
         return self.priority_operators.copy()
+
+    def get_settings_operators_ref(self) -> dict:
+        return self.settings_operators
+
+    def get_settings_operators_copy(self) -> dict:
+        return self.settings_operators.copy()
 
     def get_sfuntions_ref(self) -> dict:
         return self.sfunctions

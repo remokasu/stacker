@@ -9,13 +9,6 @@ from stacker.exec_modes.excution_mode import ExecutionMode
 from stacker.include.stk_file_read import readtxt
 from stacker.lib.config import script_extension_name
 from stacker.stacker import Stacker
-from stacker.syntax.parser import (
-    is_array,
-    is_array_balanced,
-    is_brace_balanced,
-    is_tuple,
-    is_tuple_balanced,
-)
 
 
 class ScriptMode(ExecutionMode):
