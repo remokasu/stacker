@@ -11,23 +11,28 @@ dist/
 build/
 *.egg-info/
 
-# Visual Studio Code settings
+# IDE settings
 .vscode/
+.idea/
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
 # Local development settings
 venv/
-.idea/
 *.env
 
-# Other
+# Logs and coverage files
 *.log
+.stacker_history
+.coverage
+
+# System files
 .DS_Store
 
-# stacker log file
-.stacker_history
-
-# swap
+# Swap files
 *.swp
+
+# Cache files
+.pytest_cache/
+.ruff_cache/

@@ -333,6 +333,23 @@ stacker -e "3 4 + echo"
   stacker:0> disable_all_plugins
   ```
 
+- enable_disp_ans
+  Enables the display of the last result (ans) at the end of the stack.
+  ```bash
+  stacker:0> enable_disp_ans
+  stacker:1> 3 4 +
+  7
+  [7]
+  ```
+
+- disable_disp_ans
+  Disables the display of the last result (ans) at the end of the stack.
+  ```bash
+  stacker:0> disable_disp_ans
+  stacker:1> 3 4 +
+  [7]
+  ```
+
 - enable_disp_stack
   Enables the setting to display the stack contents each time. By default, this setting is already active.
   ```bash
@@ -351,11 +368,14 @@ stacker -e "3 4 + echo"
   stacker:0> disable_disp_logo
   ```
 
+
+
 ## Configuration File
 You can automatically load settings at startup. The configuration file should be placed in ~/.stackerrc. For example, if you write the following contents in ~/.stackerrc, the disable_disp_logo and disable_disp_stack will be automatically activated at startup.
 ```bash
 disable_disp_logo
 disable_disp_stack
+enabble_disp_ans
 ```
 
 ## Creating Plugins

@@ -9,5 +9,5 @@ class TestImportStacker(unittest.TestCase):
         stacker = Stacker()
         stacker.stack.clear()
         stacker.process_expression(f"'{filename}' include")
-        stacker.process_expression(f"5 increment")
+        stacker.process_expression("5 increment")
         self.assertEqual(stacker.stack[-1], 6)

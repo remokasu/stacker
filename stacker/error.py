@@ -54,7 +54,7 @@ class UnexpectedTokenError(StackerError):
 
     def __init__(self, token, message=None):
         if message is None:
-            message = f"Unexpected token `{token}`"
+            message = f"Unexpected token found: `{token}`. If `{token}` is intended as a variable or symbol, ensure it is defined or prepend it with '$'."
         super().__init__(message)
 
 

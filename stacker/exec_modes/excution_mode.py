@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-import copy
 from pathlib import Path
 
-from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
 
-from stacker.error import ScriptReadError
 from stacker.include.stk_file_read import readtxt
-from stacker.lib.config import script_extension_name, stacker_dotfile
 from stacker.stacker import Stacker
 from stacker.syntax.parser import (
     is_array_balanced,
@@ -17,6 +13,33 @@ from stacker.syntax.parser import (
     remove_start_end_quotes,
 )
 from stacker.util import colored
+
+
+def simple_format(arr):
+    """
+    Format the specified list as a simple string.
+    Example:
+        [[2.999999999999992, -1.9999999999999942], [1.9999999999999947, -0.9999999999999964]]
+        -> [[3.0000, -2.0000], [2.0000, -1.0000]]
+    """
+
+    def format_number(x):
+        if isinstance(x, int):
+            return str(x)
+        if isinstance(x, str):
+            return x
+        return f"{x:.4f}"
+
+    def format_recursive(item):
+        if not isinstance(item, list):
+            return format_number(item)
+        else:
+            return item
+        # else:
+        #     formatted_items = [format_recursive(subitem) for subitem in item]
+        #     return "[" + " ".join(formatted_items) + "]"
+
+    return format_recursive(arr)
 
 
 class ExecutionMode:
@@ -36,6 +59,7 @@ class ExecutionMode:
         # _reserved_word = copy.deepcopy(self.rpn_calculator.reserved_word)
         _reserved_word = list(self.receved_word)
         _operator_key = list(self.rpn_calculator.get_operators_ref().keys())
+        # _setting_key = list(self.rpn_calculator.get_settings_operators_ref().keys())
         _sfunctions_key = list(self.rpn_calculator.get_sfuntions_ref().keys())
         _variable_key = list(self.rpn_calculator.get_variables_ref().keys())
         _macro_key = list(self.rpn_calculator.get_macros_ref().keys())
@@ -43,6 +67,7 @@ class ExecutionMode:
             set(
                 _reserved_word
                 + _operator_key
+                # + _setting_key
                 + _sfunctions_key
                 + _variable_key
                 + _macro_key
@@ -69,7 +94,7 @@ class ExecutionMode:
     def run(self):
         raise NotImplementedError("Subclasses must implement the 'run' method")
 
-    def print_colored_output(self, stack_list: list) -> None:
+    def print_colored_output(self, stack_list: list) -> str:
         stack_str = colored("[", "yellow")
         for item in stack_list:
             item_str = str(item)
@@ -100,7 +125,7 @@ class ExecutionMode:
                 stack_str += " "
         stack_str = stack_str[0:-2]
         stack_str += colored("]", "yellow")
-        print(stack_str)
+        return stack_str
 
     def disp_stack(self) -> None:
         """Print the current stack to the console."""
@@ -109,17 +134,33 @@ class ExecutionMode:
         for token in _stack:
             if isinstance(token, Stacker):
                 stack.append("{" + f"{token.expression}" + "}")
+            # elif isinstance(token, list):
+            #     stack.append(simple_format(token))
             else:
-                stack.append(token)
+                stack.append(simple_format(token))
         if self.color_print is True:
-            self.print_colored_output(stack)
+            stack_str = self.print_colored_output(stack)
+            print(stack_str)
         else:
-            print(stack)
+            print(f"{stack}")
 
     def disp_all_valiables(self) -> None:
         variables = self.rpn_calculator.get_variables_copy()
         for key in variables.keys():
             print(f"{key} = {variables[key]}")
+
+    def disp_ans(self) -> None:
+        _stack = self.rpn_calculator.get_stack_copy_as_list()
+        if len(_stack) == 0:
+            return
+        print(f"{_stack[-1]}")
+        # ans = _stack[-1]
+        # if isinstance(ans, list):
+        #     print(f"ans = \n    {simple_format(ans)}")
+        # elif isinstance(ans, Stacker):
+        #     pass
+        # else:
+        #     print(f"ans = {simple_format(ans)}")
 
     def execute_stacker_dotfile(self, filename: str | Path) -> None:
         """Import a stacker script and return the stacker object."""
