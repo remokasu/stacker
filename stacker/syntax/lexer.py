@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 
 def lex_string(s: str) -> list:
     """Parses a string into a list of tokens.

@@ -127,12 +127,12 @@ class TestStacker(unittest.TestCase):
             self.stacker.stack.clear()
             try:
                 self.stacker.process_expression(expression)
-            except Exception as e:
+            except Exception:
                 print("error!!", expression)
                 assert False
             try:
                 self.assertEqual(self.stacker.stack[-1], expected)
-            except Exception as e:
+            except Exception:
                 print("error!!", expression)
                 assert False
 

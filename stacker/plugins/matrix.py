@@ -25,6 +25,8 @@ a + b (scalar addition)
 
 
 def _add(a, b):
+    if type(a) is str or type(b) is str:
+        return a + b
     return (np.array(a) + np.array(b)).tolist()
 
 
@@ -173,7 +175,7 @@ A ^ B (matrix power)
 
 
 def _pow(a, b):
-    if (np.array(a).shape == () and np.array(b).shape == ()):
+    if np.array(a).shape == () and np.array(b).shape == ():
         return _elempow(a, b)
     return np.linalg.matrix_power(a, b).tolist()
 

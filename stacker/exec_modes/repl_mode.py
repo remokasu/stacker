@@ -21,7 +21,6 @@ from stacker.syntax.parser import (
     is_tuple,
     is_tuple_balanced,
 )
-from stacker.util import colored
 
 
 class ReplMode(ExecutionMode):
@@ -154,14 +153,15 @@ class ReplMode(ExecutionMode):
                     self.disp_all_valiables()
                     continue
                 self.rpn_calculator.process_expression(expression)
-                if self.rpn_calculator.disp_stack_mode is True:
+                if self.rpn_calculator.disp_ans_mode is True:
                     self.disp_ans()
+                if self.rpn_calculator.disp_stack_mode is True:
                     self.disp_stack()
-                else:
-                    if self.rpn_calculator.get_stack_length() > 0:
-                        print(self.rpn_calculator.get_stack_copy_as_list()[-1])
-                    else:
-                        print(self.rpn_calculator.get_stack_copy_as_list())
+                # else:
+                #     if self.rpn_calculator.get_stack_length() > 0:
+                #         print(self.rpn_calculator.get_stack_copy_as_list()[-1])
+                #     else:
+                #         print(self.rpn_calculator.get_stack_copy_as_list())
                 self.rpn_calculator.clear_trace()
 
             except EOFError:
@@ -171,7 +171,6 @@ class ReplMode(ExecutionMode):
             except Exception as e:
                 print(f"{type(e).__name__}: {e}")
                 trace = self.rpn_calculator.get_trace_copy()
-                # print(colored(f"{e}", "red"))
                 if len(trace) == 0:
                     sys.exit(1)
                 if len(trace) > 4:

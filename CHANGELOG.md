@@ -1,6 +1,20 @@
 # CHANGE LOG
 
-## [1.5.6] - 2024-03-17
+## [1.5.6] - 2024-08-31
+- Add `enable_disp_ans` and `disable_disp_ans` settings.
+  - `enable_disp_ans`: This command enables the display of the last result after stack operations. It makes it easier for users to verify the outcomes of their actions.
+    ~~~
+    stacker:0> enable_disp_ans
+    stacker:1> 3 4 +
+    7
+    [7]
+    ~~~
+  - `disable_disp_ans`: This command disables the display of the last result after stack operations. When activated, only the stack contents will be shown, providing a cleaner view.
+    ~~~
+    stacker:0> disable_disp_ans
+    stacker:1> 3 4 +
+    [7]
+    ~~~
 
 
 ## [1.5.5] - 2024-02-15

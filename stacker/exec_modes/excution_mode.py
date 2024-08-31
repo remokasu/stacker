@@ -1,16 +1,10 @@
 from __future__ import annotations
 
-import copy
 from pathlib import Path
 
-import numpy as np
-
-from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
 
-from stacker.error import ScriptReadError
 from stacker.include.stk_file_read import readtxt
-from stacker.lib.config import script_extension_name, stacker_dotfile
 from stacker.stacker import Stacker
 from stacker.syntax.parser import (
     is_array_balanced,
@@ -28,12 +22,14 @@ def simple_format(arr):
         [[2.999999999999992, -1.9999999999999942], [1.9999999999999947, -0.9999999999999964]]
         -> [[3.0000, -2.0000], [2.0000, -1.0000]]
     """
+
     def format_number(x):
         if isinstance(x, int):
             return str(x)
         if isinstance(x, str):
             return x
         return f"{x:.4f}"
+
     def format_recursive(item):
         if not isinstance(item, list):
             return format_number(item)
@@ -42,6 +38,7 @@ def simple_format(arr):
         # else:
         #     formatted_items = [format_recursive(subitem) for subitem in item]
         #     return "[" + " ".join(formatted_items) + "]"
+
     return format_recursive(arr)
 
 
@@ -62,6 +59,7 @@ class ExecutionMode:
         # _reserved_word = copy.deepcopy(self.rpn_calculator.reserved_word)
         _reserved_word = list(self.receved_word)
         _operator_key = list(self.rpn_calculator.get_operators_ref().keys())
+        # _setting_key = list(self.rpn_calculator.get_settings_operators_ref().keys())
         _sfunctions_key = list(self.rpn_calculator.get_sfuntions_ref().keys())
         _variable_key = list(self.rpn_calculator.get_variables_ref().keys())
         _macro_key = list(self.rpn_calculator.get_macros_ref().keys())
@@ -69,6 +67,7 @@ class ExecutionMode:
             set(
                 _reserved_word
                 + _operator_key
+                # + _setting_key
                 + _sfunctions_key
                 + _variable_key
                 + _macro_key
@@ -154,13 +153,14 @@ class ExecutionMode:
         _stack = self.rpn_calculator.get_stack_copy_as_list()
         if len(_stack) == 0:
             return
-        ans = _stack[-1]
-        if isinstance(ans, list):
-            print(f"ans = \n    {simple_format(ans)}")
-        elif isinstance(ans, Stacker):
-            pass
-        else:
-            print(f"ans = {simple_format(ans)}")
+        print(f"{_stack[-1]}")
+        # ans = _stack[-1]
+        # if isinstance(ans, list):
+        #     print(f"ans = \n    {simple_format(ans)}")
+        # elif isinstance(ans, Stacker):
+        #     pass
+        # else:
+        #     print(f"ans = {simple_format(ans)}")
 
     def execute_stacker_dotfile(self, filename: str | Path) -> None:
         """Import a stacker script and return the stacker object."""
