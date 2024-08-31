@@ -9,7 +9,7 @@ from pathlib import Path
 
 from pkg_resources import get_distribution
 
-from stacker.error import LoadPluginError
+# from stacker.error import LoadPluginError
 from stacker.exec_modes import CommandLineMode, ReplMode, ScriptMode
 
 # from stacker.execution_mode import ScriptMode, ReplMode

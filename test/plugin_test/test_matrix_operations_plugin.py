@@ -4,7 +4,6 @@ import numpy as np
 
 from stacker.plugins import matrix
 from stacker.stacker import Stacker
-import math
 
 
 class TestMatrixOperationsPlugin(unittest.TestCase):
@@ -16,8 +15,6 @@ class TestMatrixOperationsPlugin(unittest.TestCase):
     # +
     # ================================
     def test_matrix_add(self):
-        a = np.array([[1, 2], [3, 4]])
-        b = np.array([[5, 6], [7, 8]])
         expression = "[1 2; 3 4] [5 6; 7 8] +"
         self.stacker.stack.clear()
         self.stacker.process_expression(expression)
@@ -39,8 +36,6 @@ class TestMatrixOperationsPlugin(unittest.TestCase):
     # -
     # ================================
     def test_matrix_sub(self):
-        a = np.array([[1, 2], [3, 4]])
-        b = np.array([[5, 6], [7, 8]])
         expression = "[1 2; 3 4] [5 6; 7 8] -"
         self.stacker.stack.clear()
         self.stacker.process_expression(expression)
@@ -59,8 +54,6 @@ class TestMatrixOperationsPlugin(unittest.TestCase):
     # *
     # ================================
     def test_matrix_mul(self):
-        a = np.array([[1, 2], [3, 4]])
-        b = np.array([[5, 6], [7, 8]])
         expression = "[1 2; 3 4] [5 6; 7 8] *"
         self.stacker.stack.clear()
         self.stacker.process_expression(expression)
@@ -82,8 +75,6 @@ class TestMatrixOperationsPlugin(unittest.TestCase):
     # .*
     # ================================
     def test_elementwise_mul(self):
-        a = [[1, 2], [3, 4]]
-        b = [[5, 6], [7, 8]]
         expression = "[1 2; 3 4] [5 6; 7 8] .*"
         self.stacker.stack.clear()
         self.stacker.process_expression(expression)
@@ -173,7 +164,6 @@ class TestMatrixOperationsPlugin(unittest.TestCase):
     # ^
     # ================================
     def test_matrix_power(self):
-        a = [[1, 2], [3, 4]]
         expression = "[1 2; 3 4] 3 ^"
         self.stacker.stack.clear()
         self.stacker.process_expression(expression)
@@ -194,7 +184,6 @@ class TestMatrixOperationsPlugin(unittest.TestCase):
     # .^
     # ================================
     def test_elementwise_power(self):
-        a = [[1, 2], [3, 4]]
         expression = "[1 2; 3 4] 3 .^"
         self.stacker.stack.clear()
         self.stacker.process_expression(expression)

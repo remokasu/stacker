@@ -13,7 +13,7 @@ def evaluate_token_or_return_str(token: str) -> Any:
     """Evaluates a token if it is a number, otherwise returns the token as a string."""
     try:
         return ast.literal_eval(token)
-    except (ValueError, SyntaxError) as e:
+    except (ValueError, SyntaxError):
         return token
 
 
