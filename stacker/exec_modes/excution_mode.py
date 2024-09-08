@@ -13,6 +13,7 @@ from stacker.syntax.parser import (
     remove_start_end_quotes,
 )
 from stacker.util import colored
+from stacker.syntax.parser import is_string
 
 
 def simple_format(arr):
@@ -59,6 +60,9 @@ class ExecutionMode:
         # _reserved_word = copy.deepcopy(self.rpn_calculator.reserved_word)
         _reserved_word = list(self.receved_word)
         _operator_key = list(self.rpn_calculator.get_operators_ref().keys())
+        _priority_operators_key = list(
+            self.rpn_calculator.get_priority_operators_ref().keys()
+        )
         # _setting_key = list(self.rpn_calculator.get_settings_operators_ref().keys())
         _sfunctions_key = list(self.rpn_calculator.get_sfuntions_ref().keys())
         _variable_key = list(self.rpn_calculator.get_variables_ref().keys())
@@ -67,6 +71,7 @@ class ExecutionMode:
             set(
                 _reserved_word
                 + _operator_key
+                + _priority_operators_key
                 # + _setting_key
                 + _sfunctions_key
                 + _variable_key
@@ -118,6 +123,10 @@ class ExecutionMode:
                 #
                 # if len(item_str) > 20:
                 #     item_str = item_str[0:10] + "..."
+                if not is_string(item_str):
+                    item_str = f"'{item_str}'"
+                else:
+                    item_str = f"'{item_str[1:-1]}'"
                 stack_str += colored(item_str, "green")
                 stack_str += " "
             else:

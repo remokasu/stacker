@@ -531,14 +531,24 @@ print(stacker.eval("3 4 +"))
 | Operator | Description                                               | Example                |
 |----------|-----------------------------------------------------------|------------------------|
 | drop     | Drops the top element of the stack.                       | `drop`                 |
+| drop2    | Drops the top two elements of the stack.                  | `drop2`                |
+| dropn    | Drops the nth element from the top of the stack.          | `n drop`               |
 | dup      | Duplicate the top element of the stack.                   | `dup`                  |
+| dup2     | Duplicate the top two elements of the stack.              | `dup2`                 |
+| dupn     | Duplicate the nth element from the top of the stack.      | `n dup`                |
 | swap     | Swap the top two elements of the stack.                   | `swap`                 |
 | rev      | Reverse the stack.                                        | `rev`                  |
-| rot      | Rotate n by n to the right.                               | `n rot`                |
-| rotl     | Rotate n by n to the left.                                | `n rotl`               |
-| pick     | Pick the nth element from the top of the stack.           | `n pick`               |
+| rot      | Move the third element to the top of the stack.           | `rot`                  |
+| unrot    | Move the top element to the third position of the stack.  | `unrot`                |
+| roll     | Moves the nth element to the top of the stack.            | `roll`                 |
+| over     | Copy the second element from the top of the stack.        | `over`                 |
+| pick     | Copies the nth element to the top of the stack.           | `n pick`               |
+| nip      | Remove the second element from the top of the stack.      | `nip`                  |
+| depth    | Returns the depth of the stack.                           | `depth`                |
+| ins      | Insert the specified value at the specified position.     | `3 1 ins`              |
 | count    | Counts the number of occurrences of a value in the stack. | `count`                |
 | clear    | Clear the stack.                                          | `clear`                |
+| disp     | Display the stack.                                        | `disp`                 |
 
 
 ### Other Operators
