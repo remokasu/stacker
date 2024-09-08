@@ -121,3 +121,39 @@ class ScriptReadError(StackerError):
         if message is None:
             message = "Script read error: An error occurred while reading the script."
         super().__init__(message)
+
+
+class DropError(Exception):
+    pass
+
+
+class DupError(Exception):
+    pass
+
+
+class OverError(Exception):
+    pass
+
+
+class SwapError(Exception):
+    pass
+
+
+class RollError(Exception):
+    pass
+
+
+class RotError(Exception):
+    pass
+
+
+class PickError(Exception):
+    pass
+
+
+class NipError(Exception):
+    pass
+
+
+class InsertError(Exception):
+    pass

@@ -152,6 +152,8 @@ def is_block(expression: str) -> bool:
 
 
 def is_string(expression: str) -> bool:
+    if not isinstance(expression, str):
+        return False
     return (expression.startswith("'") and expression.endswith("'")) or (
         expression.startswith('"') and expression.endswith('"')
     )

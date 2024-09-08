@@ -1,5 +1,65 @@
 # CHANGE LOG
 
+## [1.5.7] - 2024-09-08
+- Fixed an issue where stack-related commands were inadvertently removed from input suggestions in version 1.5.6. These commands are now correctly displayed in suggestions.
+
+- Fixed an issue where string inputs identical to reserved keywords for constants, such as "e" for the mathematical constant approximately 2.7183, were mistakenly evaluated as the constants themselves. Now, when strings are explicitly entered, such as through quotes, they are processed as strings rather than numerical values or constants. This correction ensures that user input is handled correctly regardless of resemblance to reserved keywords.
+
+- Add `nip` command.
+  - Removes the second element from the top of the stack.
+    ~~~
+    stacker:0> 1 2 3
+    [1 2 3]
+    stacker:3> nip
+    [1 3]
+    ~~~
+
+- Add `rot` command.
+  - Move the third element to the top of the stack.
+    ~~~
+    stacker:0> 1 2 3 4 5
+    [1 2 3 4 5]
+    stacker:5> rot
+    [1 2 4 5 3]
+    ~~~
+
+- Add `unrot` command.
+  - Move the top element to the third position.
+    ~~~
+    stacker:0> 1 2 3 4 5
+    [1 2 3 4 5]
+    stacker:5> unrot
+    [1 2 5 3 4]
+    ~~~
+
+- Add `over` command.
+  - Copies the second element from the top of the stack.
+    ~~~
+    stacker:0> 1 2 3
+    [1 2 3]
+    stacker:3> over
+    [1 2 3 2]
+    ~~~
+
+- Add `roll` command.
+  - Moves the nth element to the top of the stack.
+    ~~~
+    stacker:0> 1 2 3 4 5
+    [1 2 3 4 5]
+    stacker:5> 3 roll
+    [1 2 4 5 3]
+    ~~~
+
+- Add `depth` command.
+  - Returns the depth of the stack.
+    ~~~
+    stacker:0> 1 2 3 4 5
+    [1 2 3 4 5]
+    stacker:5> depth
+    [1 2 3 4 5 5]
+    ~~~
+
+
 ## [1.5.6] - 2024-08-31
 - Add `enable_disp_ans` and `disable_disp_ans` settings.
   - `enable_disp_ans`: This command enables the display of the last result after stack operations. It makes it easier for users to verify the outcomes of their actions.
@@ -16,6 +76,9 @@
     [7]
     ~~~
 
+- Fixed bug in the examples.
+
+- Fixed a bug where string concatenation using the '+' operator was not functioning correctly.
 
 ## [1.5.5] - 2024-02-15
 - Added file input and output functionality.

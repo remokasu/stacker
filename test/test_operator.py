@@ -202,7 +202,7 @@ class TestStacker(unittest.TestCase):
 
         # str
         self.stacker.process_expression("'hoge'")
-        self.assertEqual(self.stacker.stack[-1], "hoge")
+        self.assertEqual(self.stacker.stack[-1], "'hoge'")
         self.assertEqual(type(self.stacker.stack[-1]), str)
 
         # tuple
