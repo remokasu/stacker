@@ -161,6 +161,12 @@ def is_string(expression: str) -> bool:
     )
 
 
+def is_list(expression: str) -> bool:
+    if not isinstance(expression, str):
+        return False
+    return expression.startswith("[") and expression.endswith("]")
+
+
 def is_undefined_symbol(expression: str) -> bool:
     return expression.startswith("$") and not expression.endswith("$")
 

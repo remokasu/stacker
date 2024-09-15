@@ -1,5 +1,23 @@
 # CHANGE LOG
 
+## [1.5.9] - 2024-09-16
+- Fixed the `eval` command. Previously used solely for evaluating strings, it can now also evaluate block stacks and literal objects.
+  - Examples:
+    ```
+    stacker:0> {1 2 +} eval
+    [3]
+    ```
+    In this example, the block stack `{1 2 +}` is evaluated, and the result is pushed onto the stack.
+
+    ```
+    stacker:0> 3 eval
+    [3]
+    ```
+    In this example, the literal object `3` is evaluated, and the result is pushed onto the stack.
+
+- Removed the feature introduced in 1.5.8 that displayed a specific error message (StackUnderflowError) when the stack depth is less than the number of function arguments. Errors occurring during evaluation will now display as before.
+
+
 ## [1.5.8] - 2024-09-14
 - Fixed a bug where empty blocks `{}` were not being evaluated properly.
 - Added `iferror` command.
@@ -8,6 +26,12 @@
     {try block} {catch block} iferror
     ~~~
 
+- Introduced a dedicated error message when the stack depth is less than the number of arguments required by a function.
+  - Example:
+    ```
+    stacker:0> 1 +
+    StackUnderflowError: Operator `+` requires 2 arguments.
+    ```
 
 ## [1.5.7] - 2024-09-08
 - Fixed an issue where stack-related commands were inadvertently removed from input suggestions in version 1.5.6. These commands are now correctly displayed in suggestions.

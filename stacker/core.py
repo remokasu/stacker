@@ -42,6 +42,7 @@ from stacker.syntax.parser import (
     # is_label_symbol,
     is_reference_symbol,
     is_string,
+    is_list,
     # is_transpose_command,
     is_tuple,
     is_undefined_symbol,
@@ -246,8 +247,8 @@ class StackerCore:
         if token in self.sfunctions:  # sfunctions
             args = []
             sfunc = self.sfunctions[token]
-            if sfunc["arg_count"] > len(stack):
-                raise StackUnderflowError(token, sfunc["arg_count"])
+            # if sfunc["arg_count"] > len(stack):
+            #     raise StackUnderflowError(token, sfunc["arg_count"])
             for _ in range(sfunc["arg_count"]):
                 args.insert(0, self._pop_and_eval(stack))
             if sfunc["push_result_to_stack"]:
@@ -257,8 +258,8 @@ class StackerCore:
         elif token in self.plugins:
             args = []
             op = self.plugins[token]
-            if op["arg_count"] > len(stack):
-                raise StackUnderflowError(token, op["arg_count"])
+            # if op["arg_count"] > len(stack):
+            #     raise StackUnderflowError(token, op["arg_count"])
             for _ in range(op["arg_count"]):
                 args.insert(0, self._pop_and_eval(stack))
             if op["push_result_to_stack"]:
@@ -267,8 +268,8 @@ class StackerCore:
                 op["func"](*args)
         elif token in self.priority_operators:
             op = self.priority_operators[token]
-            if op["arg_count"] > len(stack):
-                raise StackUnderflowError(token, op["arg_count"])
+            # if op["arg_count"] > len(stack):
+            #     raise StackUnderflowError(token, op["arg_count"])
             if token == "do":
                 body = stack.pop()
                 symbol = stack.pop()
@@ -314,8 +315,10 @@ class StackerCore:
                 if is_string(expression):
                     # 'hoge' -> hoge
                     self._eval(expression[1:-1], stack=stack)
+                elif isinstance(expression, StackerCore):
+                    self._eval_block(expression, stack=stack)
                 else:
-                    raise StackerSyntaxError("Invalid expression.")
+                    stack.append(expression)
             elif token == "include":
                 filename = stack.pop()
                 op["func"](self, filename)
@@ -324,8 +327,8 @@ class StackerCore:
         elif token in self.stack_operators:  # stack operators
             args = [stack]
             op = self.stack_operators[token]
-            if op["arg_count"] > len(stack):
-                raise StackUnderflowError(token, op["arg_count"])
+            # if op["arg_count"] > len(stack):
+            #     raise StackUnderflowError(token, op["arg_count"])
             for _ in range(op["arg_count"]):
                 args.insert(0, self._pop_and_eval(stack))
             if op["push_result_to_stack"]:
@@ -334,8 +337,8 @@ class StackerCore:
                 op["func"](*args)
         elif token in self.settings_operators:  # settings operators
             op = self.settings_operators[token]
-            if op["arg_count"] > len(stack):
-                raise StackUnderflowError(token, op["arg_count"])
+            # if op["arg_count"] > len(stack):
+            #     raise StackUnderflowError(token, op["arg_count"])
             if token == "disable_plugin":
                 operator_name = stack.pop()
                 op["func"](self, operator_name)
@@ -344,8 +347,8 @@ class StackerCore:
         elif token in self.operators:  # Other operators
             args = []
             op = self.operators[token]
-            if op["arg_count"] > len(stack):
-                raise StackUnderflowError(token, op["arg_count"])
+            # if op["arg_count"] > len(stack):
+            #     raise StackUnderflowError(token, op["arg_count"])
             for _ in range(op["arg_count"]):
                 args.insert(0, self._pop_and_eval(stack))
             if op["push_result_to_stack"]:
@@ -367,6 +370,9 @@ class StackerCore:
         tokens = parse_expression(expr)
         self._evaluate(tokens, stack=stack)
         return stack
+
+    def _eval_block(self, block: StackerCore, stack: deque) -> None:
+        self._evaluate(block.tokens, stack=stack)
 
     def _clear_trace(self) -> None:
         self.trace = []
