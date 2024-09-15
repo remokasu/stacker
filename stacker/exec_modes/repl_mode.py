@@ -133,7 +133,23 @@ class ReplMode(ExecutionMode):
                     for (
                         operator_name,
                         operator_descriptions,
-                    ) in self.rpn_calculator.operator_descriptions.items():
+                    ) in self.rpn_calculator.get_operator_descriptions().items():
+                        print(f"  {operator_name}:\t{operator_descriptions}")
+                    print("")
+                    print("Stack operators:")
+                    for (
+                        operator_name,
+                        operator_descriptions,
+                    ) in self.rpn_calculator.get_stack_operator_descriptions().items():
+                        print(f"  {operator_name}:\t{operator_descriptions}")
+                    print("")
+                    print("Settings operators:")
+                    for (
+                        operator_name,
+                        operator_descriptions,
+                    ) in (
+                        self.rpn_calculator.get_settings_operator_descriptions().items()
+                    ):
                         print(f"  {operator_name}:\t{operator_descriptions}")
                     print("")
                     print("Plugin commands:")

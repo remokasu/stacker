@@ -20,9 +20,9 @@ from stacker.error import (
 """
 Stack manipulation functions.
 
-stack = ['a', 'b', 'c', 'd'] 
+stack = ['a', 'b', 'c', 'd']
 
-index: value 
+index: value
     4: 'a'
     3: 'b'
     2: 'c'
@@ -39,7 +39,7 @@ def _drop(stack: deque) -> None:
         # 1: 'c'  | 1: 'b'
     """
     if len(stack) == 0:
-        raise DropError("drop failed: stack is empty")
+        raise DropError("Stack is empty")
     stack.pop()
 
 
@@ -53,7 +53,7 @@ def _drop2(stack: deque) -> None:
         # 1: 'd'  | 1: 'b'
     """
     if len(stack) < 2:
-        raise DropError("drop failed: stack has less than 2 elements")
+        raise DropError("Stack has less than 2 elements")
     stack.pop()
     stack.pop()
 
@@ -70,9 +70,9 @@ def _dropn(num: int, stack: deque) -> None:
         # 1: 3    | 1: 'b'
     """
     if len(stack) == 0:
-        raise DropError("drop failed: stack is empty")
+        raise DropError("Stack is empty")
     if num > len(stack):
-        raise DropError("drop failed: num is greater than stack size")
+        raise DropError("Num is greater than stack size")
     for _ in range(num):
         stack.pop()
 
@@ -85,7 +85,7 @@ def _dup(stack: deque) -> None:
         # 1: 'a'  | 1: 'a'
     """
     if len(stack) == 0:
-        raise DupError("dup failed: stack is empty")
+        raise DupError("Stack is empty")
     stack.append(stack[-1])
 
 
@@ -99,7 +99,7 @@ def _dup2(stack: deque) -> None:
         # 1: 'b'  | 1: 'b'
     """
     if len(stack) < 2:
-        raise DupError("dup failed: stack has less than 2 elements")
+        raise DupError("Stack has less than 2 elements")
     start_index = len(stack) - 2
     end_index = len(stack)
     stack.extend(deque(itertools.islice(stack, start_index, end_index)))
@@ -117,9 +117,9 @@ def _dupn(num: int, stack: deque) -> None:
         # 1: 3    | 1: 'c'
     """
     if len(stack) == 0:
-        raise DupError("dup failed: stack is empty")
+        raise DupError("Stack is empty")
     if num > len(stack):
-        raise DupError("dup failed: num is greater than stack size")
+        raise DupError("Index out of range")
     start_index = len(stack) - num
     end_index = len(stack)
     stack.extend(deque(itertools.islice(stack, start_index, end_index)))
@@ -134,7 +134,7 @@ def _over(stack: deque) -> None:
         # 1: 'b' | 1: 'a'
     """
     if len(stack) < 2:
-        raise OverError("over failed: stack has less than 2 elements")
+        raise OverError("Stack has less than 2 elements")
     stack.append(stack[-2])
 
 
@@ -147,17 +147,8 @@ def _swap(stack: deque):
         # 1: 'c'  | 1: 'b'
     """
     if len(stack) < 2:
-        raise SwapError("swap failed: stack has less than 2 elements")
+        raise SwapError("Stack has less than 2 elements")
     stack[-1], stack[-2] = stack[-2], stack[-1]
-
-
-# def _pluck(index: int, stack: list):
-#     if len(stack) == 0:
-#         raise StackerSyntaxError("pluck failed: stack is empty")
-#     elif index >= len(stack):
-#         raise StackerSyntaxError("pluck failed: index out of range")
-#     value = stack.pop(index)
-#     stack.append(value)
 
 
 def _roll(n: int, stack: deque) -> None:
@@ -171,16 +162,12 @@ def _roll(n: int, stack: deque) -> None:
         # 1: 4
     """
     if len(stack) == 0:
-        raise RollError("roll failed: stack is empty")
+        raise RollError("Stack is empty")
     if n > len(stack):
-        raise RollError("roll failed: n is greater than stack size")
+        raise RollError("Index out of range")
     item = stack[-n]
     stack.remove(item)
     stack.append(item)
-
-
-# def _rolld(n: int, stack: deque):
-#     ...
 
 
 def _rot(stack: deque) -> None:
@@ -192,7 +179,7 @@ def _rot(stack: deque) -> None:
         # 1: 'c'  | 1: 'a'
     """
     if len(stack) < 3:
-        raise RotError("rot failed: stack has less than 3 elements")
+        raise RotError("Stack has less than 3 elements")
     stack[-1], stack[-2], stack[-3] = stack[-3], stack[-1], stack[-2]
 
 
@@ -205,15 +192,8 @@ def _unrot(stack: deque) -> None:
         # 1: 'c'  | 1: 'a'
     """
     if len(stack) < 3:
-        raise RotError("rot failed: stack has less than 3 elements")
+        raise RotError("Stack has less than 3 elements")
     stack[-1], stack[-2], stack[-3] = stack[-2], stack[-3], stack[-1]
-
-
-# def _rotl(num: int, stack: deque) -> None:
-#     """
-#     Rotates the top n elements of the stack to the left.
-#     """"
-#     stack.rotate(-num)
 
 
 def _pick(num: int, stack: deque) -> None:
@@ -227,9 +207,9 @@ def _pick(num: int, stack: deque) -> None:
         # 1: 2    | 1: 'c'
     """
     if len(stack) == 0:
-        raise PickError("pick failed: stack is empty")
+        raise PickError("Stack is empty")
     elif num >= len(stack):
-        raise PickError("pick failed: index out of range")
+        raise PickError("Index out of range")
     if num < 0:
         num = len(stack) + num + 1
     index = len(stack) - num
@@ -245,7 +225,7 @@ def _nip(stack: deque) -> None:
         # 1: 'c'  | 1: 'c'
     """
     if len(stack) < 2:
-        raise NipError("nip failed: stack has less than 2 elements")
+        raise NipError("Stack has less than 2 elements")
     stack.remove(stack[-2])
 
 
@@ -274,7 +254,7 @@ def _insert(index: int, value: Any, stack: deque) -> None:
     """
     index = len(stack) - index
     if index > len(stack):
-        raise InsertError("insert failed: index out of range")
+        raise InsertError("index out of range")
     stack.insert(index, value)
 
 
@@ -363,12 +343,6 @@ stack_operators = {
         "push_result_to_stack": False,
         "desc": "Swaps the top two elements of the stack.",
     },
-    # "pluck": {
-    #     "func": (lambda index, stack: _pluck(index, stack)),
-    #     "arg_count": 1,
-    #     "push_result_to_stack": False,
-    #     "desc": "Removes the element at the specified index and moves it to the top of the stack.",
-    # },
     "pick": {
         "func": (lambda num, stack: _pick(num, stack)),
         "arg_count": 1,
@@ -393,12 +367,6 @@ stack_operators = {
         "push_result_to_stack": False,
         "desc": "Moves the top element to the third position of the stack.",
     },
-    # "rotl": {
-    #     "func": (lambda num, stack: _rotl(num, stack)),
-    #     "arg_count": 1,
-    #     "push_result_to_stack": False,
-    #     "desc": "Rotates the top n elements of the stack to the left.",
-    # },
     "nip": {
         "func": (lambda stack: _nip(stack)),
         "arg_count": 0,
