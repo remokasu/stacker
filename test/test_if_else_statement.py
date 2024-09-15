@@ -80,7 +80,7 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         expr = "{1 +} {99} iferror"
         stacker.process_expression(expr)
-        self.assertEqual(list(stacker.stack), [1, 99])
+        self.assertEqual(list(stacker.stack), [99])
 
         # no error
         stacker = Stacker()

@@ -17,6 +17,7 @@ def _float(x):
 
 def _str(x):
     try:
+        print(x)
         return str(x)
     except TypeError:
         raise TypeError(f"Cannot take str of {x}.")
