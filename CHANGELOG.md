@@ -1,5 +1,14 @@
 # CHANGE LOG
 
+## [1.5.8] - 2024-09-14
+- Fixed a bug where empty blocks `{}` were not being evaluated properly.
+- Added `iferror` command.
+  - The `iferror` command allows users to handle errors in a more structured way. It is used in conjunction with the `try` and `catch` blocks to execute specific commands when an error occurs.
+    ~~~
+    {try block} {catch block} iferror
+    ~~~
+
+
 ## [1.5.7] - 2024-09-08
 - Fixed an issue where stack-related commands were inadvertently removed from input suggestions in version 1.5.6. These commands are now correctly displayed in suggestions.
 

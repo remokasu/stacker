@@ -11,6 +11,8 @@ __transpose_symbol__ = "^T"
 
 def evaluate_token_or_return_str(token: str) -> Any:
     """Evaluates a token if it is a number, otherwise returns the token as a string."""
+    if is_block(token):
+        return token  # {} is not dictionary
     try:
         return ast.literal_eval(token)
     except (ValueError, SyntaxError):

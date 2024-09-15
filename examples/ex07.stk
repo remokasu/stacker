@@ -1,0 +1,5 @@
+# error
+{undefined_symbol} {"error" echo} iferror
+
+# no error
+{0 $x set x echo} {"error" echo} iferror

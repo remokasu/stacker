@@ -40,12 +40,20 @@ class StackerError(Exception):
     pass
 
 
+class StackUnderflowError(StackerError):
+    """Stack underflow error"""
+
+    def __init__(self, operator: str, num_args: int):
+        message = f"Operator `{operator}` requires {num_args} arguments."
+        super().__init__(message)
+
+
 class StackerSyntaxError(StackerError):
     """Syntax error"""
 
     def __init__(self, message):
         if message is None:
-            message = "Syntax error: An error occurred while parsing the expression."
+            message = "An error occurred while parsing the expression."
         super().__init__(message)
 
 
@@ -54,7 +62,25 @@ class UnexpectedTokenError(StackerError):
 
     def __init__(self, token, message=None):
         if message is None:
-            message = f"Unexpected token found: `{token}`. If `{token}` is intended as a variable or symbol, ensure it is defined or prepend it with '$'."
+            message = f"`{token}`. If `{token}` is intended as a variable or symbol, ensure it is defined or prepend it with '$'."
+        super().__init__(message)
+
+
+class UndefinedVariableError(StackerError):
+    """Undefined variable error"""
+
+    def __init__(self, token, message=None):
+        if message is None:
+            message = f"`{token}` is not defined."
+        super().__init__(message)
+
+
+class UndefinedSymbolError(StackerError):
+    """Undefined symbol error"""
+
+    def __init__(self, token, message=None):
+        if message is None:
+            message = f"`{token}` is not defined."
         super().__init__(message)
 
 
@@ -63,9 +89,7 @@ class SemanticError(StackerError):
 
     def __init__(self, message=None):
         if message is None:
-            message = (
-                "Semantic error: An error occurred while evaluating the expression."
-            )
+            message = "An error occurred while evaluating the expression."
         super().__init__(message)
 
 
@@ -74,7 +98,7 @@ class StackerRuntimeError(StackerError):
 
     def __init__(self, message=None):
         if message is None:
-            message = "Runtime error: An error occurred during execution."
+            message = "An error occurred during execution."
         super().__init__(message)
 
 
@@ -83,7 +107,7 @@ class ResourceError(StackerError):
 
     def __init__(self, message=None):
         if message is None:
-            message = "Resource error: An error occurred while allocating resources."
+            message = "An error occurred while allocating resources."
         super().__init__(message)
 
 
@@ -92,7 +116,7 @@ class ValidationError(StackerError):
 
     def __init__(self, message=None):
         if message is None:
-            message = "Validation error: An error occurred while validating the input."
+            message = "An error occurred while validating the input."
         super().__init__(message)
 
 
@@ -101,7 +125,7 @@ class LoadPluginError(StackerError):
 
     def __init__(self, message=None):
         if message is None:
-            message = "Load plugin error: An error occurred while loading the plugin."
+            message = "An error occurred while loading the plugin."
         super().__init__(message)
 
 
@@ -110,7 +134,7 @@ class IncludeError(StackerError):
 
     def __init__(self, message=None):
         if message is None:
-            message = "Include error: An error occurred while including the file."
+            message = "An error occurred while including the file."
         super().__init__(message)
 
 
@@ -119,7 +143,7 @@ class ScriptReadError(StackerError):
 
     def __init__(self, message=None):
         if message is None:
-            message = "Script read error: An error occurred while reading the script."
+            message = "An error occurred while reading the script."
         super().__init__(message)
 
 

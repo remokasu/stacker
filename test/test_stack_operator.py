@@ -24,15 +24,25 @@ class TestUnit(unittest.TestCase):
         stacker.process_expression(expr)
         self.assertEqual(list(stacker.stack), [1, 2, 3, 3])
 
-    # def test_copy(self):
-    #     stacker = Stacker()
-    #     stacker.push(1)
-    #     stacker.push(2)
-    #     stacker.push(3)
-    #     self.assertEqual(list(stacker.stack), [1, 2, 3])
-    #     expr = "1 copy"
-    #     stacker.process_expression(expr)
-    #     self.assertEqual(list(stacker.stack), [1, 2, 3, 2])
+    def test_dup2(self):
+        stacker = Stacker()
+        stacker.push(1)
+        stacker.push(2)
+        stacker.push(3)
+        self.assertEqual(list(stacker.stack), [1, 2, 3])
+        expr = "dup2"
+        stacker.process_expression(expr)
+        self.assertEqual(list(stacker.stack), [1, 2, 3, 2, 3])
+
+    def test_dupn(self):
+        stacker = Stacker()
+        stacker.push(1)
+        stacker.push(2)
+        stacker.push(3)
+        self.assertEqual(list(stacker.stack), [1, 2, 3])
+        expr = "2 dupn"
+        stacker.process_expression(expr)
+        self.assertEqual(list(stacker.stack), [1, 2, 3, 2, 3])
 
     def test_swap(self):
         stacker = Stacker()
@@ -44,6 +54,28 @@ class TestUnit(unittest.TestCase):
         expr = "swap"
         stacker.process_expression(expr)
         self.assertEqual(list(stacker.stack), [1, 2, 4, 3])
+
+    def test_over(self):
+        stacker = Stacker()
+        stacker.push(1)
+        stacker.push(2)
+        stacker.push(3)
+        stacker.push(4)
+        self.assertEqual(list(stacker.stack), [1, 2, 3, 4])
+        expr = "over"
+        stacker.process_expression(expr)
+        self.assertEqual(list(stacker.stack), [1, 2, 3, 4, 3])
+
+    def test_roll(self):
+        stacker = Stacker()
+        stacker.push(1)
+        stacker.push(2)
+        stacker.push(3)
+        stacker.push(4)
+        self.assertEqual(list(stacker.stack), [1, 2, 3, 4])
+        expr = "4 roll"
+        stacker.process_expression(expr)
+        self.assertEqual(list(stacker.stack), [2, 3, 4, 1])
 
     # def test_pluck(self):
     #     stacker = Stacker()
@@ -92,19 +124,17 @@ class TestUnit(unittest.TestCase):
         stacker.process_expression(expr)
         self.assertEqual(list(stacker.stack), [1, 4, 2, 3])
 
-    # def test_rotl(self):
-    #     stacker = Stacker()
-    #     stacker.push(1)
-    #     stacker.push(2)
-    #     stacker.push(3)
-    #     stacker.push(4)
-    #     self.assertEqual(list(stacker.stack), [1, 2, 3, 4])
-    #     expr = "1 rotl"
-    #     stacker.process_expression(expr)
-    #     self.assertEqual(list(stacker.stack), [2, 3, 4, 1])
-    #     expr = "2 rotl"
-    #     stacker.process_expression(expr)
-    #     self.assertEqual(list(stacker.stack), [4, 1, 2, 3])
+    def test_unrot(self):
+        """Move the top element to the third position."""
+        stacker = Stacker()
+        stacker.push(1)
+        stacker.push(2)
+        stacker.push(3)
+        stacker.push(4)
+        self.assertEqual(list(stacker.stack), [1, 2, 3, 4])
+        expr = "unrot"
+        stacker.process_expression(expr)
+        self.assertEqual(list(stacker.stack), [1, 4, 2, 3])
 
     def test_pick(self):
         stacker = Stacker()
@@ -157,3 +187,25 @@ class TestUnit(unittest.TestCase):
         expr = "clear"
         stacker.process_expression(expr)
         self.assertEqual(list(stacker.stack), [])
+
+    def test_nip(self):
+        stacker = Stacker()
+        stacker.push(1)
+        stacker.push(2)
+        stacker.push(3)
+        stacker.push(4)
+        self.assertEqual(list(stacker.stack), [1, 2, 3, 4])
+        expr = "nip"
+        stacker.process_expression(expr)
+        self.assertEqual(list(stacker.stack), [1, 2, 4])
+
+    def test_depth(self):
+        stacker = Stacker()
+        stacker.push(1)
+        stacker.push(2)
+        stacker.push(3)
+        stacker.push(4)
+        self.assertEqual(list(stacker.stack), [1, 2, 3, 4])
+        expr = "depth"
+        stacker.process_expression(expr)
+        self.assertEqual(list(stacker.stack), [1, 2, 3, 4, 4])

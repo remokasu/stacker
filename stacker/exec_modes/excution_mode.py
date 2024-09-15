@@ -110,6 +110,9 @@ class ExecutionMode:
             elif item_str.startswith("(") or item_str.endswith(")"):
                 stack_str += colored(item_str, "green")
                 stack_str += " "
+            elif item_str.startswith("{") or item_str.endswith("}"):
+                stack_str += colored(item_str, "cyan")
+                stack_str += " "
             elif item_str.replace(".", "", 1).isdigit() or (
                 item_str.startswith("-") and item_str[1:].replace(".", "", 1).isdigit()
             ):
