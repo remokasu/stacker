@@ -74,3 +74,16 @@ class TestUnit(unittest.TestCase):
         expr = "{114 514 +} {810 1008 +} False ifelse"
         stacker.process_expression(expr)
         self.assertEqual(list(stacker.stack), [1818])
+
+    def test_if_error(self):
+        # error
+        stacker = Stacker()
+        expr = "{1 +} {99} iferror"
+        stacker.process_expression(expr)
+        self.assertEqual(list(stacker.stack), [1, 99])
+
+        # no error
+        stacker = Stacker()
+        expr = "{1 1 +} {99} iferror"
+        stacker.process_expression(expr)
+        self.assertEqual(list(stacker.stack), [2])

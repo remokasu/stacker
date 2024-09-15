@@ -1,29 +1,18 @@
 # Stacker: An RPN Calculator and Extensible Programming Language
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![PyPI version](https://badge.fury.io/py/pystacker.svg)](https://badge.fury.io/py/pystacker)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 Stacker is a powerful Reverse Polish Notation (RPN) calculator built with Python, featuring basic mathematical operations and extensibility through plugins.
 
 ## Installation
 
-### Prerequisites:
-Ensure Python 3 is installed.
+```bash
+git clone git@github.com:remokasu/stacker.git
+cd stacker
+pip install .
+```
 
-### Installation Options:
-
-- Via pip:
-    ```bash
-    pip install pystacker
-    ```
-
-- From source:
-    ```bash
-    git clone git@github.com:remokasu/stacker.git
-    cd stacker
-    python setup.py install
-    ```
 
 ## Feedback and Contributions
 
@@ -551,10 +540,28 @@ print(stacker.eval("3 4 +"))
 | disp     | Display the stack.                                        | `disp`                 |
 
 
+### Control Operators
+| Operator | Description                                           | Example                    |
+|----------|-------------------------------------------------------|----------------------------|
+| if       | Conditional statement                                 | `{...} true  if`           |
+| ifelse   | Conditional statement with an else block              | `{true block} {false block} true ifelse`  |
+| iferror  | Conditional statement for error handling              | `{try block} {catch block} iferror` |
+| do       | Loop                                                  | `0 10 $i {i echo} do`      |
+| times    | Loop a specified number of times                      | `{dup ++} 10 times`        |
+| break    | Break out of a loop                                    | `break`                   |
+
+
+### Function, Macro, and Variable Operators
+| Operator | Description                                           | Example                    |
+|----------|-------------------------------------------------------|----------------------------|
+| defun    | Define a function                                     | `(x y) {x y *} $multiply defun` |
+| alias    | Define a macro                                        | `{2 ^ 3 * 5 +} $calculatePowerAndAdd alias` |
+| set      | Assign a value to a variable                          | `3 $x set`                |
+
+
 ### Other Operators
 | Operator | Description                                           | Example                    |
 |----------|-------------------------------------------------------|----------------------------|
-| time     | Get Python time time object.                          | `time`                     |
 | include  | Include the specified file                            | `"file.stk" include`       |
 | eval     | Evaluate the specified RPN expression                 | `'3 5 +' eval`             |
 | evalpy   | Evaluate the specified Python expression              | `'3+5' evalpy`             |

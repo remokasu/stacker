@@ -17,24 +17,24 @@ def readtxt(file_path):
     filtered_lines = []
 
     for line in lines:
-        # Check for the start and end of triple double quote block
-        if line.strip().startswith('"""'):
+        if line.strip().startswith(
+            '"""'
+        ):  # Check for the start and end of triple double quote block
             in_double_quote_comment = not in_double_quote_comment
             continue  # Skip the line with triple quotes
-
-        # Check for the start and end of triple single quote block
-        if line.strip().startswith("'''"):
+        if line.strip().startswith(
+            "'''"
+        ):  # Check for the start and end of triple single quote block
             in_single_quote_comment = not in_single_quote_comment
             continue  # Skip the line with triple quotes
-
-        # Skip lines within block comments
-        if in_double_quote_comment or in_single_quote_comment:
+        if (
+            in_double_quote_comment or in_single_quote_comment
+        ):  # Skip lines within block comments
             continue
-
-        # Skip lines that start with # or are blank lines (including the last line if it's blank)
-        if line.strip().startswith("#") or not line.strip():
+        if (
+            line.strip().startswith("#") or not line.strip()
+        ):  # Skip lines that start with # or are blank lines (including the last line if it's blank)
             continue
-
         filtered_lines.append(line)
 
     # Trim the final newline character if it exists

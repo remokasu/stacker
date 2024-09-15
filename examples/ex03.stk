@@ -1,19 +1,11 @@
-0 3 $i {
-    0 3 $j {
-        0 3 $k {
-            i j k + +
+0 1 $i {
+    "i: " i  str + echo
+    3 4 $j {
+        "j: " j str + echo
+        5 6 $k {
+            "k: " k str + echo
         } do
     } do
 } do
 
-echo
-disp
-
-clear
-1 2 $i {
-    1 2 $j {
-        i j +
-    } do
-} do
-echo
 disp

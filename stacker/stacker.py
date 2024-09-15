@@ -1,387 +1,26 @@
 from __future__ import annotations
 
-import ast
 import copy
 from collections import deque
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
-from stacker.constant import constants
-from stacker.error import (  # SemanticError,; StackerRuntimeError,; ResourceError,; ValidationError,; LoadPluginError,
-    StackerRuntimeError,
-    StackerSyntaxError,
-    UnexpectedTokenError,
-)
-from stacker.include import include_stacker_script
-from stacker.lib.function.algebra import alge_operators
-from stacker.lib.function.arith import arith_operators
-from stacker.lib.function.base import base_operators
-from stacker.lib.function.bitwise import bitwise_operators
-from stacker.lib.function.comparison import compare_operators
-from stacker.lib.function.eval import eval_operators
-from stacker.lib.function.file import file_operators
-from stacker.lib.function.io import io_operators
-from stacker.lib.function.list import list_operators
-from stacker.lib.function.logic import logic_operators
-from stacker.lib.function.math import math_operators
-from stacker.lib.function.random import random_operators
-from stacker.lib.function.stack import stack_operators
-from stacker.lib.function.string import string_operators
-from stacker.lib.function.time import time_operators
-from stacker.lib.function.types import type_operators
-from stacker.syntax.parser import (
-    convert_custom_string_tuple_to_proper_tuple,
-    is_array,
-    is_block,
-    # is_contains_transpose_command,
-    # is_label_symbol,
-    is_reference_symbol,
-    is_string,
-    # is_transpose_command,
-    is_tuple,
-    is_undefined_symbol,
-    parse_expression,
-)
+from stacker.error import StackerSyntaxError
+from stacker.core import StackerCore
+from stacker.syntax.parser import parse_expression
 
-__BREAK__ = "\b"
-__TRANSPOSE__ = "transpose"
+if TYPE_CHECKING:
+    from stacker.sfunction import StackerFunction
 
 
-loop_operators = {
-    "times": {
-        "arg_count": 2,
-        "push_result_to_stack": False,
-        "desc": "Executes a block of code a specified number of times.",
-    },
-    "do": {
-        "arg_count": 4,
-        "push_result_to_stack": False,
-        "desc": "Executes a block of code a specified number of times.",
-    },
-}
-
-condition_operators = {
-    "if": {
-        "arg_count": 2,
-        "push_result_to_stack": False,
-        "desc": "Executes a block of code if a condition is true.",
-    },
-    "ifelse": {
-        "arg_count": 3,
-        "push_result_to_stack": False,
-        "desc": (
-            "Executes a block of code if a condition is true, "
-            "otherwise executes another block of code."
-        ),
-    },
-}
-
-special_operators = {
-    "ans": {
-        "arg_count": 0,
-        "push_result_to_stack": True,
-        "desc": "Returns the last result.",
-    },
-    "set": {
-        "arg_count": 2,
-        "push_result_to_stack": False,
-        "desc": "Sets a variable.",
-    },
-    "defun": {
-        "arg_count": 3,
-        "push_result_to_stack": False,
-        "desc": "Defines a function.",
-    },
-    "alias": {
-        "arg_count": 2,
-        "push_result_to_stack": False,
-        "desc": "Defines a macro.",
-    },
-    "include": {
-        "arg_count": 1,
-        "push_result_to_stack": False,
-        "desc": "Includes another stacker script.",
-    },
-    "eval": {
-        "arg_count": 1,
-        "push_result_to_stack": True,
-        "desc": "Evaluates a given RPN expression.",
-    },
-    "break": {
-        "arg_count": 0,
-        "push_result_to_stack": False,
-        "desc": "",
-    },
-    "exit": {
-        "arg_count": 0,
-        "push_result_to_stack": False,
-        "desc": "",
-    },
-}
-
-settings_operators = {
-    "disable_plugin": {
-        "arg_count": 1,
-        "push_result_to_stack": False,
-        "desc": "Disables a plugin.",
-    },
-    "disable_all_plugins": {
-        "arg_count": 0,
-        "push_result_to_stack": False,
-        "desc": "Disables all plugins.",
-    },
-    "enable_disp_stack": {
-        "arg_count": 0,
-        "push_result_to_stack": False,
-        "desc": "Enables showing stack.",
-    },
-    "disable_disp_stack": {
-        "arg_count": 0,
-        "push_result_to_stack": False,
-        "desc": "Disables showing stack.",
-    },
-    "disable_disp_logo": {
-        "arg_count": 0,
-        "push_result_to_stack": False,
-        "desc": "Disables showing logo.",
-    },
-    "enable_disp_logo": {
-        "arg_count": 0,
-        "push_result_to_stack": False,
-        "desc": "Enables showing logo.",
-    },
-    "enable_disp_ans": {
-        "arg_count": 0,
-        "push_result_to_stack": False,
-        "desc": "Enables showing ans.",
-    },
-    "disable_disp_ans": {
-        "arg_count": 0,
-        "push_result_to_stack": False,
-        "desc": "Disables showing ans.",
-    },
-}
-
-
-class Stacker:
-    """A class for evaluating RPN expressions."""
-
-    depth_counter = 0
-
-    def __init__(self, expression: str | None = None, parent: "Stacker" | None = None):
-        self.parent = parent
-        self.depth = Stacker.depth_counter
-        Stacker.depth_counter += 1
-        self.expression = expression
-        if self.expression is not None:
-            self.tokens = parse_expression(self.expression)
-        self.child = None
-        # self.stack: list[Any] = []
-        self.trace: list[Any] = []  # for error trace
-        self.stack: deque[Any] = deque()
-        if self.parent is not None:  # it is a substack of a parent stacker
-            self.operators = self.parent.get_operators_ref()
-            self.priority_operators = self.parent.get_priority_operators_ref()
-            self.settings_operators = self.parent.get_settings_operators_ref()
-            self.macros = self.parent.get_macros_ref()
-            self.variables = self.parent.get_variables_ref()
-            self.plugins = self.parent.get_plugins_ref()
-            self.sfunctions = self.parent.get_sfuntions_copy()
-            self.break_flag = False
-            return
-        self.loop_operators = loop_operators
-        self.condition_operators = condition_operators
-        self.special_operators = special_operators
-        self.settings_operators = settings_operators
-        self.operators = {}
-        self.operators.update(copy.deepcopy(alge_operators))
-        self.operators.update(copy.deepcopy(arith_operators))
-        self.operators.update(copy.deepcopy(base_operators))
-        self.operators.update(copy.deepcopy(bitwise_operators))
-        self.operators.update(copy.deepcopy(compare_operators))
-        self.operators.update(copy.deepcopy(file_operators))
-        self.operators.update(copy.deepcopy(io_operators))
-        self.operators.update(copy.deepcopy(logic_operators))
-        self.operators.update(copy.deepcopy(math_operators))
-        self.operators.update(copy.deepcopy(random_operators))
-        self.operators.update(copy.deepcopy(type_operators))
-        self.operators.update(copy.deepcopy(list_operators))
-        # self.operators.update(copy.deepcopy(stack_operators))
-        self.operators.update(copy.deepcopy(eval_operators))
-        self.operators.update(copy.deepcopy(string_operators))
-        self.operators.update(copy.deepcopy(time_operators))
-        # self.operators.update(copy.deepcopy(self.condition_operators))
-        # self.operators.update(copy.deepcopy(self.loop_operators))
-        # self.operators.update(copy.deepcopy(self.special_operators))
-        # self.settings_operators.update(copy.deepcopy(self.settings_operators))
-        self.priority_operators = {}
-        self.priority_operators.update(stack_operators)
-        self.priority_operators.update(self.loop_operators)
-        self.priority_operators.update(self.condition_operators)
-        self.priority_operators.update(self.special_operators)
-        self.variables = {}
-        self.variables.update(constants)
-        self.macros = {}
-        self.plugins = {}
-        self.sfunctions = {}
-        self.labels = {}
-        self.operator_descriptions = {}
-        for operator_name, operator_descriptions in self.operators.items():
-            self.operator_descriptions[operator_name] = operator_descriptions["desc"]
-        self.plugin_descriptions = {}
-        self._disp_stack_mode = True
-        self._disp_logo = True
-        self._disp_ans = False
-
-    # ========================
-    # Include
-    # ========================
-
+class Stacker(StackerCore):
     def include(self, filename: str) -> None:
-        """Includes another stacker script."""
-        _stacker = include_stacker_script(filename)
-        # _operator = _stacker.get_operators_ref()
-        _macros = _stacker.get_macros_ref()
-        _variables = _stacker.get_variables_copy()
-        _sfunctions = _stacker.get_sfuntions_ref()
-        # self.operators.update(_operator)
-        self.macros.update(_macros)
-        self.variables.update(_variables)
-        self.sfunctions.update(_sfunctions)
-        self.clear_trace()
-
-    # ========================
-    # Substack
-    # ========================
-
-    def substack(self, token: str, stack: deque) -> None:
-        """Creates a substack.
-        :param token: {...}.
-        """
-        expression = token[1:-1]
-        self.child = Stacker(expression=expression, parent=self)
-        stack.append(self.child)
-
-    # ========================
-    # Stack
-    # ========================
+        return self.priority_operators["include"]["func"](self, filename)
 
     def push(self, value: Any) -> None:  # TODO: remove
         self.stack.append(value)
 
     def pop_and_eval(self, stack: deque) -> Any:
-        value = stack.pop()
-        if isinstance(value, Stacker):
-            value.evaluate(value.tokens, stack=value.stack)
-            sub = value.get_stack_ref()
-            if sub:
-                stack.extend(sub)
-            return stack.pop()
-        else:
-            if isinstance(value, (list, tuple)):
-                return value
-            elif is_string(value):
-                return value[1:-1]  # 'hoge' -> hoge
-            return self.variables.get(value, value)
-
-    def _pop(self) -> Any:
-        try:
-            return self.stack.pop()
-        except IndexError:
-            raise StackerRuntimeError("Stack is empty.")
-
-    # ========================
-    # Loop (do, times)
-    # ========================
-
-    def execute_do(
-        self,
-        start_value: int,
-        end_value: int,
-        symbol: str,
-        block: Stacker,
-        parent: Stacker,
-    ) -> None:
-        for i in range(start_value, end_value + 1):
-            block.variables[symbol] = i
-            parent.evaluate(block.tokens, stack=parent.stack)
-            if len(parent.stack) > 0 and parent.stack[-1] == __BREAK__:
-                parent.stack.pop()
-                break
-
-    def execute_times(
-        self,
-        n_times: int,
-        block: Stacker | Any,
-        parent: Stacker,
-    ) -> None:
-        """Executes a block of code a specified number of times."""
-        if isinstance(block, Stacker):
-            i_count = 0
-            parent.stack.append(i_count)
-            while parent.stack[-1] < n_times:
-                parent.stack.pop()
-                parent.evaluate(block.tokens, stack=parent.stack)
-                i_count = i_count + 1
-                parent.stack.append(i_count)
-            parent.stack.pop()
-        else:  # e.g. a numeric object
-            i_count = 0
-            parent.stack.append(i_count)
-            while parent.stack[-1] < n_times:
-                parent.stack.pop()
-                parent.stack.append(block)
-                i_count = i_count + 1
-                parent.stack.append(i_count)
-            parent.stack.pop()
-
-    # ========================
-    # Condition (if, ifelse)
-    # ========================
-
-    def execute_if(
-        self, condition: Stacker | bool, blockstack: Stacker | Any, parent: Stacker
-    ) -> None:
-        """Executes a block of code if a condition is true."""
-        if isinstance(condition, Stacker):
-            parent.evaluate(condition.tokens, stack=parent.stack)
-            condition = parent.stack.pop()
-        if isinstance(condition, str):
-            if condition in self.variables:
-                condition = self.variables[condition]
-        if condition:
-            if isinstance(blockstack, Stacker):
-                parent.evaluate(blockstack.tokens, stack=parent.stack)
-            else:  # e.g. a numeric object
-                parent.stack.append(blockstack)
-
-    def execute_if_else(
-        self,
-        condition: Stacker | bool,
-        true_block: Stacker | Any,
-        false_block: Stacker | Any,
-        parent: Stacker,
-    ) -> None:
-        """Executes a block of code if a condition is true, otherwise executes another block of code."""
-        if isinstance(condition, Stacker):
-            parent.evaluate(condition.tokens, stack=parent.stack)
-            condition = parent.stack.pop()
-        if isinstance(condition, str):
-            if condition in self.variables:
-                condition = self.variables[condition]
-        if condition:
-            if isinstance(true_block, Stacker):
-                parent.evaluate(true_block.tokens, stack=parent.stack)
-            else:  # e.g. a numeric object
-                parent.stack.append(true_block)
-        else:
-            if isinstance(false_block, Stacker):
-                parent.evaluate(false_block.tokens, stack=parent.stack)
-            else:
-                parent.stack.append(false_block)
-
-    # ========================
-    # Evaluation
-    # ========================
+        return self._pop_and_eval(stack)
 
     def process_expression(self, expression) -> None:
         tokens = parse_expression(expression)
@@ -392,201 +31,12 @@ class Stacker:
         Evaluates a given RPN expression.
         Returns the result of the evaluation.
         """
-        # Iterate over each token in the token list
-        enum_tokens = enumerate(tokens)
-        for index, token in enum_tokens:
-            self.trace.append(token)
-            if not isinstance(token, str):
-                stack.append(token)  # Literal value
-            elif (
-                token in self.operators
-                or token in self.priority_operators
-                or token in self.settings_operators
-                or token in self.sfunctions
-                or token in self.plugins
-            ):
-                self._execute(token, stack)
-            elif token in self.macros:
-                self.expand_macro(token, stack)
-            # elif is_string(token):
-            #   stack.append(token[1:-1])
-            elif (
-                token in self.variables
-                or is_tuple(token)
-                or is_array(token)
-                or is_string(token)
-            ):
-                stack.append(token)
-            # elif is_transpose_command(token):
-            #     # Example: [1 2; 3 4]^T
-            #     self._execute(__TRANSPOSE__, stack)
-            # elif is_contains_transpose_command(token):
-            #     # Example: A^T
-            #     token = token[:-2]
-            #     if token in self.variables:
-            #         stack.append(self.variables[token])
-            #         self._execute(__TRANSPOSE__, stack)
-            elif is_undefined_symbol(token):
-                token = token[1:]
-                stack.append(token)
-            elif is_reference_symbol(token):
-                token = token[1:]
-                if token in self.variables:
-                    stack.append(self.variables[token])
-                else:
-                    raise StackerSyntaxError(f"Undefined symbol '{token}'")
-            elif is_block(token):
-                self.substack(token, stack)
-            else:
-                raise UnexpectedTokenError(token)
-        return stack
-
-    def _execute(self, token: str, stack: deque) -> None:
-        """
-        Applies an operator to the top elements on the stack.
-        Modifies the stack in-place.
-        """
-        if token in self.sfunctions:  # sfunctions
-            args = []
-            for _ in range(self.sfunctions[token]["arg_count"]):
-                args.insert(0, self.pop_and_eval(stack))
-            sfunc = self.sfunctions[token]
-            if sfunc["push_result_to_stack"]:
-                stack.append(sfunc["func"](*args))
-            else:
-                sfunc["func"](*args)
-        elif token in self.plugins:
-            args = []
-            for _ in range(self.plugins[token]["arg_count"]):
-                args.insert(0, self.pop_and_eval(stack))
-            op = self.plugins[token]
-            if op["push_result_to_stack"]:
-                stack.append(op["func"](*args))
-            else:
-                op["func"](*args)
-        elif token in self.priority_operators:
-            if token == "do":
-                body = stack.pop()  # not evaluate
-                symbol = stack.pop()
-                end_value = self.pop_and_eval(stack)
-                start_value = self.pop_and_eval(stack)
-                self.execute_do(start_value, end_value, symbol, body, self)
-            elif token == "times":
-                n_times = self.pop_and_eval(stack)
-                body = stack.pop()
-                self.execute_times(n_times, body, self)
-            elif token == "break":
-                stack.append(__BREAK__)
-            elif token == "if":
-                condition = stack.pop()
-                true_block = stack.pop()
-                self.execute_if(condition, true_block, self)
-            elif token == "ifelse":
-                condition = stack.pop()
-                false_block = stack.pop()
-                true_block = stack.pop()
-                self.execute_if_else(condition, true_block, false_block, self)
-            # elif token == "ans":  # TODO:
-            #     stack.append(self.stack[-1])
-            elif token == "set":
-                name = stack.pop()
-                value = self.pop_and_eval(stack)
-                self.variables[name] = value
-            elif token == "defun":
-                name = stack.pop()
-                body = stack.pop()
-                fargs = self.pop_and_eval(stack)
-                fargs = convert_custom_string_tuple_to_proper_tuple(fargs)
-                fargs = ast.literal_eval(fargs)
-                self.defun_sfunction(name, fargs, body)
-            elif token == "alias":
-                name = stack.pop()
-                body = stack.pop()
-                self.define_macro(name, body)
-            elif token == "eval":
-                expression = stack.pop()
-                if is_string(expression):
-                    # 'hoge' -> hoge
-                    self._eval(expression[1:-1], stack=stack)
-                else:
-                    raise StackerSyntaxError("Invalid expression.")
-            elif token == "include":
-                filename = stack.pop()
-                self.include(filename)
-            elif token in stack_operators:  # stack operators
-                args = [stack]
-                for _ in range(stack_operators[token]["arg_count"]):
-                    args.insert(0, self.pop_and_eval(stack))
-                op = stack_operators[token]
-                if op["push_result_to_stack"]:
-                    stack.append(op["func"](*args))
-                else:
-                    op["func"](*args)
-            elif token == "exit":
-                raise SystemExit
-        elif token in self.settings_operators:
-            if token == "disable_plugin":
-                operator_name = stack.pop()
-                self._disable_plugin(operator_name)
-            elif token == "disable_all_plugins":
-                self._disable_all_plugins()
-            elif token == "enable_disp_stack":
-                self._enable_disp_stack()
-            elif token == "disable_disp_stack":
-                self._disable_disp_stack()
-            elif token == "disable_disp_logo":
-                self._disable_disp_logo()
-            elif token == "enable_disp_logo":
-                self._enable_disp_logo()
-            elif token == "enable_disp_ans":
-                self._enable_disp_ans()
-            elif token == "disable_disp_ans":
-                self._disable_disp_ans()
-            self.clear_trace()
-        elif token in self.operators:  # Other operators
-            args = []
-            for _ in range(self.operators[token]["arg_count"]):
-                args.insert(0, self.pop_and_eval(stack))
-            op = self.operators[token]
-            if op["push_result_to_stack"]:
-                stack.append(op["func"](*args))
-            else:
-                op["func"](*args)
-        else:
-            raise StackerSyntaxError(f"Unknown operator '{token}'")
-        return
-
-    def expand_macro(self, name: str, stack: deque) -> None:
-        """Executes a macro."""
-        macro = self.macros[name]
-        expression = macro.blockstack.expression
-        tokens = parse_expression(expression)
-        self.evaluate(tokens, stack=stack)
-
-    def _eval(self, expr: str, stack: deque = deque()) -> deque:
-        tokens = parse_expression(expr)
-        self.evaluate(tokens, stack=stack)
-        return stack
-
-    # ========================
-    # Definition
-    # ========================
-
-    def defun_sfunction(self, func_name: str, fargs, body: Stacker) -> None:
-        function = StackerFunction(fargs, body)
-        args_count = len(fargs)
-        self.register_sfunction(
-            func_name, function, args_count, push_result_to_stack=True
-        )
-
-    def define_macro(self, name: str, body: Stacker) -> None:
-        """Defines a macro."""
-        macro = StackerMacro(name, body)
-        self.register_macro(name, macro)
-
-    # ========================
-    # Registration
-    # ========================
+        try:
+            return self._evaluate(tokens, stack=stack)
+        except Exception as e:
+            if self.parent is not None:
+                self.parent.trace = self.trace
+            raise e
 
     def register_operator(
         self,
@@ -676,33 +126,6 @@ class Stacker:
     # Setting
     # ========================
 
-    def _disable_plugin(self, operator_name: str) -> None:
-        if operator_name in self.plugins:
-            del self.plugins[operator_name]
-        else:
-            print(f"Plugin '{operator_name}' is not registered.")
-
-    def _disable_all_plugins(self) -> None:
-        self.plugins = {}
-
-    def _enable_disp_stack(self) -> None:
-        self._disp_stack_mode = True
-
-    def _disable_disp_stack(self) -> None:
-        self._disp_stack_mode = False
-
-    def _enable_disp_logo(self) -> None:
-        self._disp_logo = True
-
-    def _disable_disp_logo(self) -> None:
-        self._disp_logo = False
-
-    def _enable_disp_ans(self) -> None:
-        self._disp_ans = True
-
-    def _disable_disp_ans(self) -> None:
-        self._disp_ans = False
-
     @property
     def disp_stack_mode(self) -> bool:
         return self._disp_stack_mode
@@ -762,6 +185,12 @@ class Stacker:
     def get_priority_operators_copy(self) -> dict:
         return self.priority_operators.copy()
 
+    def get_stack_operators_ref(self) -> dict:
+        return self.stack_operators
+
+    def get_stack_operators_copy(self) -> dict:
+        return self.stack_operators.copy()
+
     def get_settings_operators_ref(self) -> dict:
         return self.settings_operators
 
@@ -795,12 +224,35 @@ class Stacker:
     def get_labels_copy(self) -> dict:
         return self.labels.copy()
 
+    def get_operator_descriptions(self) -> dict:
+        operator_descriptions = {}
+        for operator_name, operator_description in self.operators.items():
+            operator_descriptions[operator_name] = operator_description["desc"]
+        for operator_name, operator_description in self.priority_operators.items():
+            operator_descriptions[operator_name] = operator_description["desc"]
+        return operator_descriptions
+
+    def get_plugin_descriptions(self) -> dict:
+        return self.plugin_descriptions
+
+    def get_stack_operator_descriptions(self) -> dict:
+        return {k: v["desc"] for k, v in self.stack_operators.items()}
+
+    def get_settings_operator_descriptions(self) -> dict:
+        return {k: v["desc"] for k, v in self.settings_operators.items()}
+
+    def get_expression(self) -> str:
+        return self.expression
+
     # ========================
     # Clear
     # ========================
 
     def clear_trace(self) -> None:
         self.trace = []
+
+    # def clear_ans(self) -> None:
+    #     self._ans = None
 
     # ========================
     # Debug
@@ -816,40 +268,5 @@ class Stacker:
         and = stacker.eval("1 2 +")
         ```
         """
-        print(expression)
         tokens = parse_expression(expression)
         return list(copy.deepcopy(self.evaluate(tokens)))
-
-
-class StackerFunction:
-    """A callable object that represents a function defined in Stacker."""
-
-    def __init__(self, args: list[str], blockstack: Stacker) -> None:
-        self.args = args
-        self.blockstack = blockstack
-        self.arg_count = len(args)
-
-    def __call__(self, *values) -> Any:
-        values = list(values)
-        if len(values) != len(self.args):
-            raise ValueError(f"Expected {len(self.args)} arguments, got {len(values)}")
-        # Create a new stack for the function call
-        # Bind the arguments to the values
-        for arg, value in zip(self.args, values):
-            self.blockstack.variables[arg] = value
-            self.blockstack.stack.append(arg)
-        self.blockstack.stack.append(self.blockstack)
-        result = self.blockstack.pop_and_eval(self.blockstack.stack)
-        return result
-
-
-class StackerMacro:
-    """A callable object that represents a macro defined in Stacker."""
-
-    def __init__(self, name: str, blockstack: Stacker) -> None:
-        self.name = name
-        self.blockstack = blockstack
-        self.arg_count = 0
-
-    def __call__(self) -> Stacker:
-        return self.blockstack
