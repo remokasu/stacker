@@ -306,10 +306,23 @@ class TestStacker(unittest.TestCase):
         self.assertEqual(self.stacker.stack[-1], 28)
 
     # eval
-    def test_eval(self):
+    def test_eval_str(self):
         self.stacker.stack.clear()
         self.stacker.process_expression("'3 5 +' eval")
         self.assertEqual(self.stacker.stack[-1], 8)
+
+        self.stacker.stack.clear()
+        self.stacker.process_expression("5 eval")
+        self.assertEqual(self.stacker.stack[-1], 5)
+
+    def test_eval_block(self):
+        self.stacker.stack.clear()
+        self.stacker.process_expression("{3 5 +} eval")
+        self.assertEqual(self.stacker.stack[-1], 8)
+
+        self.stacker.stack.clear()
+        self.stacker.process_expression("{3 5} {*} eval")
+        self.assertEqual(self.stacker.stack[-1], 15)
 
     # evalpy
     def test_evalpy(self):
