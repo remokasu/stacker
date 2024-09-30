@@ -4,32 +4,20 @@ import random
 
 
 def _rand() -> float:
-    try:
-        return random.random()
-    except ValueError:
-        raise ValueError("Cannot generate random float")
+    return random.random()
 
 
 def _randint(x1: int, x2: int) -> int:
-    try:
-        return random.randint(int(x1), int(x2))
-    except ValueError:
-        raise ValueError(f"Cannot generate random int between {x1} and {x2}")
+    return random.randint(int(x1), int(x2))
 
 
 def _uniform(x1: float, x2: float) -> float:
-    try:
-        return random.uniform(float(x1), float(x2))
-    except ValueError:
-        raise ValueError(f"Cannot generate random float between {x1} and {x2}")
+    return random.uniform(float(x1), float(x2))
 
 
 def _dice(num_dice: int, num_faces: int) -> int:
     # Roll dice (e.g., 3d6)
-    try:
-        return sum(random.randint(1, int(num_faces)) for _ in range(int(num_dice)))
-    except ValueError:
-        raise ValueError(f"Cannot roll {num_dice}d{num_faces}")
+    return sum(random.randint(1, int(num_faces)) for _ in range(int(num_dice)))
 
 
 random_operators = {

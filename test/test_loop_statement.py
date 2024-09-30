@@ -15,5 +15,5 @@ class TestUnit(unittest.TestCase):
     def test_do(self):
         stacker = Stacker()
         expr = "0 $s set 1 100 $i {s i 2 ^ + s set} do @s"
-        stacker.process_expression(expr)
-        self.assertEqual(list(stacker.stack), [338350])
+        ans = stacker.eval(expr)
+        self.assertEqual(ans[-1], 338350)

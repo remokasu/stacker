@@ -194,7 +194,7 @@ class ReplMode(ExecutionMode):
                 else:
                     error_trace = trace
                 print(create_error_message(error_trace))
-                if self.dmode:
+                if self.debug:
                     traceback.print_exc()
                 self.rpn_calculator.clear_trace()
             # self.update_completer()

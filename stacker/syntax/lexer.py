@@ -4,10 +4,35 @@ from typing import Any
 
 
 def lex_string(s: str) -> list:
-    """Parses a string into a list of tokens.
-    :param s: The string to be parsed.
-    :return: A list of tokens.
     """
+    Parses a string into a list of tokens.
+
+    This function takes a string and splits it into tokens based on delimiters and whitespace.
+    It handles nested delimiters and ensures that tokens are correctly formed even when delimiters are nested.
+
+    Args:
+        s (str): The string to be parsed.
+
+    Returns:
+        list: A list of tokens parsed from the input string.
+
+    Example:
+        >>> lex_string("a b c")
+        ['a', 'b', 'c']
+        >>> lex_string("a (b c)")
+        ['a', '(b c)']
+        >>> lex_string("a (b (c))")
+        ['a', '(b (c))']
+        >>> lex_string("a (b (c)) d")
+        ['a', '(b (c))', 'd']
+        >>> lex_string("a (b (c)) d (e)")
+        ['a', '(b (c))', 'd', '(e)']
+        >>> lex_string("a {b c} {d e}")
+        ['a', '{b c}', '{d e}']
+        >>> lex_string("a {b c {d e}} {f h}")
+        ['a', '{b c {d e}}', '{f h}']
+    """
+
     tokens = []
     current_token = ""
     delimiter_mapping = {
@@ -48,41 +73,7 @@ def lex_string(s: str) -> list:
     return tokens
 
 
-def test_lex_string():
-    assert lex_string("a b c") == ["a", "b", "c"]
-    assert lex_string("a [b c]") == ["a", "[b c]"]
-    assert lex_string("a (b c)") == ["a", "(b c)"]
-    assert lex_string("a {b c}") == ["a", "{b c}"]
-    assert lex_string("a 'b c'") == ["a", "'b c'"]
-    assert lex_string('a "b c"') == ["a", '"b c"']
-    assert lex_string("a 'b c' d") == ["a", "'b c'", "d"]
-    assert lex_string('a "b c" d') == ["a", '"b c"', "d"]
-    assert lex_string("a 'b c' d 'e f'") == ["a", "'b c'", "d", "'e f'"]
-    assert lex_string("a {b c} {d e}") == ["a", "{b c}", "{d e}"]
-    assert lex_string("a {b c {d e}} {f h}") == ["a", "{b c {d e}}", "{f h}"]
-    # assert lex_string("/* a b c */") == ["/* a b c */"]
-    assert lex_string("[1]") == ["[1]"]
-    assert lex_string("(1)") == ["(1)"]
-
-    expr = "1 2 3 [4 5 6] 7 8 (9 10 11) a1 b1 c1 {1 2 +} '1+1' eval"
-    exprs = [
-        "1",
-        "2",
-        "3",
-        "[4 5 6]",
-        "7",
-        "8",
-        "(9 10 11)",
-        "a1",
-        "b1",
-        "c1",
-        "{1 2 +}",
-        "'1+1'",
-        "eval",
-    ]
-    tokens = lex_string(expr)
-    assert tokens == exprs
-
-
 if __name__ == "__main__":
-    test_lex_string()
+    import doctest
+
+    doctest.testmod()

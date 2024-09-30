@@ -2,12 +2,10 @@ import cmath
 import math
 import unittest
 
-import numpy as np
-
 from stacker.stacker import Stacker
 
-# from stacker.syntax.parser import lex_string
 from stacker.syntax.lexer import lex_string
+from stacker.data_type import String
 
 
 def cpow(x1, x2):
@@ -50,7 +48,7 @@ class TestStacker(unittest.TestCase):
     def setUp(self):
         self.stacker = Stacker()
 
-    def test_arithmetic_operations(self):
+    def test_operations(self):
         test_cases = [
             ("2 3 +", 5),
             ("10 3 -", 7),
@@ -61,11 +59,11 @@ class TestStacker(unittest.TestCase):
             ("5 neg", -5),
             ("3 neg abs", 3),
             ("3 2 ^", 9),
-            ("3 exp", np.exp(3)),
-            ("2 log", np.log(2)),
-            ("30 radians sin", np.sin(np.radians(30))),
-            ("45 radians cos", np.cos(np.radians(45))),
-            ("60 radians tan", np.tan(np.radians(60))),
+            ("3 exp", math.exp(3)),
+            ("2 log", math.log(2)),
+            ("30 radians sin", math.sin(math.radians(30))),
+            ("45 radians cos", math.cos(math.radians(45))),
+            ("60 radians tan", math.tan(math.radians(60))),
             ("5 float", 5.0),
             ("3.14 int", 3),
             ("1 1 ==", True),
@@ -87,13 +85,13 @@ class TestStacker(unittest.TestCase):
             ("10 oct", "0o12"),
             ("0b101010 dec", 42),
             ("255 hex", "0xff"),
-            ("4 2 gcd", np.gcd(4, 2)),
-            ("4 log10", np.log10(4)),
-            ("4 log2", np.log2(4)),
+            ("4 2 gcd", math.gcd(4, 2)),
+            ("4 log10", math.log10(4)),
+            ("4 log2", math.log2(4)),
             ("4 !", math.factorial(4)),
-            ("9 sqrt", np.sqrt(9)),
-            ("3.2 ceil", np.ceil(3.2)),
-            ("3.8 floor", np.floor(3.8)),
+            ("9 sqrt", math.sqrt(9)),
+            ("3.2 ceil", math.ceil(3.2)),
+            ("3.8 floor", math.floor(3.8)),
             ("3.5 round", round(3.5)),
             ("3.51 1 roundn", round(3.51, 1)),
             # Add complex number test cases
@@ -101,24 +99,24 @@ class TestStacker(unittest.TestCase):
             ("(1+2j) (2+3j) -", complex(1, 2) - complex(2, 3)),
             ("(1+2j) (2+3j) *", complex(1, 2) * complex(2, 3)),
             ("(1+2j) (2+3j) /", complex(1, 2) / complex(2, 3)),
-            ("(1+2j) 2 ^", np.power(complex(1, 2), 2)),
-            ("(1+2j) exp", np.exp(complex(1, 2))),
-            ("(1+2j) log", np.log(complex(1, 2))),
-            ("(1+2j) sin", np.sin(complex(1, 2))),
-            ("(1+2j) cos", np.cos(complex(1, 2))),
-            ("(1+2j) tan", np.tan(complex(1, 2))),
-            ("(1+2j) sqrt", np.sqrt(complex(1, 2))),
-            ("(1+2j) sinh", np.sinh(complex(1, 2))),
-            ("(1+2j) cosh", np.cosh(complex(1, 2))),
-            ("(1+2j) tanh", np.tanh(complex(1, 2))),
-            ("(1+2j) asin", np.arcsin(complex(1, 2))),
-            ("(1+2j) acos", np.arccos(complex(1, 2))),
-            ("(1+2j) atan", np.arctan(complex(1, 2))),
-            ("(1+2j) asinh", np.arcsinh(complex(1, 2))),
-            ("(1+2j) acosh", np.arccosh(complex(1, 2))),
-            ("(1+2j) atanh", np.arctanh(complex(1, 2))),
-            ("4 2 lcm", np.lcm(4, 2)),
-            ("27 cbrt", np.cbrt(27)),
+            ("(1+2j) 2 ^", complex(1, 2) ** 2),
+            ("(1+2j) exp", cmath.exp(complex(1, 2))),
+            ("(1+2j) log", cmath.log(complex(1, 2))),
+            ("(1+2j) sin", cmath.sin(complex(1, 2))),
+            ("(1+2j) cos", cmath.cos(complex(1, 2))),
+            ("(1+2j) tan", cmath.tan(complex(1, 2))),
+            ("(1+2j) sqrt", cmath.sqrt(complex(1, 2))),
+            ("(1+2j) sinh", cmath.sinh(complex(1, 2))),
+            ("(1+2j) cosh", cmath.cosh(complex(1, 2))),
+            ("(1+2j) tanh", cmath.tanh(complex(1, 2))),
+            ("(1+2j) asin", cmath.asin(complex(1, 2))),
+            ("(1+2j) acos", cmath.acos(complex(1, 2))),
+            ("(1+2j) atan", cmath.atan(complex(1, 2))),
+            ("(1+2j) asinh", cmath.asinh(complex(1, 2))),
+            ("(1+2j) acosh", cmath.acosh(complex(1, 2))),
+            ("(1+2j) atanh", cmath.atanh(complex(1, 2))),
+            ("4 2 lcm", math.lcm(4, 2)),
+            ("27 cbrt", 27 ** (1 / 3)),
             ("5 2 ncr", math.comb(5, 2)),
             ("5 2 npr", math.perm(5, 2)),
         ]
@@ -135,12 +133,10 @@ class TestStacker(unittest.TestCase):
             except Exception:
                 print("error!!", expression)
                 assert False
-
         for expression, expected in test_cases:
             self.stacker.stack.clear()
             self.stacker.process_expression(expression)
             self.assertAlmostEqual(self.stacker.stack[-1], expected)
-        print("!")
 
     def test_long_rpn(self):
         self.stacker.stack.clear()
@@ -181,7 +177,7 @@ class TestStacker(unittest.TestCase):
 
     def test_function_definition_and_call(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("(x) {x x *} $f defun")
+        self.stacker.process_expression("{x} {x x *} $f defun")
         self.stacker.process_expression("4 f")
         self.assertEqual(self.stacker.stack[-1], 16)
 
@@ -202,8 +198,8 @@ class TestStacker(unittest.TestCase):
 
         # str
         self.stacker.process_expression("'hoge'")
-        self.assertEqual(self.stacker.stack[-1], "'hoge'")
-        self.assertEqual(type(self.stacker.stack[-1]), str)
+        self.assertEqual(self.stacker.stack[-1], "hoge")
+        self.assertEqual(type(self.stacker.stack[-1]), String)
 
         # tuple
         self.stacker.process_expression("(1 2 3)")
@@ -269,21 +265,29 @@ class TestStacker(unittest.TestCase):
         # self.assertEqual(self.stacker.stack[-1], (1, 2, 3))
 
         # Custom format tuple input
-        self.stacker.process_expression("(1 2 3)")
-        self.assertEqual(self.stacker.stack[-1], (1, 2, 3))
+        ans = self.stacker.eval("(1 2 3)")
+        self.assertEqual(ans[-1], (1, 2, 3))
 
         # Custom format tuple input with float
-        self.stacker.process_expression("(1.0 2.0 3.0)")
-        self.assertEqual(self.stacker.stack[-1], (1.0, 2.0, 3.0))
+        # self.stacker.process_expression("(1.0 2.0 3.0)")
+        # self.assertEqual(self.stacker.stack[-1], (1.0, 2.0, 3.0))
+        ans = self.stacker.eval("(1.0 2.0 3.0)")
+        self.assertEqual(ans[-1], (1.0, 2.0, 3.0))
 
         # Multiline input
-        self.stacker.process_expression("(1 2 3 ; 4 5 6)")
-        self.assertEqual(self.stacker.stack[-1], ((1, 2, 3), (4, 5, 6)))
+        # self.stacker.process_expression("(1 2 3 ; 4 5 6)")
+        # self.assertEqual(self.stacker.stack[-1], ((1, 2, 3), (4, 5, 6)))
+        ans = self.stacker.eval("(1 2 3 ; 4 5 6)")
+        self.assertEqual(ans[-1], ((1, 2, 3), (4, 5, 6)))
 
-        self.stacker.process_expression("(1 2 3; 4 5 6; 7 8 9) 5 6")
-        self.assertEqual(self.stacker.stack[-1], 6)
-        self.assertEqual(self.stacker.stack[-2], 5)
-        self.assertEqual(self.stacker.stack[-3], ((1, 2, 3), (4, 5, 6), (7, 8, 9)))
+        # self.stacker.process_expression("(1 2 3; 4 5 6; 7 8 9) 5 6")
+        # self.assertEqual(self.stacker.stack[-1], 6)
+        # self.assertEqual(self.stacker.stack[-2], 5)
+        # self.assertEqual(self.stacker.stack[-3], ((1, 2, 3), (4, 5, 6), (7, 8, 9)))
+        ans = self.stacker.eval("(1 2 3; 4 5 6; 7 8 9) 5 6")
+        self.assertEqual(ans[-1], 6)
+        self.assertEqual(ans[-2], 5)
+        self.assertEqual(ans[-3], ((1, 2, 3), (4, 5, 6), (7, 8, 9)))
 
     # valiable
     def test_variable_assign_1(self):

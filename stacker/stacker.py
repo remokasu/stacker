@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import copy
-from collections import deque
 from typing import TYPE_CHECKING, Any, Callable
 
 from stacker.error import StackerSyntaxError
@@ -11,22 +9,42 @@ from stacker.syntax.parser import parse_expression
 if TYPE_CHECKING:
     from stacker.sfunction import StackerFunction
 
+from stacker.data_type import stack_data
+
 
 class Stacker(StackerCore):
+    def __init__(
+        self, expression: str | None = None, parent: StackerCore | None = None
+    ):
+        super().__init__(expression, parent)
+        self.trace = []
+        self._disp_stack_mode = True
+        self._disp_logo = True
+        self._disp_ans = False
+        self._ans = None
+        self.plugin_descriptions = {}
+
     def include(self, filename: str) -> None:
         return self.priority_operators["include"]["func"](self, filename)
 
     def push(self, value: Any) -> None:  # TODO: remove
         self.stack.append(value)
 
-    def pop_and_eval(self, stack: deque) -> Any:
+    def pop_and_eval(self, stack: stack_data) -> Any:
         return self._pop_and_eval(stack)
+
+    def pop(self) -> Any:
+        return self.stack.pop()
 
     def process_expression(self, expression) -> None:
         tokens = parse_expression(expression)
         self.evaluate(tokens, stack=self.stack)
 
-    def evaluate(self, tokens: list, stack: deque = deque()) -> deque:
+    # @staticmethod
+    # def new(expression: str | None = None, parent: Stacker | None = None) -> Stacker:
+    #     return Stacker(expression=expression, parent=parent)
+
+    def evaluate(self, tokens: list, stack: stack_data = stack_data()) -> stack_data:
         """
         Evaluates a given RPN expression.
         Returns the result of the evaluation.
@@ -152,13 +170,13 @@ class Stacker(StackerCore):
         else:
             raise StackerSyntaxError(f"Unknown operator '{operator_name}'")
 
-    def get_stack_ref(self) -> deque:
+    def get_stack_ref(self) -> stack_data:
         return self.stack
 
-    def get_stack_copy(self) -> deque:
+    def get_stack_copy(self) -> stack_data:
         return self.stack.copy()
 
-    def get_stack_copy_as_list(self) -> deque:
+    def get_stack_copy_as_list(self) -> list:
         return list(self.stack.copy())
 
     def get_macros_ref(self) -> dict:
@@ -173,11 +191,11 @@ class Stacker(StackerCore):
     def get_variables_copy(self) -> dict:
         return self.variables.copy()
 
-    def get_operators_ref(self) -> dict:
-        return self.operators
+    def get_regular_operators_ref(self) -> dict:
+        return self.regular_operators
 
-    def get_operators_copy(self) -> dict:
-        return self.operators.copy()
+    def get_regular_operators_copy(self) -> dict:
+        return self.regular_operators.copy()
 
     def get_priority_operators_ref(self) -> dict:
         return self.priority_operators
@@ -190,6 +208,24 @@ class Stacker(StackerCore):
 
     def get_stack_operators_copy(self) -> dict:
         return self.stack_operators.copy()
+
+    def get_hof_operators_ref(self) -> dict:
+        return self.hof_operators
+
+    def get_hof_operators_copy(self) -> dict:
+        return self.hof_operators.copy()
+
+    def get_aggregate_operators_ref(self) -> dict:
+        return self.aggregate_operators
+
+    def get_aggregate_operators_copy(self) -> dict:
+        return self.aggregate_operators.copy()
+
+    def get_transform_operators_ref(self) -> dict:
+        return self.transform_operators
+
+    def get_transform_operators_copy(self) -> dict:
+        return self.transform_operators.copy()
 
     def get_settings_operators_ref(self) -> dict:
         return self.settings_operators
@@ -224,9 +260,26 @@ class Stacker(StackerCore):
     def get_labels_copy(self) -> dict:
         return self.labels.copy()
 
+    def get_all_keys_for_completer(self) -> list[str]:
+        return list(
+            set(
+                list(self.regular_operators.keys())
+                + list(self.priority_operators.keys())
+                + list(self.stack_operators.keys())
+                # + list(self.settings_operators.keys())
+                + list(self.hof_operators.keys())
+                + list(self.aggregate_operators.keys())
+                + list(self.transform_operators.keys())
+                + list(self.sfunctions.keys())
+                + list(self.plugins.keys())
+                + list(self.macros.keys())
+                + list(self.variables.keys())
+            )
+        )
+
     def get_operator_descriptions(self) -> dict:
         operator_descriptions = {}
-        for operator_name, operator_description in self.operators.items():
+        for operator_name, operator_description in self.regular_operators.items():
             operator_descriptions[operator_name] = operator_description["desc"]
         for operator_name, operator_description in self.priority_operators.items():
             operator_descriptions[operator_name] = operator_description["desc"]
@@ -240,9 +293,6 @@ class Stacker(StackerCore):
 
     def get_settings_operator_descriptions(self) -> dict:
         return {k: v["desc"] for k, v in self.settings_operators.items()}
-
-    def get_expression(self) -> str:
-        return self.expression
 
     # ========================
     # Clear
@@ -258,7 +308,7 @@ class Stacker(StackerCore):
     # Debug
     # ========================
 
-    def eval(self, expression: str) -> Any:
+    def eval(self, expression: str, stack: stack_data = stack_data()) -> Any:
         """Evaluates a given RPN expression.
         Returns the result of the evaluation.
 
@@ -269,4 +319,4 @@ class Stacker(StackerCore):
         ```
         """
         tokens = parse_expression(expression)
-        return list(copy.deepcopy(self.evaluate(tokens)))
+        return self.evaluate(tokens, stack=stack)
