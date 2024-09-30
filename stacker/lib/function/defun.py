@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from stacker.sfunction import StackerFunction
 
 
@@ -8,7 +8,9 @@ if TYPE_CHECKING:
     from stacker.stacker import Stacker
 
 
-def defun_sfunction(stacker: Stacker, func_name: str, fargs, body: Stacker) -> None:
+def defun_sfunction(
+    stacker: Stacker, func_name: str, fargs: list, body: Stacker
+) -> None:
     function = StackerFunction(fargs, body)
     args_count = len(fargs)
     stacker.register_sfunction(

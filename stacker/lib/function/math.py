@@ -1,250 +1,192 @@
 from __future__ import annotations
 
 import math
+import cmath
 from typing import Callable
-
-import numpy as np
 
 
 def _pow(x1, x2):
-    try:
-        return np.power(x1, x2).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot raise {x1} to the power of {x2}.")
+    return x1**x2
 
 
 def _log(x):
-    try:
-        return np.log(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take log of {x}.")
+    if type(x) is complex:
+        return cmath.log(x)
+    else:
+        return math.log(x)
 
 
 def _log2(x):
-    try:
-        return np.log2(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take log2 of {x}.")
+    if type(x) is complex:
+        return cmath.log(x, 2)
+    else:
+        return math.log(x, 2)
 
 
 def _log10(x):
-    try:
-        return np.log10(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take log10 of {x}.")
+    if type(x) is complex:
+        return cmath.log(x, 10)
+    else:
+        return math.log10(x)
 
 
 def _exp(x):
-    try:
-        return np.exp(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take exp of {x}.")
+    if type(x) is complex:
+        return cmath.exp(x)
+    else:
+        return math.exp(x)
 
 
 def _sin(x):
-    try:
-        return np.sin(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take sin of {x}.")
+    if type(x) is complex:
+        return cmath.sin(x)
+    else:
+        return math.sin(x)
 
 
 def _cos(x):
-    try:
-        return np.cos(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take cos of {x}.")
+    if type(x) is complex:
+        return cmath.cos(x)
+    else:
+        return math.cos(x)
 
 
 def _tan(x):
-    try:
-        return np.tan(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take tan of {x}.")
+    if type(x) is complex:
+        return cmath.tan(x)
+    else:
+        return math.tan(x)
 
 
 def _asin(x):
-    try:
-        return np.arcsin(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take asin of {x}.")
+    if type(x) is complex:
+        return cmath.asin(x)
+    else:
+        return math.asin(x)
 
 
 def _acos(x):
-    try:
-        return np.arccos(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take acos of {x}.")
+    if type(x) is complex:
+        return cmath.acos(x)
+    else:
+        return math.acos(x)
 
 
 def _atan(x):
-    try:
-        return np.arctan(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take atan of {x}.")
+    if type(x) is complex:
+        return cmath.atan(x)
+    else:
+        return math.atan(x)
 
 
 def _sinh(x):
-    try:
-        return np.sinh(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take sinh of {x}.")
+    if type(x) is complex:
+        return cmath.sinh(x)
+    else:
+        return math.sinh(x)
 
 
 def _cosh(x):
-    try:
-        return np.cosh(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take cosh of {x}.")
+    if type(x) is complex:
+        return cmath.cosh(x)
+    else:
+        return math.cosh(x)
 
 
 def _tanh(x):
-    try:
-        return np.tanh(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take tanh of {x}.")
+    if type(x) is complex:
+        return cmath.tanh(x)
+    else:
+        return math.tanh(x)
 
 
 def _asinh(x):
-    try:
-        return np.arcsinh(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take asinh of {x}.")
+    if type(x) is complex:
+        return cmath.asinh(x)
+    else:
+        return math.asinh(x)
 
 
 def _acosh(x):
-    try:
-        return np.arccosh(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take acosh of {x}.")
+    if type(x) is complex:
+        return cmath.acosh(x)
+    else:
+        return math.acosh(x)
 
 
 def _atanh(x):
-    try:
-        return np.arctanh(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take atanh of {x}.")
+    if type(x) is complex:
+        return cmath.atanh(x)
+    else:
+        return math.atanh(x)
 
 
 def _sqrt(x):
-    try:
-        return np.sqrt(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take sqrt of {x}.")
+    if type(x) is complex:
+        return cmath.sqrt(x)
+    else:
+        return math.sqrt(x)
 
 
 def _gcd(x1, x2):
-    try:
-        return np.gcd(x1, x2).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take gcd of {x1} and {x2}.")
+    return math.gcd(x1, x2)
 
 
 def _lcm(x1, x2):
-    try:
-        return np.lcm(x1, x2).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take lcm of {x1} and {x2}.")
+    return (x1 * x2) // math.gcd(x1, x2)
 
 
 def _radians(deg):
-    try:
-        return np.radians(deg).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot convert {deg} to radians")
+    return math.radians(deg)
 
 
 def _factorial(x):
-    # TODO Type check
-    try:
-        return np.math.factorial(x)
-    except TypeError:
-        raise TypeError(f"Cannot take factorial of {x}.")
+    return math.factorial(x)
 
 
 def _ceil(x):
-    try:
-        return np.ceil(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take ceil of {x}.")
+    return math.ceil(x)
 
 
 def _floor(x):
-    try:
-        return np.floor(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take floor of {x}.")
+    return math.floor(x)
 
 
 def _roundn(x, n):
-    try:
-        return round(x, n)
-    except TypeError:
-        raise TypeError(f"Cannot round {x} to {n}.")
+    return round(x, n)
 
 
 def _round(x):
-    try:
-        return round(x)
-    except TypeError:
-        raise TypeError(f"Cannot round {x}.")
+    return round(x)
 
 
 def _comb(n: int, k: int):
-    if not isinstance(n, int) or not isinstance(k, int):
-        raise TypeError(f"Cannot take comb of {n} and {k}.")
-    try:
-        return math.comb(int(n), int(k))
-    except TypeError:
-        raise TypeError(f"Cannot take comb of {n} and {k}.")
+    return math.comb(int(n), int(k))
 
 
 def _perm(n: int, k: int) -> int:
-    if not isinstance(n, int) or not isinstance(k, int):
-        raise TypeError(f"Cannot take perm of {n} and {k}.")
-    try:
-        return math.perm(int(n), int(k))
-    except TypeError:
-        raise TypeError(f"Cannot take perm of {n} and {k}.")
+    return math.perm(int(n), int(k))
 
 
 def _abs(x):
-    try:
-        return np.abs(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take abs of {x}.")
-
-
-# def factorial(x) -> int:
-#     return math.factorial(int(x))
+    return abs(x)
 
 
 def _cbrt(x):
-    try:
-        return np.cbrt(x).tolist()
-    except TypeError:
-        raise TypeError(f"Cannot take cbrt of {x}.")
+    return x ** (1 / 3)
 
 
 def _ncr(n, k):
-    try:
-        return _comb(n, k)
-    except TypeError:
-        raise TypeError(f"Cannot take ncr of {n} and {k}.")
+    return _comb(n, k)
 
 
 def _npr(n, k):
-    try:
-        return _perm(n, k)
-    except TypeError:
-        raise TypeError(f"Cannot take npr of {n} and {k}.")
+    return _perm(n, k)
 
 
 def _numeric_diff(f: Callable, x: float) -> float:
     h = 1e-4
-    try:
-        return (f(x + h) - f(x - h)) / (2 * h)
-    except TypeError:
-        raise TypeError(f"Cannot take numeric_diff of {f} and {x}.")
+    return (f(x + h) - f(x - h)) / (2 * h)
 
 
 math_operators = {

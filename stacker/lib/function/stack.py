@@ -30,7 +30,7 @@ index: value
 """
 
 
-def _drop(stack: deque) -> None:
+def _drop(stack: deque | list) -> None:
     """
     Drops the top element of the stack.
     Example:
@@ -43,7 +43,7 @@ def _drop(stack: deque) -> None:
     stack.pop()
 
 
-def _drop2(stack: deque) -> None:
+def _drop2(stack: deque | list) -> None:
     """
     Drops the top two elements of the stack.
     Example:
@@ -58,7 +58,7 @@ def _drop2(stack: deque) -> None:
     stack.pop()
 
 
-def _dropn(num: int, stack: deque) -> None:
+def _dropn(num: int, stack: deque | list) -> None:
     """
     Drops the top n elements of the stack.
     Example:
@@ -77,7 +77,7 @@ def _dropn(num: int, stack: deque) -> None:
         stack.pop()
 
 
-def _dup(stack: deque) -> None:
+def _dup(stack: deque | list) -> None:
     """
     Duplicates the top element of the stack.
     Example:
@@ -89,7 +89,7 @@ def _dup(stack: deque) -> None:
     stack.append(stack[-1])
 
 
-def _dup2(stack: deque) -> None:
+def _dup2(stack: deque | list) -> None:
     """
     Duplicates the top two elements of the stack.
     Example:
@@ -102,10 +102,13 @@ def _dup2(stack: deque) -> None:
         raise DupError("Stack has less than 2 elements")
     start_index = len(stack) - 2
     end_index = len(stack)
-    stack.extend(deque(itertools.islice(stack, start_index, end_index)))
+    if isinstance(stack, list):
+        stack.extend(stack[start_index:end_index])
+    else:
+        stack.extend(deque(itertools.islice(stack, start_index, end_index)))
 
 
-def _dupn(num: int, stack: deque) -> None:
+def _dupn(num: int, stack: deque | list) -> None:
     """
     Duplicates the top n elements of the stack.
     Example:
@@ -122,10 +125,13 @@ def _dupn(num: int, stack: deque) -> None:
         raise DupError("Index out of range")
     start_index = len(stack) - num
     end_index = len(stack)
-    stack.extend(deque(itertools.islice(stack, start_index, end_index)))
+    if isinstance(stack, list):
+        stack.extend(stack[start_index:end_index])
+    else:
+        stack.extend(deque(itertools.islice(stack, start_index, end_index)))
 
 
-def _over(stack: deque) -> None:
+def _over(stack: deque | list) -> None:
     """
     Copies the second element to the top of the stack.
     Example:
@@ -138,7 +144,7 @@ def _over(stack: deque) -> None:
     stack.append(stack[-2])
 
 
-def _swap(stack: deque):
+def _swap(stack: deque | list):
     """
     Swaps the top two elements of the stack.
     Example:
@@ -151,7 +157,7 @@ def _swap(stack: deque):
     stack[-1], stack[-2] = stack[-2], stack[-1]
 
 
-def _roll(n: int, stack: deque) -> None:
+def _roll(n: int, stack: deque | list) -> None:
     """
     Moves the nth element to the top of the stack.
     Example:
@@ -170,7 +176,7 @@ def _roll(n: int, stack: deque) -> None:
     stack.append(item)
 
 
-def _rot(stack: deque) -> None:
+def _rot(stack: deque | list) -> None:
     """
     Move the third element to the top of the stack.
     Example:
@@ -183,7 +189,7 @@ def _rot(stack: deque) -> None:
     stack[-1], stack[-2], stack[-3] = stack[-3], stack[-1], stack[-2]
 
 
-def _unrot(stack: deque) -> None:
+def _unrot(stack: deque | list) -> None:
     """
     Moves the top element to the third position of the stack.
     Example:
@@ -196,7 +202,7 @@ def _unrot(stack: deque) -> None:
     stack[-1], stack[-2], stack[-3] = stack[-2], stack[-3], stack[-1]
 
 
-def _pick(num: int, stack: deque) -> None:
+def _pick(num: int, stack: deque | list) -> None:
     """
     Copies the nth element to the top of the stack.
     Example:
@@ -216,7 +222,7 @@ def _pick(num: int, stack: deque) -> None:
     stack.append(stack[index])
 
 
-def _nip(stack: deque) -> None:
+def _nip(stack: deque | list) -> None:
     """
     Removes the second element from the top of the stack.
     Example:
@@ -229,7 +235,7 @@ def _nip(stack: deque) -> None:
     stack.remove(stack[-2])
 
 
-def _depth(stack: deque) -> int:
+def _depth(stack: deque | list) -> int:
     """
     Returns the depth of the stack.
     Example:
@@ -241,7 +247,7 @@ def _depth(stack: deque) -> int:
     return len(stack)
 
 
-def _insert(index: int, value: Any, stack: deque) -> None:
+def _insert(index: int, value: Any, stack: deque | list) -> None:
     """
     Inserts a value at the specified index.
     Example:
@@ -258,7 +264,7 @@ def _insert(index: int, value: Any, stack: deque) -> None:
     stack.insert(index, value)
 
 
-def _rev(stack: deque) -> None:
+def _rev(stack: deque | list) -> None:
     """
     Reverses the stack.
     Example:
@@ -272,7 +278,7 @@ def _rev(stack: deque) -> None:
 
 def _count(
     value: Any,
-    stack: deque,
+    stack: deque | list,
 ) -> int:
     """
     Counts the number of occurrences of a value in the stack.
@@ -280,18 +286,21 @@ def _count(
     return stack.count(value)
 
 
-def _clear(stack: deque) -> None:
+def _clear(stack: deque | list) -> None:
     """
     Clears the stack.
     """
     stack.clear()
 
 
-def _disp(stack: deque) -> None:
+def _disp(stack: deque | list) -> None:
     """
     Prints the stack.
     """
-    print(list(stack))
+    if isinstance(stack, deque):
+        print(list(stack))
+    else:
+        print(stack)
 
 
 stack_operators = {

@@ -96,7 +96,7 @@ Stacker allows for straightforward RPN input. For example:
 
 
 - ### Variables:
-  - syntax: 
+  - syntax:
     ``` bash
     value $name set
     ```
@@ -134,7 +134,7 @@ Stacker allows for straightforward RPN input. For example:
     ```
 
 
-- ### Block Stack:
+- ### Code blocks:
 
   Code blocks are enclosed in curly braces ({}). These blocks are pushed onto the stack in their raw form and can be executed later. For example: {1 2 +}. These blocks are particularly useful for deferred (lazy) evaluation. Specific use-cases include conditional statements and loop controls.
 
@@ -149,92 +149,153 @@ Stacker allows for straightforward RPN input. For example:
     ```
     In this command, the block `{1 2 +}` is pushed (added) to the stack.
 
-- ### Conditionals:
-  - if
-    - syntax:
-      ```bash
-      {true_block} {condition} if
-      ```
-    - example:
-      ``` bash
-      stacker:0> 0 $x set
-      stacker:1> {3 4 +} {x 0 ==} if
-      [7]
-      ```
-      This example pushes `7` onto the stack because `x` is equal to `0`.
-  - ifelse
-    - syntax:
-      ```bash
-      {true_block} {false_block} {condition} ifelse
-      ```
-    - example:
-      ``` bash
-      stacker:0> 0 $x set
-      stacker:1> {3 4 +} {3 4 -} {x 0 ==} ifelse
-      [7]
-      ```
-      This example pushes `7` onto the stack because `x` is equal to `0`.
+- ### Code Blocks
 
-- ### Loops:
-  - do
+  Code blocks in Stacker are enclosed in curly braces ({}). These blocks are fundamental structures that enable deferred evaluation and control flow management.
+
+  Syntax:
+  ```bash
+  {code_elements}
+  ```
+
+  Key Characteristics:
+  1. Structure: Code blocks contain one or more code elements separated by spaces.
+  2. Deferred Evaluation: The contents of a code block are not immediately executed.
+  3. Stack Interaction: When encountered, code blocks are pushed onto the stack in their raw form.
+  4. Execution: Code blocks can be executed at a later time when needed.
+
+  Common Use Cases:
+  - Conditional statements
+  - Loop controls
+  - Function definitions
+
+  Example:
+  ```bash
+  stacker:0> {1 2 +}
+  [{1 2 +}]
+  ```
+
+  In this example, the block `{1 2 +}` is pushed onto the stack as a single entity. The output shows the stack's contents after the operation, indicating that the block has been stored but not executed.
+
+  Note: The execution of a code block's contents occurs only when explicitly triggered, allowing for flexible program control and lazy evaluation strategies.
+
+- ### Control Structures in Stacker
+
+  Stacker provides two main types of control structures: conditionals and loops. These allow for dynamic program flow based on conditions and repetitive execution of code blocks.
+
+  - #### Conditionals
+
+    Conditionals in Stacker enable execution of code based on specified conditions.
+
+  - ##### if Statement
+
+    The `if` statement executes a code block if a condition is true.
+
+    Syntax:
+    ```bash
+    {true_block} {condition} if
+    ```
+
+    Example:
+    ```bash
+    stacker:0> 0 $x set
+    stacker:1> {3 4 +} {x 0 ==} if
+    [7]
+    ```
+
+    Result: Pushes `7` onto the stack as `x` equals `0`.
+
+  - ##### ifelse Statement
+
+    The `ifelse` statement provides branching based on a condition, executing one of two code blocks.
+
+    Syntax:
+    ```bash
+    {true_block} {false_block} {condition} ifelse
+    ```
+
+    Example:
+    ```bash
+    stacker:0> 0 $x set
+    stacker:1> {3 4 +} {3 4 -} {x 0 ==} ifelse
+    [7]
+    ```
+
+    Result: Pushes `7` onto the stack as `x` equals `0`.
+
+  - #### Loops
+
+    Loops in Stacker allow for repeated execution of code blocks.
+
+  - ##### do Loop
+
+    The `do` loop iterates over a range of values.
+
+    Syntax:
+    ```bash
+    start_value end_value $symbol {body} do
+    ```
+
+    Example:
+    ```bash
+    stacker:0> 1 10 $i {i echo} do
+    1
+    2
+    3
+    4
+    5
+    6
+    7
+    8
+    9
+    10
+    ```
+
+    Result: Prints numbers from 0 to 10.
+
+  - ##### times Loop
+
+    The `times` loop repeats a code block a specified number of times.
+
+    Syntax:
+    ```bash
+    {body} n times
+    ```
+
+    Example:
+    ```bash
+    stacker:0> 1 {dup ++} 10 times
+    [1 2 3 4 5 6 7 8 9 10 11]
+    ```
+
+    Result: Pushes numbers 1 through 11 onto the stack by repeatedly duplicating and incrementing.
+
+  - #### break
     - syntax:
       ```bash
-      start_value end_value $symbol {body} do
+      {break}
       ```
     - example:
       ```bash
-      stacker:0> 0 10 $i {i echo} do
+      stacker:0> 0 $i set
+      stacker:1> 0 9 $i {{break} i 5 == if i echo} do
       0
       1
       2
       3
       4
       5
-      6
-      7
-      8
-      9
-      10
       ```
-      This example prints the numbers from 0 to 10.
-  - times
-    - syntax:
-      ```bash
-      {body} n times
-      ```
-    - example:
-      ```bash
-      stacker:0> 1 {dup ++} 10 times
-      [1 2 3 4 5 6 7 8 9 10 11]
-      ```
-      In this example, we push 1 onto the stack and then repeat {dup (duplicate the top element) and ++ (add 1 to the top element)} 10 times.
-
-- ### break
-  - syntax:
-    ```bash
-    {break}
-    ```
-  - example:
-    ```bash
-    stacker:0> 0 $i set
-    stacker:1> 0 10 $i {{break} i 5 == if i echo} do
-    0
-    1
-    2
-    3
-    4
-    5
-    ```
-    This example prints the numbers from 0 to 5. When `i` is equal to `5`, the loop is terminated by `break`.
+      This example prints the numbers from 0 to 5. When `i` is equal to `5`, the loop is terminated by `break`.
 
 - ### Define a function:
   - syntax:
     ```bash
-    (arg1 arg2 ... argN) {body} $name defun
+    {arg1 arg2 ... argN} {body} $name defun
     ```
   - example:
     ```bash
-    stacker:0> (x y) {x y *} $multiply defun
+    stacker:0> {x y} {x y *} $multiply defun
     stacker:1> 10 20 multiply
     [200]
     ```
@@ -293,7 +354,7 @@ Stacker scripts can be created in `.stk` files. To run a script, simply execute 
   p echo
   ```
 
-  Running the script:  
+  Running the script:
   ```bash
   stacker my_script.stk
   ```
@@ -554,14 +615,26 @@ print(stacker.eval("3 4 +"))
 ### Function, Macro, and Variable Operators
 | Operator | Description                                           | Example                    |
 |----------|-------------------------------------------------------|----------------------------|
-| defun    | Define a function                                     | `(x y) {x y *} $multiply defun` |
+| defun    | Define a function                                     | `{x y} {x y *} $multiply defun` |
 | alias    | Define a macro                                        | `{2 ^ 3 * 5 +} $calculatePowerAndAdd alias` |
 | set      | Assign a value to a variable                          | `3 $x set`                |
+
+
+### Array Operators
+| Operator | Description                                           | Example                    |
+|----------|-------------------------------------------------------|----------------------------|
+| map      | Apply a function to each element of an array          | `[1 2 3] {dup} map`        |
+| zip      | Combine two arrays into a single array                | `[1 2 3] [4 5 6] zip`      |
+| filter   | Filter an array based on a condition                  | `[1 2 3 4 5] {2 % 0 ==} filter` |
+| all      | Check if all elements of an array satisfy a condition  | `[1 2 3 4 5] {2 % 0 ==} all` |
+| any      | Check if any element of an array satisfies a condition | `[1 2 3 4 5] {2 % 0 ==} any` |
 
 
 ### Other Operators
 | Operator | Description                                           | Example                    |
 |----------|-------------------------------------------------------|----------------------------|
+| sub      | Substack the top element of the stack                 | `sub`                      |
+| subn     | Cluster elements between the top and the nth (make substacks) | `3 subn`           |
 | include  | Include the specified file                            | `"file.stk" include`       |
 | eval     | Evaluate the specified RPN expression                 | `'3 5 +' eval`             |
 | evalpy   | Evaluate the specified Python expression              | `'3+5' evalpy`             |
