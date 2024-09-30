@@ -9,10 +9,10 @@ from stacker.syntax.parser import remove_start_end_quotes
 
 def include_stacker_script(filename: str | Path):
     """Import a stacker script and return the stacker object."""
-
-    filename = remove_start_end_quotes(filename)
     if isinstance(filename, str):
-        filename = Path(filename).resolve()
+        filename = remove_start_end_quotes(filename)
+        # filename = Path(filename).resolve()
+        filename = Path(filename)
     if not filename.is_file():
         raise IncludeError(f"File {filename} not found.")
     if not filename.exists():

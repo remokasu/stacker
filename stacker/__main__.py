@@ -22,7 +22,7 @@ parser = argparse.ArgumentParser(description="Stacker command line interface.")
 parser.add_argument(
     "--addplugin", metavar="path", type=str, help="Path to the plugin to add."
 )
-parser.add_argument("--dmode", action="store_true", help="Enable debug mode")
+parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 parser.add_argument("-e", default=None, help="Execute the given command.")
 parser.add_argument("script", nargs="?", default=None, help="Script file to run.")
 argv = parser.parse_args()
@@ -86,7 +86,7 @@ def load_dotfile(stacker: Stacker, dotfile_path: str | Path) -> None:
         print(f"An error occurred while loading the dotfile: {str(e)}")
 
 
-def copy_plugin_to_install_dir(plugin_path: str, dmode: bool) -> None:
+def copy_plugin_to_install_dir(plugin_path: str, debug_mode: bool) -> None:
     try:
         # Get the installation directory of Stacker
         stacker_dist = get_distribution("pystacker")
@@ -106,7 +106,7 @@ def copy_plugin_to_install_dir(plugin_path: str, dmode: bool) -> None:
         print(
             f"An error occurred while adding the plugin ({str(plugin_path)}): {str(e)}"
         )
-        if dmode:
+        if debug_mode:
             traceback.print_exc()
 
 
@@ -114,10 +114,10 @@ def main():
     """Main entry point for the Stacker CLI."""
     # add plugin
     if argv.addplugin:
-        copy_plugin_to_install_dir(argv.addplugin, argv.dmode)
+        copy_plugin_to_install_dir(argv.addplugin, argv.debug)
         return
 
-    if argv.dmode:
+    if argv.debug:
         logging.basicConfig(level=logging.DEBUG)
     else:
         logging.basicConfig(level=logging.INFO)
@@ -154,7 +154,7 @@ def main():
         script_mode = ScriptMode(rpn_calculator)
         if stacker_dotfile_path.exists():
             script_mode.execute_stacker_dotfile(stacker_dotfile_path)
-        if argv.dmode:
+        if argv.debug:
             script_mode.debug_mode()
         script_mode.run(argv.script)
     else:
@@ -163,7 +163,7 @@ def main():
         # execute the dotfile
         if stacker_dotfile_path.exists():
             repl_mode.execute_stacker_dotfile(stacker_dotfile_path)
-        if argv.dmode:
+        if argv.debug:
             repl_mode.debug_mode()
         if repl_mode.rpn_calculator.disp_logo_mode:
             disp_logo()

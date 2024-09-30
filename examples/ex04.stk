@@ -1,7 +1,7 @@
 "macro.stk" include
 "func.stk" include
 
-(x y) {x y +} $fadd defun
+{x y} {x y +} $fadd defun
 {* 10 +} $mulmacro alias
 
 4 oneadd echo

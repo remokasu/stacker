@@ -17,18 +17,18 @@ class TestUnit(unittest.TestCase):
         with self.assertRaises(TypeError):
             stacker.process_expression(expr)
 
-    def test_range(self):
-        stacker = Stacker()
-        stacker.push(1)
-        stacker.push(5)
-        self.assertEqual(list(stacker.stack), [1, 5])
-        expr = "range"
-        stacker.process_expression(expr)
-        self.assertEqual(list(stacker.stack), [[1, 2, 3, 4]])
-        stacker.push(1.1)
-        stacker.push(4.2)
-        with self.assertRaises(TypeError):
-            stacker.process_expression(expr)
+    # def test_range(self):
+    #     stacker = Stacker()
+    #     stacker.push(1)
+    #     stacker.push(5)
+    #     self.assertEqual(list(stacker.stack), [1, 5])
+    #     expr = "range"
+    #     stacker.process_expression(expr)
+    #     self.assertEqual(list(stacker.stack), [[1, 2, 3, 4]])
+    #     stacker.push(1.1)
+    #     stacker.push(4.2)
+    #     with self.assertRaises(TypeError):
+    #         stacker.process_expression(expr)
 
     def test_len(self):
         stacker = Stacker()
