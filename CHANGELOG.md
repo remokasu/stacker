@@ -1,5 +1,58 @@
 # CHANGE LOG
 
+## [1.6.0]
+
+### Feature Changes
+- Changed debug mode startup option from `--dmode` to `--debug`
+- Replaced numpy operations with math and cmath modules to reduce external library dependencies
+  - Note: This changes the behavior of applying operators to iterable objects. Use the `map` function to replicate previous behavior
+
+### Bug Fixes
+- Fixed an error when inputting tuples in REPL mode. Also improved display
+- Improved error detection when using undefined variables within tuples or lists
+
+### New Features
+- `sub` command: Converts the top stack element to a code block
+- `subn` command: Converts elements from the top of the stack to the nth element into a code block
+- Added higher-order functions: `map`, `filter`, `zip` (applicable to lists, tuples, and code blocks)
+- Added aggregation functions: `any`, `all`, `sum`, `max`, `min` (applicable to lists, tuples, and code blocks)
+
+### Breaking Changes
+1. Changed method of specifying arguments in function definitions
+   - New: `{arg1 arg2} { ... } $funcName defun`
+   - Old: `(arg1 arg2) { ... } $funcName defun` or `[arg1 arg2] { ... } $funcName defun`
+
+2. Quotation marks are now required for string specifications within tuples and lists
+   - Correct: `("hoge" "hoge")`
+   - Incorrect: `(hoge hoge)`
+
+### Usage Examples
+
+Higher-order functions:
+~~~
+stacker:0> [1 2 3] {2 *} map
+[[2 4 6]]
+stacker:0> (1 2 3) {2 *} map
+[(2, 4, 6)]
+stacker:0> {1 2 3} {2 *} map
+[{2 4 6}]
+~~~
+
+Aggregation functions:
+~~~
+stacker:0> [true false true] any
+[true]
+stacker:0> [true false true] all
+[false]
+stacker:0> [1 2 3] sum
+[6]
+stacker:0> [1 2 3] max
+[3]
+stacker:0> [1 2 3] min
+[1]
+~~~
+
+
 ## [1.5.9] - 2024-09-16
 - Fixed the `eval` command. Previously used solely for evaluating strings, it can now also evaluate block stacks and literal objects.
   - Examples:

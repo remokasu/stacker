@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import ast
 import re
-from typing import Any
-
+from typing import List, Union, Iterator, Optional, Any
 from stacker.syntax.lexer import lex_string
 
 __transpose_symbol__ = "^T"
@@ -189,90 +188,309 @@ def is_contains_transpose_command(expression: str) -> bool:
     return False
 
 
-def convert_custom_array_to_proper_list(token: str) -> str:
+class Token:
+    """Represents a single token."""
+
+    def __init__(self, type_: str, value: str) -> None:
+        self.type: str = type_
+        self.value: str = value
+
+    def __repr__(self) -> str:
+        return f"Token({self.type}, {self.value})"
+
+
+class Identifier:
+    """Represents an identifier."""
+
+    def __init__(self, name: str) -> None:
+        self.name: str = name
+
+    def __repr__(self) -> str:
+        return f"Identifier({self.name})"
+
+
+class ListNode:
+    """Represents a list node."""
+
+    def __init__(self, elements: List[Any]) -> None:
+        self.elements: List[Any] = elements
+
+    def __repr__(self) -> str:
+        return f"ListNode({self.elements})"
+
+
+class TupleNode:
+    """Represents a tuple node."""
+
+    def __init__(self, elements: List[Any]) -> None:
+        self.elements: List[Any] = elements
+
+    def __repr__(self) -> str:
+        return f"TupleNode({self.elements})"
+
+
+class Tokenizer:
+    """Splits input string into tokens."""
+
+    # Define token patterns
+    token_specification: List[tuple] = [
+        ("BRACED_CONTENT", r"\{[^}]*\}"),  # Content inside braces (highest priority)
+        # Complex numbers with real and imaginary parts (e.g., 2+3j, -4.5-6.7j)
+        (
+            "COMPLEX_NUMBER",
+            r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[+-](\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[jJ]",
+        ),
+        (
+            "NUMBER",
+            r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[jJ]?",
+        ),  # Integer, float, complex (imaginary only)
+        (
+            "STRING",
+            r"('([^'\\]|\\.)*'|\"([^\"\\]|\\.)*\")",
+        ),  # Strings with single or double quotes
+        ("IDENTIFIER", r"[A-Za-z_][A-Za-z0-9_]*"),  # Identifier
+        ("LBRACKET", r"\["),  # Left bracket
+        ("RBRACKET", r"\]"),  # Right bracket
+        ("LPAREN", r"\("),  # Left parenthesis
+        ("RPAREN", r"\)"),  # Right parenthesis
+        ("SEMICOLON", r";"),  # Semicolon
+        ("OPERATOR", r"[+\-]"),  # Plus or minus sign
+        ("SPACE", r"\s+"),  # Space
+        ("COMMA", r","),  # Comma
+        ("OTHER", r"."),  # Other characters
+    ]
+
+    def __init__(self, text: str) -> None:
+        self.text: str = text
+        self.tokens: Iterator[Token] = self.tokenize()
+
+    def tokenize(self) -> Iterator[Token]:
+        tok_regex: str = "|".join(
+            f"(?P<{name}>{pattern})" for name, pattern in self.token_specification
+        )
+        get_token = re.compile(tok_regex).match
+        pos: int = 0
+        mo: Optional[re.Match] = get_token(self.text, pos)
+        while mo:
+            kind: str = mo.lastgroup  # type: ignore
+            value: str = mo.group()
+            if kind != "SPACE":  # Ignore spaces
+                yield Token(kind, value)
+            pos = mo.end()
+            mo = get_token(self.text, pos)
+        if pos != len(self.text):
+            raise SyntaxError(
+                f"Unexpected character {self.text[pos]!r} at position {pos}"
+            )
+
+
+class Parser:
+    """Builds Python list or tuple structure from tokens."""
+
+    def __init__(self, tokenizer: Tokenizer) -> None:
+        self.tokens: Iterator[Token] = iter(tokenizer.tokens)
+        self.current_token: Optional[Token] = None
+        self.next_token()
+
+    def next_token(self) -> None:
+        """Get the next token."""
+        try:
+            self.current_token = next(self.tokens)
+        except StopIteration:
+            self.current_token = None
+
+    def parse(self) -> Union[ListNode, TupleNode]:
+        """Start parsing."""
+        if self.current_token is None:
+            return ListNode([])
+        return self.parse_structure()
+
+    def parse_structure(self) -> Union[ListNode, TupleNode]:
+        """Parse a list or tuple structure."""
+        elements: List[Any] = []
+        if self.current_token.type == "LBRACKET":
+            opening_bracket: str = "LBRACKET"
+            closing_bracket: str = "RBRACKET"
+            node_class = ListNode
+        elif self.current_token.type == "LPAREN":
+            opening_bracket = "LPAREN"
+            closing_bracket = "RPAREN"
+            node_class = TupleNode
+        else:
+            raise SyntaxError(
+                f"Expected LBRACKET or LPAREN, got {self.current_token.type}"
+            )
+        self.expect(opening_bracket)
+        while self.current_token and self.current_token.type != closing_bracket:
+            if self.current_token.type == "BRACED_CONTENT":
+                # Handle braced content
+                content = self.current_token.value  # Includes the braces
+                elements.append({"braced_content": content})
+                self.next_token()
+            elif self.current_token.type in ("LBRACKET", "LPAREN"):
+                # Nested list or tuple
+                elements.append(self.parse_structure())
+            elif self.current_token.type == "COMPLEX_NUMBER":
+                # Complex number with real and imaginary parts
+                num_str = self.current_token.value
+                number = ast.literal_eval(num_str)
+                elements.append(number)
+                self.next_token()
+            elif self.current_token.type == "NUMBER":
+                # Number (int, float, or imaginary-only complex)
+                num_str = self.current_token.value
+                number = ast.literal_eval(num_str)
+                elements.append(number)
+                self.next_token()
+            elif self.current_token.type == "STRING":
+                # String (remove quotes)
+                string_value = self.current_token.value
+                unquoted_string = ast.literal_eval(string_value)
+                elements.append(unquoted_string)
+                self.next_token()
+            elif self.current_token.type == "IDENTIFIER":
+                # Identifier
+                elements.append(Identifier(self.current_token.value))
+                self.next_token()
+            elif self.current_token.type == "SEMICOLON":
+                # Line separator (new substructure)
+                self.next_token()
+                elements.append(";")  # Keep semicolon as placeholder
+            else:
+                raise SyntaxError(f"Unexpected token {self.current_token}")
+        self.expect(closing_bracket)
+        # If there is at least one semicolon, we need to split
+        if ";" in elements:
+            split_elements = self.split_by_semicolon(elements, node_class)
+            return node_class(split_elements)
+        else:
+            # No semicolons, return elements directly
+            return node_class(elements)
+
+    def split_by_semicolon(self, elements: List[Any], node_class: Any) -> List[Any]:
+        """Create sublists or subtuples based on semicolons."""
+        result: List[Any] = []
+        current: List[Any] = []
+        for item in elements:
+            if item == ";":
+                if current:
+                    result.append(self.wrap_node(current, node_class))
+                    current = []
+            else:
+                current.append(item)
+        if current:
+            result.append(self.wrap_node(current, node_class))
+        return result
+
+    def wrap_node(self, elements: List[Any], node_class: Any) -> Any:
+        """Wrap elements into node_class, or return single element."""
+        if len(elements) == 1 and isinstance(elements[0], (ListNode, TupleNode)):
+            return elements[0]
+        else:
+            return node_class(elements)
+
+    def expect(self, token_type: str) -> None:
+        """Expect a specific token type and advance."""
+        if self.current_token and self.current_token.type == token_type:
+            self.next_token()
+        else:
+            expected: str = token_type
+            actual: str = self.current_token.type if self.current_token else "EOF"
+            raise SyntaxError(f"Expected token {expected}, got {actual}")
+
+
+class ArrayConverter:
+    """Converts custom array string to Python list or tuple format string."""
+
+    def __init__(self, text: str) -> None:
+        self.text: str = text
+
+    def convert(self) -> str:
+        tokenizer = Tokenizer(self.text)
+        parser = Parser(tokenizer)
+        parsed: Union[ListNode, TupleNode] = parser.parse()
+        # Flatten singleton lists or tuples at the top level
+        while (
+            isinstance(parsed, (ListNode, TupleNode))
+            and len(parsed.elements) == 1
+            and isinstance(parsed.elements[0], (ListNode, TupleNode))
+        ):
+            parsed = parsed.elements[0]
+        return self.format_structure(parsed)
+
+    def format_structure(
+        self,
+        obj: Union[ListNode, TupleNode, int, float, complex, str, Identifier, dict],
+    ) -> str:
+        """Format the parsed structure into a string."""
+        if isinstance(obj, ListNode):
+            return (
+                "["
+                + ",".join(self.format_structure(item) for item in obj.elements)
+                + "]"
+            )
+        elif isinstance(obj, TupleNode):
+            return (
+                "("
+                + ",".join(self.format_structure(item) for item in obj.elements)
+                + ")"
+            )
+        elif isinstance(obj, dict) and "braced_content" in obj:
+            content = obj["braced_content"]
+            # Remove extra spaces inside braces if needed
+            content = content.strip()
+            return f'"{content}"'
+        elif isinstance(obj, Identifier):
+            return f"'{self.format_identifier(obj)}'"
+        elif isinstance(obj, str):
+            return f"'\"{obj}\"'"
+        elif isinstance(obj, complex):
+            return str(obj)
+        else:
+            return str(obj)
+
+    def format_identifier(self, obj: Identifier) -> str:
+        """Format an identifier."""
+        # return f'${obj.name}'
+        return f"{obj.name}"
+
+
+def convert_custom_array_to_proper_list(input_str: str) -> str:
     """
-    Converts a custom list token into a proper Python list.
-
-    :param token: The custom list token to be converted.
-    :return: The converted token as a proper Python list.
-
-    Example:
-    Input:  "[1 2 3; 4 5 6]"
-    Output: "[[1, 2, 3], [4, 5, 6]]"
-    Input:  "[1 2 3]"
-    Output: "[1, 2, 3]"
+    >>> convert_custom_array_to_proper_list("[1 2 3; 4 5 6]")
+    '[[1,2,3],[4,5,6]]'
+    >>> convert_custom_array_to_proper_list("[1 2 3]")
+    '[1,2,3]'
+    >>> convert_custom_array_to_proper_list("[1 2 3; 4 5 6; 7 8 9]")
+    '[[1,2,3],[4,5,6],[7,8,9]]'
+    >>> convert_custom_array_to_proper_list("[1 2 3; 4 5 6; 7 8 9; 10 11 12]")
+    '[[1,2,3],[4,5,6],[7,8,9],[10,11,12]]'
+    >>> convert_custom_array_to_proper_list("[[1 2 3; 4 5 6; 7 8 9]; [10 11 12; 13 14 15; 16 17 18]; [19 20 21; 22 23 24; 25 26 27]]")
+    '[[[1,2,3],[4,5,6],[7,8,9]],[[10,11,12],[13,14,15],[16,17,18]],[[19,20,21],[22,23,24],[25,26,27]]]'
+    >>> convert_custom_array_to_proper_list("[1 2 3; 4 5 6; 7 8 9; [10 11 12]]")
+    '[[1,2,3],[4,5,6],[7,8,9],[[10,11,12]]]'
+    >>> convert_custom_array_to_proper_list("[1 2 3; 4 5 6; 7 8 9; [10 11 12; 13 14 15]]")
+    '[[1,2,3],[4,5,6],[7,8,9],[[10,11,12],[13,14,15]]]'
+    >>> convert_custom_array_to_proper_list("[a b c]")
+    "['a','b','c']"
+    >>> convert_custom_array_to_proper_list("['a' 'b' 'c']")
+    '''['"a"','"b"','"c"']''''
+    >>> convert_custom_array_to_proper_list("[1 2 {3 4 5}]")
+    '[1,2,"{3 4 5}"]'
     """
-
-    token = token.replace(";", "], [")
-    token = re.sub(r"(\d+(\.\d+)?)\s+", r"\1, ", token)
-    open_brackets = token.count("[")
-    close_brackets = token.count("]")
-    if open_brackets > close_brackets:
-        token += "]" * (open_brackets - close_brackets)
-    if is_array(token) and not is_single_array(token):
-        token = f"[{token}]"
-    return token
+    converter = ArrayConverter(input_str)
+    return converter.convert()
 
 
-def convert_custom_tuple_to_proper_tuple(token: str) -> str:
-    """
-    Converts a custom tuple token into a proper Python tuple.
-
-    :param token: The custom tuple token to be converted.
-    :return: The converted token as a proper Python tuple.
-
-    Example:
-    Input:  "(1 2 3; 4 5 6)"
-    Output: "((1, 2, 3), (4, 5, 6))"
-    """
-    token = re.sub(r"(\d+(\.\d+)?)\s+", r"\1, ", token)
-    token = re.sub(r";\s+", r"), (", token)
-
-    open_parenthesis = token.count("(")
-    close_parenthesis = token.count(")")
-    if open_parenthesis > close_parenthesis:
-        token += ")" * (open_parenthesis - close_parenthesis)
-    if is_tuple(token) and not is_single_tuple(token):
-        token = f"({token})"
-    return token
-
-
-def convert_custom_string_tuple_to_proper_tuple(token: str) -> str:
-    """
-    Converts a custom tuple token with string elements into a proper Python tuple.
-
-    :param token: The custom tuple token to be converted.
-    :return: The converted token as a proper Python tuple.
-
-    Example:
-    Input:  "(a b)"
-    Output: "("a", "b")"
-    Input:  "(x)"
-    Output: "x"
-    """
-    # Convert sequences of non-number, non-punctuation characters to
-    #    use commas and surround with quotes
-    token = re.sub(r"([a-zA-Z_]\w*)\s*", r'"\1", ', token)
-    # Change semicolons to tuple separators
-    token = re.sub(r";\s*", r"), (", token)
-
-    open_parenthesis = token.count("(")
-    close_parenthesis = token.count(")")
-    if open_parenthesis > close_parenthesis:
-        token += ")" * (open_parenthesis - close_parenthesis)
-    if is_tuple(token) and not is_single_tuple(token):
-        token = f"({token})"
-
-    # Clean up any trailing commas and quotes
-    token = re.sub(r", \)", r")", token)
-    token = re.sub(r'", ', r'",', token)
-    return token
-
-
-def parse_expression(expression: str) -> list:
+def parse_expression(expression: str) -> list[str]:
     """
     input(str)  : [1 2 3] 4 5 a
     output(list): [[1, 2, 3], 4, 5, 'a']
+
+    >>> parse_expression("[1 2 3] 4 5 a")
+    ['[1 2 3]', '4', '5', 'a']
+    >>> parse_expression("{0}")
+    ['{0}']
     """
     ignore_tokens = ['"""', "'''"]
     lexed_expression: list = lex_string(expression)
@@ -281,18 +499,17 @@ def parse_expression(expression: str) -> list:
         if token in ignore_tokens:
             continue
         elif is_array(token):
-            token = convert_custom_array_to_proper_list(token)
-            tokens.append(evaluate_token_or_return_str(token))
+            tokens.append(token)
         elif is_tuple(token):
-            token = convert_custom_tuple_to_proper_tuple(token)
-            tokens.append(evaluate_token_or_return_str(token))
+            tokens.append(token)
         elif is_string(token):
             tokens.append(token)
         else:
-            tokens.append(evaluate_token_or_return_str(token))
+            tokens.append(token)
     return tokens
 
 
 if __name__ == "__main__":
-    print(parse_expression("[1 2 3] 4 5 a +"))
-    print(parse_expression("(1)"))
+    import doctest
+
+    doctest.testmod()

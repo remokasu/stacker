@@ -1,1 +1,1 @@
-(x) {x 2 ^} $power defun
+{x} {x 2 ^} $power defun
