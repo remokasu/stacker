@@ -15,7 +15,7 @@ def define_macro(stacker: Stacker, name: str, body: Stacker) -> None:
 
 
 macro_operators = {
-    "alias": {
+    "defmacro": {
         "func": (lambda stacker, name, body: define_macro(stacker, name, body)),
         "arg_count": 2,
         "push_result_to_stack": False,
