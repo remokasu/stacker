@@ -1,2 +1,2 @@
 {x} {x 2 ^} $power defun
-{1 +} $increment alias
+{1 +} $increment defmacro

@@ -304,11 +304,11 @@ Stacker allows for straightforward RPN input. For example:
 - ### Define a macro:
   - syntax:
     ```bash
-    {body} $name alias
+    {body} $name defmacro
     ```
   - example:
     ```bash
-    stacker:0> {2 ^ 3 * 5 +} $calculatePowerAndAdd alias
+    stacker:0> {2 ^ 3 * 5 +} $calculatePowerAndAdd defmacro
     stacker:1> 5 calculatePowerAndAdd
     [80]
     ```
@@ -616,7 +616,7 @@ print(stacker.eval("3 4 +"))
 | Operator | Description                                           | Example                    |
 |----------|-------------------------------------------------------|----------------------------|
 | defun    | Define a function                                     | `{x y} {x y *} $multiply defun` |
-| alias    | Define a macro                                        | `{2 ^ 3 * 5 +} $calculatePowerAndAdd alias` |
+| defmacro    | Define a macro                                        | `{2 ^ 3 * 5 +} $calculatePowerAndAdd defmacro` |
 | set      | Assign a value to a variable                          | `3 $x set`                |
 
 

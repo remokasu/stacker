@@ -33,7 +33,7 @@ from stacker.lib.function.include import include_operators
 from stacker.lib.function.setting import settings_operators
 from stacker.lib.function.exit import exit_operators
 from stacker.lib.function.defun import defun_operators
-from stacker.lib.function.alias import macro_operators
+from stacker.lib.function.defmacro import macro_operators
 from stacker.lib.function.hof import hof_operators
 from stacker.syntax.parser import (
     convert_custom_array_to_proper_list,
@@ -203,7 +203,6 @@ class StackerCore:
         if isinstance(value, StackerCore):
             value._evaluate(value.tokens, stack=value.stack)
             sub = value.stack
-            sub = value.stack
             if sub:
                 stack.extend(sub)
             return stack.pop()
@@ -324,10 +323,10 @@ class StackerCore:
     def _literal_eval(self, token: str) -> Any:
         if is_block(token):
             return token
-        elif is_string(token):
-            return String(token[1:-1])
         elif token in self.variables:
             return self.variables[token]
+        elif is_string(token):
+            return String(token[1:-1])
         else:
             try:
                 return ast.literal_eval(token)
@@ -412,7 +411,7 @@ class StackerCore:
                 else:
                     fargs = [fargs]
                 op["func"](self, name, fargs, body)
-            elif token == "alias":
+            elif token == "defmacro":
                 name = stack.pop()
                 body = stack.pop()
                 op["func"](self, name, body)
@@ -479,8 +478,16 @@ class StackerCore:
                 xs1 = stack.pop()
                 xs_org = copy.deepcopy(xs1)
                 # ys_org = copy.deepcopy(ys)
-                xs2 = xs2.tokens if isinstance(xs2, StackerCore) else xs2
-                xs1 = xs1.tokens if isinstance(xs1, StackerCore) else xs1
+                xs2 = (
+                    xs2.tokens
+                    if isinstance(xs2, StackerCore)
+                    else self._var_str_to_literal(xs2)
+                )
+                xs1 = (
+                    xs1.tokens
+                    if isinstance(xs1, StackerCore)
+                    else self._var_str_to_literal(xs1)
+                )
                 if op["push_result_to_stack"]:
                     lst = op["func"](xs1, xs2)
                     if isinstance(xs_org, list):
@@ -497,7 +504,11 @@ class StackerCore:
             op = self.transform_operators[token]
             args = stack.pop()
             args_org = copy.deepcopy(args)
-            args = args.tokens if isinstance(args, StackerCore) else args
+            args = (
+                args.tokens
+                if isinstance(args, StackerCore)
+                else self._var_str_to_literal(args)
+            )
             if op["push_result_to_stack"]:
                 lst = op["func"](args)
                 if token == "list":
@@ -520,7 +531,7 @@ class StackerCore:
             args = (
                 list(map(self._literal_eval, args.tokens))
                 if isinstance(args, StackerCore)
-                else args
+                else self._var_str_to_literal(args)
             )
             if op["push_result_to_stack"]:
                 stack.append(op["func"](args))

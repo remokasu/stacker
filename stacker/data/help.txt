@@ -13,7 +13,7 @@ Examples:
   Variable assignment: 5 $a set
   Function definition: {x y} {x y ^ } $funcName defun
   Function call: 4 5 func
-  Macro definition: {2 ^ 5 +} $macroName alias
+  Macro definition: {2 ^ 5 +} $macroName defmacro
   Macro call: 3 macroName
 
 Numbwer input

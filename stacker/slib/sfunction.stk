@@ -2,4 +2,4 @@
 """
 mean: Mean of a list of numbers
 """
-$xs {xs sum xs len /} $mean defun
+{xs} {xs sum xs len /} $mean defun
