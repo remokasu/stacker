@@ -1,5 +1,21 @@
 # CHANGE LOG
 
+## [1.6.1]
+
+### Bug Fixes
+- Resolved an issue where passing arrays to user-defined functions resulted in errors.
+
+### Breaking Changes
+- Changed the macro definition command from `alias` to `defmacro`.
+  - Rationale: This change aligns the macro definition syntax with the function definition syntax (`defun`).
+  - Note: This modification is not backwards compatible with previous versions.
+
+### Migration
+Users will need to update their existing macro definitions:
+- Old syntax: `alias`
+- New syntax: `defmacro`
+
+
 ## [1.6.0]
 
 ### Feature Changes

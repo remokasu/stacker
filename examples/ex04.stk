@@ -2,7 +2,7 @@
 "func.stk" include
 
 {x y} {x y +} $fadd defun
-{* 10 +} $mulmacro alias
+{* 10 +} $mulmacro defmacro
 
 4 oneadd echo
 5 power echo
