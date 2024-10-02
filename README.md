@@ -20,9 +20,9 @@ Feedback and contributions are welcome. Please submit issues or suggestions on t
 
 ## Dependencies
 
-Stacker uses external libraries like NumPy and Python Prompt Toolkit. Ensure these are installed:
+Python Prompt Toolkit is required for Stacker. Install it using the following command:
 ```bash
-pip install numpy prompt_toolkit
+pip install prompt_toolkit
 ```
 
 ## Usage

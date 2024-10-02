@@ -36,7 +36,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(list(stacker.stack), [[1, 2, 3, 4, 5]])
         expr = "len"
         stacker.process_expression(expr)
-        self.assertEqual(list(stacker.stack), [5])
+        self.assertEqual(list(stacker.stack), [[1, 2, 3, 4, 5], 5])
         stacker.push(1.1)
         with self.assertRaises(TypeError):
             stacker.process_expression(expr)
@@ -47,7 +47,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(list(stacker.stack), [[1, 2, 3, 4, 5]])
         expr = "min"
         stacker.process_expression(expr)
-        self.assertEqual(list(stacker.stack), [1])
+        self.assertEqual(list(stacker.stack), [[1, 2, 3, 4, 5], 1])
         stacker.push(1.1)
         with self.assertRaises(TypeError):
             stacker.process_expression(expr)
@@ -58,7 +58,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(list(stacker.stack), [[1, 2, 3, 4, 5]])
         expr = "max"
         stacker.process_expression(expr)
-        self.assertEqual(list(stacker.stack), [5])
+        self.assertEqual(list(stacker.stack), [[1, 2, 3, 4, 5], 5])
         stacker.push(1.1)
         with self.assertRaises(TypeError):
             stacker.process_expression(expr)

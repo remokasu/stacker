@@ -61,34 +61,82 @@ if TYPE_CHECKING:
 
 special_operators = {
     "ans": {
+        "func": None,
         "arg_count": 0,
         "push_result_to_stack": True,
         "desc": "Returns the last result.",
     },
     "set": {
+        "func": None,
         "arg_count": 2,
         "push_result_to_stack": False,
         "desc": "Sets a variable.",
     },
     "eval": {
+        "func": None,
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Evaluates a given RPN expression.",
     },
     "break": {
+        "func": None,
         "arg_count": 0,
         "push_result_to_stack": False,
         "desc": "Breaks a loop.",
     },
     "sub": {
+        "func": None,
         "arg_count": 0,
         "push_result_to_stack": True,
         "desc": "Substack the top element",
     },
     "subn": {
+        "func": None,
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Cluster elements between the top and the nth (make substacks)",
+    },
+    "read-from-string": {
+        "func": None,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Reads a string and returns a list of words.",
+    },
+    "read": {
+        "func": None,
+        "arg_count": 0,
+        "push_result_to_stack": True,
+        "desc": "Reads a string from the console.",
+    },
+    "split": {
+        "func": None,
+        "arg_count": 2,
+        "push_result_to_stack": True,
+        "desc": "Splits the first string by the second string.",
+    },
+    "nth": {
+        "func": None,
+        "arg_count": 2,
+        "push_result_to_stack": True,
+        "desc": "Returns the nth element of the iterable.",
+    },
+    "len": {
+        "func": None,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns the length of an iterable.",
+    },
+    "min": {
+        "func": None,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns the minimum value in an iterable.",
+    },
+    "max": {
+        "func": None,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns the maximum value in an iterable.",
     },
 }
 
@@ -190,6 +238,10 @@ class StackerCore:
         :param token: {...}.
         """
         expression = token[1:-1]
+        self.child = type(self)(expression=expression, parent=self)
+        stack.append(self.child)
+
+    def _substack_with_expression(self, expression: str, stack: stack_data) -> None:
         self.child = type(self)(expression=expression, parent=self)
         stack.append(self.child)
 
@@ -431,6 +483,28 @@ class StackerCore:
                 elms = [stack.pop() for _ in range(n)]
                 elms.reverse()
                 self._substack_with_tokens(elms, stack)
+            elif token == "read-from-string":
+                self._substack_with_expression(stack.pop(), stack)
+            elif token == "read":
+                self._substack_with_expression(input(), stack)
+            elif token == "split":
+                sep = stack.pop()
+                word = stack.pop()
+                for string in word.split(sep):
+                    stack.append(string)
+            elif token == "len":
+                stack.append(len(stack[-1]))
+            elif token == "min":
+                stack.append(min(stack[-1]))
+            elif token == "max":
+                stack.append(max(stack[-1]))
+            elif token == "nth":
+                n = stack.pop()
+                lst = stack[-1]
+                if isinstance(lst, String):
+                    stack.append(String(lst[n]))
+                else:
+                    stack.append(lst[n])
             elif token == "include":
                 filename = stack.pop()
                 op["func"](self, filename)

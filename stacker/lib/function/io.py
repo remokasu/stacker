@@ -6,19 +6,15 @@ def _echo(content: str) -> None:
     print(content)
 
 
-def _println(content: str) -> None:
-    """Prints the specified content to the console."""
-    print(content)
-
-
-def _print(content: str) -> None:
+def _echo2(content: str) -> None:
     """Prints the specified content to the console."""
     print(content, end="")
 
 
 def _input() -> str:
     """Prints the specified content to the console."""
-    return input()
+    string = input()
+    return f'"{string}"'
 
 
 io_operators = {
@@ -28,14 +24,8 @@ io_operators = {
         "push_result_to_stack": False,
         "desc": "Prints the specified content to the console.",
     },
-    "print": {
-        "func": (lambda content: _print(content)),
-        "arg_count": 1,
-        "push_result_to_stack": False,
-        "desc": "Prints the specified content to the console.",
-    },
-    "println": {
-        "func": (lambda content: _println(content)),
+    "ECHO": {
+        "func": (lambda content: _echo2(content)),
         "arg_count": 1,
         "push_result_to_stack": False,
         "desc": "Prints the specified content to the console.",
