@@ -145,7 +145,9 @@ class ExecutionMode:
             # else:
             #     stack_str += colored(item_str, "default")
             #     stack_str += " "
-        stack_str = stack_str[0:-2]
+
+        # stack_str = stack_str[0:-2]
+        stack_str = stack_str[0:-1]
         stack_str += colored("]", "yellow")
         return stack_str
 
@@ -335,6 +337,18 @@ class CustomStringPrinter(CustomPrinter):
         return self.__str__()
 
 
+class CutomCallablePrinter(CustomPrinter):
+    def __init__(self, value: Any, color: str):
+        self.value = value
+        self.color = color
+
+    def __str__(self):
+        return colored(str(self.value), self.color)
+
+    def __repr__(self):
+        return str(self.value)
+
+
 color_map = {
     "int": "default",
     "float": "default",
@@ -345,6 +359,7 @@ color_map = {
     "list": "red",
     "tuple": "red",
     "block": "cyan",
+    "callable": "yellow",
 }
 
 
@@ -367,4 +382,6 @@ def custom_print(value: Any) -> CustomPrinter:
         return CustomTuplePrinter(value, color_map["tuple"])
     if isinstance(value, Stacker):
         return CustomBlockPrinter(value, color_map["block"])
+    if callable(value):
+        return CutomCallablePrinter(value, color_map["callable"])
     return value

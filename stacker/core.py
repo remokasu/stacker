@@ -35,6 +35,7 @@ from stacker.lib.function.exit import exit_operators
 from stacker.lib.function.defun import defun_operators
 from stacker.lib.function.defmacro import macro_operators
 from stacker.lib.function.hof import hof_operators
+from stacker.lib.function.lmd import lambda_operators
 from stacker.syntax.parser import (
     convert_custom_array_to_proper_list,
     is_block,
@@ -53,6 +54,7 @@ from stacker.reserved import (
     # __TRANSPOSE__
 )
 from stacker.data_type import String, stack_data
+from stacker.slambda import StackerLambda
 
 if TYPE_CHECKING:
     # from stacker.sfunction import StackerFunction
@@ -120,23 +122,11 @@ special_operators = {
         "push_result_to_stack": True,
         "desc": "Returns the nth element of the iterable.",
     },
-    "len": {
+    "expand": {
         "func": None,
         "arg_count": 1,
-        "push_result_to_stack": True,
-        "desc": "Returns the length of an iterable.",
-    },
-    "min": {
-        "func": None,
-        "arg_count": 1,
-        "push_result_to_stack": True,
-        "desc": "Returns the minimum value in an iterable.",
-    },
-    "max": {
-        "func": None,
-        "arg_count": 1,
-        "push_result_to_stack": True,
-        "desc": "Returns the maximum value in an iterable.",
+        "push_result_to_stack": False,
+        "desc": "Unlists a iterable.",
     },
 }
 
@@ -199,6 +189,7 @@ class StackerCore:
         self.priority_operators.update(include_operators)
         self.priority_operators.update(defun_operators)
         self.priority_operators.update(macro_operators)
+        self.priority_operators.update(lambda_operators)
         self.priority_operators.update(exit_operators)
 
         self.hof_operators = hof_operators
@@ -467,6 +458,13 @@ class StackerCore:
                 name = stack.pop()
                 body = stack.pop()
                 op["func"](self, name, body)
+            elif token == "lambda":
+                body = stack.pop()
+                fargs = stack.pop()
+                if op["push_result_to_stack"]:
+                    stack.append(op["func"](fargs, body))
+                else:
+                    op["func"](fargs, body)
             elif token == "eval":
                 expression = stack.pop()
                 if isinstance(expression, String):
@@ -505,6 +503,14 @@ class StackerCore:
                     stack.append(String(lst[n]))
                 else:
                     stack.append(lst[n])
+            elif token == "expand":
+                iterable = stack.pop()
+                if isinstance(iterable, list or tuple):
+                    stack.extend(iterable)
+                elif isinstance(iterable, StackerCore):
+                    stack.extend(iterable.tokens)
+                else:
+                    raise StackerSyntaxError(f"Cannot expand {iterable}")
             elif token == "include":
                 filename = stack.pop()
                 op["func"](self, filename)
@@ -611,6 +617,11 @@ class StackerCore:
                 stack.append(op["func"](args))
             else:
                 op["func"](args)
+        elif isinstance(token, StackerLambda):
+            args = []
+            for _ in range(token.arg_count):
+                args.insert(0, self._pop_and_eval(stack))
+            stack.append(token(*args))
         elif token in self.settings_operators:  # settings operators
             op = self.settings_operators[token]
             if token == "disable_plugin":
@@ -622,9 +633,11 @@ class StackerCore:
             raise StackerSyntaxError(f"Unknown operator '{token}'")
         return
 
-    def _get_hof_func(self, body: str | StackerCore) -> callable:
+    def _get_hof_func(self, body: str | StackerCore | StackerLambda) -> callable:
         if isinstance(body, StackerCore):
             return lambda args: self._stacker_lambda(args, body.copy())
+        elif isinstance(body, StackerLambda):
+            return body
         else:
             if body in self.sfunctions:
                 return self.sfunctions[body]["func"]
@@ -689,7 +702,8 @@ class StackerCore:
                     return item
                 elif item in self.variables:
                     return item
-                return repr(item)
+                else:
+                    return repr(item)
             return str(item)
 
         formatted_items = " ".join(map(format_item, self.tokens))
