@@ -69,9 +69,9 @@ class ExecutionMode:
         _reserved_word = list(self.receved_word)
         _operator_key = list(self.rpn_calculator.get_all_keys_for_completer())
         _priority_operators_key = list(
-            self.rpn_calculator.get_priority_operators_ref().keys()
+            self.rpn_calculator.operator_manager.get_priority_keys()
         )
-        # _setting_key = list(self.rpn_calculator.get_settings_operators_ref().keys())
+        # _setting_key = list(self.rpn_calculator.get_settings_ref().keys())
         _sfunctions_key = list(self.rpn_calculator.get_sfuntions_ref().keys())
         _variable_key = list(self.rpn_calculator.get_variables_ref().keys())
         _macro_key = list(self.rpn_calculator.get_macros_ref().keys())

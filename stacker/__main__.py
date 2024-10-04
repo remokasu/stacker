@@ -148,7 +148,7 @@ def main():
             commandline_mode.execute_stacker_dotfile(stacker_dotfile_path)
         commandline_mode.run(argv.e)
         return
-
+    
     if argv.script:
         # Script Mode
         script_mode = ScriptMode(rpn_calculator)
@@ -156,6 +156,7 @@ def main():
             script_mode.execute_stacker_dotfile(stacker_dotfile_path)
         if argv.debug:
             script_mode.debug_mode()
+        rpn_calculator.clear_trace()
         script_mode.run(argv.script)
     else:
         # REPL mode
@@ -167,6 +168,7 @@ def main():
             repl_mode.debug_mode()
         if repl_mode.rpn_calculator.disp_logo_mode:
             disp_logo()
+        rpn_calculator.clear_trace()
         repl_mode.run()
 
 
