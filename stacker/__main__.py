@@ -148,7 +148,7 @@ def main():
             commandline_mode.execute_stacker_dotfile(stacker_dotfile_path)
         commandline_mode.run(argv.e)
         return
-    
+
     if argv.script:
         # Script Mode
         script_mode = ScriptMode(rpn_calculator)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import Callable
 
 from stacker.error import StackerSyntaxError
 
@@ -165,44 +165,6 @@ class OperatorManager:
         if operator in self.oprerators["settings"]:
             return True
         return False
-
-    def get_func(self, operator: str) -> callable:
-        if operator in self._priority_operators:
-            return self._priority_operators[operator]["func"]
-        if operator in self._regular_operators:
-            return self._regular_operators[operator]["func"]
-        if operator in special_operators:
-            return special_operators[operator]["func"]
-        if operator in hof_operators:
-            return hof_operators[operator]["func"]
-        if operator in aggregate_operators:
-            return aggregate_operators[operator]["func"]
-        if operator in transform_operators:
-            return transform_operators[operator]["func"]
-        if operator in stack_operators:
-            return stack_operators[operator]["func"]
-        if operator in settings_operators:
-            return settings_operators[operator]["func"]
-        return None
-
-    def get_operator(self, operator):
-        if operator in self._priority_operators:
-            return self._priority_operators[operator]
-        if operator in self._regular_operators:
-            return self._regular_operators[operator]
-        if operator in special_operators:
-            return special_operators[operator]
-        if operator in hof_operators:
-            return hof_operators[operator]
-        if operator in aggregate_operators:
-            return aggregate_operators[operator]
-        if operator in transform_operators:
-            return transform_operators[operator]
-        if operator in stack_operators:
-            return stack_operators[operator]
-        if operator in settings_operators:
-            return settings_operators[operator]
-        raise StackerSyntaxError(f"Unknown operator '{operator}'")
 
     def get_all_keys(self) -> list[str]:
         key = []

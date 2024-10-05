@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
-from stacker.error import StackerSyntaxError
 from stacker.core import StackerCore
 from stacker.syntax.parser import parse_expression
 

@@ -28,7 +28,7 @@ from stacker.reserved import (
 )
 from stacker.data_type import String, stack_data
 from stacker.slambda import StackerLambda
-from stacker.operator_manager import OperatorManager
+from stacker.manager.operator_manager import OperatorManager
 
 if TYPE_CHECKING:
     # from stacker.sfunction import StackerFunction
