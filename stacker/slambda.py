@@ -22,7 +22,6 @@ class StackerLambda:
             raise ValueError(f"Expected {len(self.args)} arguments, got {len(values)}")
         for arg, value in zip(self.args, values):
             self.blockstack.variables[arg] = value
-            self.blockstack.stack.append(arg)
         self.blockstack.stack.append(self.blockstack)
         result = self.blockstack._pop_and_eval(self.blockstack.stack)
         return result

@@ -1,0 +1,5 @@
+1 2 + # ADD
+3 4 - # SUB
+-1 2 * # MUL
+
+disp # Display the result

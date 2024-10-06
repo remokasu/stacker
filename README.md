@@ -314,6 +314,17 @@ Stacker allows for straightforward RPN input. For example:
     ```
     This defines a macro with the body `{2 ^ 3 * 5 +}` and assigns it the name `calculatePowerAndAdd`. This macro squares the number on the stack, multiplies it by 3, and then adds 5.
 
+# Lambda Functions
+  - syntax:
+    ```bash
+    {arg1 arg2 ... argN} {body} lambda
+    ```
+  - example:
+    ```bash
+    stacker:0> {x y} {x y *} lambda
+    [λxλy.{x y *}]
+    ```
+  
 - ### Include Scripts
   Stacker scripts can be included in other scripts using the `include` command. For example:
 
@@ -612,11 +623,12 @@ print(stacker.eval("3 4 +"))
 | break    | Break out of a loop                                    | `break`                   |
 
 
-### Function, Macro, and Variable Operators
+### Function, Macro, Lambda, and Variable Operators
 | Operator | Description                                           | Example                    |
 |----------|-------------------------------------------------------|----------------------------|
 | defun    | Define a function                                     | `{x y} {x y *} $multiply defun` |
-| defmacro    | Define a macro                                        | `{2 ^ 3 * 5 +} $calculatePowerAndAdd defmacro` |
+| defmacro    | Define a macro                                     | `{2 ^ 3 * 5 +} $calculatePowerAndAdd defmacro` |
+| lambda   | Create a lambda function                              | `{x y} {x y *} lambda`    |
 | set      | Assign a value to a variable                          | `3 $x set`                |
 
 
@@ -639,8 +651,6 @@ print(stacker.eval("3 4 +"))
 | eval     | Evaluate the specified RPN expression                 | `'3 5 +' eval`             |
 | evalpy   | Evaluate the specified Python expression              | `'3+5' evalpy`             |
 | echo     | Print the specified value to stdout without adding it to the stack | `3 4 + echo`  |
-| println  | Print the specified value to stdout without adding it to the stack | `3 4 + println`  |
-| print    | Print the specified value to stdout without adding a newline character at the end or adding it to the stack. | `3 4 + print`  |
 | input    | Get input from the user                               | `input`                    |
 | read     | Read the contents of the specified file               | `"file.txt" read`          |
 | write    | Write the specified value to the specified file       | `"hoge" "file.txt" write`  |

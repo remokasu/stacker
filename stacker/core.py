@@ -124,6 +124,8 @@ class StackerCore:
         """
         self.trace = tokens
         for token in tokens:
+            # if token == "#":  # Comment
+            #     break
             if not isinstance(token, str):
                 stack.append(token)  # Literal value
             elif (
@@ -138,11 +140,11 @@ class StackerCore:
                 or token in self.plugins
             ):
                 self._execute(token, stack)
-                # self.trace = []
             elif token in self.macros:
                 self._expand_macro(token, stack)
             elif token in self.variables:
-                stack.append(token)
+                # stack.append(token)
+                stack.append(self.variables[token])
             elif is_string(token):
                 stack.append(String(token[1:-1]))
             elif is_tuple(token):
@@ -289,10 +291,14 @@ class StackerCore:
                 op["func"](try_block, catch_block, self)
             elif token == "set":
                 name = stack.pop()
+                if not isinstance(name, str):
+                    raise StackerSyntaxError(f"Expected a string, got {name}")
                 value = self._pop_and_eval(stack)
                 self.variables[name] = value
             elif token == "defun":
                 name = stack.pop()
+                if not isinstance(name, str):
+                    raise StackerSyntaxError(f"Expected a string, got {name}")
                 body = stack.pop()
                 fargs = stack.pop()  # str
                 if isinstance(fargs, tuple):
@@ -307,6 +313,8 @@ class StackerCore:
             elif token == "defmacro":
                 name = stack.pop()
                 body = stack.pop()
+                if not isinstance(name, str):
+                    raise StackerSyntaxError(f"Expected a string, got {name}")
                 op["func"](self, name, body)
             elif token == "lambda":
                 body = stack.pop()
@@ -329,7 +337,6 @@ class StackerCore:
                         args.insert(0, self._pop_and_eval(stack))
                     stack.append(expression(*args))
                 else:
-                    # self._eval(expression, stack=stack)
                     stack.append(expression)
             elif token == "sub":
                 token = stack.pop()
@@ -339,6 +346,15 @@ class StackerCore:
                 elms = [stack.pop() for _ in range(n)]
                 elms.reverse()
                 self._substack_with_tokens(elms, stack)
+            elif token == "listn" or token == "tuplen":
+                n = stack.pop()
+                elms = [stack.pop() for _ in range(n)]
+                elms.reverse()
+                if token == "listn":
+                    stack.append(elms)
+                else:
+                    stack.append(tuple(elms))
+                stack.append(elms)
             elif token == "read-from-string":
                 self._substack_with_expression(stack.pop(), stack)
             elif token == "read":
@@ -348,12 +364,6 @@ class StackerCore:
                 word = stack.pop()
                 for string in word.split(sep):
                     stack.append(string)
-            elif token == "len":
-                stack.append(len(stack[-1]))
-            elif token == "min":
-                stack.append(min(stack[-1]))
-            elif token == "max":
-                stack.append(max(stack[-1]))
             elif token == "nth":
                 n = stack.pop()
                 lst = stack[-1]

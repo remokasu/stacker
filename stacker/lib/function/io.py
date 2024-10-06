@@ -8,12 +8,18 @@ io_operators = {
         "push_result_to_stack": False,
         "desc": "Prints the specified content to the console.",
     },
-    # "print": {
-    #     "func": (lambda content: print(content, end="")),
-    #     "arg_count": 1,
-    #     "push_result_to_stack": False,
-    #     "desc": "Prints the specified content to the console.",
-    # },
+    "print": {
+        "func": (lambda content: print(content)),
+        "arg_count": 1,
+        "push_result_to_stack": False,
+        "desc": "Prints the specified content to the console.",
+    },
+    "printc": {
+        "func": (lambda content: print(content, end="")),
+        "arg_count": 1,
+        "push_result_to_stack": False,
+        "desc": "Prints the specified content to the console without a newline.",
+    },
     "newline": {
         "func": (lambda: print("")),
         "arg_count": 0,

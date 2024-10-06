@@ -1,5 +1,5 @@
 # sum of squares from 1 to 100.
 
 0 $s set
-1 100 $i {s i 2 ^ + s set} do
+1 100 $i {s i 2 ^ + $s set} do
 "result: " s str + echo

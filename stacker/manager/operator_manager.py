@@ -101,6 +101,18 @@ special_operators = {
         "push_result_to_stack": False,
         "desc": "Unlists a iterable.",
     },
+    "listn": {
+        "func": None,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Converts an iterable to a list.",
+    },
+    "tuplen": {
+        "func": None,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Converts an iterable to a tuple.",
+    },
 }
 
 
