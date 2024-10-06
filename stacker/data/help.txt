@@ -8,15 +8,7 @@ Usage:
   To use the result in a subsequent calculation, input the next expression.
   To clear the stack, type 'clear'.
 
-Examples:
-  RPN expression: 3 4 +
-  Variable assignment: 5 $a set
-  Function definition: {x y} {x y ^ } $funcName defun
-  Function call: 4 5 func
-  Macro definition: {2 ^ 5 +} $macroName defmacro
-  Macro call: 3 macroName
-
-Numbwer input
+Numbwer input:
   integer: 3
   float: 3.14
   scientific notation: 1.23e-4
@@ -24,15 +16,35 @@ Numbwer input
   binary: 0b1010
   octal: 0o123
   complex: 1+2j
+
 String input:
   "hogefoovar"
-  "hoge foo var"
+
 Array input:
   [1 2 3 4 5]
   [1 2 3; 4 5 6; 7 8 9]
 Tuple input:
   (1 2 3 4 5)
   (1 2 3; 4 5 6; 7 8 9)
+
+If statement:
+  {<true expr>} condition if
+  {<true expr>} {<false expr>} condition ifelse
+
+Loop statement:
+  - do
+    stat end $loopVariable {body} do
+  - times
+    {body} n times
+
+Define Function:
+  {arg1 srg2 ...} {body} $funcName defun
+
+Lambda:
+  {arg1 srg2 ...} {body} lambda  
+
+Macro:
+  {body} $macroName defmacro
 
 parameters:
   pi
@@ -42,11 +54,3 @@ parameters:
   true
   false
   null
-
-If statement:
-  {<true expr>} condition if
-  {<true expr>} {<false expr>} condition ifelse
-
-Loop statement:
-  stat end loopVariable {<loop expr>} do
-  {<loop expr>} n times
