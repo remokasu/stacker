@@ -14,16 +14,17 @@ pip install .
 ```
 
 
-## Feedback and Contributions
-
-Feedback and contributions are welcome. Please submit issues or suggestions on the [Issues page](https://github.com/remokasu/stacker/issues).
-
 ## Dependencies
 
 Python Prompt Toolkit is required for Stacker. Install it using the following command:
 ```bash
 pip install prompt_toolkit
 ```
+
+## Feedback and Contributions
+
+Feedback and contributions are welcome. Please submit issues or suggestions on the [Issues page](https://github.com/remokasu/stacker/issues).
+
 
 ## Usage
 
@@ -106,17 +107,11 @@ Stacker allows for straightforward RPN input. For example:
     ```
     In this example, we assign `3` to `x`.
     If you input an undefined symbol, you need to prefix the symbol name with a dollar sign ($). <br>
-    From now on, when using `x`, the character 'x' will be pushed onto the stack and evaluated to return `3` when popped. <br>
-    You can push the value of a symbol by prefixing it with @. <br>
-    For example, `@x` will push `3`.
+    Hereafter, when x is used, 3 will be pushed onto the stack. Additionally, when using predefined symbols, the dollar sign is not required.
     ``` bash
     stacker:0> 3 $x set
     stacker:1> x
-    [x]
-    stacker:2> @x
-    [x, 3]
-    stacker:1> +
-    [6]
+    [3]
     ```
 
 - Arrays:
@@ -211,7 +206,7 @@ Stacker allows for straightforward RPN input. For example:
 
     Syntax:
     ```bash
-    {true_block} {false_block} {condition} ifelse
+    {<true-block>} {<false-block>} {condition} ifelse
     ```
 
     Example:
@@ -253,7 +248,31 @@ Stacker allows for straightforward RPN input. For example:
 
     Result: Prints numbers from 0 to 10.
 
-  - ##### times Loop
+  - ##### dolist
+
+      The `dolist` loop iterates over a list of values.
+
+      Syntax:
+      ```bash
+      [value1 value2 ... valueN] $symbol {body} dolist
+      ```
+
+      Example:
+      ```bash
+      stacker:0> [1 2 3 4 5] $i {i echo} dolist
+      1
+      2
+      3
+      4
+      5
+      ```
+
+      Result: Prints numbers 1 through 5.
+
+      Note:
+        When expressing a list of consecutive values, the concise notation value1 valueN `seq` can be used instead of `[value1 value2 ... valueN]` to efficiently describe a sequence with a constant step size.
+
+  - ##### times
 
     The `times` loop repeats a code block a specified number of times.
 
@@ -314,7 +333,9 @@ Stacker allows for straightforward RPN input. For example:
     ```
     This defines a macro with the body `{2 ^ 3 * 5 +}` and assigns it the name `calculatePowerAndAdd`. This macro squares the number on the stack, multiplies it by 3, and then adds 5.
 
-# Lambda Functions
+- ### Lambda Functions
+  Lambda functions are anonymous functions that can be defined and executed on the fly. They are useful for creating temporary functions without the need for a formal definition.
+
   - syntax:
     ```bash
     {arg1 arg2 ... argN} {body} lambda
@@ -324,7 +345,16 @@ Stacker allows for straightforward RPN input. For example:
     stacker:0> {x y} {x y *} lambda
     [λxλy.{x y *}]
     ```
-  
+
+  - example:
+    ```bash
+    stacker:0> {x y} {x y *} lambda $multiply set
+    stacker:1> 3 4 multiply
+    [12]
+    ```
+    This example defines a lambda function that multiplies two numbers and assigns it to the variable `multiply`. The function is then called with the arguments `3` and `4`.
+
+
 - ### Include Scripts
   Stacker scripts can be included in other scripts using the `include` command. For example:
 
@@ -350,7 +380,7 @@ Stacker allows for straightforward RPN input. For example:
     ```
     stacker:0> "output.txt" read $text set
     ```
-    You can also set the contents of the file to a variable using the `set` command. 
+    You can also set the contents of the file to a variable using the `set` command.
 
 ## Running Scripts
 Stacker scripts can be created in `.stk` files. To run a script, simply execute it with Stacker. For example:

@@ -8,10 +8,10 @@ exit_operators = {
         "push_result_to_stack": False,
         "desc": "Exits the program.",
     },
-    "exit-error": {
+    "abort": {
         "func": (lambda: sys.exit(1)),
         "arg_count": 0,
         "push_result_to_stack": False,
-        "desc": "Exits the program with an error.",
+        "desc": "Aborts the program.",
     },
 }

@@ -7,6 +7,7 @@ if TYPE_CHECKING:
 
 from stacker.data_type import String, stack_data
 
+
 class StackerFunction:
     """A callable object that represents a function defined in Stacker."""
 

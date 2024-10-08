@@ -1,8 +1,9 @@
 from stacker import Stacker
 from stacker import Stacker
+
 stacker = Stacker()
 stacker.eval(
-"""time $s_t set
+    """time $s_t set
 100000 $n set
 0 $p set
 0 n $k {
@@ -13,4 +14,5 @@ time $e_t set
 
 p echo
 "time: " e_t s_t - str + echo
-""")
+"""
+)

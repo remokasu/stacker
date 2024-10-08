@@ -41,6 +41,20 @@ def _do(
             break
 
 
+def _dolist(
+    symbol: str,
+    lst: list,
+    block: Stacker,
+    parent: Stacker,
+):
+    for i in lst:
+        block.variables[symbol] = i
+        parent.evaluate(block.tokens, stack=parent.stack)
+        if len(parent.stack) > 0 and parent.stack[-1] == __BREAK__:
+            parent.stack.pop()
+            break
+
+
 loop_operators = {
     "times": {
         "func": (lambda n_times, block, parent: _times(n_times, block, parent)),
@@ -53,6 +67,14 @@ loop_operators = {
             lambda start_value, end_value, symbol, block, parent: _do(
                 start_value, end_value, symbol, block, parent
             )
+        ),
+        "arg_count": 4,
+        "push_result_to_stack": False,
+        "desc": "Executes a block of code a specified number of times.",
+    },
+    "dolist": {
+        "func": (
+            lambda symbol, lst, block, parent: _dolist(symbol, lst, block, parent)
         ),
         "arg_count": 4,
         "push_result_to_stack": False,

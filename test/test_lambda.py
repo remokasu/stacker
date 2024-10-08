@@ -25,11 +25,11 @@ class TestStacker(unittest.TestCase):
     def test_test_lambda_factorial(self):
         self.stacker.stack.clear()
         ans = self.stacker.eval(
-"""
+            """
 { n } {
     { 1 }
     {
-         n n 1 - fact eval *
+         n n 1 - fact *
     }
     n 1 <=
     ifelse

@@ -123,4 +123,10 @@ string_operators = {
         "push_result_to_stack": True,
         "desc": "Returns a substring of the specified string.",
     },
+    "format": {
+        "func": (lambda value1, value2: value1.format(value2)),
+        "arg_count": 2,
+        "push_result_to_stack": True,
+        "desc": "Formats the specified string using the specified arguments.",
+    },
 }

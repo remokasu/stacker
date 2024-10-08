@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 io_operators = {
     "echo": {
         "func": (lambda content: print(content)),

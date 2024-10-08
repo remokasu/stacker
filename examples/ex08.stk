@@ -1,7 +1,5 @@
 # Define a recursive factorial function using a lambda and assign it to 'fact'
 
-
-
 { n } {
     { 1 }
     {n n 1 - fact *}

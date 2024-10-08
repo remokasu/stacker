@@ -166,16 +166,12 @@ def is_list(expression: str) -> bool:
     return expression.startswith("[") and expression.endswith("]")
 
 
-def is_undefined_symbol(expression: str) -> bool:
+def is_symbol(expression: str) -> bool:
     return expression.startswith("$") and not expression.endswith("$")
 
 
 def is_label_symbol(expression: str) -> bool:
     return expression.endswith(":") and not expression.startswith(":")
-
-
-def is_reference_symbol(expression: str) -> bool:
-    return expression.startswith("@") and not expression.endswith("@")
 
 
 def is_transpose_command(expression: str) -> bool:
@@ -491,13 +487,18 @@ def parse_expression(expression: str) -> list[str]:
     ['[1 2 3]', '4', '5', 'a']
     >>> parse_expression("{0}")
     ['{0}']
+    >>> parse_expression("-1 k ^ 2 k * 1 + / p + $p set  # calculate p")
+    ['-1', 'k', '^', '2', 'k', '*', '1', '+', '/', 'p', '+', '$p', 'set']
     """
     ignore_tokens = ['"""', "'''"]
     lexed_expression: list = lex_string(expression)
     tokens = []
+
     for token in lexed_expression:
         if token in ignore_tokens:
             continue
+        elif token.startswith("#"):
+            return tokens
         elif is_array(token):
             tokens.append(token)
         elif is_tuple(token):

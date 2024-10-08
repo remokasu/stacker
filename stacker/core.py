@@ -14,12 +14,11 @@ from stacker.syntax.parser import (
     is_block,
     # is_contains_transpose_command,
     # is_label_symbol,
-    is_reference_symbol,
     is_string,
     is_list,
     # is_transpose_command,
     is_tuple,
-    is_undefined_symbol,
+    is_symbol,
     parse_expression,
 )
 from stacker.reserved import (
@@ -128,6 +127,19 @@ class StackerCore:
             #     break
             if not isinstance(token, str):
                 stack.append(token)  # Literal value
+            elif token in self.macros:
+                self._expand_macro(token, stack)
+            elif token in self.variables:  # Variable
+                # if variable is a function(lambda), evaluate it and push the result to the stack
+                # else, push the variable to the stack
+                value = self.variables[token]
+                if isinstance(value, StackerLambda):
+                    args = []
+                    for _ in range(value.arg_count):
+                        args.insert(0, self._pop_and_eval(stack))
+                    stack.append(value(*args))
+                else:
+                    stack.append(value)
             elif (
                 token in self.operator_manager.oprerators["priority"]
                 or token in self.operator_manager.oprerators["regular"]
@@ -140,11 +152,6 @@ class StackerCore:
                 or token in self.plugins
             ):
                 self._execute(token, stack)
-            elif token in self.macros:
-                self._expand_macro(token, stack)
-            elif token in self.variables:
-                # stack.append(token)
-                stack.append(self.variables[token])
             elif is_string(token):
                 stack.append(String(token[1:-1]))
             elif is_tuple(token):
@@ -175,15 +182,9 @@ class StackerCore:
             #     if token in self.variables:
             #         stack.append(self.variables[token])
             #         self._execute(__TRANSPOSE__, stack)
-            elif is_undefined_symbol(token):
+            elif is_symbol(token):
                 token = token[1:]
                 stack.append(token)
-            elif is_reference_symbol(token):
-                token = token[1:]
-                if token in self.variables:
-                    stack.append(self.variables[token])
-                else:
-                    raise UndefinedSymbolError(token)
             elif is_block(token):
                 self._substack(token, stack)
             else:
@@ -191,7 +192,7 @@ class StackerCore:
                 if isinstance(token, String):
                     stack.append(token)
                 elif isinstance(token, str):
-                    if is_undefined_symbol(token):
+                    if is_symbol(token):
                         stack.append(token)
                     else:
                         raise UndefinedSymbolError(token)
@@ -202,7 +203,7 @@ class StackerCore:
     def _var_str_to_literal(self, value: Any) -> Any:
         if is_string(value):
             return String(value[1:-1])
-        elif isinstance(value, str) and is_undefined_symbol(value):
+        elif isinstance(value, str) and is_symbol(value):
             if value[1:] in self.variables:
                 return self.variables[value[1:]]
             else:
@@ -269,7 +270,14 @@ class StackerCore:
                 symbol = stack.pop()
                 end_value = self._pop_and_eval(stack)
                 start_value = self._pop_and_eval(stack)
-                op["func"](start_value, end_value, symbol, body, self)
+                name = self._dollar_to_var_name(symbol)
+                op["func"](start_value, end_value, name, body, self)
+            elif token == "dolist":
+                body = stack.pop()
+                symbol = stack.pop()
+                lst = self._pop_and_eval(stack)
+                name = self._dollar_to_var_name(symbol)
+                op["func"](name, lst, body, self)
             elif token == "times":
                 n_times = self._pop_and_eval(stack)
                 body = stack.pop()
@@ -290,15 +298,13 @@ class StackerCore:
                 try_block = stack.pop()
                 op["func"](try_block, catch_block, self)
             elif token == "set":
-                name = stack.pop()
-                if not isinstance(name, str):
-                    raise StackerSyntaxError(f"Expected a string, got {name}")
+                symbol = stack.pop()
+                name = self._dollar_to_var_name(symbol)
                 value = self._pop_and_eval(stack)
                 self.variables[name] = value
             elif token == "defun":
-                name = stack.pop()
-                if not isinstance(name, str):
-                    raise StackerSyntaxError(f"Expected a string, got {name}")
+                symbol = stack.pop()
+                name = self._dollar_to_var_name(symbol)
                 body = stack.pop()
                 fargs = stack.pop()  # str
                 if isinstance(fargs, tuple):
@@ -311,10 +317,9 @@ class StackerCore:
                     fargs = [fargs]
                 op["func"](self, name, fargs, body)
             elif token == "defmacro":
-                name = stack.pop()
+                symbol = stack.pop()
                 body = stack.pop()
-                if not isinstance(name, str):
-                    raise StackerSyntaxError(f"Expected a string, got {name}")
+                name = self._dollar_to_var_name(symbol)
                 op["func"](self, name, body)
             elif token == "lambda":
                 body = stack.pop()
@@ -488,11 +493,6 @@ class StackerCore:
                 stack.append(op["func"](args))
             else:
                 op["func"](args)
-        elif isinstance(token, StackerLambda):
-            args = []
-            for _ in range(token.arg_count):
-                args.insert(0, self._pop_and_eval(stack))
-            stack.append(token(*args))
         elif (
             token in self.operator_manager.oprerators["settings"]
         ):  # settings operators
@@ -505,6 +505,26 @@ class StackerCore:
         else:
             raise StackerSyntaxError(f"Unknown operator '{token}'")
         return
+
+    def _dollar_to_var_name(self, symbol: str | StackerCore) -> str:
+        """
+        - $symbol -> symbol
+        - {$symbol} -> symbol
+        - symbol -> raise StackerSyntaxError
+        - {symbol} -> raise StackerSyntaxError
+        """
+        if isinstance(symbol, str):
+            if is_symbol(symbol):
+                return symbol[1:]
+            else:
+                return symbol
+        elif isinstance(symbol, StackerCore):
+            if len(symbol.tokens) == 1:
+                if is_symbol(symbol.tokens[0]):
+                    return symbol.tokens[0][1:]
+                else:
+                    return symbol.tokens[0]
+        raise StackerSyntaxError(f"Expected a symbol, got {symbol}")
 
     def _get_hof_func(self, body: str | StackerCore | StackerLambda) -> callable:
         if isinstance(body, StackerCore):
@@ -553,8 +573,8 @@ class StackerCore:
     def __len__(self):
         return len(self.tokens)
 
-    def __getitem__(self, key):
-        return self.tokens[key]
+    def __getitem__(self, index):
+        return self.tokens[index]
 
     def __str__(self):
         def format_item(item):
