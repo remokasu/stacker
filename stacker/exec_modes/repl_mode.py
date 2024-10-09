@@ -177,7 +177,7 @@ class ReplMode(ExecutionMode):
                 if self.rpn_calculator.disp_ans_mode is True:
                     self.disp_ans()
                 if self.rpn_calculator.disp_stack_mode is True:
-                    self.disp_stack()
+                    self.disp()
                 # else:
                 #     if self.rpn_calculator.get_stack_length() > 0:
                 #         print(self.rpn_calculator.get_stack_copy_as_list()[-1])

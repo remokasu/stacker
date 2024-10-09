@@ -14,7 +14,7 @@ from stacker.syntax.parser import (
 )
 
 # from stacker.syntax.parser import is_string
-from stacker.util.disp import disp_colored
+from stacker.util.disp import disp_stack
 
 # def simple_format(arr):
 #     """
@@ -105,14 +105,15 @@ class ExecutionMode:
     def run(self):
         raise NotImplementedError("Subclasses must implement the 'run' method")
 
-    def disp_stack(self) -> None:
+    def disp(self) -> None:
         """Print the current stack to the console."""
         _stack = self.rpn_calculator.get_stack_copy_as_list()
-        if self.color_print is True:
-            stack_str = disp_colored(_stack)
-            print(stack_str)
-        else:
-            print(f"{_stack}".replace(",", ""))
+        disp_stack(_stack, colored=self.color_print )
+        # if self.color_print is True:
+        #     stack_str = disp_colored(_stack)
+        #     print(stack_str)
+        # else:
+        #     print(f"{_stack}".replace(",", ""))
 
     def disp_all_valiables(self) -> None:
         variables = self.rpn_calculator.get_variables_copy()
