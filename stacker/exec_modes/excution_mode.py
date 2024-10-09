@@ -108,7 +108,7 @@ class ExecutionMode:
     def disp(self) -> None:
         """Print the current stack to the console."""
         _stack = self.rpn_calculator.get_stack_copy_as_list()
-        disp_stack(_stack, colored=self.color_print )
+        disp_stack(_stack, colored=self.color_print)
         # if self.color_print is True:
         #     stack_str = disp_colored(_stack)
         #     print(stack_str)
