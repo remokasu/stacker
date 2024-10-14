@@ -1,5 +1,46 @@
 # CHANGE LOG
 
+## [1.7.0]
+
+- **Support for Lambda Functions**:
+  - Lambda functions are now supported, enabling inline definitions and executions of anonymous functions.
+  - **Example**:
+    ```
+    stacker:0> {x} {x 2 *} lambda
+    ```
+
+- **Enforced Symbol Naming Conventions**:
+  - Symbols used as arguments in `set`, `defun`, and `defmacro` now require a `$` prefix to improve clarity and prevent naming conflicts.
+  - **Example**:
+    ```
+    stacker:0> 123 $a set
+    ```
+
+- **New Stack Manipulation Commands**:
+  - **n listn**: Converts the top n elements from the stack into a list.
+  - **n tuplen**: Converts the top n elements from the stack into a tuple.
+  - **extend**: Expands list and tuple objects onto the stack.
+  
+- **Input/Output Enhancements**:
+  - **read**: Reads data from standard input.
+  - **read-from-string**: Interprets a string as RPN expressions and reads it.
+
+- **Bug Fixes**:
+  - Resolved an issue where unnecessary values were being pushed onto the stack during function execution in sub-blocks, causing unexpected errors during recursive operations.
+
+- **Display Command Improvement**:
+  - The `disp` command has been updated to omit commas between elements, aligning with RAEL mode display conventions.
+
+- **New Command**:
+  - **abort**: Immediately terminates the program with an exit status of 1, equivalent to `exit(1)`.
+
+- **Unified Line Endings**:
+  - Line endings across files have been unified; `.gitattributes` has been updated with `* text=auto`.
+
+- **Comment Handling Improvement**:
+  - Fixed an oversight where text following a `#` in the middle of a line was not being recognized as a comment.
+
+
 ## [1.6.1]
 
 ### Bug Fixes

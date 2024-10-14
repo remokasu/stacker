@@ -31,10 +31,10 @@ def readtxt(file_path):
             in_double_quote_comment or in_single_quote_comment
         ):  # Skip lines within block comments
             continue
-        if (
-            line.strip().startswith("#") or not line.strip()
-        ):  # Skip lines that start with # or are blank lines (including the last line if it's blank)
-            continue
+        # if (
+        #     line.strip().startswith("#") or not line.strip()
+        # ):  # Skip lines that start with # or are blank lines (including the last line if it's blank)
+        #     continue
         filtered_lines.append(line)
 
     # Trim the final newline character if it exists

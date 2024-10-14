@@ -328,6 +328,22 @@ class TestStacker(unittest.TestCase):
         self.stacker.process_expression("{3 5} {*} eval")
         self.assertEqual(self.stacker.stack[-1], 15)
 
+    def test_eval_list(self):
+        self.stacker.stack.clear()
+        self.stacker.process_expression("'[3 5 6]' eval")
+        self.assertEqual(self.stacker.stack[-1], [3, 5, 6])
+
+    def test_eval_tuple(self):
+        self.stacker.stack.clear()
+        self.stacker.process_expression("'(3 5 6)' eval")
+        self.assertEqual(self.stacker.stack[-1], (3, 5, 6))
+
+    def test_eval_variable(self):
+        self.stacker.stack.clear()
+        self.stacker.process_expression("5 $a set")
+        self.stacker.process_expression("a eval")
+        self.assertEqual(self.stacker.stack[-1], 5)
+
     # evalpy
     def test_evalpy(self):
         self.stacker.stack.clear()
