@@ -20,22 +20,22 @@ aggregate_operators = {
         "push_result_to_stack": True,
         "desc": "Sums a iterable.",
     },
-    "max": {
-        "func": (lambda xs: max(xs)),
-        "arg_count": 1,
-        "push_result_to_stack": True,
-        "desc": "Finds the maximum value in an iterable.",
-    },
-    "min": {
-        "func": (lambda xs: min(xs)),
-        "arg_count": 1,
-        "push_result_to_stack": True,
-        "desc": "Finds the minimum value in an iterable.",
-    },
     "len": {
         "func": (lambda xs: len(xs)),
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Returns the length of an iterable.",
+    },
+    "min": {
+        "func": (lambda xs: min(xs)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns the minimum value in an iterable.",
+    },
+    "max": {
+        "func": (lambda xs: max(xs)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns the maximum value in an iterable.",
     },
 }
