@@ -18,9 +18,8 @@ from stacker.syntax.parser import (
     is_block,
     is_string,
     is_list,
-    is_undefined_symbol,
+    is_symbol,
     is_label_symbol,
-    is_reference_symbol,
     is_transpose_command,
     is_contains_transpose_command,
     convert_custom_array_to_proper_list,
@@ -102,17 +101,13 @@ class TestParser(unittest.TestCase):
         self.assertTrue(is_list("[1, 2, 3]"))
         self.assertFalse(is_list("(1, 2, 3)"))
 
-    def test_is_undefined_symbol(self):
-        self.assertTrue(is_undefined_symbol("$symbol"))
-        self.assertFalse(is_undefined_symbol("symbol$"))
+    def test_is_symbol(self):
+        self.assertTrue(is_symbol("$symbol"))
+        self.assertFalse(is_symbol("symbol$"))
 
     def test_is_label_symbol(self):
         self.assertTrue(is_label_symbol("label:"))
         self.assertFalse(is_label_symbol(":label"))
-
-    def test_is_reference_symbol(self):
-        self.assertTrue(is_reference_symbol("@reference"))
-        self.assertFalse(is_reference_symbol("reference@"))
 
     def test_is_transpose_command(self):
         self.assertTrue(is_transpose_command("^T"))
@@ -190,6 +185,11 @@ class TestParser(unittest.TestCase):
         self.assertEqual(parse_expression("[1 2 3] 4 5 a"), ["[1 2 3]", "4", "5", "a"])
         self.assertEqual(parse_expression("(1)"), ["(1)"])
 
+    def test_block_1(self):
+        self.assertEqual(parse_expression("{x}{x 1 +}lambda"), ["{x}", "{x 1 +}", "lambda"])
+
+    def test_block_2(self):
+        self.assertEqual(parse_expression("3{1 +}"), ["3", "{1 +}"])
 
 if __name__ == "__main__":
     unittest.main()

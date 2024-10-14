@@ -1,49 +1,34 @@
 from __future__ import annotations
 
-
-def _echo(content: str) -> None:
-    """Prints the specified content to the console."""
-    print(content)
-
-
-def _println(content: str) -> None:
-    """Prints the specified content to the console."""
-    print(content)
-
-
-def _print(content: str) -> None:
-    """Prints the specified content to the console."""
-    print(content, end="")
-
-
-def _input() -> str:
-    """Prints the specified content to the console."""
-    return input()
-
-
 io_operators = {
     "echo": {
-        "func": (lambda content: _echo(content)),
+        "func": (lambda content: print(content)),
         "arg_count": 1,
         "push_result_to_stack": False,
         "desc": "Prints the specified content to the console.",
     },
     "print": {
-        "func": (lambda content: _print(content)),
+        "func": (lambda content: print(content)),
         "arg_count": 1,
         "push_result_to_stack": False,
         "desc": "Prints the specified content to the console.",
     },
-    "println": {
-        "func": (lambda content: _println(content)),
+    "printc": {
+        "func": (lambda content: print(content, end="")),
         "arg_count": 1,
         "push_result_to_stack": False,
-        "desc": "Prints the specified content to the console.",
+        "desc": "Prints the specified content to the console without a newline.",
     },
-    "input": {
-        "func": (lambda: _input()),
+    "newline": {
+        "func": (lambda: print("")),
         "arg_count": 0,
-        "push_result_to_stack": True,
-        "desc": "Prints the specified content to the console.",
+        "push_result_to_stack": False,
+        "desc": "Prints a newline to the console.",
     },
+    # "input": {
+    #     "func": (lambda: _input()),
+    #     "arg_count": 0,
+    #     "push_result_to_stack": True,
+    #     "desc": "Reads a line of input from the console.",
+    # },
 }

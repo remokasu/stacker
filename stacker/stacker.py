@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
-from stacker.error import StackerSyntaxError
 from stacker.core import StackerCore
 from stacker.syntax.parser import parse_expression
 
@@ -25,7 +24,9 @@ class Stacker(StackerCore):
         self.plugin_descriptions = {}
 
     def include(self, filename: str) -> None:
-        return self.priority_operators["include"]["func"](self, filename)
+        return self.operator_manager.oprerators["priority"]["include"]["func"](
+            self, filename
+        )
 
     def push(self, value: Any) -> None:  # TODO: remove
         self.stack.append(value)
@@ -64,22 +65,13 @@ class Stacker(StackerCore):
         push_result_to_stack: bool,
         desc: str | None = None,
     ) -> None:
-        if operator_name in self.priority_operators:
-            del self.priority_operators[operator_name]
-            self.priority_operators[operator_name] = {
-                "func": operator_func,
-                "arg_count": arg_count,
-                "push_result_to_stack": push_result_to_stack,
-                "desc": desc,
-            }
-        if operator_name in self.operators:
-            del self.operators[operator_name]
-        self.operators[operator_name] = {
-            "func": operator_func,
-            "arg_count": arg_count,
-            "push_result_to_stack": push_result_to_stack,
-            "desc": desc,
-        }
+        self.operator_manager.register_operator(
+            operator_name,
+            operator_func,
+            arg_count,
+            push_result_to_stack,
+            desc,
+        )
 
     def register_sfunction(
         self,
@@ -160,16 +152,6 @@ class Stacker(StackerCore):
     # Getter
     # ========================
 
-    def get_any_operator_arg_count(self, operator_name: str) -> int:
-        if operator_name in self.operators:
-            return self.operators[operator_name]["arg_count"]
-        elif operator_name in self.sfunctions:
-            return self.sfunctions[operator_name]["arg_count"]
-        elif operator_name in self.plugins:
-            return self.plugins[operator_name]["arg_count"]
-        else:
-            raise StackerSyntaxError(f"Unknown operator '{operator_name}'")
-
     def get_stack_ref(self) -> stack_data:
         return self.stack
 
@@ -190,48 +172,6 @@ class Stacker(StackerCore):
 
     def get_variables_copy(self) -> dict:
         return self.variables.copy()
-
-    def get_regular_operators_ref(self) -> dict:
-        return self.regular_operators
-
-    def get_regular_operators_copy(self) -> dict:
-        return self.regular_operators.copy()
-
-    def get_priority_operators_ref(self) -> dict:
-        return self.priority_operators
-
-    def get_priority_operators_copy(self) -> dict:
-        return self.priority_operators.copy()
-
-    def get_stack_operators_ref(self) -> dict:
-        return self.stack_operators
-
-    def get_stack_operators_copy(self) -> dict:
-        return self.stack_operators.copy()
-
-    def get_hof_operators_ref(self) -> dict:
-        return self.hof_operators
-
-    def get_hof_operators_copy(self) -> dict:
-        return self.hof_operators.copy()
-
-    def get_aggregate_operators_ref(self) -> dict:
-        return self.aggregate_operators
-
-    def get_aggregate_operators_copy(self) -> dict:
-        return self.aggregate_operators.copy()
-
-    def get_transform_operators_ref(self) -> dict:
-        return self.transform_operators
-
-    def get_transform_operators_copy(self) -> dict:
-        return self.transform_operators.copy()
-
-    def get_settings_operators_ref(self) -> dict:
-        return self.settings_operators
-
-    def get_settings_operators_copy(self) -> dict:
-        return self.settings_operators.copy()
 
     def get_sfuntions_ref(self) -> dict:
         return self.sfunctions
@@ -263,13 +203,7 @@ class Stacker(StackerCore):
     def get_all_keys_for_completer(self) -> list[str]:
         return list(
             set(
-                list(self.regular_operators.keys())
-                + list(self.priority_operators.keys())
-                + list(self.stack_operators.keys())
-                # + list(self.settings_operators.keys())
-                + list(self.hof_operators.keys())
-                + list(self.aggregate_operators.keys())
-                + list(self.transform_operators.keys())
+                self.operator_manager.get_all_keys_for_completer()
                 + list(self.sfunctions.keys())
                 + list(self.plugins.keys())
                 + list(self.macros.keys())
@@ -277,22 +211,8 @@ class Stacker(StackerCore):
             )
         )
 
-    def get_operator_descriptions(self) -> dict:
-        operator_descriptions = {}
-        for operator_name, operator_description in self.regular_operators.items():
-            operator_descriptions[operator_name] = operator_description["desc"]
-        for operator_name, operator_description in self.priority_operators.items():
-            operator_descriptions[operator_name] = operator_description["desc"]
-        return operator_descriptions
-
     def get_plugin_descriptions(self) -> dict:
         return self.plugin_descriptions
-
-    def get_stack_operator_descriptions(self) -> dict:
-        return {k: v["desc"] for k, v in self.stack_operators.items()}
-
-    def get_settings_operator_descriptions(self) -> dict:
-        return {k: v["desc"] for k, v in self.settings_operators.items()}
 
     # ========================
     # Clear

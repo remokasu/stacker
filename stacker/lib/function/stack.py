@@ -15,6 +15,7 @@ from stacker.error import (
     NipError,
     InsertError,
 )
+from stacker.util.disp import disp_stack
 
 
 """
@@ -298,9 +299,11 @@ def _disp(stack: deque | list) -> None:
     Prints the stack.
     """
     if isinstance(stack, deque):
-        print(list(stack))
+        # print(list(stack))
+        disp_stack(list(stack))
     else:
-        print(stack)
+        # print(stack)
+        disp_stack(stack)
 
 
 stack_operators = {
