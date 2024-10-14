@@ -130,26 +130,31 @@ class ReplMode(ExecutionMode):
                     disp_help()
                     print("")
                     print("Supported operators and functions:")
+                    regular_operator_descriptions = {}
+                    regular_operator_descriptions.update(
+                        self.rpn_calculator.operator_manager.get_regular_descriptions()
+                    )
+                    regular_operator_descriptions.update(
+                        self.rpn_calculator.operator_manager.get_priority_descriptions()
+                    )
                     for (
                         operator_name,
                         operator_descriptions,
-                    ) in self.rpn_calculator.get_operator_descriptions().items():
+                    ) in regular_operator_descriptions.items():
                         print(f"  {operator_name}:\t{operator_descriptions}")
                     print("")
                     print("Stack operators:")
                     for (
                         operator_name,
                         operator_descriptions,
-                    ) in self.rpn_calculator.get_stack_operator_descriptions().items():
+                    ) in self.rpn_calculator.operator_manager.get_stack_descriptions().items():
                         print(f"  {operator_name}:\t{operator_descriptions}")
                     print("")
                     print("Settings operators:")
                     for (
                         operator_name,
                         operator_descriptions,
-                    ) in (
-                        self.rpn_calculator.get_settings_operator_descriptions().items()
-                    ):
+                    ) in self.rpn_calculator.operator_manager.get_settings_descriptions().items():
                         print(f"  {operator_name}:\t{operator_descriptions}")
                     print("")
                     print("Plugin commands:")
@@ -172,7 +177,7 @@ class ReplMode(ExecutionMode):
                 if self.rpn_calculator.disp_ans_mode is True:
                     self.disp_ans()
                 if self.rpn_calculator.disp_stack_mode is True:
-                    self.disp_stack()
+                    self.disp()
                 # else:
                 #     if self.rpn_calculator.get_stack_length() > 0:
                 #         print(self.rpn_calculator.get_stack_copy_as_list()[-1])

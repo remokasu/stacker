@@ -1,0 +1,11 @@
+# Define a recursive factorial function using a lambda and assign it to 'fact'
+
+{ n } {
+    { 1 }
+    {n n 1 - fact *}
+    n 1 <=
+    ifelse
+} $fact defun
+
+# Calculate the factorial of 5
+5 fact echo

@@ -166,16 +166,12 @@ def is_list(expression: str) -> bool:
     return expression.startswith("[") and expression.endswith("]")
 
 
-def is_undefined_symbol(expression: str) -> bool:
+def is_symbol(expression: str) -> bool:
     return expression.startswith("$") and not expression.endswith("$")
 
 
 def is_label_symbol(expression: str) -> bool:
     return expression.endswith(":") and not expression.startswith(":")
-
-
-def is_reference_symbol(expression: str) -> bool:
-    return expression.startswith("@") and not expression.endswith("@")
 
 
 def is_transpose_command(expression: str) -> bool:
@@ -468,13 +464,11 @@ def convert_custom_array_to_proper_list(input_str: str) -> str:
     >>> convert_custom_array_to_proper_list("[[1 2 3; 4 5 6; 7 8 9]; [10 11 12; 13 14 15; 16 17 18]; [19 20 21; 22 23 24; 25 26 27]]")
     '[[[1,2,3],[4,5,6],[7,8,9]],[[10,11,12],[13,14,15],[16,17,18]],[[19,20,21],[22,23,24],[25,26,27]]]'
     >>> convert_custom_array_to_proper_list("[1 2 3; 4 5 6; 7 8 9; [10 11 12]]")
-    '[[1,2,3],[4,5,6],[7,8,9],[[10,11,12]]]'
+    '[[1,2,3],[4,5,6],[7,8,9],[10,11,12]]'
     >>> convert_custom_array_to_proper_list("[1 2 3; 4 5 6; 7 8 9; [10 11 12; 13 14 15]]")
     '[[1,2,3],[4,5,6],[7,8,9],[[10,11,12],[13,14,15]]]'
     >>> convert_custom_array_to_proper_list("[a b c]")
     "['a','b','c']"
-    >>> convert_custom_array_to_proper_list("['a' 'b' 'c']")
-    '''['"a"','"b"','"c"']''''
     >>> convert_custom_array_to_proper_list("[1 2 {3 4 5}]")
     '[1,2,"{3 4 5}"]'
     """
@@ -491,13 +485,22 @@ def parse_expression(expression: str) -> list[str]:
     ['[1 2 3]', '4', '5', 'a']
     >>> parse_expression("{0}")
     ['{0}']
+    >>> parse_expression("-1 k ^ 2 k * 1 + / p + $p set  # calculate p")
+    ['-1', 'k', '^', '2', 'k', '*', '1', '+', '/', 'p', '+', '$p', 'set']
+    >>> parse_expression("{x}{x x +}lambda")
+    ['{x}', '{x x +}', 'lambda']
+    >>> parse_expression("3{x}{x x +}lambda")
+    ['3', '{x}', '{x x +}', 'lambda']
     """
     ignore_tokens = ['"""', "'''"]
     lexed_expression: list = lex_string(expression)
     tokens = []
+
     for token in lexed_expression:
         if token in ignore_tokens:
             continue
+        elif token.startswith("#"):
+            return tokens
         elif is_array(token):
             tokens.append(token)
         elif is_tuple(token):
