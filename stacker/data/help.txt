@@ -28,8 +28,8 @@ Tuple input:
   (1 2 3; 4 5 6; 7 8 9)
 
 If statement:
-  {<true expr>} condition if
-  {<true expr>} {<false expr>} condition ifelse
+  condition <true expr> if
+  condition <true expr> <false expr> ifelse
 
 Loop statement:
   - do
@@ -41,7 +41,7 @@ Define Function:
   {arg1 srg2 ...} {body} $funcName defun
 
 Lambda:
-  {arg1 srg2 ...} {body} lambda  
+  {arg1 srg2 ...} {body} lambda
 
 Macro:
   {body} $macroName defmacro
