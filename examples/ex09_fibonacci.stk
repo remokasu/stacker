@@ -1,0 +1,14 @@
+{ n } {
+    n 2 <
+    { n }
+    {
+        n 1 - fib
+        n 2 - fib
+        +
+    }
+    ifelse
+} $fib defun
+
+
+# Calculate the nth Fibonacci number
+1 10 $i {i fib echo} do

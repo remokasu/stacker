@@ -186,10 +186,13 @@ class TestParser(unittest.TestCase):
         self.assertEqual(parse_expression("(1)"), ["(1)"])
 
     def test_block_1(self):
-        self.assertEqual(parse_expression("{x}{x 1 +}lambda"), ["{x}", "{x 1 +}", "lambda"])
+        self.assertEqual(
+            parse_expression("{x}{x 1 +}lambda"), ["{x}", "{x 1 +}", "lambda"]
+        )
 
     def test_block_2(self):
         self.assertEqual(parse_expression("3{1 +}"), ["3", "{1 +}"])
+
 
 if __name__ == "__main__":
     unittest.main()

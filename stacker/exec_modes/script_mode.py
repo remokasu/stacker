@@ -26,6 +26,9 @@ class ScriptMode(ExecutionMode):
             code = readtxt(path)
             expression = ""
             for line in code.splitlines():
+                sharp_index = line.find("#")
+                if sharp_index != -1:
+                    line = line[:sharp_index]
                 line = line.strip()
                 expression += line + " "
                 if self._is_balanced(expression):
