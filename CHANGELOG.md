@@ -1,5 +1,28 @@
 # CHANGE LOG
 
+## [1.8.0]
+
+- **Breaking Changes**
+
+  - **Modified ifelse Syntax**:
+
+    Before: <true-expr> <false-expr> condition ifelse
+    After: condition <true-expr> <false-expr> ifelse
+
+    Note: This change is not backwards compatible with previous versions.
+
+  - **Modified if Syntax**:
+
+    Before: <true-expr> condition if
+    After: condition <true-expr> if
+
+    Note: This change is not backwards compatible with previous versions.
+
+- **Bug Fixes**
+
+  Fixed variable scope handling in recursive function processing
+
+
 ## [1.7.0]
 
 - **Support for Lambda Functions**:
@@ -20,7 +43,7 @@
   - **n listn**: Converts the top n elements from the stack into a list.
   - **n tuplen**: Converts the top n elements from the stack into a tuple.
   - **extend**: Expands list and tuple objects onto the stack.
-  
+
 - **Input/Output Enhancements**:
   - **read**: Reads data from standard input.
   - **read-from-string**: Interprets a string as RPN expressions and reads it.

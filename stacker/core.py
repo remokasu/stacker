@@ -64,6 +64,7 @@ class StackerCore:
         self.operator_manager = OperatorManager()
         self.variables = {}
         self.variables.update(constants)
+        self.sfunc_args = {}
         self.macros = {}
         self.plugins = {}
         self.sfunctions = {}
@@ -277,13 +278,13 @@ class StackerCore:
             elif token == "break":
                 stack.append(__BREAK__)
             elif token == "if":
-                condition = stack.pop()
                 true_block = stack.pop()
+                condition = stack.pop()
                 op["func"](condition, true_block, self)
             elif token == "ifelse":
-                condition = stack.pop()
                 false_block = stack.pop()
                 true_block = stack.pop()
+                condition = stack.pop()
                 op["func"](condition, true_block, false_block, self)
             elif token == "iferror":
                 catch_block = stack.pop()
@@ -586,9 +587,9 @@ class StackerCore:
             elif is_tuple(item):
                 return item.replace(",", " ")
             elif isinstance(item, str):
-                if item in self.operator_manager.built_in_operators or (
-                    item.startswith("{") and item.endswith("}")
-                ):
+                if item in self.operator_manager.built_in_operators:
+                    return item
+                elif item.startswith("{") and item.endswith("}"):
                     return item
                 elif item in self.variables:
                     return item

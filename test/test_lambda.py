@@ -27,11 +27,9 @@ class TestStacker(unittest.TestCase):
         ans = self.stacker.eval(
             """
 { n } {
-    { 1 }
-    {
-         n n 1 - fact *
-    }
     n 1 <=
+    { 1 }
+    { n n 1 - fact * }
     ifelse
 } lambda $fact set
 5 fact eval

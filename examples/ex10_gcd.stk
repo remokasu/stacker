@@ -1,0 +1,8 @@
+{ a b } {
+    b 0 ==
+    { a }
+    { b a b % gcd }
+    ifelse
+} $gcd defun
+
+18 24 gcd echo  # -> 6
