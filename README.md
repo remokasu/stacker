@@ -188,13 +188,13 @@ Stacker allows for straightforward RPN input. For example:
 
     Syntax:
     ```bash
-    {true_block} {condition} if
+    condition <true-expr> if
     ```
 
     Example:
     ```bash
     stacker:0> 0 $x set
-    stacker:1> {3 4 +} {x 0 ==} if
+    stacker:1> x 0 == {3 4 +} if
     [7]
     ```
 
@@ -206,13 +206,13 @@ Stacker allows for straightforward RPN input. For example:
 
     Syntax:
     ```bash
-    {<true-block>} {<false-block>} {condition} ifelse
+    condition <true-expr> <false-expr> ifelse
     ```
 
     Example:
     ```bash
     stacker:0> 0 $x set
-    stacker:1> {3 4 +} {3 4 -} {x 0 ==} ifelse
+    stacker:1> x 0 == {3 4 +} {3 4 -} ifelse
     [7]
     ```
 

@@ -2,18 +2,18 @@
 
 1 100 $i
 {
+    i 3 % 0 == i 5 % 0 == and
     {"fizzbuzz" echo}
     {
+        i 5 % 0 ==
         {"buzz" echo}
         {
+            i 3 % 0 ==
             {"fizz" echo}
             {i str echo}
-            {i 3 % 0 ==}
             ifelse
         }
-        {i 5 % 0 ==}
         ifelse
     }
-    {i 3 % 0 == i 5 % 0 == and}
     ifelse
 } do

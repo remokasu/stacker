@@ -1,6 +1,0 @@
-0 100 $i {
-    i echo
-    {break}
-    {i 6 ==}
-    if
-} do

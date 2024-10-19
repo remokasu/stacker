@@ -1,0 +1,9 @@
+{ n } {
+    n 1 <=
+    { 1 }
+    {n n 1 - fact *}
+    ifelse
+} $fact defun
+
+# Calculate the factorial of 5
+10 fact echo
