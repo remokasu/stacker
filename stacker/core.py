@@ -92,6 +92,11 @@ class StackerCore:
         self.child.tokens = tokens
         stack.append(self.child)
 
+    def _pop_only(self, stack: stack_data) -> Any:
+        top = stack.pop()
+        self.trace.append(top)
+        return
+
     def _pop_and_eval(self, stack: stack_data) -> Any:
         value = stack.pop()
         if isinstance(value, StackerCore):
@@ -486,6 +491,15 @@ class StackerCore:
                 stack.append(op["func"](args))
             else:
                 op["func"](args)
+        elif token in self.operator_manager.oprerators["file"]:
+            op = self.operator_manager.oprerators["file"][token]
+            args = []
+            for _ in range(op["arg_count"]):
+                args.insert(0, self._pop_and_eval(stack))
+            if op["push_result_to_stack"]:
+                stack.append(op["func"](*args))
+            else:
+                op["func"](*args)
         elif (
             token in self.operator_manager.oprerators["settings"]
         ):  # settings operators
@@ -565,7 +579,7 @@ class StackerCore:
             return self.tokens == other.tokens
         else:
             if len(self.tokens) == 0:
-                return None == other
+                return other is None
             return self.tokens == other
 
     def __iter__(self):

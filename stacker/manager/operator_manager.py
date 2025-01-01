@@ -32,6 +32,7 @@ from stacker.lib.function.defun import defun_operators
 from stacker.lib.function.defmacro import macro_operators
 from stacker.lib.function.hof import hof_operators
 from stacker.lib.function.lmd import lambda_operators
+from stacker.lib.function.os import os_operators
 
 
 special_operators = {
@@ -134,6 +135,7 @@ class OperatorManager:
         self._regular_operators.update(eval_operators)
         self._regular_operators.update(string_operators)
         self._regular_operators.update(time_operators)
+        self._regular_operators.update(os_operators)
 
         self._priority_operators = {}
         self._priority_operators.update(loop_operators)
@@ -145,6 +147,7 @@ class OperatorManager:
         self._priority_operators.update(lambda_operators)
         self._priority_operators.update(exit_operators)
 
+        self._file_operators = file_operators
         self._hof_operators = hof_operators
         self._aggregate_operators = aggregate_operators
         self._transform_operators = transform_operators
@@ -158,6 +161,7 @@ class OperatorManager:
             "aggregate": self._aggregate_operators,
             "transform": self._transform_operators,
             "stack": self._stack_operators,
+            "file": self._file_operators,
             "settings": self._settings_operators,
         }
 
@@ -193,6 +197,8 @@ class OperatorManager:
             return transform_operators[operator]["arg_count"]
         if operator in stack_operators:
             return stack_operators[operator]["arg_count"]
+        if operator in file_operators:
+            return file_operators[operator]["arg_count"]
         if operator in settings_operators:
             return settings_operators[operator]["arg_count"]
         raise StackerSyntaxError(f"Unknown operator '{operator}'")
@@ -282,6 +288,18 @@ class OperatorManager:
         return list(self._stack_operators.keys())
 
     ############################
+    # File operators
+    ############################
+    def get_file_ref(self) -> dict:
+        return self._file_operators
+
+    def get_file_copy(self) -> dict:
+        return self._file_operators.copy()
+
+    def get_file_keys(self) -> list[str]:
+        return list(self._file_operators.keys())
+
+    ############################
     # Settings operators
     ############################
     def get_settings_ref(self) -> dict:
@@ -324,6 +342,12 @@ class OperatorManager:
         descriptions = {}
         for operator in self._stack_operators:
             descriptions[operator] = self._stack_operators[operator]["desc"]
+        return descriptions
+
+    def get_file_descriptions(self) -> dict:
+        descriptions = {}
+        for operator in self._file_operators:
+            descriptions[operator] = self._file_operators[operator]["desc"]
         return descriptions
 
     def get_settings_descriptions(self) -> dict:

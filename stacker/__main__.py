@@ -27,6 +27,8 @@ parser.add_argument("-e", default=None, help="Execute the given command.")
 parser.add_argument("script", nargs="?", default=None, help="Script file to run.")
 argv = parser.parse_args()
 
+sys.setrecursionlimit(1 << 30)
+
 
 def load_stacker_lib(stacker: Stacker, dir_path) -> bool:
     """Load the Stacker library from the specified directory.

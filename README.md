@@ -363,24 +363,6 @@ Stacker allows for straightforward RPN input. For example:
   ```
   All functions, macros and variables defined in "my_script.stk" are added to the current stack.
 
-- ### File Writing and Reading
-  - Writing to a file:
-    ```bash
-    stacker:0> "output.txt" "hoge" write
-    ```
-    This writes the string "hoge" to the file "output.txt".
-
-  - Reading from a file:
-    ```bash
-    stacker:0> "output.txt" read
-    [hoge]
-    ```
-    This reads the contents of "output.txt" and executes it.
-
-    ```
-    stacker:0> "output.txt" read $text set
-    ```
-    You can also set the contents of the file to a variable using the `set` command.
 
 ## Running Scripts
 Stacker scripts can be created in `.stk` files. To run a script, simply execute it with Stacker. For example:
@@ -466,7 +448,7 @@ You can automatically load settings at startup. The configuration file should be
 ```bash
 disable_disp_logo
 disable_disp_stack
-enabble_disp_ans
+enable_disp_ans
 ```
 
 ## Creating Plugins
@@ -615,6 +597,7 @@ print(stacker.eval("3 4 +"))
 | random   | Generate a random floating-point number between 0 and 1| `random`                  |
 | randint  | Generate a random integer within a specified range    | `1 6 randint`              |
 | uniform  | Generate a random floating-point number within a specified range | `1 2 uniform`   |
+| frac     | Fraction                                              | `3 6 frac`                 |
 | dice     | Roll dice (e.g., 3d6)                                 | `3 6 dice`                 |
 
 
@@ -682,8 +665,12 @@ print(stacker.eval("3 4 +"))
 | evalpy   | Evaluate the specified Python expression              | `'3+5' evalpy`             |
 | echo     | Print the specified value to stdout without adding it to the stack | `3 4 + echo`  |
 | input    | Get input from the user                               | `input`                    |
-| read     | Read the contents of the specified file               | `"file.txt" read`          |
-| write    | Write the specified value to the specified file       | `"hoge" "file.txt" write`  |
+| read     | Reads a string from the console                       | `read`                     |
+| write-to-file | Write the top element of the stack to a file       | `3 "output.txt" write-to-file` |
+| append-to-file | Append the top element of the stack to a file      | `3 "output.txt" append-to-file` |
+| read-from-file | Read the contents of a file and push it to the stack | `"input.txt" read-from-file` |
+| file-exists | Check if a file exists                                | `"file.txt" file-exists`    |
+
 
 
 ## Constants
