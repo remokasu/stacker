@@ -1,5 +1,29 @@
 # CHANGE LOG
 
+## [1.8.1]
+
+### Improvements
+- **Increased Maximum Regression Iterations**: The maximum number of regression iterations has been increased.
+- **Improved Token Interpretation**: Tokens enclosed in `{}` are now correctly interpreted even when there are no spaces between them.  
+  Example: `{x} {x 2 ^} lambda` is now interpreted as `{x}{x 2 ^}lambda`.
+
+### New Features
+- **`frac` Command**:  
+  Example: `3 4 frac` returns `Fraction(3, 4)` and displays as `3/4`.
+- **File Commands**:
+  - `write-to-file`: Writes specified content to a file.  
+    Example: `"This is a test file." "test.txt" write-to-file`
+  - `append-to-file`: Appends specified content to a file.  
+    Example: `"This is a test file." "test.txt" append-to-file`
+  - `read-from-file`: Reads content from a file.  
+    Example: `"test.txt" read-from-file`
+  - `file-exists`: Checks if a file exists.  
+    Example: `"test.txt" file-exists`
+
+### Documentation Fixes
+- Fixed incorrect explanation for the `read` command in `README.md`.
+
+
 ## [1.8.0]
 
 - **Breaking Changes**
