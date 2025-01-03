@@ -9,6 +9,5 @@
     ifelse
 } $fib defun
 
-
 # Calculate the nth Fibonacci number
 1 10 $i {i fib echo} do

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from stacker.stacker import Stacker
 
-from stacker.data_type import String, stack_data
+from stacker.data_type import stack_data
 
 import copy
 
