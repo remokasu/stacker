@@ -4,18 +4,21 @@ import sys
 from pathlib import Path
 
 from stacker.error import ScriptReadError
-from stacker.exec_modes.error import create_error_message
 from stacker.exec_modes.excution_mode import ExecutionMode
 from stacker.include.stk_file_read import readtxt
 from stacker.lib.config import script_extension_name
 from stacker.stacker import Stacker
+# from stacker.util.color import colored
+# from stacker.exec_modes.error import create_error_message
 
 
 class ScriptMode(ExecutionMode):
     def __init__(self, rpn_calculator: Stacker):
+        self.col_count = 0
         super().__init__(rpn_calculator)
 
     def run(self, file_path: str):
+        line = ""
         try:
             path = Path(file_path)
             if not path.is_file() or not path.suffix == script_extension_name:
@@ -31,6 +34,7 @@ class ScriptMode(ExecutionMode):
                     line = line[:sharp_index]
                 line = line.strip()
                 expression += line + " "
+                self.col_count += 1
                 if self._is_balanced(expression):
                     if expression[-2:] in {";]", ";)"}:
                         closer = expression[-1]
@@ -40,14 +44,6 @@ class ScriptMode(ExecutionMode):
         except Exception as e:
             print(f"File: {Path(file_path).resolve()}")
             print(f"{type(e).__name__}: {e}")
-            trace = self.rpn_calculator.get_trace_copy()
-            if len(trace) == 0:
-                sys.exit(1)
-            if len(trace) > 4:
-                error_trace = trace[-4:]
-            else:
-                error_trace = trace
-            print(create_error_message(error_trace))
             sys.exit(1)
 
         # with path.open('r') as script_file:

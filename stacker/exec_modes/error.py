@@ -8,3 +8,7 @@ def create_error_message(error_tokens: list[str]):
     expression = " ".join([str(token) for token in error_tokens])
     hilight = " " * (len(expression) - len(last_token)) + "^" * len(last_token)
     return colored(f"{expression}\n{hilight}", "red")
+
+
+def create_error_message_from_str(code: str):
+    return colored(code, "red")

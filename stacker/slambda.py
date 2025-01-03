@@ -32,11 +32,13 @@ class StackerLambda:
     def __str__(self) -> str:
         if len(self.args) == 0:
             return "λ"
-        elif len(self.args) == 1:
-            return f"λ{self.args[0]}." + self.blockstack.__str__()
+        body_str = self.blockstack.__str__()
+        for arg in self.args:
+            body_str = body_str.replace(f"'{arg}'", arg)
+        if len(self.args) == 1:
+            return f"λ{self.args[0]}." + body_str
         else:
-            args = "λ" + "λ".join(self.args) + "." + self.blockstack.__str__()
-            return args
+            return "λ" + "λ".join(self.args) + "." + body_str
 
     def __repr__(self) -> str:
         return self.__str__()

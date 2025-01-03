@@ -4,7 +4,7 @@ import unittest
 
 from stacker.stacker import Stacker
 
-from stacker.syntax.lexer import lex_string
+from stacker.syntax.parser import lex_string
 from stacker.data_type import String
 
 

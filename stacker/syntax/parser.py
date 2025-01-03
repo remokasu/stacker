@@ -2,16 +2,339 @@ from __future__ import annotations
 
 import ast
 import re
-from typing import List, Union, Iterator, Optional, Any
-from stacker.syntax.lexer import lex_string
+from typing import List, Union, Iterator, Any
+import warnings
+from dataclasses import dataclass
+from enum import Enum, auto
 
 __transpose_symbol__ = "^T"
 
 
+class TokenType(Enum):
+    BRACED_CONTENT = auto()
+    COMPLEX_NUMBER = auto()
+    NUMBER = auto()
+    STRING = auto()
+    IDENTIFIER = auto()
+    LBRACKET = auto()
+    RBRACKET = auto()
+    LPAREN = auto()
+    RPAREN = auto()
+    SEMICOLON = auto()
+    OPERATOR = auto()
+    SPACE = auto()
+    COMMA = auto()
+    OTHER = auto()
+
+
+@dataclass
+class Token:
+    """Represents a single token."""
+
+    type: TokenType
+    value: str
+
+    def __repr__(self) -> str:
+        return f"Token({self.type}, {self.value})"
+
+
+@dataclass
+class Identifier:
+    """Represents an identifier."""
+
+    name: str
+
+    def __repr__(self) -> str:
+        return f"Identifier({self.name})"
+
+
+@dataclass
+class ListNode:
+    """Represents a list node."""
+
+    elements: List[Any]
+
+    def __repr__(self) -> str:
+        return f"ListNode({self.elements})"
+
+
+@dataclass
+class TupleNode:
+    """Represents a tuple node."""
+
+    elements: List[Any]
+
+    def __repr__(self) -> str:
+        return f"TupleNode({self.elements})"
+
+
+class TokenPattern:
+    """Token patterns for lexical analysis"""
+
+    PATTERNS = [
+        (TokenType.BRACED_CONTENT, r"\{[^}]*\}"),
+        (
+            TokenType.COMPLEX_NUMBER,
+            r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[+-](\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[jJ]",
+        ),
+        (TokenType.NUMBER, r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[jJ]?"),
+        (TokenType.STRING, r"('([^'\\]|\\.)*'|\"([^\"\\]|\\.)*\")"),
+        (TokenType.IDENTIFIER, r"[A-Za-z_][A-Za-z0-9_]*"),
+        (TokenType.LBRACKET, r"\["),
+        (TokenType.RBRACKET, r"\]"),
+        (TokenType.LPAREN, r"\("),
+        (TokenType.RPAREN, r"\)"),
+        (TokenType.SEMICOLON, r";"),
+        (TokenType.OPERATOR, r"[+\-]"),
+        (TokenType.SPACE, r"\s+"),
+        (TokenType.COMMA, r","),
+        (TokenType.OTHER, r"."),
+    ]
+
+
+class UnifiedLexer:
+    """Unified lexical analyzer that handles both simple and complex tokenization"""
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+        self.pos = 0
+        self.delimiter_mapping = {"[": "]", "(": ")", "{": "}", "'": "'", '"': '"'}
+        self._setup_regex()
+
+    def _setup_regex(self) -> None:
+        """Setup regex patterns for tokenization"""
+        self.tok_regex = "|".join(
+            f"(?P<{pattern[0].name}>{pattern[1]})" for pattern in TokenPattern.PATTERNS
+        )
+        self.token_re = re.compile(self.tok_regex)
+
+    def tokenize(self) -> list[str]:
+        """Tokenize input preserving nested structures"""
+        tokens = []
+        current_token = ""
+        bracket_stack = []
+
+        for char in self.text:
+            if char in self.delimiter_mapping:
+                if current_token and current_token.strip().isdigit():
+                    tokens.append(current_token)
+                    current_token = ""
+
+                if bracket_stack and self.delimiter_mapping[bracket_stack[-1]] == char:
+                    current_token += char
+                    bracket_stack.pop()
+                    if not bracket_stack:
+                        tokens.append(current_token)
+                        current_token = ""
+                else:
+                    bracket_stack.append(char)
+                    current_token += char
+            elif bracket_stack:
+                current_token += char
+                if char == self.delimiter_mapping[bracket_stack[-1]]:
+                    bracket_stack.pop()
+                    if not bracket_stack:
+                        tokens.append(current_token)
+                        current_token = ""
+            elif char.isspace():
+                if current_token:
+                    tokens.append(current_token)
+                    current_token = ""
+            else:
+                current_token += char
+
+        if current_token:
+            tokens.append(current_token)
+
+        return tokens
+
+    def get_tokens(self) -> Iterator[Token]:
+        """Get tokens with type information"""
+        pos = 0
+        while pos < len(self.text):
+            match = self.token_re.match(self.text, pos)
+            if match is None:
+                break
+
+            kind = TokenType[match.lastgroup]  # type: ignore
+            value = match.group()
+            if kind != TokenType.SPACE:
+                yield Token(kind, value)
+
+            pos = match.end()
+
+        if pos != len(self.text):
+            raise SyntaxError(
+                f"Unexpected character {self.text[pos]!r} at position {pos}"
+            )
+
+
+class Parser:
+    """Unified parser that handles both simple and complex parsing"""
+
+    def __init__(self, text: str) -> None:
+        self.lexer = UnifiedLexer(text)
+        self.tokens = iter(self.lexer.get_tokens())
+        self.current_token = None
+        self.next_token()
+
+    def next_token(self) -> None:
+        """Get the next token"""
+        try:
+            self.current_token = next(self.tokens)
+        except StopIteration:
+            self.current_token = None
+
+    def parse(self) -> Union[ListNode, TupleNode]:
+        """Parse input into appropriate node structure"""
+        if self.current_token is None:
+            return ListNode([])
+        return self.parse_structure()
+
+    def parse_structure(self) -> Union[ListNode, TupleNode]:
+        """Parse a list or tuple structure"""
+        elements = []
+
+        if self.current_token.type == TokenType.LBRACKET:
+            closing_type = TokenType.RBRACKET
+            node_class = ListNode
+        elif self.current_token.type == TokenType.LPAREN:
+            closing_type = TokenType.RPAREN
+            node_class = TupleNode
+        else:
+            raise SyntaxError(
+                f"Expected LBRACKET or LPAREN, got {self.current_token.type}"
+            )
+
+        self.next_token()  # consume opening bracket/paren
+
+        while self.current_token and self.current_token.type != closing_type:
+            elements.append(self._parse_element())
+
+        if self.current_token is None:
+            raise SyntaxError(f"Expected {closing_type}, got EOF")
+
+        self.next_token()  # consume closing bracket/paren
+
+        if ";" in elements:
+            return node_class(self._split_by_semicolon(elements, node_class))
+        return node_class(elements)
+
+    def _parse_element(self) -> Any:
+        """Parse a single element within a structure"""
+        if self.current_token is None:
+            raise SyntaxError("Unexpected EOF while parsing element")
+
+        if self.current_token.type in (TokenType.LBRACKET, TokenType.LPAREN):
+            return self.parse_structure()
+
+        token = self.current_token
+        self.next_token()
+
+        if token.type == TokenType.BRACED_CONTENT:
+            return {"braced_content": token.value}
+        elif token.type == TokenType.COMPLEX_NUMBER:
+            return ast.literal_eval(token.value)
+        elif token.type == TokenType.NUMBER:
+            return ast.literal_eval(token.value)
+        elif token.type == TokenType.STRING:
+            return ast.literal_eval(token.value)
+        elif token.type == TokenType.IDENTIFIER:
+            return Identifier(token.value)
+        elif token.type == TokenType.SEMICOLON:
+            return ";"
+        else:
+            raise SyntaxError(f"Unexpected token {token}")
+
+    def _split_by_semicolon(
+        self, elements: List[Any], node_class: type[Union[ListNode, TupleNode]]
+    ) -> List[Any]:
+        """Split elements by semicolon into subnodes"""
+        result = []
+        current = []
+
+        for item in elements:
+            if item == ";":
+                if current:
+                    result.append(self._wrap_node(current, node_class))
+                    current = []
+            else:
+                current.append(item)
+
+        if current:
+            result.append(self._wrap_node(current, node_class))
+
+        return result
+
+    def _wrap_node(
+        self, elements: List[Any], node_class: type[Union[ListNode, TupleNode]]
+    ) -> Any:
+        """Wrap elements into appropriate node type"""
+        if len(elements) == 1 and isinstance(elements[0], (ListNode, TupleNode)):
+            return elements[0]
+        return node_class(elements)
+
+
+class Formatter:
+    """Formats parsed structures back into string representation"""
+
+    @staticmethod
+    def format_structure(
+        obj: Union[ListNode, TupleNode, int, float, complex, str, Identifier, dict],
+    ) -> str:
+        """Format any parsed structure back to string"""
+        if isinstance(obj, ListNode):
+            return f"[{','.join(Formatter.format_structure(item) for item in obj.elements)}]"
+        elif isinstance(obj, TupleNode):
+            return f"({','.join(Formatter.format_structure(item) for item in obj.elements)})"
+        elif isinstance(obj, dict) and "braced_content" in obj:
+            return f'"{obj["braced_content"].strip()}"'
+        elif isinstance(obj, Identifier):
+            return f"'{obj.name}'"
+        elif isinstance(obj, str):
+            return f"'\"{obj}\"'"
+        elif isinstance(obj, complex):
+            return str(obj)
+        return str(obj)
+
+
+def convert_custom_array_to_proper_list(input_str: str) -> str:
+    """Convert custom array notation to proper list notation"""
+    parser = Parser(input_str)
+    parsed = parser.parse()
+
+    # Flatten singleton structures
+    while (
+        isinstance(parsed, (ListNode, TupleNode))
+        and len(parsed.elements) == 1
+        and isinstance(parsed.elements[0], (ListNode, TupleNode))
+    ):
+        parsed = parsed.elements[0]
+
+    return Formatter.format_structure(parsed)
+
+
+def parse_expression(expression: str) -> list[str]:
+    """Parse expression into tokens while preserving structure"""
+    ignore_tokens = ['"""', "'''"]
+    lexer = UnifiedLexer(expression)
+    tokens = []
+
+    for token in lexer.tokenize():
+        if token in ignore_tokens:
+            continue
+        elif token.startswith("#"):
+            return tokens
+        elif any(token.startswith(c) for c in "[({'\""):
+            tokens.append(token)
+        else:
+            tokens.append(token)
+    return tokens
+
+
 def evaluate_token_or_return_str(token: str) -> Any:
-    """Evaluates a token if it is a number, otherwise returns the token as a string."""
     if is_block(token):
-        return token  # {} is not dictionary
+        return token
     try:
         return ast.literal_eval(token)
     except (ValueError, SyntaxError):
@@ -26,12 +349,6 @@ def starts_with_char(expression: str, char: str) -> bool:
 
 
 def remove_start_end_quotes(expression: str) -> str:
-    """
-    Removes the starting and ending quotes from the specified expression.
-
-    :param expression: The expression to be processed.
-    :return: The expression with the starting and ending quotes removed.
-    """
     if expression.startswith("'") and expression.endswith("'"):
         return expression[1:-1]
     if expression.startswith('"') and expression.endswith('"'):
@@ -40,83 +357,34 @@ def remove_start_end_quotes(expression: str) -> str:
 
 
 def is_balanced(expression: str, open_char: str, close_char: str) -> bool:
-    """
-    Checks if the specified expression is balanced.
-
-    :param
-        expression: The expression to be checked.
-        open_char: The opening character.
-        close_char: The closing character.
-    :return: True if the expression is balanced, otherwise False.
-    """
-    open_count = expression.count(open_char)
-    close_count = expression.count(close_char)
-    return open_count == close_count
+    return expression.count(open_char) == expression.count(close_char)
 
 
 def is_single(expression: str, open_char: str, close_char: str) -> bool:
-    """
-    Checks if the specified expression is a single instance of the specified
-    open and close characters.
-
-    :param
-        expression: The expression to be checked.
-        open_char: The opening character.
-        close_char: The closing character.
-    :return: True if the expression is a single instance of the specified
-    """
-    if is_balanced(expression, open_char, close_char):
-        return expression.count(open_char) == 1 and expression.count(close_char) == 1
-    return False
+    return (
+        is_balanced(expression, open_char, close_char)
+        and expression.count(open_char) == 1
+        and expression.count(close_char) == 1
+    )
 
 
 def is_array(expression: str) -> bool:
-    """
-    Checks if the specified expression is an array.
-
-    :param expression: The expression to be checked.
-    :return: True if the expression is an array, otherwise False.
-    """
     return starts_with_char(expression, "[")
 
 
 def is_tuple(expression: str) -> bool:
-    """
-    Checks if the specified expression is a tuple.
-
-    :param expression: The expression to be checked.
-    :return: True if the expression is a tuple, otherwise False.
-    """
     return starts_with_char(expression, "(")
 
 
 def is_brace(expression: str) -> bool:
-    """
-    Checks if the specified expression is a brace.
-
-    :param expression: The expression to be checked.
-    :return: True if the expression is a brace, otherwise False.
-    """
     return starts_with_char(expression, "{")
 
 
 def is_array_balanced(expression: str) -> bool:
-    """
-    Checks if the specified array expression is balanced.
-
-    :param expression: The expression to be checked.
-    :return: True if the expression is a balanced array, otherwise False.
-    """
     return is_balanced(expression, "[", "]")
 
 
 def is_tuple_balanced(expression: str) -> bool:
-    """
-    Checks if the specified tuple expression is balanced.
-
-    :param expression: The expression to be checked.
-    :return: True if the expression is a balanced tuple, otherwise False.
-    """
     return is_balanced(expression, "(", ")")
 
 
@@ -125,12 +393,6 @@ def is_brace_balanced(expression: str) -> bool:
 
 
 def is_single_array(expression: str) -> bool:
-    """
-    Checks if the specified expression is a single array.
-
-    :param expression: The expression to be checked.
-    :return: True if the expression is a single array, otherwise False.
-    """
     return is_single(expression, "[", "]")
 
 
@@ -145,11 +407,7 @@ def is_single_brace(expression: str) -> bool:
 def is_block(expression: str) -> bool:
     if not isinstance(expression, str):
         return False
-    opener = expression.count("{")
-    closer = expression.count("}")
-    if opener == 0 and closer == 0:
-        return False
-    return opener == closer
+    return expression.count("{") == expression.count("}") > 0
 
 
 def is_string(expression: str) -> bool:
@@ -179,337 +437,19 @@ def is_transpose_command(expression: str) -> bool:
 
 
 def is_contains_transpose_command(expression: str) -> bool:
-    if len(expression) > len(__transpose_symbol__):
-        return expression[-len(__transpose_symbol__) :] == __transpose_symbol__
-    return False
+    return (
+        len(expression) > len(__transpose_symbol__)
+        and expression[-len(__transpose_symbol__) :] == __transpose_symbol__
+    )
 
 
-class Token:
-    """Represents a single token."""
-
-    def __init__(self, type_: str, value: str) -> None:
-        self.type: str = type_
-        self.value: str = value
-
-    def __repr__(self) -> str:
-        return f"Token({self.type}, {self.value})"
-
-
-class Identifier:
-    """Represents an identifier."""
-
-    def __init__(self, name: str) -> None:
-        self.name: str = name
-
-    def __repr__(self) -> str:
-        return f"Identifier({self.name})"
-
-
-class ListNode:
-    """Represents a list node."""
-
-    def __init__(self, elements: List[Any]) -> None:
-        self.elements: List[Any] = elements
-
-    def __repr__(self) -> str:
-        return f"ListNode({self.elements})"
-
-
-class TupleNode:
-    """Represents a tuple node."""
-
-    def __init__(self, elements: List[Any]) -> None:
-        self.elements: List[Any] = elements
-
-    def __repr__(self) -> str:
-        return f"TupleNode({self.elements})"
-
-
-class Tokenizer:
-    """Splits input string into tokens."""
-
-    # Define token patterns
-    token_specification: List[tuple] = [
-        ("BRACED_CONTENT", r"\{[^}]*\}"),  # Content inside braces (highest priority)
-        # Complex numbers with real and imaginary parts (e.g., 2+3j, -4.5-6.7j)
-        (
-            "COMPLEX_NUMBER",
-            r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[+-](\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[jJ]",
-        ),
-        (
-            "NUMBER",
-            r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[jJ]?",
-        ),  # Integer, float, complex (imaginary only)
-        (
-            "STRING",
-            r"('([^'\\]|\\.)*'|\"([^\"\\]|\\.)*\")",
-        ),  # Strings with single or double quotes
-        ("IDENTIFIER", r"[A-Za-z_][A-Za-z0-9_]*"),  # Identifier
-        ("LBRACKET", r"\["),  # Left bracket
-        ("RBRACKET", r"\]"),  # Right bracket
-        ("LPAREN", r"\("),  # Left parenthesis
-        ("RPAREN", r"\)"),  # Right parenthesis
-        ("SEMICOLON", r";"),  # Semicolon
-        ("OPERATOR", r"[+\-]"),  # Plus or minus sign
-        ("SPACE", r"\s+"),  # Space
-        ("COMMA", r","),  # Comma
-        ("OTHER", r"."),  # Other characters
-    ]
-
-    def __init__(self, text: str) -> None:
-        self.text: str = text
-        self.tokens: Iterator[Token] = self.tokenize()
-
-    def tokenize(self) -> Iterator[Token]:
-        tok_regex: str = "|".join(
-            f"(?P<{name}>{pattern})" for name, pattern in self.token_specification
-        )
-        get_token = re.compile(tok_regex).match
-        pos: int = 0
-        mo: Optional[re.Match] = get_token(self.text, pos)
-        while mo:
-            kind: str = mo.lastgroup  # type: ignore
-            value: str = mo.group()
-            if kind != "SPACE":  # Ignore spaces
-                yield Token(kind, value)
-            pos = mo.end()
-            mo = get_token(self.text, pos)
-        if pos != len(self.text):
-            raise SyntaxError(
-                f"Unexpected character {self.text[pos]!r} at position {pos}"
-            )
-
-
-class Parser:
-    """Builds Python list or tuple structure from tokens."""
-
-    def __init__(self, tokenizer: Tokenizer) -> None:
-        self.tokens: Iterator[Token] = iter(tokenizer.tokens)
-        self.current_token: Optional[Token] = None
-        self.next_token()
-
-    def next_token(self) -> None:
-        """Get the next token."""
-        try:
-            self.current_token = next(self.tokens)
-        except StopIteration:
-            self.current_token = None
-
-    def parse(self) -> Union[ListNode, TupleNode]:
-        """Start parsing."""
-        if self.current_token is None:
-            return ListNode([])
-        return self.parse_structure()
-
-    def parse_structure(self) -> Union[ListNode, TupleNode]:
-        """Parse a list or tuple structure."""
-        elements: List[Any] = []
-        if self.current_token.type == "LBRACKET":
-            opening_bracket: str = "LBRACKET"
-            closing_bracket: str = "RBRACKET"
-            node_class = ListNode
-        elif self.current_token.type == "LPAREN":
-            opening_bracket = "LPAREN"
-            closing_bracket = "RPAREN"
-            node_class = TupleNode
-        else:
-            raise SyntaxError(
-                f"Expected LBRACKET or LPAREN, got {self.current_token.type}"
-            )
-        self.expect(opening_bracket)
-        while self.current_token and self.current_token.type != closing_bracket:
-            if self.current_token.type == "BRACED_CONTENT":
-                # Handle braced content
-                content = self.current_token.value  # Includes the braces
-                elements.append({"braced_content": content})
-                self.next_token()
-            elif self.current_token.type in ("LBRACKET", "LPAREN"):
-                # Nested list or tuple
-                elements.append(self.parse_structure())
-            elif self.current_token.type == "COMPLEX_NUMBER":
-                # Complex number with real and imaginary parts
-                num_str = self.current_token.value
-                number = ast.literal_eval(num_str)
-                elements.append(number)
-                self.next_token()
-            elif self.current_token.type == "NUMBER":
-                # Number (int, float, or imaginary-only complex)
-                num_str = self.current_token.value
-                number = ast.literal_eval(num_str)
-                elements.append(number)
-                self.next_token()
-            elif self.current_token.type == "STRING":
-                # String (remove quotes)
-                string_value = self.current_token.value
-                unquoted_string = ast.literal_eval(string_value)
-                elements.append(unquoted_string)
-                self.next_token()
-            elif self.current_token.type == "IDENTIFIER":
-                # Identifier
-                elements.append(Identifier(self.current_token.value))
-                self.next_token()
-            elif self.current_token.type == "SEMICOLON":
-                # Line separator (new substructure)
-                self.next_token()
-                elements.append(";")  # Keep semicolon as placeholder
-            else:
-                raise SyntaxError(f"Unexpected token {self.current_token}")
-        self.expect(closing_bracket)
-        # If there is at least one semicolon, we need to split
-        if ";" in elements:
-            split_elements = self.split_by_semicolon(elements, node_class)
-            return node_class(split_elements)
-        else:
-            # No semicolons, return elements directly
-            return node_class(elements)
-
-    def split_by_semicolon(self, elements: List[Any], node_class: Any) -> List[Any]:
-        """Create sublists or subtuples based on semicolons."""
-        result: List[Any] = []
-        current: List[Any] = []
-        for item in elements:
-            if item == ";":
-                if current:
-                    result.append(self.wrap_node(current, node_class))
-                    current = []
-            else:
-                current.append(item)
-        if current:
-            result.append(self.wrap_node(current, node_class))
-        return result
-
-    def wrap_node(self, elements: List[Any], node_class: Any) -> Any:
-        """Wrap elements into node_class, or return single element."""
-        if len(elements) == 1 and isinstance(elements[0], (ListNode, TupleNode)):
-            return elements[0]
-        else:
-            return node_class(elements)
-
-    def expect(self, token_type: str) -> None:
-        """Expect a specific token type and advance."""
-        if self.current_token and self.current_token.type == token_type:
-            self.next_token()
-        else:
-            expected: str = token_type
-            actual: str = self.current_token.type if self.current_token else "EOF"
-            raise SyntaxError(f"Expected token {expected}, got {actual}")
-
-
-class ArrayConverter:
-    """Converts custom array string to Python list or tuple format string."""
-
-    def __init__(self, text: str) -> None:
-        self.text: str = text
-
-    def convert(self) -> str:
-        tokenizer = Tokenizer(self.text)
-        parser = Parser(tokenizer)
-        parsed: Union[ListNode, TupleNode] = parser.parse()
-        # Flatten singleton lists or tuples at the top level
-        while (
-            isinstance(parsed, (ListNode, TupleNode))
-            and len(parsed.elements) == 1
-            and isinstance(parsed.elements[0], (ListNode, TupleNode))
-        ):
-            parsed = parsed.elements[0]
-        return self.format_structure(parsed)
-
-    def format_structure(
-        self,
-        obj: Union[ListNode, TupleNode, int, float, complex, str, Identifier, dict],
-    ) -> str:
-        """Format the parsed structure into a string."""
-        if isinstance(obj, ListNode):
-            return (
-                "["
-                + ",".join(self.format_structure(item) for item in obj.elements)
-                + "]"
-            )
-        elif isinstance(obj, TupleNode):
-            return (
-                "("
-                + ",".join(self.format_structure(item) for item in obj.elements)
-                + ")"
-            )
-        elif isinstance(obj, dict) and "braced_content" in obj:
-            content = obj["braced_content"]
-            # Remove extra spaces inside braces if needed
-            content = content.strip()
-            return f'"{content}"'
-        elif isinstance(obj, Identifier):
-            return f"'{self.format_identifier(obj)}'"
-        elif isinstance(obj, str):
-            return f"'\"{obj}\"'"
-        elif isinstance(obj, complex):
-            return str(obj)
-        else:
-            return str(obj)
-
-    def format_identifier(self, obj: Identifier) -> str:
-        """Format an identifier."""
-        # return f'${obj.name}'
-        return f"{obj.name}"
-
-
-def convert_custom_array_to_proper_list(input_str: str) -> str:
-    """
-    >>> convert_custom_array_to_proper_list("[1 2 3; 4 5 6]")
-    '[[1,2,3],[4,5,6]]'
-    >>> convert_custom_array_to_proper_list("[1 2 3]")
-    '[1,2,3]'
-    >>> convert_custom_array_to_proper_list("[1 2 3; 4 5 6; 7 8 9]")
-    '[[1,2,3],[4,5,6],[7,8,9]]'
-    >>> convert_custom_array_to_proper_list("[1 2 3; 4 5 6; 7 8 9; 10 11 12]")
-    '[[1,2,3],[4,5,6],[7,8,9],[10,11,12]]'
-    >>> convert_custom_array_to_proper_list("[[1 2 3; 4 5 6; 7 8 9]; [10 11 12; 13 14 15; 16 17 18]; [19 20 21; 22 23 24; 25 26 27]]")
-    '[[[1,2,3],[4,5,6],[7,8,9]],[[10,11,12],[13,14,15],[16,17,18]],[[19,20,21],[22,23,24],[25,26,27]]]'
-    >>> convert_custom_array_to_proper_list("[1 2 3; 4 5 6; 7 8 9; [10 11 12]]")
-    '[[1,2,3],[4,5,6],[7,8,9],[10,11,12]]'
-    >>> convert_custom_array_to_proper_list("[1 2 3; 4 5 6; 7 8 9; [10 11 12; 13 14 15]]")
-    '[[1,2,3],[4,5,6],[7,8,9],[[10,11,12],[13,14,15]]]'
-    >>> convert_custom_array_to_proper_list("[a b c]")
-    "['a','b','c']"
-    >>> convert_custom_array_to_proper_list("[1 2 {3 4 5}]")
-    '[1,2,"{3 4 5}"]'
-    """
-    converter = ArrayConverter(input_str)
-    return converter.convert()
-
-
-def parse_expression(expression: str) -> list[str]:
-    """
-    input(str)  : [1 2 3] 4 5 a
-    output(list): [[1, 2, 3], 4, 5, 'a']
-
-    >>> parse_expression("[1 2 3] 4 5 a")
-    ['[1 2 3]', '4', '5', 'a']
-    >>> parse_expression("{0}")
-    ['{0}']
-    >>> parse_expression("-1 k ^ 2 k * 1 + / p + $p set  # calculate p")
-    ['-1', 'k', '^', '2', 'k', '*', '1', '+', '/', 'p', '+', '$p', 'set']
-    >>> parse_expression("{x}{x x +}lambda")
-    ['{x}', '{x x +}', 'lambda']
-    >>> parse_expression("3{x}{x x +}lambda")
-    ['3', '{x}', '{x x +}', 'lambda']
-    """
-    ignore_tokens = ['"""', "'''"]
-    lexed_expression: list = lex_string(expression)
-    tokens = []
-
-    for token in lexed_expression:
-        if token in ignore_tokens:
-            continue
-        elif token.startswith("#"):
-            return tokens
-        elif is_array(token):
-            tokens.append(token)
-        elif is_tuple(token):
-            tokens.append(token)
-        elif is_string(token):
-            tokens.append(token)
-        else:
-            tokens.append(token)
-    return tokens
+def lex_string(s: str) -> list:
+    warnings.warn(
+        "lex_string() is deprecated. Use UnifiedLexer(s).tokenize() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return UnifiedLexer(s).tokenize()
 
 
 if __name__ == "__main__":

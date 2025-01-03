@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import cmath
 from typing import Callable
+from fractions import Fraction
 
 
 def _pow(x1, x2):
@@ -182,6 +183,10 @@ def _ncr(n, k):
 
 def _npr(n, k):
     return _perm(n, k)
+
+
+def _frac(a, b):
+    return Fraction(a, b)
 
 
 def _numeric_diff(f: Callable, x: float) -> float:
@@ -381,5 +386,11 @@ math_operators = {
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Round to nearest integer",
+    },
+    "frac": {
+        "func": (lambda a, b: _frac(a, b)),
+        "arg_count": 2,
+        "push_result_to_stack": True,
+        "desc": "Fraction",
     },
 }
