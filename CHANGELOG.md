@@ -1,5 +1,12 @@
 # CHANGE LOG
 
+## [1.8.2]
+
+- **Changed**
+
+  Stopped using the deprecated pkg_resources module in favor of standard library alternatives.
+
+
 ## [1.8.1]
 
 ### Improvements
