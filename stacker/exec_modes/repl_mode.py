@@ -4,11 +4,10 @@ import logging
 import sys
 import traceback
 
-from pkg_resources import get_distribution
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import FileHistory
-
+from importlib.metadata import version
 from stacker.exec_modes.error import create_error_message
 from stacker.exec_modes.excution_mode import ExecutionMode
 from stacker.lib import delete_history, disp_about, disp_help
@@ -39,8 +38,11 @@ class ReplMode(ExecutionMode):
             print("\nSee you!")
             sys.exit()
 
+    def get_version(self) -> str:
+        return version("pystacker")
+
     def run(self):
-        stacker_version = get_distribution("pystacker").version
+        stacker_version = self.get_version()
         print(f"Stacker {stacker_version} on {sys.platform}")
         print('Type "help" to get more information.')
 

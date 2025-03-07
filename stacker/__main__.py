@@ -6,13 +6,10 @@ import shutil
 import sys
 import traceback
 from pathlib import Path
+import stacker
 
-from pkg_resources import get_distribution
-
-# from stacker.error import LoadPluginError
 from stacker.exec_modes import CommandLineMode, ReplMode, ScriptMode
 
-# from stacker.execution_mode import ScriptMode, ReplMode
 from stacker.lib import disp_logo
 from stacker.lib.config import plugins_dir_path, stacker_dotfile_path
 from stacker.stacker import Stacker
@@ -91,8 +88,10 @@ def load_dotfile(stacker: Stacker, dotfile_path: str | Path) -> None:
 def copy_plugin_to_install_dir(plugin_path: str, debug_mode: bool) -> None:
     try:
         # Get the installation directory of Stacker
-        stacker_dist = get_distribution("pystacker")
-        plugin_dir = stacker_dist.location + "/stacker/plugins"
+        # stacker_dist = get_distribution("pystacker")
+        # plugin_dir = stacker_dist.location + "/stacker/plugins"
+        stacker_package_dir = os.path.dirname(os.path.abspath(stacker.__file__))
+        plugin_dir = os.path.join(stacker_package_dir, "plugins")
 
         # Check if the plugin file exists
         if not os.path.isfile(plugin_path):
