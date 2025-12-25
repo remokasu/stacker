@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
-from stacker.core import StackerCore
+from stacker.engine.core import StackerCore
 from stacker.syntax.parser import parse_expression
 
 if TYPE_CHECKING:
-    from stacker.sfunction import StackerFunction
+    from stacker.engine.sfunction import StackerFunction
 
-from stacker.data_type import stack_data
+from stacker.engine.data_type import stack_data
 
 
 class Stacker(StackerCore):
@@ -17,14 +17,10 @@ class Stacker(StackerCore):
     ):
         super().__init__(expression, parent)
         self.trace = []
-        self._disp_stack_mode = True
-        self._disp_logo = True
-        self._disp_ans = False
-        self._ans = None
         self.plugin_descriptions = {}
 
     def include(self, filename: str) -> None:
-        return self.operator_manager.oprerators["priority"]["include"]["func"](
+        return self.operator_manager.operators["priority"]["include"]["func"](
             self, filename
         )
 
@@ -131,22 +127,6 @@ class Stacker(StackerCore):
 
     def register_label(self, label_name: str, index: int) -> None:
         self.labels[label_name] = index
-
-    # ========================
-    # Setting
-    # ========================
-
-    @property
-    def disp_stack_mode(self) -> bool:
-        return self._disp_stack_mode
-
-    @property
-    def disp_logo_mode(self) -> bool:
-        return self._disp_logo
-
-    @property
-    def disp_ans_mode(self) -> bool:
-        return self._disp_ans
 
     # ========================
     # Getter

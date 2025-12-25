@@ -36,3 +36,18 @@ venv/
 # Cache files
 .pytest_cache/
 .ruff_cache/
+
+# Sphinx documentation build files
+memo/
+
+# HTML coverage reports
+htmlcov/
+
+# Claude code assistant files
+.claude/
+
+# WIP documentation
+docs/
+
+# Debug directories
+benchmarks/

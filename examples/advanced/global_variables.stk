@@ -1,0 +1,13 @@
+# Global variables example
+
+0 counter global
+
+{x} {
+    counter 1 + counter global  # Increment global counter
+    x counter *
+} multiply_by_counter defun
+
+# Each call increments the counter
+5 multiply_by_counter echo   # Output: 5  (5 * 1)
+5 multiply_by_counter echo   # Output: 10 (5 * 2)
+5 multiply_by_counter echo   # Output: 15 (5 * 3)

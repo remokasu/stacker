@@ -1,0 +1,7 @@
+# Error handling with 'iferror'
+
+# Example 1: Catch an error
+{undefined_symbol} {"Error caught!" echo} iferror
+
+# Example 2: No error occurs
+{0 x = x echo} {"This won't be executed" echo} iferror
