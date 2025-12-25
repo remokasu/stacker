@@ -1,0 +1,8 @@
+{ n } {
+    n 1 <=
+    { 1 }
+    {n n 1 - fact *}
+    ifelse
+} $fact defun
+
+100 fact

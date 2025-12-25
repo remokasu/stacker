@@ -1,0 +1,152 @@
+# Data Types - Exploring different data types in Stacker
+
+# ===== Integers =====
+"=== Integers ===" echo
+
+42 echo
+-17 echo
+0 echo
+
+# Arithmetic
+10 3 + "10 + 3 =" swap echo
+10 3 - "10 - 3 =" swap echo
+10 3 * "10 * 3 =" swap echo
+10 3 / "10 / 3 =" swap echo
+10 3 % "10 % 3 =" swap echo
+
+# ===== Floating Point Numbers =====
+"" echo
+"=== Floating Point Numbers ===" echo
+
+3.14 echo
+-2.5 echo
+0.0 echo
+
+# Arithmetic with floats
+3.14 2.0 * "3.14 * 2.0 =" swap echo
+
+# Power
+2.0 3.0 ^ "2.0 ^ 3.0 =" swap echo
+
+# ===== Different Number Bases =====
+"" echo
+"=== Number Bases ===" echo
+
+# Binary (0b prefix)
+0b1010 "Binary 0b1010 =" swap echo  # 10 in decimal
+
+# Octal (0o prefix)
+0o17 "Octal 0o17 =" swap echo  # 15 in decimal
+
+# Hexadecimal (0x prefix)
+0xFF "Hex 0xFF =" swap echo  # 255 in decimal
+
+# ===== Complex Numbers =====
+"" echo
+"=== Complex Numbers ===" echo
+
+# Complex number: real+imagj
+3+4j "Complex number:" swap echo
+
+# Complex arithmetic
+1+2j 3+4j + "1+2j + 3+4j =" swap echo
+
+# ===== Strings =====
+"" echo
+"=== Strings ===" echo
+
+"Hello, World!" echo
+"Stacker" echo
+
+# String concatenation
+"Hello" " " + "World!" + echo
+
+# String conversion
+42 str "Number as string:" swap echo
+3.14 str "Float as string:" swap echo
+
+# ===== Booleans =====
+"" echo
+"=== Booleans ===" echo
+
+true echo
+false echo
+
+# Boolean operations
+true false and "true AND false =" swap echo
+true false or "true OR false =" swap echo
+true not "NOT true =" swap echo
+
+# ===== Lists =====
+"" echo
+"=== Lists ===" echo
+
+[1 2 3 4 5] "List:" swap echo
+
+# List operations
+[1 2 3] len "Length of [1 2 3]:" swap echo
+
+[3 1 2] sorted "Sorted [3 1 2]:" swap echo
+
+[1 2 3] rev "Reversed [1 2 3]:" swap echo
+
+# Creating list from stack
+1 2 3 4 5 5 listn "List from 5 elements:" swap echo
+
+# ===== Fractions =====
+"" echo
+"=== Fractions ===" echo
+
+3 4 frac "Fraction 3/4:" swap echo
+
+1 2 frac 1 3 frac + "1/2 + 1/3 =" swap echo
+
+# ===== Special Values =====
+"" echo
+"=== Special Values ===" echo
+
+pi "Pi:" swap echo
+e "Euler's number:" swap echo
+tau "Tau (2*pi):" swap echo
+inf "Infinity:" swap echo
+nan "Not a Number:" swap echo
+
+# ===== Type Checking =====
+"" echo
+"=== Type Checking ===" echo
+
+42 type "Type of 42:" swap echo
+3.14 type "Type of 3.14:" swap echo
+"hello" type "Type of 'hello':" swap echo
+true type "Type of true:" swap echo
+[1 2 3] type "Type of [1 2 3]:" swap echo
+3+4j type "Type of 3+4j:" swap echo
+
+# ===== Type Conversion =====
+"" echo
+"=== Type Conversion ===" echo
+
+# To integer
+3.7 int "3.7 to int:" swap echo
+"42" int "\"42\" to int:" swap echo
+
+# To float
+42 float "42 to float:" swap echo
+
+# To string
+123 str "123 to string:" swap echo
+
+# To binary, octal, hex
+255 bin "255 to binary:" swap echo
+255 oct "255 to octal:" swap echo
+255 hex "255 to hex:" swap echo
+
+# ===== Code Blocks =====
+"" echo
+"=== Code Blocks ===" echo
+
+{1 2 +} "Code block:" swap echo
+{1 2 +} type "Type of code block:" swap echo
+
+# Evaluating code block
+{5 3 *} eval "Evaluated {5 3 *}:" swap echo

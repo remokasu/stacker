@@ -8,7 +8,7 @@ import traceback
 from pathlib import Path
 import stacker
 
-from stacker.exec_modes import CommandLineMode, ReplMode, ScriptMode
+from stacker.runtime.exec_modes import CommandLineMode, ReplMode, ScriptMode
 
 from stacker.lib import disp_logo
 from stacker.lib.config import plugins_dir_path, stacker_dotfile_path
@@ -167,7 +167,7 @@ def main():
             repl_mode.execute_stacker_dotfile(stacker_dotfile_path)
         if argv.debug:
             repl_mode.debug_mode()
-        if repl_mode.rpn_calculator.disp_logo_mode:
+        if repl_mode.disp_logo_mode:
             disp_logo()
         rpn_calculator.clear_trace()
         repl_mode.run()

@@ -1,0 +1,11 @@
+# Greatest Common Divisor using Euclidean algorithm
+
+{a b} {
+    b 0 ==
+    {a}
+    {b a b % gcd}
+    ifelse
+} gcd defun
+
+# Calculate GCD of 48 and 18
+48 18 gcd echo  # Output: 6

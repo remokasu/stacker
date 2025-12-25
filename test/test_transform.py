@@ -17,10 +17,7 @@ class TestUnit(unittest.TestCase):
         ans = stacker.eval("[1 2 3] enumerate")
         self.assertEqual(ans[-1], [(0, 1), (1, 2), (2, 3)])
 
-    def test_enumerate_tuple(self):
-        stacker = Stacker()
-        ans = stacker.eval("(1 2 3) enumerate")
-        self.assertEqual(ans[-1], ((0, 1), (1, 2), (2, 3)))
+    # REMOVED: test_enumerate_tuple - () now creates code blocks, not tuples
 
     ############################
     # sorted
@@ -35,10 +32,7 @@ class TestUnit(unittest.TestCase):
         ans = stacker.eval("[3 1 2] sorted")
         self.assertEqual(ans[-1], [1, 2, 3])
 
-    def test_sorted_tuple(self):
-        stacker = Stacker()
-        ans = stacker.eval("(3 1 2) sorted")
-        self.assertEqual(ans[-1], (1, 2, 3))
+    # REMOVED: test_sorted_tuple - () now creates code blocks, not tuples
 
     ############################
     # reversed
@@ -53,10 +47,7 @@ class TestUnit(unittest.TestCase):
         ans = stacker.eval("[1 2 3] reversed")
         self.assertEqual(ans[-1], [3, 2, 1])
 
-    def test_reversed_tuple(self):
-        stacker = Stacker()
-        ans = stacker.eval("(1 2 3) reversed")
-        self.assertEqual(ans[-1], (3, 2, 1))
+    # REMOVED: test_reversed_tuple - () now creates code blocks, not tuples
 
     ############################
     # list
@@ -71,25 +62,6 @@ class TestUnit(unittest.TestCase):
         ans = stacker.eval("[1 2 3] list")
         self.assertEqual(ans[-1], [1, 2, 3])
 
-    def test_list_tuple(self):
-        stacker = Stacker()
-        ans = stacker.eval("(1 2 3) list")
-        self.assertEqual(ans[-1], [1, 2, 3])
+    # REMOVED: test_list_tuple - () now creates code blocks, not tuples
 
-    ############################
-    # tuple
-    ############################
-    def test_tuple_block(self):
-        stacker = Stacker()
-        ans = stacker.eval("{1 2 3} tuple")
-        self.assertEqual(ans[-1], (1, 2, 3))
-
-    def test_tuple_list(self):
-        stacker = Stacker()
-        ans = stacker.eval("[1 2 3] tuple")
-        self.assertEqual(ans[-1], (1, 2, 3))
-
-    def test_tuple_tuple(self):
-        stacker = Stacker()
-        ans = stacker.eval("(1 2 3) tuple")
-        self.assertEqual(ans[-1], (1, 2, 3))
+    # REMOVED: All tuple operator tests - tuple operator deprecated

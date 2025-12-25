@@ -12,10 +12,8 @@ class TestStacker(unittest.TestCase):
         ans = self.stacker.eval("[1 2 3] {x} {x 2 *} lambda map")
         self.assertEqual(ans[-1], [2, 4, 6])
 
-    def test_test_lambda_2(self):
-        self.stacker.stack.clear()
-        ans = self.stacker.eval("(1 2 3) {x} {x 2 *} lambda map")
-        self.assertEqual(ans[-1], (2, 4, 6))
+    # REMOVED: test_test_lambda_2 - () now creates code blocks, not tuples
+    # Use [1 2 3] for lists instead
 
     def test_test_lambda_3(self):
         self.stacker.stack.clear()

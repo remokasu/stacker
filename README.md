@@ -5,6 +5,19 @@
 
 Stacker is a powerful Reverse Polish Notation (RPN) calculator built with Python, featuring basic mathematical operations and extensibility through plugins.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Dependencies](#dependencies)
+- [Usage](#usage)
+- [Running Scripts](#running-scripts)
+- [VSCode Syntax Highlighting](#vscode-syntax-highlighting)
+- [Error Formatting](#error-formatting)
+- [Command Line Execution](#command-line-execution)
+- [Configuration File](#configuration-file)
+- [Creating Plugins](#creating-plugins)
+- [Supported Operations](#supported-operations)
+
 ## Installation
 
 ```bash
@@ -12,6 +25,16 @@ git clone git@github.com:remokasu/stacker.git
 cd stacker
 pip install .
 ```
+
+### Optional: VSCode Syntax Highlighting
+
+For syntax highlighting support in VSCode:
+
+```bash
+cp -r .vscode-extension ~/.vscode/extensions/stacker-language
+```
+
+Reload VSCode (Ctrl+Shift+P → "Developer: Reload Window") and `.stk` files will be highlighted. 
 
 
 ## Dependencies
@@ -99,20 +122,29 @@ Stacker allows for straightforward RPN input. For example:
 - ### Variables:
   - syntax:
     ``` bash
-    value $name set
+    value name set
+    # or
+    value name =
     ```
   - example:
     ```bash
-    stacker:0> 3 $x set
-    ```
-    In this example, we assign `3` to `x`.
-    If you input an undefined symbol, you need to prefix the symbol name with a dollar sign ($). <br>
-    Hereafter, when x is used, 3 will be pushed onto the stack. Additionally, when using predefined symbols, the dollar sign is not required.
-    ``` bash
-    stacker:0> 3 $x set
+    stacker:0> 3 x set
     stacker:1> x
     [3]
+
+    # Using = operator (equivalent to set)
+    stacker:2> 5 y =
+    stacker:3> y
+    [5]
     ```
+    In this example, we assign `3` to `x` using `set`, and `5` to `y` using `=`. Both operators work identically.
+
+    **Note:** The `$` prefix (e.g., `$x`) is supported for backward compatibility but no longer required.
+
+    **Note:** The `=` operator is an alias for `set` and can be used interchangeably. Use whichever feels more natural for your coding style.
+
+    **Important:** Avoid using built-in operator names (like `sum`, `max`, `min`) as variable names,
+    as this will shadow the operator. See [VARIABLE_NAMING.md](VARIABLE_NAMING.md) for details.
 
 - Arrays:
   - Single-line array:
@@ -129,50 +161,41 @@ Stacker allows for straightforward RPN input. For example:
     ```
 
 
-- ### Code blocks:
-
-  Code blocks are enclosed in curly braces ({}). These blocks are pushed onto the stack in their raw form and can be executed later. For example: {1 2 +}. These blocks are particularly useful for deferred (lazy) evaluation. Specific use-cases include conditional statements and loop controls.
-
-  - syntax:
-    ```bash
-    {1 2 +}
-    ```
-  - example:
-    ```bash
-    stacker:0> {1 2 +}
-    [{1 2 +}]
-    ```
-    In this command, the block `{1 2 +}` is pushed (added) to the stack.
-
 - ### Code Blocks
 
-  Code blocks in Stacker are enclosed in curly braces ({}). These blocks are fundamental structures that enable deferred evaluation and control flow management.
+  Code blocks are fundamental structures in Stacker that enable deferred evaluation and control flow management. They are enclosed in curly braces `{}`.
 
-  Syntax:
+  **Syntax:**
   ```bash
   {code_elements}
   ```
 
-  Key Characteristics:
-  1. Structure: Code blocks contain one or more code elements separated by spaces.
-  2. Deferred Evaluation: The contents of a code block are not immediately executed.
-  3. Stack Interaction: When encountered, code blocks are pushed onto the stack in their raw form.
-  4. Execution: Code blocks can be executed at a later time when needed.
+  **Key Characteristics:**
+  1. **Deferred Evaluation**: Code blocks are not executed immediately when encountered
+  2. **Stack Interaction**: Pushed onto the stack as single units in their raw form
+  3. **Delayed Execution**: Can be executed later when needed (via `eval`, `if`, `times`, etc.)
 
-  Common Use Cases:
-  - Conditional statements
-  - Loop controls
-  - Function definitions
+  **Common Use Cases:**
+  - Conditional statements (`if`, `ifelse`)
+  - Loop controls (`times`, `do`, `dolist`)
+  - Function definitions (`defun`, `lambda`)
+  - Lazy evaluation patterns
 
-  Example:
+  **Examples:**
   ```bash
+  # Create a code block
   stacker:0> {1 2 +}
   [{1 2 +}]
+
+  # Execute with eval
+  stacker:1> {1 2 +} eval
+  [3]
+
+  # Use in function definitions
+  stacker:2> {x y} {x y *} multiply defun
   ```
 
-  In this example, the block `{1 2 +}` is pushed onto the stack as a single entity. The output shows the stack's contents after the operation, indicating that the block has been stored but not executed.
-
-  Note: The execution of a code block's contents occurs only when explicitly triggered, allowing for flexible program control and lazy evaluation strategies.
+  **Note**: Code blocks are stored but not executed until explicitly triggered. This allows for flexible program control, lazy evaluation, and higher-order programming patterns.
 
 - ### Control Structures in Stacker
 
@@ -193,7 +216,7 @@ Stacker allows for straightforward RPN input. For example:
 
     Example:
     ```bash
-    stacker:0> 0 $x set
+    stacker:0> 0 x set
     stacker:1> x 0 == {3 4 +} if
     [7]
     ```
@@ -211,7 +234,7 @@ Stacker allows for straightforward RPN input. For example:
 
     Example:
     ```bash
-    stacker:0> 0 $x set
+    stacker:0> 0 x set
     stacker:1> x 0 == {3 4 +} {3 4 -} ifelse
     [7]
     ```
@@ -228,12 +251,12 @@ Stacker allows for straightforward RPN input. For example:
 
     Syntax:
     ```bash
-    start_value end_value $symbol {body} do
+    start_value end_value symbol {body} do
     ```
 
     Example:
     ```bash
-    stacker:0> 1 10 $i {i echo} do
+    stacker:0> 1 10 i {i echo} do
     1
     2
     3
@@ -246,7 +269,7 @@ Stacker allows for straightforward RPN input. For example:
     10
     ```
 
-    Result: Prints numbers from 0 to 10.
+    Result: Prints numbers from 1 to 10.
 
   - ##### dolist
 
@@ -254,12 +277,12 @@ Stacker allows for straightforward RPN input. For example:
 
       Syntax:
       ```bash
-      [value1 value2 ... valueN] $symbol {body} dolist
+      [value1 value2 ... valueN] symbol {body} dolist
       ```
 
       Example:
       ```bash
-      stacker:0> [1 2 3 4 5] $i {i echo} dolist
+      stacker:0> [1 2 3 4 5] i {i echo} dolist
       1
       2
       3
@@ -296,8 +319,8 @@ Stacker allows for straightforward RPN input. For example:
       ```
     - example:
       ```bash
-      stacker:0> 0 $i set
-      stacker:1> 0 9 $i {{break} i 5 == if i echo} do
+      stacker:0> 0 i set
+      stacker:1> 0 9 i {{break} i 5 == if i echo} do
       0
       1
       2
@@ -310,11 +333,11 @@ Stacker allows for straightforward RPN input. For example:
 - ### Define a function:
   - syntax:
     ```bash
-    {arg1 arg2 ... argN} {body} $name defun
+    {arg1 arg2 ... argN} {body} name defun
     ```
   - example:
     ```bash
-    stacker:0> {x y} {x y *} $multiply defun
+    stacker:0> {x y} {x y *} multiply defun
     stacker:1> 10 20 multiply
     [200]
     ```
@@ -323,11 +346,11 @@ Stacker allows for straightforward RPN input. For example:
 - ### Define a macro:
   - syntax:
     ```bash
-    {body} $name defmacro
+    {body} name defmacro
     ```
   - example:
     ```bash
-    stacker:0> {2 ^ 3 * 5 +} $calculatePowerAndAdd defmacro
+    stacker:0> {2 ^ 3 * 5 +} calculatePowerAndAdd defmacro
     stacker:1> 5 calculatePowerAndAdd
     [80]
     ```
@@ -348,7 +371,7 @@ Stacker allows for straightforward RPN input. For example:
 
   - example:
     ```bash
-    stacker:0> {x y} {x y *} lambda $multiply set
+    stacker:0> {x y} {x y *} lambda multiply set
     stacker:1> 3 4 multiply
     [12]
     ```
@@ -369,8 +392,8 @@ Stacker scripts can be created in `.stk` files. To run a script, simply execute 
 
 - my_script.stk:
   ```bash
-  0 $p set
-  0 100000 $k {
+  0 p set
+  0 100000 k {
       -1 k ^ 2 k * 1 + / p + p set
   } do
   4 p * p set
@@ -381,6 +404,42 @@ Stacker scripts can be created in `.stk` files. To run a script, simply execute 
   ```bash
   stacker my_script.stk
   ```
+
+
+## VSCode Syntax Highlighting
+
+Stacker provides syntax highlighting support for `.stk` files in Visual Studio Code, making it easier to read and write Stacker code.
+
+### Installation
+
+Install the syntax highlighting extension by copying it to your VSCode extensions directory:
+
+```bash
+# For VSCode Server (Remote SSH)
+mkdir -p ~/.vscode-server/extensions/stacker-language-0.1.0
+cp -r .vscode-extension/* ~/.vscode-server/extensions/stacker-language-0.1.0/
+
+# For local VSCode
+mkdir -p ~/.vscode/extensions/stacker-language-0.1.0
+cp -r .vscode-extension/* ~/.vscode/extensions/stacker-language-0.1.0/
+```
+
+Then reload VSCode (Ctrl+Shift+P → "Developer: Reload Window").
+
+### Features
+
+- **Comment highlighting** (`#`) - Green, italic
+- **String literals** (`"..."`, `'...'`) - Brown
+- **Number literals** (`42`, `3.14`, `0xFF`, `0b1010`) - Light green
+- **Operators** (`+`, `-`, `and`, `or`, etc.) - Blue
+- **Control flow** (`if`, `do`, `times`) - Purple
+- **Function definitions** (`defun`, `defmacro`, `lambda`) - Teal, bold
+- **Variables** (`$x`, `a`) - Light blue
+- **Assignment** (`set`, `=`, `global`) - White, bold
+- Auto-closing brackets (`{`, `[`, `"`, `'`)
+- Code folding support
+
+For detailed installation instructions, see [VSCODE_SETUP.md](VSCODE_SETUP.md).
 
 
 ## Command Line Execution
@@ -631,7 +690,7 @@ print(stacker.eval("3 4 +"))
 | if       | Conditional statement                                 | `{...} true  if`           |
 | ifelse   | Conditional statement with an else block              | `{true block} {false block} true ifelse`  |
 | iferror  | Conditional statement for error handling              | `{try block} {catch block} iferror` |
-| do       | Loop                                                  | `0 10 $i {i echo} do`      |
+| do       | Loop                                                  | `0 10 i {i echo} do`      |
 | times    | Loop a specified number of times                      | `{dup ++} 10 times`        |
 | break    | Break out of a loop                                    | `break`                   |
 
@@ -639,10 +698,12 @@ print(stacker.eval("3 4 +"))
 ### Function, Macro, Lambda, and Variable Operators
 | Operator | Description                                           | Example                    |
 |----------|-------------------------------------------------------|----------------------------|
-| defun    | Define a function                                     | `{x y} {x y *} $multiply defun` |
-| defmacro    | Define a macro                                     | `{2 ^ 3 * 5 +} $calculatePowerAndAdd defmacro` |
+| defun    | Define a function                                     | `{x y} {x y *} multiply defun` |
+| defmacro    | Define a macro                                     | `{2 ^ 3 * 5 +} calculatePowerAndAdd defmacro` |
 | lambda   | Create a lambda function                              | `{x y} {x y *} lambda`    |
-| set      | Assign a value to a variable                          | `3 $x set`                |
+| set      | Assign a value to a variable                          | `3 x set`                |
+| =        | Assign a value to a variable (alias for `set`)        | `3 x =`                  |
+| global   | Assign a value to a global variable                   | `42 $answer global`      |
 
 
 ### Array Operators
@@ -662,7 +723,6 @@ print(stacker.eval("3 4 +"))
 | subn     | Cluster elements between the top and the nth (make substacks) | `3 subn`           |
 | include  | Include the specified file                            | `"file.stk" include`       |
 | eval     | Evaluate the specified RPN expression                 | `'3 5 +' eval`             |
-| evalpy   | Evaluate the specified Python expression              | `'3+5' evalpy`             |
 | echo     | Print the specified value to stdout without adding it to the stack | `3 4 + echo`  |
 | input    | Get input from the user                               | `input`                    |
 | read     | Reads a string from the console                       | `read`                     |

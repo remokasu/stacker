@@ -1,176 +1,29 @@
 from __future__ import annotations
 
 import ast
-import re
-from typing import List, Union, Iterator, Any
-import warnings
-from dataclasses import dataclass
-from enum import Enum, auto
+from functools import lru_cache
+from typing import Any, List
+
+# Import lexer components from the separate lexer module
+from stacker.syntax.lexer import (
+    Identifier,
+    ListNode,
+    Token,
+    TokenType,
+    TupleNode,
+    UnifiedLexer,
+    lex_string,
+)
 
 __transpose_symbol__ = "^T"
 
 
-class TokenType(Enum):
-    BRACED_CONTENT = auto()
-    COMPLEX_NUMBER = auto()
-    NUMBER = auto()
-    STRING = auto()
-    IDENTIFIER = auto()
-    LBRACKET = auto()
-    RBRACKET = auto()
-    LPAREN = auto()
-    RPAREN = auto()
-    SEMICOLON = auto()
-    OPERATOR = auto()
-    SPACE = auto()
-    COMMA = auto()
-    OTHER = auto()
-
-
-@dataclass
-class Token:
-    """Represents a single token."""
-
-    type: TokenType
-    value: str
-
-    def __repr__(self) -> str:
-        return f"Token({self.type}, {self.value})"
-
-
-@dataclass
-class Identifier:
-    """Represents an identifier."""
-
-    name: str
-
-    def __repr__(self) -> str:
-        return f"Identifier({self.name})"
-
-
-@dataclass
-class ListNode:
-    """Represents a list node."""
-
-    elements: List[Any]
-
-    def __repr__(self) -> str:
-        return f"ListNode({self.elements})"
-
-
-@dataclass
-class TupleNode:
-    """Represents a tuple node."""
-
-    elements: List[Any]
-
-    def __repr__(self) -> str:
-        return f"TupleNode({self.elements})"
-
-
-class TokenPattern:
-    """Token patterns for lexical analysis"""
-
-    PATTERNS = [
-        (TokenType.BRACED_CONTENT, r"\{[^}]*\}"),
-        (
-            TokenType.COMPLEX_NUMBER,
-            r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[+-](\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[jJ]",
-        ),
-        (TokenType.NUMBER, r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[jJ]?"),
-        (TokenType.STRING, r"('([^'\\]|\\.)*'|\"([^\"\\]|\\.)*\")"),
-        (TokenType.IDENTIFIER, r"[A-Za-z_][A-Za-z0-9_]*"),
-        (TokenType.LBRACKET, r"\["),
-        (TokenType.RBRACKET, r"\]"),
-        (TokenType.LPAREN, r"\("),
-        (TokenType.RPAREN, r"\)"),
-        (TokenType.SEMICOLON, r";"),
-        (TokenType.OPERATOR, r"[+\-]"),
-        (TokenType.SPACE, r"\s+"),
-        (TokenType.COMMA, r","),
-        (TokenType.OTHER, r"."),
-    ]
-
-
-class UnifiedLexer:
-    """Unified lexical analyzer that handles both simple and complex tokenization"""
-
-    def __init__(self, text: str) -> None:
-        self.text = text
-        self.pos = 0
-        self.delimiter_mapping = {"[": "]", "(": ")", "{": "}", "'": "'", '"': '"'}
-        self._setup_regex()
-
-    def _setup_regex(self) -> None:
-        """Setup regex patterns for tokenization"""
-        self.tok_regex = "|".join(
-            f"(?P<{pattern[0].name}>{pattern[1]})" for pattern in TokenPattern.PATTERNS
-        )
-        self.token_re = re.compile(self.tok_regex)
-
-    def tokenize(self) -> list[str]:
-        """Tokenize input preserving nested structures"""
-        tokens = []
-        current_token = ""
-        bracket_stack = []
-
-        for char in self.text:
-            if char in self.delimiter_mapping:
-                if current_token and current_token.strip().isdigit():
-                    tokens.append(current_token)
-                    current_token = ""
-
-                if bracket_stack and self.delimiter_mapping[bracket_stack[-1]] == char:
-                    current_token += char
-                    bracket_stack.pop()
-                    if not bracket_stack:
-                        tokens.append(current_token)
-                        current_token = ""
-                else:
-                    bracket_stack.append(char)
-                    current_token += char
-            elif bracket_stack:
-                current_token += char
-                if char == self.delimiter_mapping[bracket_stack[-1]]:
-                    bracket_stack.pop()
-                    if not bracket_stack:
-                        tokens.append(current_token)
-                        current_token = ""
-            elif char.isspace():
-                if current_token:
-                    tokens.append(current_token)
-                    current_token = ""
-            else:
-                current_token += char
-
-        if current_token:
-            tokens.append(current_token)
-
-        return tokens
-
-    def get_tokens(self) -> Iterator[Token]:
-        """Get tokens with type information"""
-        pos = 0
-        while pos < len(self.text):
-            match = self.token_re.match(self.text, pos)
-            if match is None:
-                break
-
-            kind = TokenType[match.lastgroup]  # type: ignore
-            value = match.group()
-            if kind != TokenType.SPACE:
-                yield Token(kind, value)
-
-            pos = match.end()
-
-        if pos != len(self.text):
-            raise SyntaxError(
-                f"Unexpected character {self.text[pos]!r} at position {pos}"
-            )
-
-
 class Parser:
-    """Unified parser that handles both simple and complex parsing"""
+    """DEPRECATED: This parser includes tuple support which was removed in v1.9.0.
+
+    Unified parser that handles both simple and complex parsing.
+    Note: LPAREN now creates code blocks, not tuples.
+    """
 
     def __init__(self, text: str) -> None:
         self.lexer = UnifiedLexer(text)
@@ -314,8 +167,9 @@ def convert_custom_array_to_proper_list(input_str: str) -> str:
     return Formatter.format_structure(parsed)
 
 
-def parse_expression(expression: str) -> list[str]:
-    """Parse expression into tokens while preserving structure"""
+@lru_cache(maxsize=512)
+def _parse_expression_cached(expression: str) -> tuple[str, ...]:
+    """Cached version of parse_expression that returns a tuple."""
     ignore_tokens = ['"""', "'''"]
     lexer = UnifiedLexer(expression)
     tokens = []
@@ -324,12 +178,18 @@ def parse_expression(expression: str) -> list[str]:
         if token in ignore_tokens:
             continue
         elif token.startswith("#"):
-            return tokens
+            return tuple(tokens)
         elif any(token.startswith(c) for c in "[({'\""):
             tokens.append(token)
         else:
             tokens.append(token)
-    return tokens
+    return tuple(tokens)
+
+
+def parse_expression(expression: str) -> list[str]:
+    """Parse expression into tokens while preserving structure"""
+    # Use cached version and convert back to list
+    return list(_parse_expression_cached(expression))
 
 
 def evaluate_token_or_return_str(token: str) -> Any:
@@ -373,6 +233,10 @@ def is_array(expression: str) -> bool:
 
 
 def is_tuple(expression: str) -> bool:
+    """DEPRECATED: Tuples removed in v1.9.0. Use is_code_block() instead.
+
+    This function now checks for parenthesized code blocks, not tuples.
+    """
     return starts_with_char(expression, "(")
 
 
@@ -385,11 +249,16 @@ def is_array_balanced(expression: str) -> bool:
 
 
 def is_tuple_balanced(expression: str) -> bool:
+    """DEPRECATED: Tuples removed in v1.9.0. Use is_brace_balanced() instead.
+
+    This function checks if parentheses are balanced (for code blocks).
+    """
     return is_balanced(expression, "(", ")")
 
 
 def is_brace_balanced(expression: str) -> bool:
-    return is_balanced(expression, "{", "}")
+    """Check if both {} and () code block delimiters are balanced."""
+    return is_balanced(expression, "{", "}") and is_balanced(expression, "(", ")")
 
 
 def is_single_array(expression: str) -> bool:
@@ -397,6 +266,10 @@ def is_single_array(expression: str) -> bool:
 
 
 def is_single_tuple(expression: str) -> bool:
+    """DEPRECATED: Tuples removed in v1.9.0.
+
+    This function checks for single-level parenthesized code blocks.
+    """
     return is_single(expression, "(", ")")
 
 
@@ -405,9 +278,41 @@ def is_single_brace(expression: str) -> bool:
 
 
 def is_block(expression: str) -> bool:
+    """Check if expression is a code block with {} delimiters.
+
+    Note: For checking both {} and () code blocks, use is_code_block() instead.
+    This function is kept for backward compatibility.
+    """
     if not isinstance(expression, str):
         return False
     return expression.count("{") == expression.count("}") > 0
+
+
+def is_code_block(expression: str) -> bool:
+    """Check if expression is a code block (either {} or ()).
+
+    Code blocks can be delimited by either curly braces {} or parentheses ().
+    Both notations are functionally identical and create StackerCore substack objects.
+
+    Args:
+        expression: String to check
+
+    Returns:
+        True if expression has balanced braces or parentheses (non-empty), False otherwise
+
+    Examples:
+        >>> is_code_block("{1 2 +}")
+        True
+        >>> is_code_block("(1 2 +)")
+        True
+        >>> is_code_block("[1 2 3]")
+        False
+    """
+    if not isinstance(expression, str):
+        return False
+    has_braces = expression.count("{") == expression.count("}") > 0
+    has_parens = expression.count("(") == expression.count(")") > 0
+    return has_braces or has_parens
 
 
 def is_string(expression: str) -> bool:
@@ -425,7 +330,29 @@ def is_list(expression: str) -> bool:
 
 
 def is_symbol(expression: str) -> bool:
-    return expression.startswith("$") and not expression.endswith("$")
+    """Check if expression is a valid symbol (e.g., $name, $my_var).
+
+    Valid symbols:
+    - Start with exactly one $
+    - Followed by at least one character
+    - Do not contain $ elsewhere
+
+    Examples:
+        $name -> True
+        $x -> True
+        $ -> False (no name after $)
+        $$x -> False (multiple $ at start)
+        $name$ -> False ($ at end)
+    """
+    if not isinstance(expression, str):
+        return False
+    if len(expression) < 2:  # At least "$x"
+        return False
+    if not expression.startswith("$"):
+        return False
+    if "$" in expression[1:]:  # No $ after the first character
+        return False
+    return True
 
 
 def is_label_symbol(expression: str) -> bool:
@@ -441,15 +368,6 @@ def is_contains_transpose_command(expression: str) -> bool:
         len(expression) > len(__transpose_symbol__)
         and expression[-len(__transpose_symbol__) :] == __transpose_symbol__
     )
-
-
-def lex_string(s: str) -> list:
-    warnings.warn(
-        "lex_string() is deprecated. Use UnifiedLexer(s).tokenize() instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return UnifiedLexer(s).tokenize()
 
 
 if __name__ == "__main__":

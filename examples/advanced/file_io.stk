@@ -1,0 +1,155 @@
+# File I/O - File operations
+
+# ===== Writing to a File =====
+"=== Writing to a File ===" echo
+
+"This is a test file.
+It has multiple lines.
+Line 3 here." "test_output.txt" write-to-file
+
+"File written to test_output.txt" echo
+
+# ===== Reading from a File =====
+"" echo
+"=== Reading from a File ===" echo
+
+"test_output.txt" read-from-file
+"File contents:" echo
+echo
+
+# ===== Appending to a File =====
+"" echo
+"=== Appending to a File ===" echo
+
+"
+This line was appended." "test_output.txt" append-to-file
+
+"Appended to file" echo
+
+"test_output.txt" read-from-file
+"Updated contents:" echo
+echo
+
+# ===== Check if File Exists =====
+"" echo
+"=== Check if File Exists ===" echo
+
+"Does test_output.txt exist?" echo
+"test_output.txt" file-exists echo
+
+"Does nonexistent.txt exist?" echo
+"nonexistent.txt" file-exists echo
+
+# ===== Writing Multiple Lines =====
+"" echo
+"=== Writing Multiple Lines ===" echo
+
+# Create a multi-line string
+"Line 1
+Line 2
+Line 3
+Line 4
+Line 5" "multiline.txt" write-to-file
+
+"Written multiline file" echo
+
+# ===== Reading Lines =====
+"" echo
+"=== Reading Lines ===" echo
+
+"multiline.txt" read-lines lines =
+
+"Number of lines:" echo
+lines len echo
+
+# Print each line with line number
+0 idx =
+lines line {
+    idx 1 + idx =
+    idx str ":" + line + echo
+} dolist
+
+# ===== Writing Structured Data =====
+"" echo
+"=== Writing Structured Data ===" echo
+
+# Write CSV-like data
+"Name,Age,City
+Alice,30,Tokyo
+Bob,25,Osaka
+Charlie,35,Kyoto" "data.csv" write-to-file
+
+"CSV file written" echo
+
+# ===== Writing Numbers to File =====
+"" echo
+"=== Writing Numbers to File ===" echo
+
+# Generate and save numbers
+"" content =
+1 10 i {
+    content i str + "\n" + content =
+} do
+
+content "numbers.txt" write-to-file
+"Numbers written to file" echo
+
+# ===== Logging Example =====
+"" echo
+"=== Logging Example ===" echo
+
+{message} {
+    "[LOG] " message + "\n" + "app.log" append-to-file
+} log defun
+
+"Application started" log
+"Processing data" log
+"Task completed" log
+
+"app.log" read-from-file
+"Log contents:" echo
+echo
+
+# ===== File-based Configuration =====
+"" echo
+"=== Configuration File ===" echo
+
+"# Configuration file
+timeout=30
+max_retries=3
+debug=true" "config.txt" write-to-file
+
+"Configuration written" echo
+
+"config.txt" read-lines
+line {
+    line len 0 >
+    line 0 nth "#" != and {
+        line echo
+    } if
+} dolist
+
+# ===== Practical Example: Simple Text Processing =====
+"" echo
+"=== Simple Text Processing ===" echo
+
+"The quick brown fox jumps over the lazy dog.
+The dog was not amused." "sample.txt" write-to-file
+
+"sample.txt" read-from-file text =
+
+"Text length:" echo
+text len echo
+
+# ===== Cleanup Note =====
+"" echo
+"=== Note ===" echo
+"The following files were created:" echo
+"- test_output.txt" echo
+"- multiline.txt" echo
+"- data.csv" echo
+"- numbers.txt" echo
+"- app.log" echo
+"- config.txt" echo
+"- sample.txt" echo
+"You may want to delete them after testing." echo
