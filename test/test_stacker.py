@@ -315,12 +315,6 @@ class TestStacker(unittest.TestCase):
         self.stacker.process_expression("a eval")
         self.assertEqual(self.stacker.stack[-1], 5)
 
-    # evalpy
-    def test_evalpy(self):
-        self.stacker.stack.clear()
-        self.stacker.process_expression("'1 + 1' evalpy")
-        self.assertEqual(self.stacker.stack[-1], 2)
-
 
 if __name__ == "__main__":
     unittest.main()

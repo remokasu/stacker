@@ -1,0 +1,50 @@
+# String Operations - String manipulation techniques
+
+# ===== Basic String Operations =====
+"=== Basic String Operations ===" echo
+
+# String concatenation
+"Hello" " " + "World!" + echo
+
+# String conversion
+42 str echo
+3.14 str echo
+
+# ===== String Properties =====
+"" echo
+"=== String Properties ===" echo
+
+"Length of 'Hello':" echo
+"Hello" len echo
+
+"Length of empty string:" echo
+"" len echo
+
+# ===== String Access =====
+"" echo
+"=== String Access ===" echo
+
+# Get character at index (using nth)
+"First char:" echo
+"Stacker" 0 nth echo
+
+"Char at index 3:" echo
+"Stacker" 3 nth echo
+
+# ===== String Comparison =====
+"" echo
+"=== String Comparison ===" echo
+
+"Is 'apple' < 'banana'?" echo
+"apple" "banana" < echo
+
+"Is 'hello' == 'hello'?" echo
+"hello" "hello" == echo
+
+"Is 'abc' > 'xyz'?" echo
+"abc" "xyz" > echo
+
+# ===== Info =====
+"" echo
+"=== Note ===" echo
+"Basic operations: concatenation (+), length (len), indexing (nth)" echo

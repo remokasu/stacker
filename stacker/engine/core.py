@@ -5,7 +5,7 @@ import ast
 from functools import lru_cache
 from stacker.constant import constants
 from stacker.error import (
-    # StackUnderflowError,
+    StackUnderflowError,
     StackerSyntaxError,
     UndefinedSymbolError,
     # UnexpectedTokenError,
@@ -126,6 +126,25 @@ class StackerCore:
         self.child = type(self)(parent=self)
         self.child.tokens = tokens
         stack.append(self.child)
+
+    def _safe_pop(self, stack: stack_data, operator: str = "unknown", num_args: int = 1) -> Any:
+        """Safely pop from stack with informative error messages.
+
+        Args:
+            stack: The stack to pop from
+            operator: Name of the operator requesting the pop (for error messages)
+            num_args: Number of arguments the operator requires
+
+        Returns:
+            The popped value
+
+        Raises:
+            StackUnderflowError: If stack is empty
+        """
+        try:
+            return stack.pop()
+        except IndexError:
+            raise StackUnderflowError(operator, num_args)
 
     def _pop_only(self, stack: stack_data) -> Any:
         top = stack.pop()
@@ -331,6 +350,51 @@ class StackerCore:
         """
         Applies an operator to the top elements on the stack.
         Modifies the stack in-place.
+        """
+        try:
+            self._execute_impl(token, stack)
+        except IndexError as e:
+            # Convert IndexError to StackUnderflowError with operator info
+            # Get operator info if available
+            arg_count = self._get_operator_arg_count(token)
+            raise StackUnderflowError(token, arg_count) from e
+        except TypeError as e:
+            # Provide more helpful type error messages
+            error_msg = str(e)
+            if "unsupported operand type" in error_msg:
+                raise TypeError(
+                    f"Operator `{token}` received incompatible types. {error_msg}"
+                ) from e
+            raise
+
+    def _get_operator_arg_count(self, token: str) -> int:
+        """Get the argument count for an operator."""
+        if token in self.sfunctions:
+            return self.sfunctions[token]["arg_count"]
+        elif token in self.plugins:
+            return self.plugins[token]["arg_count"]
+        elif token in self.operator_manager.operators["priority"]:
+            return self.operator_manager.operators["priority"][token].get("arg_count", 0)
+        elif token in self.operator_manager.operators["stack"]:
+            return self.operator_manager.operators["stack"][token]["arg_count"]
+        elif token in self.operator_manager.operators["system"]:
+            return self.operator_manager.operators["system"][token]["arg_count"]
+        elif token in self.operator_manager.operators["regular"]:
+            return self.operator_manager.operators["regular"][token]["arg_count"]
+        elif token in self.operator_manager.operators["hof"]:
+            return self.operator_manager.operators["hof"][token]["arg_count"]
+        elif token in self.operator_manager.operators["aggregate"]:
+            return self.operator_manager.operators["aggregate"][token]["arg_count"]
+        elif token in self.operator_manager.operators["file"]:
+            return self.operator_manager.operators["file"][token]["arg_count"]
+        elif token in self.operator_manager.operators["settings"]:
+            return self.operator_manager.operators["settings"][token].get("arg_count", 0)
+        return 1  # Default
+
+    def _execute_impl(self, token: str, stack: stack_data) -> None:
+        """
+        Internal implementation of operator execution.
+        IndexError and TypeError are caught by _execute and converted to better errors.
         """
         if token in self.sfunctions:  # sfunctions
             args = []

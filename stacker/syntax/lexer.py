@@ -120,8 +120,24 @@ class UnifiedLexer:
         tokens = []
         current_token = ""
         bracket_stack = []
+        escaped = False  # Track if previous char was backslash
 
         for char in self.text:
+            # Check if we're inside a string literal
+            in_string = bracket_stack and bracket_stack[-1] in ['"', "'"]
+
+            # Handle escaped characters in strings
+            if in_string and escaped:
+                current_token += char
+                escaped = False
+                continue
+
+            # Check for escape character in strings
+            if in_string and char == '\\':
+                current_token += char
+                escaped = True
+                continue
+
             if char in self.delimiter_mapping:
                 if current_token and current_token.strip().isdigit():
                     tokens.append(current_token)
@@ -133,6 +149,10 @@ class UnifiedLexer:
                     if not bracket_stack:
                         tokens.append(current_token)
                         current_token = ""
+                # If we're inside a string, only the matching quote closes it
+                # All other characters (including other quotes) are literal
+                elif in_string:
+                    current_token += char
                 else:
                     bracket_stack.append(char)
                     current_token += char
