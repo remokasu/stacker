@@ -1,0 +1,11 @@
+# Factorial calculation using recursion
+
+{n} {
+    n 1 <=
+    {1}
+    {n n 1 - fact *}
+    ifelse
+} fact defun
+
+# Calculate 5!
+5 fact echo  # Output: 120

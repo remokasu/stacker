@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pystacker"
-version = "1.8.2"
+version = "1.9.0"
 authors = [
     {name = "remokasu"}
 ]
@@ -12,7 +12,8 @@ description = "Stacker: RPN Calculator in Python"
 readme = "README.md"
 license = {file = "LICENSE"}
 keywords = ["reverse-polish-calculator", "rpn", "terminal-app"]
-dependencies = ["prompt-toolkit"]
+requires-python = ">=3.10"
+dependencies = ["prompt-toolkit>=3.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/remokasu/stacker"
@@ -21,14 +22,20 @@ Homepage = "https://github.com/remokasu/stacker"
 stacker = "stacker.__main__:main"
 
 [tool.setuptools]
-packages = ["stacker"]
+packages = [
+    "stacker",
+    "stacker.engine",
+    "stacker.runtime",
+    "stacker.runtime.exec_modes",
+    "stacker.include",
+    "stacker.lib",
+    "stacker.operators",
+    "stacker.manager",
+    "stacker.plugins",
+    "stacker.slib",
+    "stacker.syntax",
+    "stacker.util",
+]
 package-data = {"stacker" = [
     "data/*",
-    "plugins/*",
-    "include/*",
-    "exec_modes/*",
-    "util/*",
-    "syntax/*",
-    "slib/*",
-    "lib/*"
 ]}

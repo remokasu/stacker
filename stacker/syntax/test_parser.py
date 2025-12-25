@@ -58,6 +58,8 @@ class TestParser(unittest.TestCase):
         self.assertFalse(is_array("(1, 2, 3)"))
 
     def test_is_tuple(self):
+        # DEPRECATED: is_tuple() now checks for parenthesized code blocks, not tuples
+        # Tuples were removed in v1.9.0
         self.assertTrue(is_tuple("(1, 2, 3)"))
         self.assertFalse(is_tuple("[1, 2, 3]"))
 
@@ -70,6 +72,8 @@ class TestParser(unittest.TestCase):
         self.assertFalse(is_array_balanced("[1, 2, 3"))
 
     def test_is_tuple_balanced(self):
+        # DEPRECATED: is_tuple_balanced() now checks parentheses balance for code blocks
+        # Tuples were removed in v1.9.0
         self.assertTrue(is_tuple_balanced("(1, 2, 3)"))
         self.assertFalse(is_tuple_balanced("(1, 2, 3"))
 

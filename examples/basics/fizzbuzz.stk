@@ -1,0 +1,19 @@
+# FizzBuzz: Print numbers 1-100, replacing multiples of 3 with "fizz",
+# multiples of 5 with "buzz", and multiples of both with "fizzbuzz"
+
+1 100 i {
+    i 3 % 0 == i 5 % 0 == and
+    {"fizzbuzz" echo}
+    {
+        i 5 % 0 ==
+        {"buzz" echo}
+        {
+            i 3 % 0 ==
+            {"fizz" echo}
+            {i echo}
+            ifelse
+        }
+        ifelse
+    }
+    ifelse
+} do

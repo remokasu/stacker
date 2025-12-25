@@ -1,0 +1,8 @@
+# Sum of squares from 1 to 100
+
+0 s =
+1 100 i {
+    s i 2 ^ + s =
+} do
+
+"Result: " s str + echo  # Output: Result: 338350
