@@ -1,0 +1,13 @@
+# Demonstrating the difference between functions and macros
+
+# Function: evaluated at call time with arguments
+{x y} {x y +} add defun
+
+# Macro: code substitution at parse time
+{2 ^ 3 * 5 +} square_times_3_plus_5 defmacro
+
+# Using the function
+10 20 add echo  # Output: 30
+
+# Using the macro
+5 square_times_3_plus_5 echo  # Output: 80 (5^2 * 3 + 5)

@@ -1,0 +1,76 @@
+# Variables - Basic usage and scope
+
+# ===== Variable Assignment =====
+"=== Variable Assignment ===" echo
+
+# Using = operator (modern syntax)
+42 answer =
+"The answer is:" answer str + echo
+
+# Using set operator (traditional syntax)
+3.14 pi set
+"Pi is approximately:" pi str + echo
+
+# Multiple assignments
+10 x =
+20 y =
+"x + y =" x y + str + echo
+
+# ===== Variable Scope =====
+"" echo
+"=== Variable Scope ===" echo
+
+# Local scope in functions
+100 outer =
+
+{x} {
+    x 2 * inner =  # inner is local to this function
+    "Inside function - inner:" inner str + echo
+    "Inside function - outer:" outer str + echo  # Can access outer scope
+    inner  # Return value
+} test_scope defun
+
+50 test_scope result =
+
+# inner is not accessible here (local to function)
+"After function - outer:" outer str + echo
+"Function returned:" result str + echo
+
+# ===== Global Variables =====
+"" echo
+"=== Global Variables ===" echo
+
+0 counter global
+
+{x} {
+    counter 1 + counter =  # Increment global counter
+    x counter *
+} multiply_by_counter defun
+
+# Each call increments the counter
+5 multiply_by_counter "Counter=1:" swap echo
+5 multiply_by_counter "Counter=2:" swap echo
+5 multiply_by_counter "Counter=3:" swap echo
+
+# ===== Variable Names =====
+"" echo
+"=== Variable Names ===" echo
+
+# Variables can have descriptive names
+100 user_score =
+"Alice" user_name =
+
+"User:" user_name str + echo
+"Score:" user_score str + echo
+
+# ===== Old Syntax (backward compatibility) =====
+"" echo
+"=== Old Syntax (still works) ===" echo
+
+# Using set operator (old style)
+123 old_var set
+old_var echo
+
+# Modern style with = operator (recommended)
+456 new_var =
+new_var echo

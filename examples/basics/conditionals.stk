@@ -1,0 +1,146 @@
+# Conditionals - if and ifelse statements
+
+# ===== Basic if Statement =====
+"=== Basic if Statement ===" echo
+
+# Syntax: condition {true-block} if
+true {"This is true!" echo} if
+
+false {"This won't print" echo} if
+
+# ===== Numeric Comparisons =====
+"" echo
+"=== Numeric Comparisons ===" echo
+
+10 5 > {"10 is greater than 5" echo} if
+
+3 7 < {"3 is less than 7" echo} if
+
+5 5 == {"5 equals 5" echo} if
+
+4 4 >= {"4 is greater than or equal to 4" echo} if
+
+# ===== ifelse Statement =====
+"" echo
+"=== ifelse Statement ===" echo
+
+# Syntax: condition {true-block} {false-block} ifelse
+
+18 age =
+age 18 >= {
+    "You are an adult" echo
+} {
+    "You are a minor" echo
+} ifelse
+
+# ===== Nested Conditionals =====
+"" echo
+"=== Nested Conditionals ===" echo
+
+85 score =
+
+score 90 >= {
+    "Grade: A" echo
+} {
+    score 80 >= {
+        "Grade: B" echo
+    } {
+        score 70 >= {
+            "Grade: C" echo
+        } {
+            "Grade: D or F" echo
+        } ifelse
+    } ifelse
+} ifelse
+
+# ===== Logical Operations =====
+"" echo
+"=== Logical Operations ===" echo
+
+# and operator
+true true and {"Both true" echo} if
+
+true false and {"Won't print (and with false)" echo} if
+
+# or operator
+true false or {"At least one true" echo} if
+
+false false or {"Won't print (both false)" echo} if
+
+# not operator
+false not {"Not false = true" echo} if
+
+# ===== Complex Conditions =====
+"" echo
+"=== Complex Conditions ===" echo
+
+15 x =
+10 y =
+
+# Check if x is between 10 and 20
+x 10 >= x 20 <= and {
+    "x is between 10 and 20" echo
+} if
+
+# Check if either x or y is greater than 12
+x 12 > y 12 > or {
+    "At least one value is greater than 12" echo
+} if
+
+# ===== Conditional Assignment =====
+"" echo
+"=== Conditional Assignment ===" echo
+
+-5 num =
+
+# Get absolute value
+num 0 < {
+    num -1 *
+} {
+    num
+} ifelse abs_value =
+
+"Absolute value of -5:" abs_value str + echo
+
+# ===== Using Conditionals in Functions =====
+"" echo
+"=== Conditionals in Functions ===" echo
+
+# Max function
+{a b} {
+    a b > {a} {b} ifelse
+} max defun
+
+5 3 max "Max of 5 and 3:" swap echo
+
+# Sign function
+{n} {
+    n 0 > {
+        1
+    } {
+        n 0 < {
+            -1
+        } {
+            0
+        } ifelse
+    } ifelse
+} sign defun
+
+-7 sign "Sign of -7:" swap echo
+0 sign "Sign of 0:" swap echo
+42 sign "Sign of 42:" swap echo
+
+# ===== Even/Odd Check =====
+"" echo
+"=== Even/Odd Check ===" echo
+
+{n} {
+    n 2 % 0 == {
+        "even"
+    } {
+        "odd"
+    } ifelse
+} even_or_odd defun
+
+7 even_or_odd "7 is" swap + echo
+12 even_or_odd "12 is" swap + echo

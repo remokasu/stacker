@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 from stacker.util import colored
-from stacker.data_type import String
+from stacker.engine.data_type import String
 
 from typing import Any
 
@@ -69,17 +69,8 @@ class CustomListPrinter(CustomPrinter):
         return str(self.value).replace(",", "")
 
 
-class CustomTuplePrinter(CustomPrinter):
-    def __init__(self, value: tuple, color: str):
-        # self.value = [custom_print(item) for item in value]
-        self.value = value
-        self.color = color
-
-    def __str__(self):
-        return colored(str(self.value).replace(",", ""), self.color)
-
-    def __repr__(self):
-        return str(self.value).replace(",", "")
+# REMOVED: CustomTuplePrinter - () now creates code blocks, not tuples
+# Tuples are no longer a primary data type in Stacker
 
 
 class OperatorPrinter(CustomPrinter):
@@ -138,7 +129,7 @@ color_map = {
     "String": "lightgreen",
     "bool": "lightblue",
     "list": "red",
-    "tuple": "red",
+    # "tuple": "red",  # REMOVED: Tuples no longer supported
     "block": "cyan",
     "callable": "yellow",
 }
@@ -161,8 +152,7 @@ def custom_print(value: Any) -> CustomPrinter:
         return CustomStrPrinter(value, color_map["str"])
     if isinstance(value, list):
         return CustomListPrinter(value, color_map["list"])
-    if isinstance(value, tuple):
-        return CustomTuplePrinter(value, color_map["tuple"])
+    # REMOVED: tuple handling - () now creates code blocks
     if isinstance(value, Stacker):
         return CustomBlockPrinter(value, color_map["block"])
     if callable(value):

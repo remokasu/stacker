@@ -1,0 +1,35 @@
+# Sorting Algorithms
+
+# ===== Built-in Sort =====
+"=== Built-in Sort ===" echo
+
+"Sorted:" echo
+[5 2 8 1 9] sorted echo
+"Float sort:" echo
+[3.5 1.2 9.8 2.1] sorted echo
+
+# ===== Reverse =====
+"" echo
+"=== Reverse ===" echo
+
+"Reversed:" echo
+[1 2 3 4 5] rev echo
+
+# ===== Comparing sorted vs original =====
+"" echo
+"=== Comparing Lists ===" echo
+
+"Is [1,2,3,4,5] sorted?" echo
+[1 2 3 4 5] dup sorted == echo
+"Is [1,3,2,4] sorted?" echo
+[1 3 2 4] dup sorted == echo
+
+# ===== Performance Comparison Info =====
+"" echo
+"=== Sorting Algorithm Complexity ===" echo
+"Built-in sorted: O(n log n) - Optimized implementation" echo
+"" echo
+"Note: Advanced sorting algorithms (bubble, merge, quick) require" echo
+"      list mutation operators (put, slice, append) which are" echo
+"      currently not available in this version of Stacker." echo
+"      Use the built-in 'sorted' operator for sorting needs." echo

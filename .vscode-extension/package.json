@@ -1,0 +1,38 @@
+{
+  "name": "stacker-language",
+  "displayName": "Stacker Language Support",
+  "description": "Syntax highlighting for Stacker stack-based programming language",
+  "version": "0.1.0",
+  "publisher": "stacker",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remokasu/stacker.git"
+  },
+  "engines": {
+    "vscode": "^1.50.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "stacker",
+        "aliases": ["Stacker", "stacker"],
+        "extensions": [".stk"],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icon.png",
+          "dark": "./icon.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "stacker",
+        "scopeName": "source.stacker",
+        "path": "./syntaxes/stacker.tmLanguage.json"
+      }
+    ]
+  }
+}

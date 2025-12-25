@@ -1,0 +1,121 @@
+# Lambda Functions - Anonymous functions
+
+# ===== Basic Lambda =====
+"=== Basic Lambda ===" echo
+
+# Syntax: {params} {body} lambda
+# Creates an anonymous function
+
+{x} {x 2 *} lambda "Lambda function created" drop echo
+
+# Using lambda immediately
+5 {x} {x 2 *} lambda "5 * 2 =" swap echo
+
+# ===== Storing Lambda in Variable =====
+"" echo
+"=== Storing Lambda in Variable ===" echo
+
+{x} {x 2 *} lambda double =
+
+10 double "10 * 2 =" swap echo
+7 double "7 * 2 =" swap echo
+
+# ===== Multiple Parameters =====
+"" echo
+"=== Multiple Parameters ===" echo
+
+{x y} {x y +} lambda add =
+
+5 3 add "5 + 3 =" swap echo
+
+{a b c} {a b * c +} lambda calc =
+
+2 3 4 calc "2 * 3 + 4 =" swap echo
+
+# ===== Lambda vs defun =====
+"" echo
+"=== Lambda vs defun ===" echo
+
+# Using defun (named function)
+{x} {x x *} square defun
+5 square "5^2 (defun) =" swap echo
+
+# Using lambda (anonymous function)
+{x} {x x *} lambda square_lambda =
+5 square_lambda "5^2 (lambda) =" swap echo
+
+# ===== Lambda in Higher-Order Functions =====
+"" echo
+"=== Lambda with map ===" echo
+
+# map with code block (not lambda)
+# map uses code blocks where the element is on the stack
+[1 2 3 4 5] {2 *} map echo
+
+# Square each element
+[1 2 3 4] {dup *} map "Squares:" swap echo
+
+# ===== Lambda with filter =====
+"" echo
+"=== Lambda with filter ===" echo
+
+# Filter even numbers
+[1 2 3 4 5 6 7 8] {2 % 0 ==} filter echo
+
+# Filter numbers > 5
+[1 3 5 7 9 11] {5 >} filter "Numbers > 5:" swap echo
+
+# ===== Nested Lambdas =====
+"" echo
+"=== Nested Lambdas ===" echo
+
+# Lambda that returns another lambda
+{x} {
+    {y} {x y +} lambda
+} lambda make_adder =
+
+5 make_adder add5 =
+
+10 add5 "10 + 5 =" swap echo
+7 add5 "7 + 5 =" swap echo
+
+# ===== Lambda with Closures =====
+"" echo
+"=== Lambda with Closures ===" echo
+
+# Counter using closure
+{start} {
+    {x} {start x +} lambda
+} lambda make_counter =
+
+100 make_counter counter =
+
+5 counter "100 + 5 =" swap echo
+10 counter "100 + 10 =" swap echo
+
+# ===== Practical Examples =====
+"" echo
+"=== Practical Examples ===" echo
+
+# Example 1: Temperature converter
+{celsius} {celsius 9 * 5 / 32 +} lambda celsius_to_fahrenheit =
+
+0 celsius_to_fahrenheit "0°C =" swap echo "°F" echo
+100 celsius_to_fahrenheit "100°C =" swap echo "°F" echo
+
+# Example 2: Discount calculator
+{price discount_pct} {
+    price discount_pct 100 / * price swap -
+} lambda apply_discount =
+
+100 20 apply_discount "$100 with 20% discount: $" swap str + echo
+
+# Example 3: Custom comparator
+{threshold} {
+    {x} {x threshold >} lambda
+} lambda make_threshold_check =
+
+10 make_threshold_check above_10 =
+
+5 above_10 "Is 5 > 10?" swap echo
+15 above_10 "Is 15 > 10?" swap echo

@@ -1,0 +1,160 @@
+# Recursion - Recursive function examples
+
+# ===== Basic Recursion - Countdown =====
+"=== Basic Recursion - Countdown ===" echo
+
+{n} {
+    n 0 > {
+        n echo
+        n 1 - countdown drop
+    } if
+    0  # Always return something (dummy value)
+} countdown defun
+
+5 countdown drop
+
+# ===== Factorial (already in algorithms/, but shown here) =====
+"" echo
+"=== Factorial ===" echo
+
+{n} {
+    n 1 <= {
+        1
+    } {
+        n n 1 - factorial *
+    } ifelse
+} factorial defun
+
+5 factorial "5! =" swap echo
+10 factorial "10! =" swap echo
+
+# ===== Fibonacci (recursive version) =====
+"" echo
+"=== Fibonacci (Recursive) ===" echo
+
+{n} {
+    n 1 <= {
+        n
+    } {
+        n 1 - fib_rec
+        n 2 - fib_rec
+        +
+    } ifelse
+} fib_rec defun
+
+0 fib_rec "fib(0) =" swap echo
+1 fib_rec "fib(1) =" swap echo
+5 fib_rec "fib(5) =" swap echo
+10 fib_rec "fib(10) =" swap echo
+
+# Note: Recursive Fibonacci is inefficient for large n
+
+# ===== Sum of List =====
+"" echo
+"=== Sum of List (Recursive) ===" echo
+
+# Use reduce instead since we don't have tail/rest operations
+[1 2 3 4 5] 0 acc x {acc x +} reduce "Sum of [1,2,3,4,5] =" swap echo
+
+# ===== Power Function =====
+"" echo
+"=== Power (Recursive) ===" echo
+
+{base exp} {
+    exp 0 == {
+        1
+    } {
+        base base exp 1 - power_rec *
+    } ifelse
+} power_rec defun
+
+2 5 power_rec "2^5 =" swap echo
+3 4 power_rec "3^4 =" swap echo
+
+# ===== Greatest Common Divisor (Euclidean Algorithm) =====
+"" echo
+"=== GCD (Recursive Euclidean Algorithm) ===" echo
+
+{a b} {
+    b 0 == {
+        a
+    } {
+        b a b % gcd_rec
+    } ifelse
+} gcd_rec defun
+
+48 18 gcd_rec "GCD(48, 18) =" swap echo
+100 35 gcd_rec "GCD(100, 35) =" swap echo
+
+# ===== Binary Search (Recursive) =====
+"" echo
+"=== Binary Search (Recursive) ===" echo
+
+# Helper function for binary search
+{lst target low high} {
+    low high > {
+        -1  # Not found
+    } {
+        low high + 2 / int mid =
+        lst mid nth mid_val =
+
+        mid_val target == {
+            mid
+        } {
+            mid_val target < {
+                lst target mid 1 + high binary_search_helper
+            } {
+                lst target low mid 1 - binary_search_helper
+            } ifelse
+        } ifelse
+    } ifelse
+} binary_search_helper defun
+
+# Main binary search function
+{lst target} {
+    lst target 0 lst len 1 - binary_search_helper
+} binary_search defun
+
+[1 3 5 7 9 11 13 15] 7 binary_search "Index of 7:" swap echo
+[1 3 5 7 9 11 13 15] 13 binary_search "Index of 13:" swap echo
+[1 3 5 7 9 11 13 15] 4 binary_search "Index of 4 (not found):" swap echo
+
+# ===== Tower of Hanoi =====
+"" echo
+"=== Tower of Hanoi ===" echo
+
+{n from to aux} {
+    n 1 == {
+        "Move disk from" from str + " to" + to str + echo
+    } {
+        n 1 - from aux to hanoi drop
+        "Move disk from" from str + " to" + to str + echo
+        n 1 - aux to from hanoi drop
+    } ifelse
+    0  # Return dummy value
+} hanoi defun
+
+"Solving Tower of Hanoi with 3 disks:" echo
+3 "A" "C" "B" hanoi drop
+
+# Note: String slicing operations are not available in this version
+# so string reversal example is omitted
+
+# ===== Tail Recursion Example =====
+"" echo
+"=== Tail Recursion - Factorial ===" echo
+
+# Tail-recursive factorial (accumulator pattern)
+{n acc} {
+    n 1 <= {
+        acc
+    } {
+        n 1 - n acc * factorial_tail
+    } ifelse
+} factorial_tail defun
+
+{n} {
+    n 1 factorial_tail
+} factorial_tr defun
+
+5 factorial_tr "5! (tail recursive) =" swap echo

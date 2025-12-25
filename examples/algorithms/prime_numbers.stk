@@ -1,0 +1,123 @@
+# Prime Numbers - Detection and generation
+
+# ===== Prime Check (Basic) =====
+"=== Prime Check (Basic) ===" echo
+
+{n} {
+    n 2 < {
+        false
+    } {
+        n 2 == {
+            true
+        } {
+            true is_prime =
+            2 n sqrt int 1 + i {
+                n i % 0 == {
+                    false is_prime =
+                } if
+            } do
+            is_prime
+        } ifelse
+    } ifelse
+} is_prime defun
+
+"Is 2 prime?" echo
+2 is_prime echo
+"Is 17 prime?" echo
+17 is_prime echo
+"Is 20 prime?" echo
+20 is_prime echo
+"Is 97 prime?" echo
+97 is_prime echo
+
+# ===== Prime Check (Optimized) =====
+"" echo
+"=== Prime Check (Optimized) ===" echo
+
+{n} {
+    n 2 < {
+        false
+    } {
+        n 2 == n 3 == or {
+            true
+        } {
+            n 2 % 0 == n 3 % 0 == or {
+                false
+            } {
+                true is_prime =
+                5 i =
+                {i i * n <= is_prime and} {
+                    n i % 0 == n i 2 + % 0 == or {
+                        false is_prime =
+                    } if
+                    i 6 + i =
+                } while
+                is_prime
+            } ifelse
+        } ifelse
+    } ifelse
+} is_prime_fast defun
+
+"Is 97 prime (fast)?" echo
+97 is_prime_fast echo
+"Is 100 prime (fast)?" echo
+100 is_prime_fast echo
+
+# ===== Count primes up to N =====
+"" echo
+"=== Count Primes up to N ===" echo
+
+{n} {
+    0 count =
+    2 n i {
+        i is_prime {
+            count 1 + count =
+        } if
+    } do
+    count
+} count_primes defun
+
+"Number of primes up to 100:" echo
+100 count_primes echo
+
+# ===== Next Prime =====
+"" echo
+"=== Next Prime ===" echo
+
+{n} {
+    n 1 + candidate =
+    true searching =
+    {searching} {
+        candidate is_prime {
+            false searching =
+        } {
+            candidate 1 + candidate =
+        } ifelse
+    } while
+    candidate
+} next_prime defun
+
+"Next prime after 10:" echo
+10 next_prime echo
+"Next prime after 20:" echo
+20 next_prime echo
+
+# ===== Prime Factorization (Demonstration) =====
+"" echo
+"=== Prime Factorization ===" echo
+
+"60 = 2 * 2 * 3 * 5" echo
+"84 = 2 * 2 * 3 * 7" echo
+"17 = 17 (prime)" echo
+"" echo
+"Note: Full factorization requires list operations" echo
+
+# ===== Info =====
+"" echo
+"=== Info ===" echo
+"Prime numbers are fundamental in number theory" echo
+"They are used in cryptography, hashing, and more" echo
+"" echo
+"Note: Advanced prime algorithms (sieve, twin primes) require" echo
+"      list mutation operators (append, put) which are" echo
+"      currently not available in this version of Stacker." echo

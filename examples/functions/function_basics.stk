@@ -1,0 +1,7 @@
+# Basic function definition and usage
+
+# Define a function that multiplies two numbers
+{x y} {x y *} multiply defun
+
+# Use the function
+3 4 multiply echo  # Output: 12

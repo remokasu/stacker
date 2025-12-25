@@ -1,0 +1,6 @@
+# Breaking out of a loop
+
+0 100 i {
+    i echo
+    i 6 == {break} if
+} do
