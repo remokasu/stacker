@@ -1,5 +1,23 @@
 # CHANGE LOG
 
+## [1.9.1] - 2024-12-25
+
+### Fixed
+
+- **Void Function Support**:
+  - Fixed critical bug where functions with no return value would crash with `IndexError`
+  - Introduced `VOID` sentinel value to distinguish void functions from functions returning `None`
+  - Void functions no longer pollute the stack with unnecessary values
+  - Recursive void function calls no longer require `drop` operator
+  - Example: `{msg} {msg echo} print defun` now works without crashing
+
+### Changed
+
+- **Function Return Value Behavior**:
+  - Functions that produce no stack values now return `VOID` instead of crashing
+  - `VOID` is not pushed to the stack, keeping stack clean
+  - Explicit `None` values can still be used and will be pushed to stack normally
+
 ## [1.9.0] - 2024-12-25
 
 ### Added
