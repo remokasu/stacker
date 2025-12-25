@@ -89,6 +89,29 @@ stack_data = deque
 # stack_data = list
 
 
+class VoidType:
+    """
+    Sentinel value to indicate a function has no return value.
+    Used to distinguish void functions from functions that explicitly return None.
+    """
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __repr__(self):
+        return "VOID"
+
+    def __bool__(self):
+        return False
+
+
+# Singleton instance
+VOID = VoidType()
+
+
 class String(str):
     def __init__(self, value: str):
         self.value = str(value)

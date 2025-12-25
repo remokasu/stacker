@@ -27,7 +27,7 @@ from stacker.reserved import (
     __BREAK__,
     # __TRANSPOSE__
 )
-from stacker.engine.data_type import String, stack_data
+from stacker.engine.data_type import String, stack_data, VOID
 from stacker.engine.slambda import StackerLambda
 from stacker.engine.scope import ScopedVariables
 from stacker.operators.manager import OperatorManager
@@ -147,7 +147,12 @@ class StackerCore:
             sub = value.stack
             if sub:
                 stack.extend(sub)
-            return stack.pop()
+                return stack.pop()
+            else:
+                # Return VOID if the code block produces no value
+                # This allows void functions (functions with side effects only)
+                # VOID will not be pushed to the stack, unlike None
+                return VOID
         else:
             if isinstance(value, (list, tuple)):
                 return value
@@ -333,7 +338,9 @@ class StackerCore:
             for _ in range(sfunc["arg_count"]):
                 args.insert(0, self._pop_and_eval(stack))
             if sfunc["push_result_to_stack"]:
-                stack.append(sfunc["func"](*args))
+                result = sfunc["func"](*args)
+                if result is not VOID:
+                    stack.append(result)
             else:
                 sfunc["func"](*args)
         elif token in self.plugins:
@@ -342,7 +349,9 @@ class StackerCore:
             for _ in range(op["arg_count"]):
                 args.insert(0, self._pop_and_eval(stack))
             if op["push_result_to_stack"]:
-                stack.append(op["func"](*args))
+                result = op["func"](*args)
+                if result is not VOID:
+                    stack.append(result)
             else:
                 op["func"](*args)
         elif token in self.operator_manager.operators["priority"]:  # priority operators
@@ -418,7 +427,9 @@ class StackerCore:
                 body = stack.pop()
                 fargs = stack.pop()
                 if op["push_result_to_stack"]:
-                    stack.append(op["func"](fargs, body))
+                    result = op["func"](fargs, body)
+                    if result is not VOID:
+                        stack.append(result)
                 else:
                     op["func"](fargs, body)
             elif token == "eval":
@@ -484,7 +495,9 @@ class StackerCore:
             for _ in range(op["arg_count"]):
                 args.insert(0, self._pop_and_eval(stack))
             if op["push_result_to_stack"]:
-                stack.append(op["func"](*args))
+                result = op["func"](*args)
+                if result is not VOID:
+                    stack.append(result)
             else:
                 op["func"](*args)
         elif token in self.operator_manager.operators["system"]:  # system operators
@@ -493,7 +506,9 @@ class StackerCore:
             for _ in range(op["arg_count"]):
                 args.insert(0, self._pop_and_eval(stack))
             if op["push_result_to_stack"]:
-                stack.append(op["func"](*args))
+                result = op["func"](*args)
+                if result is not VOID:
+                    stack.append(result)
             else:
                 op["func"](*args)
         elif token in self.operator_manager.operators["regular"]:  # Other operators
@@ -502,7 +517,9 @@ class StackerCore:
             for _ in range(op["arg_count"]):
                 args.insert(0, self._pop_and_eval(stack))
             if op["push_result_to_stack"]:
-                stack.append(op["func"](*args))
+                result = op["func"](*args)
+                if result is not VOID:
+                    stack.append(result)
             else:
                 op["func"](*args)
         elif token in self.operator_manager.operators["hof"]:  # higher-order functions
@@ -628,7 +645,9 @@ class StackerCore:
                 else self._var_str_to_literal(args)
             )
             if op["push_result_to_stack"]:
-                stack.append(op["func"](args))
+                result = op["func"](args)
+                if result is not VOID:
+                    stack.append(result)
             else:
                 op["func"](args)
         elif token in self.operator_manager.operators["file"]:
@@ -637,7 +656,9 @@ class StackerCore:
             for _ in range(op["arg_count"]):
                 args.insert(0, self._pop_and_eval(stack))
             if op["push_result_to_stack"]:
-                stack.append(op["func"](*args))
+                result = op["func"](*args)
+                if result is not VOID:
+                    stack.append(result)
             else:
                 op["func"](*args)
         elif token in self.operator_manager.operators["settings"]:  # settings operators
