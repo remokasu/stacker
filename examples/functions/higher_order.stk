@@ -1,0 +1,134 @@
+# Higher-Order Functions - map, filter, reduce
+
+# ===== map - Transform each element =====
+"=== map - Transform Each Element ===" echo
+
+# Syntax: list {body} map
+# The element is implicitly on the stack in the body
+
+# Double each element
+[1 2 3 4 5] {2 *} map echo
+
+# Square each element
+[1 2 3 4] {dup *} map "Squares:" swap echo
+
+# Add 10 to each element
+[5 10 15] {10 +} map "Add 10:" swap echo
+
+# ===== filter - Select elements =====
+"" echo
+"=== filter - Select Elements ===" echo
+
+# Syntax: list var {condition} filter
+
+# Filter even numbers
+[1 2 3 4 5 6 7 8 9 10] {2 % 0 ==} filter echo
+
+# Filter numbers greater than 5
+[1 3 5 7 9 11] {5 >} filter "> 5:" swap echo
+
+# Filter positive numbers
+[-5 -2 0 3 7 -1 4] {0 >} filter "Positive:" swap echo
+
+# ===== Combining map and filter =====
+"" echo
+"=== Combining map and filter ===" echo
+
+# Get squares of even numbers
+[1 2 3 4 5 6 7 8] {2 % 0 ==} filter
+                   {dup *} map
+"Squares of evens:" swap echo
+
+# Double numbers greater than 3
+[1 2 3 4 5 6] {3 >} filter
+              {2 *} map
+"Double of (>3):" swap echo
+
+# ===== map with multiple operations =====
+"" echo
+"=== map with Complex Operations ===" echo
+
+# Convert Celsius to Fahrenheit
+[0 10 20 30 100] {9 * 5 / 32 +} map "°F:" swap echo
+
+# Calculate areas of circles (A = πr²)
+[1 2 3 4 5] {dup * pi *} map "Areas:" swap echo
+
+# ===== filter with complex conditions =====
+"" echo
+"=== filter with Complex Conditions ===" echo
+
+# Numbers divisible by 3
+[1 2 3 4 5 6 7 8 9 10 11 12] {3 % 0 ==} filter "Div by 3:" swap echo
+
+# Numbers in range [5, 10]
+[1 3 5 7 9 11 13] {dup 5 >= swap 10 <= and} filter "In [5,10]:" swap echo
+
+# ===== Nested lists with map =====
+"" echo
+"=== Nested Lists with map ===" echo
+
+# Double all elements in nested lists
+[[1 2] [3 4] [5 6]] {{2 *} map} map echo
+
+# ===== Using map/filter with strings =====
+"" echo
+"=== map/filter with Strings ===" echo
+
+# Not directly supported, but can work with character codes
+# Example: Filter characters (conceptual)
+
+# ===== Practical Examples =====
+"" echo
+"=== Practical Examples ===" echo
+
+# Example 1: Calculate total price with tax
+[10.0 20.0 30.0] {1.1 *} map "With 10% tax:" swap echo
+
+# Example 2: Find perfect squares up to 100
+[1 2 3 4 5 6 7 8 9 10] {dup *} map "Perfect squares:" swap echo
+
+# Example 3: Get passing scores
+[45 67 82 55 90 73] {60 >=} filter "Passing scores:" swap echo
+
+# ===== Custom higher-order function =====
+"" echo
+"=== Custom Higher-Order Function ===" echo
+
+# apply_twice - Apply function twice to a value
+{val func} {
+    val func
+    func
+} apply_twice defun
+
+# Use it
+10 {x} {x 2 *} lambda apply_twice "10 * 2 * 2 =" swap echo
+
+5 {x} {x 1 +} lambda apply_twice "5 + 1 + 1 =" swap echo
+
+# ===== Function composition =====
+"" echo
+"=== Function Composition ===" echo
+
+# compose - Apply two functions in sequence
+{x f g} {
+    x f g
+} compose defun
+
+10 {x} {x 2 *} lambda {x} {x 5 +} lambda compose
+"(10 * 2) + 5 =" swap echo
+
+# ===== map with index =====
+"" echo
+"=== Simulating map with index ===" echo
+
+# enumerate-like behavior using global counter
+0 idx global
+
+[10 20 30] val {
+    "Index" idx str + ":" + val str + echo
+    idx 1 + idx =
+} dolist
+
+# Reset counter
+0 idx global

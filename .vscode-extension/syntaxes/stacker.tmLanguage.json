@@ -149,7 +149,7 @@
         },
         {
           "name": "keyword.operator.eval.stacker",
-          "match": "\\b(eval|evalpy|include|sub|subn|expand|read-from-string)\\b"
+          "match": "\\b(eval|include|sub|subn|expand|read-from-string)\\b"
         }
       ]
     },

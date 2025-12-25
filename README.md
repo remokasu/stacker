@@ -723,7 +723,6 @@ print(stacker.eval("3 4 +"))
 | subn     | Cluster elements between the top and the nth (make substacks) | `3 subn`           |
 | include  | Include the specified file                            | `"file.stk" include`       |
 | eval     | Evaluate the specified RPN expression                 | `'3 5 +' eval`             |
-| evalpy   | Evaluate the specified Python expression              | `'3+5' evalpy`             |
 | echo     | Print the specified value to stdout without adding it to the stack | `3 4 + echo`  |
 | input    | Get input from the user                               | `input`                    |
 | read     | Reads a string from the console                       | `read`                     |

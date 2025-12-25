@@ -1,0 +1,125 @@
+# eval - Dynamic code execution
+
+# ===== Basic eval =====
+"=== Basic eval ===" echo
+
+# eval executes a code block
+{5 3 +} eval echo
+
+{10 2 *} eval echo
+
+# ===== eval vs Direct Execution =====
+"" echo
+"=== eval vs Direct Execution ===" echo
+
+# Direct execution
+"Direct: 5 + 3 =" echo
+5 3 + echo
+
+# With eval
+"eval: {5 3 +} eval =" echo
+{5 3 +} eval echo
+
+# ===== Dynamic Code Construction =====
+"" echo
+"=== Dynamic Code Construction ===" echo
+
+# Store operation as code block
+{2 *} double_op =
+"5 * 2 =" echo
+5 double_op eval echo
+
+{3 +} add3_op =
+"10 + 3 =" echo
+10 add3_op eval echo
+
+# ===== eval with Variables =====
+"" echo
+"=== eval with Variables ===" echo
+
+10 x =
+"x + 5 =" echo
+{x 5 +} eval echo
+
+# ===== Nested eval =====
+"" echo
+"=== Nested eval ===" echo
+
+"{{5 3 +}} eval eval =" echo
+{{5 3 +}} eval eval echo
+
+# ===== Code as Data =====
+"" echo
+"=== Code as Data ===" echo
+
+# Store multiple operations
+{5 3 +} add_code =
+{5 3 -} sub_code =
+{5 3 *} mul_code =
+{5 3 /} div_code =
+
+"Addition:" echo
+add_code eval echo
+
+"Subtraction:" echo
+sub_code eval echo
+
+"Multiplication:" echo
+mul_code eval echo
+
+"Division:" echo
+div_code eval echo
+
+# ===== Conditional eval =====
+"" echo
+"=== Conditional eval ===" echo
+
+true condition =
+
+condition {
+    "Condition true, 10+20 =" echo
+    {10 20 +} eval echo
+} {
+    "Condition false, 10*20 =" echo
+    {10 20 *} eval echo
+} ifelse
+
+# ===== Macro-like Behavior =====
+"" echo
+"=== Macro-like Behavior with eval ===" echo
+
+# Create a "macro" that repeats an operation
+{code times} {
+    0 times i {
+        code eval
+    } do
+} repeat_eval defun
+
+"Repeating 'Hello' 3 times:" echo
+{"Hello" echo} 3 repeat_eval
+
+# ===== Practical Example: Apply Operation =====
+"" echo
+"=== Apply Operation Example ===" echo
+
+{operation a b} {
+    a b operation eval
+} apply defun
+
+"5 + 3 =" echo
+{+} 5 3 apply echo
+
+"5 * 3 =" echo
+{*} 5 3 apply echo
+
+# ===== Security Note =====
+"" echo
+"=== Security Warning ===" echo
+"eval executes arbitrary code!" echo
+"Only use with trusted input." echo
+"Never eval user input directly in production." echo
+
+# ===== Performance Note =====
+"" echo
+"=== Performance Note ===" echo
+"eval has overhead - use direct execution when possible" echo

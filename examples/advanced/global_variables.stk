@@ -3,7 +3,7 @@
 0 counter global
 
 {x} {
-    counter 1 + counter global  # Increment global counter
+    counter 1 + counter =  # Increment global counter
     x counter *
 } multiply_by_counter defun
 
