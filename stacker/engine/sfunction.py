@@ -33,11 +33,23 @@ class StackerFunction:
         new_blockstack.variables = self.blockstack.variables.create_child_scope()
         new_blockstack.stack = stack_data()  # Each call needs its own stack
 
+        # Update nested StackerCore instances to use the new variable scope
+        self._update_nested_variables(new_blockstack.tokens, new_blockstack.variables)
+
         # Set function arguments in the new child scope
         for arg, value in zip(self.args, values):
             new_blockstack.variables[arg] = value
 
         self.stack.append(new_blockstack)
-        result = self.blockstack._pop_and_eval(self.stack)
+        result = new_blockstack._pop_and_eval(self.stack)
 
         return result
+
+    def _update_nested_variables(self, tokens, new_variables):
+        """Recursively update variable references in nested StackerCore instances."""
+        from stacker.engine.core import StackerCore
+        for token in tokens:
+            if isinstance(token, StackerCore):
+                token.variables = new_variables
+                # Recursively update nested code blocks
+                self._update_nested_variables(token.tokens, new_variables)

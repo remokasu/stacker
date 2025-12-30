@@ -1,7 +1,0 @@
-0 $total set
-1 100 $i {
-    1 100 $j {
-        total i j * + $total set
-    } do
-} do
-total

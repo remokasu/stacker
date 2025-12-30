@@ -1,3 +1,0 @@
-0 $s set
-1 1000 $i {s i 2 ^ + $s set} do
-s
