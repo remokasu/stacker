@@ -22,12 +22,29 @@ class StackerLambda:
         values = list(values)
         if len(values) != len(self.args):
             raise ValueError(f"Expected {len(self.args)} arguments, got {len(values)}")
-        blockstack = copy.deepcopy(self.blockstack)
+        # Use shallow copy with child scope instead of deepcopy
+        # This preserves variable scope chain for nested code blocks
+        blockstack = copy.copy(self.blockstack)
+        blockstack.variables = self.blockstack.variables.create_child_scope()
+        blockstack.stack = stack_data()
+
+        # Update nested StackerCore instances to use the new variable scope
+        self._update_nested_variables(blockstack.tokens, blockstack.variables)
+
         for arg, value in zip(self.args, values):
             blockstack.variables[arg] = value
         self.stack.append(blockstack)
-        result = self.blockstack._pop_and_eval(self.stack)
+        result = blockstack._pop_and_eval(self.stack)
         return result
+
+    def _update_nested_variables(self, tokens, new_variables):
+        """Recursively update variable references in nested StackerCore instances."""
+        from stacker.engine.core import StackerCore
+        for token in tokens:
+            if isinstance(token, StackerCore):
+                token.variables = new_variables
+                # Recursively update nested code blocks
+                self._update_nested_variables(token.tokens, new_variables)
 
     def __str__(self) -> str:
         if len(self.args) == 0:

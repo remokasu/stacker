@@ -95,9 +95,28 @@ class StackerCore:
         self.labels = {}
 
     def _block_token_format(self, token: str) -> str:
+        # Check if token is a nested code block
+        if is_code_block(token):
+            # Convert to StackerCore instance
+            temp_stack = stack_data()
+            self._substack(token, temp_stack)
+            return temp_stack.pop()
+        # For non-code-block tokens, evaluate to preserve proper types
+        # but don't resolve variables (keep them as strings for lazy evaluation)
         if token in self.operator_manager.operators["regular"]:
             return self._literal_eval2(f'"{token}"')
-        return self._literal_eval2(token)
+        # Try to evaluate as literal (numbers, strings, etc.)
+        # but fallback to string if it's an identifier
+        try:
+            if (token.startswith("'") and token.endswith("'")) or (
+                token.startswith('"') and token.endswith('"')
+            ):
+                return String(token[1:-1])
+            else:
+                return _cached_literal_eval(token)
+        except Exception:
+            # Keep as string for lazy evaluation (variables, operators, etc.)
+            return token
 
     def _substack(self, token: str, stack: stack_data) -> None:
         """Creates a substack from a code block.
@@ -315,7 +334,10 @@ class StackerCore:
             return token
         # Check for code blocks (both {} and ())
         if is_code_block(token):
-            return token
+            # Convert code block to StackerCore instance
+            temp_stack = stack_data()
+            self._substack(token, temp_stack)
+            return temp_stack.pop()
         elif token in self.variables:
             return self.variables[token]
         # Inline is_string check for performance
@@ -336,7 +358,10 @@ class StackerCore:
         # Check for code blocks (both {} and ())
         # token is guaranteed to be str by type hint, so no isinstance check needed
         if is_code_block(token):
-            return token
+            # Convert code block to StackerCore instance
+            temp_stack = stack_data()
+            self._substack(token, temp_stack)
+            return temp_stack.pop()
         # Inline is_string check for performance
         elif (token.startswith("'") and token.endswith("'")) or (
             token.startswith('"') and token.endswith('"')
@@ -845,8 +870,7 @@ class StackerCore:
     def __str__(self):
         def format_item(item):
             if isinstance(item, StackerCore):
-                # return f"{str(item)}".replace(",", " ")
-                raise NotImplementedError
+                return str(item)
             elif is_list(item):
                 return item.replace(",", " ")
             # REMOVED: Tuple handling - () now creates code blocks
