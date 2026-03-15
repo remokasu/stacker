@@ -7,6 +7,16 @@ if TYPE_CHECKING:
     from stacker.stacker import Stacker
 
 
+def _update_nested_variables(tokens, new_variables):
+    """Recursively update variable references in nested StackerCore instances."""
+    from stacker.engine.core import StackerCore
+    for token in tokens:
+        if isinstance(token, StackerCore):
+            token.variables = new_variables
+            # Recursively update nested code blocks
+            _update_nested_variables(token.tokens, new_variables)
+
+
 def _times(
     n_times: int,
     block: Stacker | Any,
@@ -33,17 +43,24 @@ def _do(
     block: Stacker,
     parent: Stacker,
 ):
+    # Create child scope once for all iterations (optimization)
+    original_parent_vars = parent.variables
+    child_scope = parent.variables.create_child_scope()
+
+    # Update nested StackerCore instances to use the child scope
+    _update_nested_variables(block.tokens, child_scope)
+
     for i in range(start_value, end_value + 1):
-        # Create a child scope for the loop variable to avoid modifying parent scope
-        # We need to temporarily set the parent's variables to use the child scope
-        original_parent_vars = parent.variables
-        parent.variables = parent.variables.create_child_scope()
-        parent.variables[symbol] = i
+        # Update loop variable
+        child_scope[symbol] = i
+        parent.variables = child_scope
+        # Use parent.evaluate to ensure proper context
         parent.evaluate(block.tokens, stack=parent.stack)
-        parent.variables = original_parent_vars
         if len(parent.stack) > 0 and parent.stack[-1] == __BREAK__:
             parent.stack.pop()
             break
+
+    parent.variables = original_parent_vars
 
 
 def _dolist(
@@ -52,17 +69,25 @@ def _dolist(
     block: Stacker,
     parent: Stacker,
 ):
+    # Create child scope once for all iterations (optimization)
+    original_parent_vars = parent.variables
+    child_scope = parent.variables.create_child_scope()
+
+    # Update nested StackerCore instances to use the child scope
+    # This is necessary because block.tokens may contain nested code blocks
+    _update_nested_variables(block.tokens, child_scope)
+
     for i in lst:
-        # Create a child scope for the loop variable to avoid modifying parent scope
-        # We need to temporarily set the parent's variables to use the child scope
-        original_parent_vars = parent.variables
-        parent.variables = parent.variables.create_child_scope()
-        parent.variables[symbol] = i
+        # Update loop variable
+        child_scope[symbol] = i
+        parent.variables = child_scope
+        # Use parent.evaluate to ensure proper context
         parent.evaluate(block.tokens, stack=parent.stack)
-        parent.variables = original_parent_vars
         if len(parent.stack) > 0 and parent.stack[-1] == __BREAK__:
             parent.stack.pop()
             break
+
+    parent.variables = original_parent_vars
 
 
 loop_operators = {
