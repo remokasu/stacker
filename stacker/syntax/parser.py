@@ -310,9 +310,16 @@ def is_code_block(expression: str) -> bool:
     """
     if not isinstance(expression, str):
         return False
-    has_braces = expression.count("{") == expression.count("}") > 0
-    has_parens = expression.count("(") == expression.count(")") > 0
-    return has_braces or has_parens
+    # Fast path: check first and last characters before counting
+    if len(expression) < 2:
+        return False
+    first_char = expression[0]
+    last_char = expression[-1]
+    if first_char == "{" and last_char == "}":
+        return expression.count("{") == expression.count("}")
+    elif first_char == "(" and last_char == ")":
+        return expression.count("(") == expression.count(")")
+    return False
 
 
 def is_string(expression: str) -> bool:
