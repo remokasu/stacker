@@ -3,6 +3,10 @@ from __future__ import annotations
 import logging
 import sys
 import traceback
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from stacker.stacker import Stacker
 
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
@@ -28,7 +32,7 @@ from stacker.syntax.parser import (
 
 
 class ReplMode(ExecutionMode):
-    def __init__(self, rpn_calculator):
+    def __init__(self, rpn_calculator: Stacker) -> None:
         super().__init__(rpn_calculator)
         # REPL-specific display settings
         self.disp_stack_mode = True
@@ -43,7 +47,7 @@ class ReplMode(ExecutionMode):
         # Initialize completer
         self.completer = WordCompleter(self.get_completer())
 
-    def get_completer(self):
+    def get_completer(self) -> list[str]:
         """Get completion words for REPL prompt."""
         _reserved_word = list(self.repl_commands)
         _operator_key = list(self.rpn_calculator.get_all_keys_for_completer())
@@ -65,10 +69,10 @@ class ReplMode(ExecutionMode):
         )
         return _reserved_word
 
-    def update_completer(self):
+    def update_completer(self) -> None:
         self.completer = WordCompleter(self.get_completer())
 
-    def get_input(self, prompt_text: str, multiline: bool):
+    def get_input(self, prompt_text: str, multiline: bool) -> str:
         try:
             return prompt(
                 prompt_text,
@@ -80,7 +84,7 @@ class ReplMode(ExecutionMode):
             print("\nSee you!")
             sys.exit()
 
-    def get_version(self) -> str:
+    def get_version(self) -> str:  # type: ignore[override]
         return version("pystacker")
 
     # REPL Command Handlers
@@ -138,7 +142,7 @@ class ReplMode(ExecutionMode):
         """Handle 'delete_history' command."""
         delete_history()
 
-    def _get_error_hint(self, error: Exception) -> str | None:
+    def _get_error_hint(self, error: Exception) -> str | None:  # type: ignore[override]
         """Generate helpful hint based on error type."""
         error_type = type(error).__name__
         message = str(error)
@@ -158,7 +162,7 @@ class ReplMode(ExecutionMode):
 
         return None
 
-    def _handle_repl_command(self, expression: str) -> bool:
+    def _handle_repl_command(self, expression: str) -> bool:  # type: ignore[override]
         """
         Handle REPL-specific commands.
         Returns True if command was handled, False otherwise.
@@ -198,7 +202,7 @@ class ReplMode(ExecutionMode):
 
         return False
 
-    def run(self):
+    def run(self) -> None:
         stacker_version = self.get_version()
         print(f"Stacker {stacker_version} on {sys.platform}")
         print('Type "help" to get more information.')

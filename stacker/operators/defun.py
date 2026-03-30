@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 def defun_sfunction(
-    stacker: Stacker, func_name: str, fargs: list, body: Stacker
+    stacker: Stacker, func_name: str, fargs: list[str], body: Stacker
 ) -> None:
     function = StackerFunction(fargs, body)
     args_count = len(fargs)

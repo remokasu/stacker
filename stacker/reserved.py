@@ -1,2 +1,2 @@
-__BREAK__ = "\b"
-__TRANSPOSE__ = "\T"
+__BREAK__: str = "\b"
+__TRANSPOSE__: str = "\T"

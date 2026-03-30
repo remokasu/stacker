@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Callable
 
 from stacker.engine.core import StackerCore
+from stacker.engine.scope import ScopedVariables
 from stacker.syntax.parser import parse_expression
 
 if TYPE_CHECKING:
@@ -14,34 +15,30 @@ from stacker.engine.data_type import stack_data
 class Stacker(StackerCore):
     def __init__(
         self, expression: str | None = None, parent: StackerCore | None = None
-    ):
+    ) -> None:
         super().__init__(expression, parent)
-        self.trace = []
-        self.plugin_descriptions = {}
+        self.trace: list[object] = []
+        self.plugin_descriptions: dict[str, str | None] = {}
 
     def include(self, filename: str) -> None:
         return self.operator_manager.operators["priority"]["include"]["func"](
             self, filename
         )
 
-    def push(self, value: Any) -> None:  # TODO: remove
+    def push(self, value: object) -> None:  # TODO: remove
         self.stack.append(value)
 
-    def pop_and_eval(self, stack: stack_data) -> Any:
+    def pop_and_eval(self, stack: stack_data[object]) -> object:
         return self._pop_and_eval(stack)
 
-    def pop(self) -> Any:
+    def pop(self) -> object:
         return self.stack.pop()
 
-    def process_expression(self, expression) -> None:
+    def process_expression(self, expression: str) -> None:
         tokens = parse_expression(expression)
         self.evaluate(tokens, stack=self.stack)
 
-    # @staticmethod
-    # def new(expression: str | None = None, parent: Stacker | None = None) -> Stacker:
-    #     return Stacker(expression=expression, parent=parent)
-
-    def evaluate(self, tokens: list, stack: stack_data = stack_data()) -> stack_data:
+    def evaluate(self, tokens: list[object], stack: stack_data[object] = stack_data()) -> stack_data[object]:
         """
         Evaluates a given RPN expression.
         Returns the result of the evaluation.
@@ -56,7 +53,7 @@ class Stacker(StackerCore):
     def register_operator(
         self,
         operator_name: str,
-        operator_func: Callable,
+        operator_func: Callable[..., object],
         arg_count: int,
         push_result_to_stack: bool,
         desc: str | None = None,
@@ -84,16 +81,16 @@ class Stacker(StackerCore):
             "desc": desc,
         }
 
-    def register_macro(self, macro_name: str, macro_body: Callable) -> None:
+    def register_macro(self, macro_name: str, macro_body: object) -> None:
         self.macros[macro_name] = macro_body
 
-    def register_parameter(self, parameter_name: str, parameter_value: Any) -> None:
+    def register_parameter(self, parameter_name: str, parameter_value: object) -> None:
         self.variables[parameter_name] = parameter_value
 
     def register_plugin(
         self,
         operator_name: str,
-        operator_func: Any,
+        operator_func: Callable[..., object],
         push_result_to_stack: bool = True,
         pass_core: bool = False,
         desc: str | None = None,
@@ -101,20 +98,17 @@ class Stacker(StackerCore):
         if pass_core:
             original_operator_func = operator_func
 
-            def wrapped_operator_func(*args, **kwargs):
+            def wrapped_operator_func(*args: object, **kwargs: object) -> object:
                 wraped = original_operator_func(self, *args, **kwargs)
                 return wraped
 
-            wrapped_operator_func.arg_count = (
-                original_operator_func.__code__.co_argcount - 1
+            wrapped_operator_func.arg_count = (  # type: ignore[attr-defined]
+                original_operator_func.__code__.co_argcount - 1  # type: ignore[union-attr]
             )
             operator_func = wrapped_operator_func
-            arg_count = wrapped_operator_func.arg_count
+            arg_count = wrapped_operator_func.arg_count  # type: ignore[attr-defined]
         else:
-            arg_count = operator_func.__code__.co_argcount
-        # self.register_operator(
-        #     operator_name, operator_func, arg_count, push_result_to_stack, desc
-        # )
+            arg_count = operator_func.__code__.co_argcount  # type: ignore[union-attr]
         if operator_name in self.plugins:
             del self.plugins[operator_name]
         self.plugins[operator_name] = {
@@ -132,52 +126,52 @@ class Stacker(StackerCore):
     # Getter
     # ========================
 
-    def get_stack_ref(self) -> stack_data:
+    def get_stack_ref(self) -> stack_data[object]:
         return self.stack
 
-    def get_stack_copy(self) -> stack_data:
+    def get_stack_copy(self) -> stack_data[object]:
         return self.stack.copy()
 
-    def get_stack_copy_as_list(self) -> list:
+    def get_stack_copy_as_list(self) -> list[object]:
         return list(self.stack.copy())
 
-    def get_macros_ref(self) -> dict:
+    def get_macros_ref(self) -> dict[str, object]:
         return self.macros
 
-    def get_macros_copy(self) -> dict:
+    def get_macros_copy(self) -> dict[str, object]:
         return self.macros.copy()
 
-    def get_variables_ref(self) -> dict:
+    def get_variables_ref(self) -> ScopedVariables:
         return self.variables
 
-    def get_variables_copy(self) -> dict:
+    def get_variables_copy(self) -> ScopedVariables:
         return self.variables.copy()
 
-    def get_sfuntions_ref(self) -> dict:
+    def get_sfuntions_ref(self) -> dict[str, object]:
         return self.sfunctions
 
-    def get_sfuntions_copy(self) -> dict:
+    def get_sfuntions_copy(self) -> dict[str, object]:
         return self.sfunctions.copy()
 
-    def get_plugins_ref(self) -> dict:
+    def get_plugins_ref(self) -> dict[str, object]:
         return self.plugins
 
-    def get_plugins_copy(self) -> dict:
+    def get_plugins_copy(self) -> dict[str, object]:
         return self.plugins.copy()
 
     def get_stack_length(self) -> int:
         return len(self.stack)
 
-    def get_trace_ref(self) -> list[Any]:
+    def get_trace_ref(self) -> list[object]:
         return self.trace
 
-    def get_trace_copy(self) -> list[Any]:
+    def get_trace_copy(self) -> list[object]:
         return self.trace.copy()
 
-    def get_labels_ref(self) -> dict:
+    def get_labels_ref(self) -> dict[str, int]:
         return self.labels
 
-    def get_labels_copy(self) -> dict:
+    def get_labels_copy(self) -> dict[str, int]:
         return self.labels.copy()
 
     def get_all_keys_for_completer(self) -> list[str]:
@@ -191,7 +185,7 @@ class Stacker(StackerCore):
             )
         )
 
-    def get_plugin_descriptions(self) -> dict:
+    def get_plugin_descriptions(self) -> dict[str, str | None]:
         return self.plugin_descriptions
 
     # ========================
@@ -201,14 +195,11 @@ class Stacker(StackerCore):
     def clear_trace(self) -> None:
         self.trace = []
 
-    # def clear_ans(self) -> None:
-    #     self._ans = None
-
     # ========================
     # Debug
     # ========================
 
-    def eval(self, expression: str, stack: stack_data = stack_data()) -> Any:
+    def eval(self, expression: str, stack: stack_data[object] = stack_data()) -> object:
         """Evaluates a given RPN expression.
         Returns the result of the evaluation.
 

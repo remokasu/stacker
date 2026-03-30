@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import deque
 
 # class Operator:
@@ -94,17 +96,17 @@ class VoidType:
     Sentinel value to indicate a function has no return value.
     Used to distinguish void functions from functions that explicitly return None.
     """
-    _instance = None
+    _instance: VoidType | None = None
 
-    def __new__(cls):
+    def __new__(cls) -> VoidType:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "VOID"
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return False
 
 
@@ -113,10 +115,10 @@ VOID = VoidType()
 
 
 class String(str):
-    def __init__(self, value: str):
+    def __init__(self, value: str) -> None:
         self.value = str(value)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.value
 
     def __add__(self, other: str) -> str:
@@ -125,10 +127,10 @@ class String(str):
     def __radd__(self, other: str) -> str:
         return other + self.value
 
-    def startswith(self, value: str) -> bool:
+    def startswith(self, value: str) -> bool:  # type: ignore[override]
         return self.value.startswith(value)
 
-    def endswith(self, value: str) -> bool:
+    def endswith(self, value: str) -> bool:  # type: ignore[override]
         return self.value.endswith(value)
 
 
@@ -141,13 +143,13 @@ class UndefinedSymbol(str):
     They can be consumed by 'set', 'defun', 'defmacro', 'do', 'dolist' as symbol names.
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         self.name = name
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"UndefinedSymbol({self.name!r})"
 
 

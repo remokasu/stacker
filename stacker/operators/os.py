@@ -16,7 +16,7 @@ def _pwd() -> str:
     return os.getcwd()
 
 
-def _cat(filename: str) -> str:
+def _cat(filename: str) -> None:
     with open(filename, "r") as f:
         print(f.read())
 

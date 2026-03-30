@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from stacker.error import IncludeError
 from stacker.include.stk_file_read import readtxt
 from stacker.syntax.parser import remove_start_end_quotes
 
+if TYPE_CHECKING:
+    from stacker.stacker import Stacker
 
-def include_stacker_script(filename: str | Path):
+
+def include_stacker_script(filename: str | Path) -> Stacker:
     """Import a stacker script and return the stacker object."""
     if isinstance(filename, str):
         filename = remove_start_end_quotes(filename)

@@ -56,10 +56,10 @@ class ExecutionMode:
         self.color_print = True
         self.debug = False
 
-    def debug_mode(self):
+    def debug_mode(self) -> None:
         self.debug = True
 
-    def get_multiline_input(self, prompt="") -> str:
+    def get_multiline_input(self, prompt: str = "") -> str:
         lines = []
         while True:
             line = input(prompt)
@@ -72,7 +72,7 @@ class ExecutionMode:
                 break
         return "\n".join(lines)
 
-    def run(self):
+    def run(self) -> None:
         raise NotImplementedError("Subclasses must implement the 'run' method")
 
     def disp(self) -> None:

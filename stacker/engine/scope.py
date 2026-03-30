@@ -7,7 +7,7 @@ correct scoping semantics.
 """
 
 from __future__ import annotations
-from typing import Any, Iterator
+from typing import Iterator
 
 
 class ScopedVariables:
@@ -29,8 +29,8 @@ class ScopedVariables:
     """
 
     def __init__(
-        self, parent: ScopedVariables | None = None, local_vars: dict | None = None
-    ):
+        self, parent: ScopedVariables | None = None, local_vars: dict[str, object] | None = None
+    ) -> None:
         """
         Initialize a new scope.
 
@@ -38,10 +38,10 @@ class ScopedVariables:
             parent: Parent scope (None for root scope)
             local_vars: Initial local variables (default: empty dict)
         """
-        self._local: dict[str, Any] = local_vars if local_vars is not None else {}
+        self._local: dict[str, object] = local_vars if local_vars is not None else {}
         self._parent: ScopedVariables | None = parent
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key: str) -> object:
         """
         Get a variable value, searching up the scope chain.
 
@@ -61,7 +61,7 @@ class ScopedVariables:
         else:
             raise KeyError(key)
 
-    def __setitem__(self, key: str, value: Any) -> None:
+    def __setitem__(self, key: str, value: object) -> None:
         """
         Set a variable in the current scope only.
 
@@ -71,7 +71,7 @@ class ScopedVariables:
         """
         self._local[key] = value
 
-    def set_global(self, key: str, value: Any) -> None:
+    def set_global(self, key: str, value: object) -> None:
         """
         Set a variable in the global (root) scope.
 
@@ -88,7 +88,7 @@ class ScopedVariables:
             # Recurse up to the root
             self._parent.set_global(key, value)
 
-    def update_existing(self, key: str, value: Any) -> bool:
+    def update_existing(self, key: str, value: object) -> bool:
         """
         Update an existing variable by searching up the scope chain.
 
@@ -137,7 +137,7 @@ class ScopedVariables:
         """
         return key in self._local or (self._parent is not None and key in self._parent)
 
-    def get(self, key: str, default: Any = None) -> Any:
+    def get(self, key: str, default: object = None) -> object:
         """
         Get a variable value with a default, searching up the scope chain.
 
@@ -153,7 +153,7 @@ class ScopedVariables:
         except KeyError:
             return default
 
-    def pop(self, key: str, default: Any = None) -> Any:
+    def pop(self, key: str, default: object = None) -> object:
         """
         Remove and return a variable from the local scope only.
 
@@ -181,7 +181,7 @@ class ScopedVariables:
                 if key not in self._local:
                     yield key
 
-    def items(self) -> Iterator[tuple[str, Any]]:
+    def items(self) -> Iterator[tuple[str, object]]:
         """
         Get all variable name-value pairs from all scopes.
 
@@ -196,7 +196,7 @@ class ScopedVariables:
                 if key not in self._local:
                     yield key, value
 
-    def update(self, other: dict) -> None:
+    def update(self, other: dict[str, object]) -> None:
         """
         Update local scope with variables from a dict.
 

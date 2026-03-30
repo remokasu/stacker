@@ -27,7 +27,7 @@ argv = parser.parse_args()
 sys.setrecursionlimit(1 << 30)
 
 
-def load_stacker_lib(stacker: Stacker, dir_path) -> bool:
+def load_stacker_lib(stacker: Stacker, dir_path: str) -> bool:
     """Load the Stacker library from the specified directory.
     :param stacker: The Stacker instance to pass to the plugins.
     :param dir_path: The directory to load the Stacker library from.
@@ -48,7 +48,7 @@ def load_stacker_lib(stacker: Stacker, dir_path) -> bool:
     return True
 
 
-def load_plugins(stacker: Stacker, plugins_dir_path) -> bool:
+def load_plugins(stacker: Stacker, plugins_dir_path: str) -> bool:
     """Load plugins from the plugins directory.
     :param stacker: The Stacker instance to pass to the plugins.
     :return: None
@@ -111,7 +111,7 @@ def copy_plugin_to_install_dir(plugin_path: str, debug_mode: bool) -> None:
             traceback.print_exc()
 
 
-def main():
+def main() -> None:
     """Main entry point for the Stacker CLI."""
     # add plugin
     if argv.addplugin:

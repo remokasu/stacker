@@ -1,30 +1,31 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from stacker.engine.core import StackerCore
 
 from stacker.engine.data_type import stack_data
+from stacker.engine.scope import ScopedVariables
 
 
 class StackerFunction:
     """A callable object that represents a function defined in Stacker."""
 
     def __init__(
-        self, args: list[str], blockstack: Stacker
+        self, args: list[str], blockstack: StackerCore
     ) -> None:
-        self.args = args
-        self.blockstack = blockstack
-        self.arg_count = len(args)
-        self.stack = stack_data()
+        self.args: list[str] = args
+        self.blockstack: StackerCore = blockstack
+        self.arg_count: int = len(args)
+        self.stack: stack_data[object] = stack_data()
 
-    def __call__(self, *values) -> Any:
+    def __call__(self, *values: object) -> object:
         self.stack.clear()
-        values = list(values)
-        if len(values) != len(self.args):
-            raise ValueError(f"Expected {len(self.args)} arguments, got {len(values)}")
+        values_list = list(values)
+        if len(values_list) != len(self.args):
+            raise ValueError(f"Expected {len(self.args)} arguments, got {len(values_list)}")
 
         # Optimization: Use scope chain instead of deepcopy
         # Create a shallow copy of blockstack with a new variable scope and stack
@@ -37,7 +38,7 @@ class StackerFunction:
         self._update_nested_variables(new_blockstack.tokens, new_blockstack.variables)
 
         # Set function arguments in the new child scope
-        for arg, value in zip(self.args, values):
+        for arg, value in zip(self.args, values_list):
             new_blockstack.variables[arg] = value
 
         self.stack.append(new_blockstack)
@@ -45,7 +46,7 @@ class StackerFunction:
 
         return result
 
-    def _update_nested_variables(self, tokens, new_variables):
+    def _update_nested_variables(self, tokens: list[object], new_variables: ScopedVariables) -> None:
         """Recursively update variable references in nested StackerCore instances."""
         from stacker.engine.core import StackerCore
         for token in tokens:

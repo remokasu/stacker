@@ -92,7 +92,6 @@ class ErrorFormatter:
         if source_line is not None and line_number is not None:
             # Line number padding
             line_num_str = str(line_number)
-            padding = len(line_num_str) + 1
 
             if use_color:
                 line_prefix = f"{cls.BLUE}{line_num_str} |{cls.RESET} "

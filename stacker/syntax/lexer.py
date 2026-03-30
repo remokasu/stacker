@@ -4,7 +4,7 @@ import re
 import warnings
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Iterator, List
+from typing import Iterator
 
 
 class TokenType(Enum):
@@ -49,7 +49,7 @@ class Identifier:
 class ListNode:
     """Represents a list node."""
 
-    elements: List[Any]
+    elements: list[object]
 
     def __repr__(self) -> str:
         return f"ListNode({self.elements})"
@@ -63,7 +63,7 @@ class TupleNode:
     Parentheses () now create code blocks, not tuples.
     """
 
-    elements: List[Any]
+    elements: list[object]
 
     def __repr__(self) -> str:
         return f"TupleNode({self.elements})"
@@ -196,7 +196,7 @@ class UnifiedLexer:
             )
 
 
-def lex_string(s: str) -> list:
+def lex_string(s: str) -> list[str]:
     """
     Deprecated: Use UnifiedLexer(s).tokenize() instead.
 

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from stacker.stacker import Stacker
 
 
-def _if(condition: Stacker | bool, blockstack: Stacker | Any, parent: Stacker) -> None:
+def _if(condition: Stacker | bool, blockstack: Stacker | object, parent: Stacker) -> None:
     """Executes a block of code if a condition is true.
     {block}
     {condition}
@@ -27,8 +27,8 @@ def _if(condition: Stacker | bool, blockstack: Stacker | Any, parent: Stacker) -
 
 def _if_else(
     condition: Stacker | bool,
-    true_block: Stacker | Any,
-    false_block: Stacker | Any,
+    true_block: Stacker | object,
+    false_block: Stacker | object,
     parent: Stacker,
 ) -> None:
     """Executes a block of code if a condition is true, otherwise executes another block of code.
@@ -56,10 +56,10 @@ def _if_else(
 
 
 def _iferror(
-    try_block: Stacker | Any,
-    catch_block: Stacker | Any,
+    try_block: Stacker | object,
+    catch_block: Stacker | object,
     parent: Stacker,
-):
+) -> None:
     """Executes a block of code if an error occurs.
     {try block}
     {catch block}

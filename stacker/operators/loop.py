@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from stacker.reserved import __BREAK__
 
 if TYPE_CHECKING:
     from stacker.stacker import Stacker
+    from stacker.engine.scope import ScopedVariables
 
 
-def _update_nested_variables(tokens, new_variables):
+def _update_nested_variables(tokens: list[object], new_variables: ScopedVariables) -> None:
     """Recursively update variable references in nested StackerCore instances."""
     from stacker.engine.core import StackerCore
     for token in tokens:
@@ -19,9 +20,9 @@ def _update_nested_variables(tokens, new_variables):
 
 def _times(
     n_times: int,
-    block: Stacker | Any,
+    block: Stacker | object,
     parent: Stacker,
-):
+) -> None:
     """Executes a block of code a specified number of times."""
     i_count = 0
     parent.stack.append(i_count)
@@ -42,7 +43,7 @@ def _do(
     symbol: str,
     block: Stacker,
     parent: Stacker,
-):
+) -> None:
     # Create child scope once for all iterations (optimization)
     original_parent_vars = parent.variables
     child_scope = parent.variables.create_child_scope()
@@ -65,10 +66,10 @@ def _do(
 
 def _dolist(
     symbol: str,
-    lst: list,
+    lst: list[object],
     block: Stacker,
     parent: Stacker,
-):
+) -> None:
     # Create child scope once for all iterations (optimization)
     original_parent_vars = parent.variables
     child_scope = parent.variables.create_child_scope()

@@ -3,9 +3,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from stacker.error import ScriptReadError, StackerError
+from stacker.error import ScriptReadError
 from stacker.runtime.exec_modes.execution_mode import ExecutionMode
-from stacker.include.stk_file_read import readtxt
 from stacker.lib.config import script_extension_name
 from stacker.stacker import Stacker
 from stacker.error_formatter import ErrorFormatter
@@ -18,7 +17,7 @@ class ScriptMode(ExecutionMode):
         self.col_count = 0
         super().__init__(rpn_calculator)
 
-    def run(self, file_path: str):
+    def run(self, file_path: str) -> None:
         try:
             path = Path(file_path)
             if not path.is_file() or not path.suffix == script_extension_name:

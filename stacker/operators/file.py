@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
 from pathlib import Path
 import os
 
 
-def _write(content, filename: Path | str) -> None:
+def _write(content: object, filename: Path | str) -> None:
     filename = Path(filename).resolve()
     with open(filename, "w") as f:
         f.write(content)
@@ -27,15 +26,20 @@ class FileIterator:
         self.mode = mode
         self.file = None
 
-    def __enter__(self):
+    def __enter__(self) -> FileIterator:
         self.file = open(self.filename, self.mode)
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
         if self.file:
             self.file.close()
 
-    def readline(self):
+    def readline(self) -> str | None:
         if self.file:
             line = self.file.readline()
             if line:
@@ -44,7 +48,7 @@ class FileIterator:
         return None
 
 
-def write_to_file(data: Any, filename: str) -> None:
+def write_to_file(data: object, filename: str) -> None:
     """Write data to a file"""
     with open(filename, "w") as f:
         f.write(str(data))
@@ -58,7 +62,7 @@ def read_from_file(filename: str) -> str:
     return content
 
 
-def append_to_file(data: Any, filename: str) -> None:
+def append_to_file(data: object, filename: str) -> None:
     """Append data to a file"""
     with open(filename, "a") as f:
         f.write(str(data))
