@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 
 
-constants = {
+constants: dict[str, int | float | bool | None] = {
     "e": math.e,
     "pi": math.pi,
     "phi": (1 + math.sqrt(5)) / 2,

@@ -1,4 +1,9 @@
-def readtxt(file_path):
+from __future__ import annotations
+
+from pathlib import Path
+
+
+def readtxt(file_path: str | Path) -> str:
     """
     This function reads a text file and ignores lines that are either
     within triple double quotes (\"\"\")
@@ -14,7 +19,7 @@ def readtxt(file_path):
     in_double_quote_comment = False
     in_single_quote_comment = False
 
-    filtered_lines = []
+    filtered_lines: list[str] = []
 
     for line in lines:
         if line.strip().startswith(
@@ -31,10 +36,6 @@ def readtxt(file_path):
             in_double_quote_comment or in_single_quote_comment
         ):  # Skip lines within block comments
             continue
-        # if (
-        #     line.strip().startswith("#") or not line.strip()
-        # ):  # Skip lines that start with # or are blank lines (including the last line if it's blank)
-        #     continue
         filtered_lines.append(line)
 
     # Trim the final newline character if it exists

@@ -127,7 +127,7 @@ special_operators = {
 
 
 class OperatorManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self._regular_operators = {}
         self._regular_operators.update(alge_operators)
         self._regular_operators.update(arith_operators)
@@ -220,10 +220,10 @@ class OperatorManager:
     ############################
     # Regular operators
     ############################
-    def get_regular_ref(self) -> dict:
+    def get_regular_ref(self) -> dict[str, object]:
         return self._regular_operators
 
-    def get_regular_copy(self) -> dict:
+    def get_regular_copy(self) -> dict[str, object]:
         return self._regular_operators.copy()
 
     def get_regular_keys(self) -> list[str]:
@@ -232,10 +232,10 @@ class OperatorManager:
     ############################
     # Priority operators
     ############################
-    def get_priority_ref(self) -> dict:
+    def get_priority_ref(self) -> dict[str, object]:
         return self._priority_operators
 
-    def get_priority_copy(self) -> dict:
+    def get_priority_copy(self) -> dict[str, object]:
         return self._priority_operators.copy()
 
     def get_priority_keys(self) -> list[str]:
@@ -244,10 +244,10 @@ class OperatorManager:
     ############################
     # Special operators
     ############################
-    def get_special_ref(self) -> dict:
+    def get_special_ref(self) -> dict[str, object]:
         return special_operators
 
-    def get_special_copy(self) -> dict:
+    def get_special_copy(self) -> dict[str, object]:
         return special_operators.copy()
 
     def get_special_keys(self) -> list[str]:
@@ -256,10 +256,10 @@ class OperatorManager:
     ############################
     # HOF operators
     ############################
-    def get_hof_ref(self) -> dict:
+    def get_hof_ref(self) -> dict[str, object]:
         return self._hof_operators
 
-    def get_hof_copy(self) -> dict:
+    def get_hof_copy(self) -> dict[str, object]:
         return self._hof_operators.copy()
 
     def get_hof_keys(self) -> list[str]:
@@ -268,10 +268,10 @@ class OperatorManager:
     ############################
     # Aggregate operators
     ############################
-    def get_aggregate_ref(self) -> dict:
+    def get_aggregate_ref(self) -> dict[str, object]:
         return self._aggregate_operators
 
-    def get_aggregate_copy(self) -> dict:
+    def get_aggregate_copy(self) -> dict[str, object]:
         return self._aggregate_operators.copy()
 
     def get_aggregate_keys(self) -> list[str]:
@@ -280,10 +280,10 @@ class OperatorManager:
     ############################
     # Transform operators
     ############################
-    def get_transform_ref(self) -> dict:
+    def get_transform_ref(self) -> dict[str, object]:
         return self._transform_operators
 
-    def get_transform_copy(self) -> dict:
+    def get_transform_copy(self) -> dict[str, object]:
         return self._transform_operators.copy()
 
     def get_transform_keys(self) -> list[str]:
@@ -292,10 +292,10 @@ class OperatorManager:
     ############################
     # Stack operators
     ############################
-    def get_stack_ref(self) -> dict:
+    def get_stack_ref(self) -> dict[str, object]:
         return self._stack_operators
 
-    def get_stack_copy(self) -> dict:
+    def get_stack_copy(self) -> dict[str, object]:
         return self._stack_operators.copy()
 
     def get_stack_keys(self) -> list[str]:
@@ -304,10 +304,10 @@ class OperatorManager:
     ############################
     # File operators
     ############################
-    def get_file_ref(self) -> dict:
+    def get_file_ref(self) -> dict[str, object]:
         return self._file_operators
 
-    def get_file_copy(self) -> dict:
+    def get_file_copy(self) -> dict[str, object]:
         return self._file_operators.copy()
 
     def get_file_keys(self) -> list[str]:
@@ -316,10 +316,10 @@ class OperatorManager:
     ############################
     # Settings operators
     ############################
-    def get_settings_ref(self) -> dict:
+    def get_settings_ref(self) -> dict[str, object]:
         return self._settings_operators
 
-    def get_settings_copy(self) -> dict:
+    def get_settings_copy(self) -> dict[str, object]:
         return self._settings_operators.copy()
 
     def get_settings_keys(self) -> list[str]:
@@ -328,10 +328,10 @@ class OperatorManager:
     ############################
     # System operators
     ############################
-    def get_system_ref(self) -> dict:
+    def get_system_ref(self) -> dict[str, object]:
         return self._system_operators
 
-    def get_system_copy(self) -> dict:
+    def get_system_copy(self) -> dict[str, object]:
         return self._system_operators.copy()
 
     def get_system_keys(self) -> list[str]:
@@ -340,61 +340,61 @@ class OperatorManager:
     ############################
     # Descriptions
     ############################
-    def get_priority_descriptions(self) -> dict:
+    def get_priority_descriptions(self) -> dict[str, object]:
         descriptions = {}
         for operator in self._priority_operators:
             descriptions[operator] = self._priority_operators[operator]["desc"]
         return descriptions
 
-    def get_hof_descriptions(self) -> dict:
+    def get_hof_descriptions(self) -> dict[str, object]:
         descriptions = {}
         for operator in self._hof_operators:
             descriptions[operator] = self._hof_operators[operator]["desc"]
         return descriptions
 
-    def get_aggregate_descriptions(self) -> dict:
+    def get_aggregate_descriptions(self) -> dict[str, object]:
         descriptions = {}
         for operator in self._aggregate_operators:
             descriptions[operator] = self._aggregate_operators[operator]["desc"]
         return descriptions
 
-    def get_transform_descriptions(self) -> dict:
+    def get_transform_descriptions(self) -> dict[str, object]:
         descriptions = {}
         for operator in self._transform_operators:
             descriptions[operator] = self._transform_operators[operator]["desc"]
         return descriptions
 
-    def get_stack_descriptions(self) -> dict:
+    def get_stack_descriptions(self) -> dict[str, object]:
         descriptions = {}
         for operator in self._stack_operators:
             descriptions[operator] = self._stack_operators[operator]["desc"]
         return descriptions
 
-    def get_file_descriptions(self) -> dict:
+    def get_file_descriptions(self) -> dict[str, object]:
         descriptions = {}
         for operator in self._file_operators:
             descriptions[operator] = self._file_operators[operator]["desc"]
         return descriptions
 
-    def get_settings_descriptions(self) -> dict:
+    def get_settings_descriptions(self) -> dict[str, object]:
         descriptions = {}
         for operator in self._settings_operators:
             descriptions[operator] = self._settings_operators[operator]["desc"]
         return descriptions
 
-    def get_system_descriptions(self) -> dict:
+    def get_system_descriptions(self) -> dict[str, object]:
         descriptions = {}
         for operator in self._system_operators:
             descriptions[operator] = self._system_operators[operator]["desc"]
         return descriptions
 
-    def get_regular_descriptions(self) -> dict:
+    def get_regular_descriptions(self) -> dict[str, object]:
         descriptions = {}
         for operator in self._regular_operators:
             descriptions[operator] = self._regular_operators[operator]["desc"]
         return descriptions
 
-    def get_regular_and_priority_operator_descriptions(self) -> dict:
+    def get_regular_and_priority_operator_descriptions(self) -> dict[str, object]:
         descriptions = {}
         descriptions.update(self.get_regular_descriptions())
         descriptions.update(self.get_priority_descriptions())
@@ -406,7 +406,7 @@ class OperatorManager:
     def register_operator(
         self,
         operator_name: str,
-        operator_func: Callable,
+        operator_func: Callable[..., object],
         arg_count: int,
         push_result_to_stack: bool,
         desc: str | None = None,

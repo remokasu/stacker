@@ -4,68 +4,66 @@ from __future__ import annotations
 from stacker.util import colored
 from stacker.engine.data_type import String
 
-from typing import Any
-
 
 class CustomPrinter:
-    def __init__(self, value: Any, color: str):
+    def __init__(self, value: object, color: str) -> None:
         self.value = value
         self.color = color
 
-    def __str__(self):
+    def __str__(self) -> str:
         return colored(str(self.value), self.color)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.value)
 
 
 class CustomIntPrinter(CustomPrinter):
-    def __init__(self, value: int, color: str):
+    def __init__(self, value: int, color: str) -> None:
         self.value = value
         self.color = color
 
 
 class CustomFloatPrinter(CustomPrinter):
-    def __init__(self, value: float, color: str):
+    def __init__(self, value: float, color: str) -> None:
         self.value = value
         self.color = color
 
 
 class CustromComplexPrinter(CustomPrinter):
-    def __init__(self, value: complex, color: str):
+    def __init__(self, value: complex, color: str) -> None:
         self.value = value
         self.color = color
 
 
 class CustomStrPrinter(CustomPrinter):
-    def __init__(self, value: str, color: str):
+    def __init__(self, value: str, color: str) -> None:
         self.value = value
         self.color = color
 
 
 class CustomBoolPrinter(CustomPrinter):
-    def __init__(self, value: bool, color: str):
+    def __init__(self, value: bool, color: str) -> None:
         self.value = value
         self.color = color
 
-    def __str__(self):
+    def __str__(self) -> str:
         return colored(str(self.value).lower(), self.color)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.value).lower()
 
 
 class CustomListPrinter(CustomPrinter):
-    def __init__(self, value: list, color: str):
+    def __init__(self, value: list[object], color: str) -> None:
         # self.value = [custom_print(item) for item in value]
         self.value = value
         self.color = color
 
-    def __str__(self):
+    def __str__(self) -> str:
         _temp = list(map(custom_print, self.value))
         return colored(str(_temp).replace(",", ""), self.color)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.value).replace(",", "")
 
 
@@ -74,54 +72,54 @@ class CustomListPrinter(CustomPrinter):
 
 
 class OperatorPrinter(CustomPrinter):
-    def __init__(self, value: Any, color: str):
+    def __init__(self, value: object, color: str) -> None:
         self.value = value
         self.color = color
 
-    def __str__(self):
+    def __str__(self) -> str:
         return colored(str(self.value), self.color)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.value)
 
 
 class CustomBlockPrinter(CustomPrinter):
-    def __init__(self, value: Any, color: str):
+    def __init__(self, value: object, color: str) -> None:
         self.value = value
         self.color = color
 
-    def __str__(self):
+    def __str__(self) -> str:
         return colored(str(self.value), self.color)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.value)
 
 
 class CustomStringPrinter(CustomPrinter):
-    def __init__(self, value: Any, color: str):
+    def __init__(self, value: object, color: str) -> None:
         self.value = value
         self.color = color
 
-    def __str__(self):
+    def __str__(self) -> str:
         return colored("'" + str(self.value) + "'", self.color)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
 
 class CutomCallablePrinter(CustomPrinter):
-    def __init__(self, value: Any, color: str):
+    def __init__(self, value: object, color: str) -> None:
         self.value = value
         self.color = color
 
-    def __str__(self):
+    def __str__(self) -> str:
         return colored(str(self.value), self.color)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.value)
 
 
-color_map = {
+color_map: dict[str, str] = {
     "int": "default",
     "float": "default",
     "complex": "default",
@@ -135,7 +133,7 @@ color_map = {
 }
 
 
-def custom_print(value: Any) -> CustomPrinter:
+def custom_print(value: object) -> CustomPrinter | object:
     from stacker.stacker import Stacker
 
     if isinstance(value, bool):
@@ -160,7 +158,7 @@ def custom_print(value: Any) -> CustomPrinter:
     return value
 
 
-def disp_colored(stack_list: list) -> str:
+def disp_colored(stack_list: list[object]) -> str:
     stack_str = colored("[", "yellow")
     for item in stack_list:
         stack_str += str(custom_print(item))
@@ -170,11 +168,11 @@ def disp_colored(stack_list: list) -> str:
     return stack_str
 
 
-def disp_default(stack_list: list) -> str:
+def disp_default(stack_list: list[object]) -> str:
     return f"{stack_list}".replace(",", "")
 
 
-def disp_stack(stack_list, colored: bool = False):
+def disp_stack(stack_list: list[object], colored: bool = False) -> None:
     if colored:
         print(disp_colored(stack_list))
     else:

@@ -7,7 +7,7 @@ from stacker.runtime.exec_modes.execution_mode import ExecutionMode
 
 
 class CommandLineMode(ExecutionMode):
-    def run(self, expression: str):
+    def run(self, expression: str) -> None:
         try:
             self.rpn_calculator.eval(expression)
         except Exception as e:

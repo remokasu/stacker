@@ -3,7 +3,6 @@ from __future__ import annotations
 import itertools
 
 from collections import deque
-from typing import Any
 from stacker.error import (
     DropError,
     DupError,
@@ -145,7 +144,7 @@ def _over(stack: deque | list) -> None:
     stack.append(stack[-2])
 
 
-def _swap(stack: deque | list):
+def _swap(stack: deque | list) -> None:
     """
     Swaps the top two elements of the stack.
     Example:
@@ -248,7 +247,7 @@ def _depth(stack: deque | list) -> int:
     return len(stack)
 
 
-def _insert(index: int, value: Any, stack: deque | list) -> None:
+def _insert(index: int, value: object, stack: deque | list) -> None:
     """
     Inserts a value at the specified index.
     Example:
@@ -278,7 +277,7 @@ def _rev(stack: deque | list) -> None:
 
 
 def _count(
-    value: Any,
+    value: object,
     stack: deque | list,
 ) -> int:
     """

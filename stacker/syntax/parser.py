@@ -2,17 +2,14 @@ from __future__ import annotations
 
 import ast
 from functools import lru_cache
-from typing import Any, List
 
 # Import lexer components from the separate lexer module
 from stacker.syntax.lexer import (
     Identifier,
     ListNode,
-    Token,
     TokenType,
     TupleNode,
     UnifiedLexer,
-    lex_string,
 )
 
 __transpose_symbol__ = "^T"
@@ -38,13 +35,13 @@ class Parser:
         except StopIteration:
             self.current_token = None
 
-    def parse(self) -> Union[ListNode, TupleNode]:
+    def parse(self) -> ListNode | TupleNode:
         """Parse input into appropriate node structure"""
         if self.current_token is None:
             return ListNode([])
         return self.parse_structure()
 
-    def parse_structure(self) -> Union[ListNode, TupleNode]:
+    def parse_structure(self) -> ListNode | TupleNode:
         """Parse a list or tuple structure"""
         elements = []
 
@@ -73,7 +70,7 @@ class Parser:
             return node_class(self._split_by_semicolon(elements, node_class))
         return node_class(elements)
 
-    def _parse_element(self) -> Any:
+    def _parse_element(self) -> object:
         """Parse a single element within a structure"""
         if self.current_token is None:
             raise SyntaxError("Unexpected EOF while parsing element")
@@ -100,8 +97,8 @@ class Parser:
             raise SyntaxError(f"Unexpected token {token}")
 
     def _split_by_semicolon(
-        self, elements: List[Any], node_class: type[Union[ListNode, TupleNode]]
-    ) -> List[Any]:
+        self, elements: list[object], node_class: type[ListNode | TupleNode]
+    ) -> list[object]:
         """Split elements by semicolon into subnodes"""
         result = []
         current = []
@@ -120,8 +117,8 @@ class Parser:
         return result
 
     def _wrap_node(
-        self, elements: List[Any], node_class: type[Union[ListNode, TupleNode]]
-    ) -> Any:
+        self, elements: list[object], node_class: type[ListNode | TupleNode]
+    ) -> ListNode | TupleNode:
         """Wrap elements into appropriate node type"""
         if len(elements) == 1 and isinstance(elements[0], (ListNode, TupleNode)):
             return elements[0]
@@ -133,7 +130,7 @@ class Formatter:
 
     @staticmethod
     def format_structure(
-        obj: Union[ListNode, TupleNode, int, float, complex, str, Identifier, dict],
+        obj: ListNode | TupleNode | int | float | complex | str | Identifier | dict[str, object],
     ) -> str:
         """Format any parsed structure back to string"""
         if isinstance(obj, ListNode):
@@ -192,7 +189,7 @@ def parse_expression(expression: str) -> list[str]:
     return list(_parse_expression_cached(expression))
 
 
-def evaluate_token_or_return_str(token: str) -> Any:
+def evaluate_token_or_return_str(token: str) -> object:
     if is_block(token):
         return token
     try:

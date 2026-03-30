@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from stacker.error import StackerSyntaxError
 
 # def _stacker_eval(expr: str, stacker: "Stacker"):
 #     """Evaluates a given RPN expression.
