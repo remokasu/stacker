@@ -21,10 +21,7 @@ from stacker.syntax.parser import (
     is_symbol,
     parse_expression,
 )
-from stacker.reserved import (
-    __BREAK__,
-    # __TRANSPOSE__
-)
+from stacker.error import BreakException
 from stacker.engine.data_type import String, stack_data, VOID
 from stacker.engine.slambda import StackerLambda
 from stacker.engine.scope import ScopedVariables
@@ -463,7 +460,7 @@ class StackerCore:
                 body = stack.pop()
                 op["func"](n_times, body, self)
             elif token == "break":
-                stack.append(__BREAK__)
+                raise BreakException()
             elif token == "if":
                 true_block = stack.pop()
                 condition = stack.pop()

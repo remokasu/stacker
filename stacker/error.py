@@ -147,6 +147,11 @@ class ScriptReadError(StackerError):
         super().__init__(message)
 
 
+class BreakException(BaseException):
+    """Raised by break to immediately exit a loop."""
+    pass
+
+
 class DropError(Exception):
     pass
 
