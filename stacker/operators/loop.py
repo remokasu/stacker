@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from stacker.reserved import __BREAK__
+from stacker.error import BreakException
 
 if TYPE_CHECKING:
     from stacker.stacker import Stacker
@@ -28,10 +28,13 @@ def _times(
     parent.stack.append(i_count)
     while parent.stack[-1] < n_times:
         parent.stack.pop()
-        if isinstance(block, type(parent)):
-            parent.evaluate(block.tokens, stack=parent.stack)
-        else:
-            parent.stack.append(block)
+        try:
+            if isinstance(block, type(parent)):
+                parent.evaluate(block.tokens, stack=parent.stack)
+            else:
+                parent.stack.append(block)
+        except BreakException:
+            return
         i_count = i_count + 1
         parent.stack.append(i_count)
     parent.stack.pop()
@@ -55,10 +58,9 @@ def _do(
         # Update loop variable
         child_scope[symbol] = i
         parent.variables = child_scope
-        # Use parent.evaluate to ensure proper context
-        parent.evaluate(block.tokens, stack=parent.stack)
-        if len(parent.stack) > 0 and parent.stack[-1] == __BREAK__:
-            parent.stack.pop()
+        try:
+            parent.evaluate(block.tokens, stack=parent.stack)
+        except BreakException:
             break
 
     parent.variables = original_parent_vars
@@ -82,10 +84,9 @@ def _dolist(
         # Update loop variable
         child_scope[symbol] = i
         parent.variables = child_scope
-        # Use parent.evaluate to ensure proper context
-        parent.evaluate(block.tokens, stack=parent.stack)
-        if len(parent.stack) > 0 and parent.stack[-1] == __BREAK__:
-            parent.stack.pop()
+        try:
+            parent.evaluate(block.tokens, stack=parent.stack)
+        except BreakException:
             break
 
     parent.variables = original_parent_vars

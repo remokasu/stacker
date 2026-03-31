@@ -23,18 +23,26 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(ans[-1], 0)
 
     def test_do_break(self):
-        # ifelse で break: i==5 の時 break → s = 1+2+3+4 = 10
+        # i==5 の時 break → s = 1+2+3+4 = 10
         self.stacker.stack.clear()
         ans = self.stacker.eval(
-            "0 $s set 1 10 $i {i 5 == {break} {s i + $s set} ifelse} do s"
+            "0 $s set 1 10 $i {i 5 == {break} if s i + $s set} do s"
         )
         self.assertEqual(ans[-1], 10)
 
     def test_dolist_break(self):
-        # ifelse で break: i==3 の時 break → s = 1+2 = 3
+        # i==3 の時 break → s = 1+2 = 3
         self.stacker.stack.clear()
         ans = self.stacker.eval(
-            "0 $s set [1 2 3 4 5] $i {i 3 == {break} {s i + $s set} ifelse} dolist s"
+            "0 $s set [1 2 3 4 5] $i {i 3 == {break} if s i + $s set} dolist s"
+        )
+        self.assertEqual(ans[-1], 3)
+
+    def test_times_break(self):
+        # s が 3 になったら break → s = 3
+        self.stacker.stack.clear()
+        ans = self.stacker.eval(
+            "0 $s set {s ++ $s set s 3 == {break} if} 10 times s"
         )
         self.assertEqual(ans[-1], 3)
 
