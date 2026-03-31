@@ -459,6 +459,10 @@ class StackerCore:
                 n_times = self._pop_and_eval(stack)
                 body = stack.pop()
                 op["func"](n_times, body, self)
+            elif token == "while":
+                body = stack.pop()
+                condition = stack.pop()
+                op["func"](condition, body, self)
             elif token == "break":
                 raise BreakException()
             elif token == "if":

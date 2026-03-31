@@ -66,6 +66,22 @@ def _do(
     parent.variables = original_parent_vars
 
 
+def _while(
+    condition: Stacker,
+    body: Stacker,
+    parent: Stacker,
+) -> None:
+    """Executes a block of code while a condition is true."""
+    while True:
+        parent.evaluate(condition.tokens, stack=parent.stack)
+        if not parent.stack.pop():
+            break
+        try:
+            parent.evaluate(body.tokens, stack=parent.stack)
+        except BreakException:
+            break
+
+
 def _dolist(
     symbol: str,
     lst: list[object],
@@ -93,6 +109,12 @@ def _dolist(
 
 
 loop_operators = {
+    "while": {
+        "func": (lambda condition, body, parent: _while(condition, body, parent)),
+        "arg_count": 2,
+        "push_result_to_stack": False,
+        "desc": "Executes a block of code while a condition is true.",
+    },
     "times": {
         "func": (lambda n_times, block, parent: _times(n_times, block, parent)),
         "arg_count": 2,
