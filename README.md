@@ -312,23 +312,43 @@ Stacker allows for straightforward RPN input. For example:
 
     Result: Pushes numbers 1 through 11 onto the stack by repeatedly duplicating and incrementing.
 
+  - ##### while Loop
+
+    The `while` loop repeats a code block while a condition is true.
+
+    Syntax:
+    ```bash
+    {condition} {body} while
+    ```
+
+    Example:
+    ```bash
+    stacker:0> 1 $i set 0 $s set
+    stacker:2> {i 6 <=} {s i + $s set i ++ $i set} while
+    stacker:2> s
+    [21]
+    ```
+
+    Result: Sums numbers from 1 to 6.
+
+    Note: Use `{condition}` as a code block that leaves a boolean on the stack. The loop terminates when the condition evaluates to false.
+
   - #### break
-    - syntax:
-      ```bash
-      {break}
-      ```
-    - example:
-      ```bash
-      stacker:0> 0 i set
-      stacker:1> 0 9 i {{break} i 5 == if i echo} do
-      0
-      1
-      2
-      3
-      4
-      5
-      ```
-      This example prints the numbers from 0 to 5. When `i` is equal to `5`, the loop is terminated by `break`.
+
+    `break` immediately exits the innermost loop (`do`, `dolist`, `times`, `while`).
+
+    Syntax:
+    ```bash
+    {break}
+    ```
+
+    Example:
+    ```bash
+    stacker:0> 0 $s set 1 10 $i {i 5 == {break} if s i + $s set} do s
+    [10]
+    ```
+
+    Result: Sums 1 through 4, then exits when `i` reaches 5. Note that `break` inside `if` immediately stops execution of the current block — `s i + $s set` is not executed when `i` equals 5.
 
 - ### Define a function:
   - syntax:
