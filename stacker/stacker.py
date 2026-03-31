@@ -38,11 +38,13 @@ class Stacker(StackerCore):
         tokens = parse_expression(expression)
         self.evaluate(tokens, stack=self.stack)
 
-    def evaluate(self, tokens: list[object], stack: stack_data[object] = stack_data()) -> stack_data[object]:
+    def evaluate(self, tokens: list[object], stack: stack_data[object] | None = None) -> stack_data[object]:
         """
         Evaluates a given RPN expression.
         Returns the result of the evaluation.
         """
+        if stack is None:
+            stack = stack_data()
         try:
             return self._evaluate(tokens, stack=stack)
         except Exception as e:
@@ -199,7 +201,7 @@ class Stacker(StackerCore):
     # Debug
     # ========================
 
-    def eval(self, expression: str, stack: stack_data[object] = stack_data()) -> object:
+    def eval(self, expression: str, stack: stack_data[object] | None = None) -> object:
         """Evaluates a given RPN expression.
         Returns the result of the evaluation.
 

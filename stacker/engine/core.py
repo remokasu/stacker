@@ -215,7 +215,9 @@ class StackerCore:
                 return self.variables[value]
             return self.variables.get(value, value)
 
-    def _eval(self, expr: str, stack: stack_data[object] = stack_data()) -> stack_data[object]:
+    def _eval(self, expr: str, stack: stack_data[object] | None = None) -> stack_data[object]:
+        if stack is None:
+            stack = stack_data()
         tokens = list(map(self._literal_eval, parse_expression(expr)))
         self._evaluate(tokens, stack=stack)
         return stack
@@ -223,11 +225,13 @@ class StackerCore:
     def _eval_block(self, block: StackerCore, stack: stack_data[object]) -> None:
         self._evaluate(block.tokens, stack=stack)
 
-    def _evaluate(self, tokens: list[object], stack: stack_data[object] = stack_data()) -> stack_data[object]:
+    def _evaluate(self, tokens: list[object], stack: stack_data[object] | None = None) -> stack_data[object]:
         """
         Evaluates a given RPN expression.
         Returns the result of the evaluation.
         """
+        if stack is None:
+            stack = stack_data()
         self.trace = tokens
         # Commands that expect a symbol name as the preceding argument
         symbol_consuming_commands = {"set", "=", "defun", "defmacro"}
