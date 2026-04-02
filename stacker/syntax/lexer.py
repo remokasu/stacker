@@ -80,7 +80,7 @@ class TokenPattern:
         ),
         (TokenType.NUMBER, r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[jJ]?"),
         (TokenType.STRING, r"('([^'\\]|\\.)*'|\"([^\"\\]|\\.)*\")"),
-        (TokenType.IDENTIFIER, r"[A-Za-z_][A-Za-z0-9_]*"),
+        (TokenType.IDENTIFIER, r"[A-Za-z_][A-Za-z0-9_\-?!]*"),
         (TokenType.LBRACKET, r"\["),
         (TokenType.RBRACKET, r"\]"),
         (TokenType.LPAREN, r"\("),

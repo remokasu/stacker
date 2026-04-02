@@ -574,6 +574,26 @@ class StackerCore:
                     stack.extend(iterable.tokens)
                 else:
                     raise StackerSyntaxError(f"Cannot expand {iterable}")
+            elif token == "apply":
+                func = stack.pop()
+                args_list = self._pop_and_eval(stack)
+                if isinstance(args_list, (list, tuple)):
+                    for arg in args_list:
+                        stack.append(arg)
+                elif isinstance(args_list, StackerCore):
+                    for tok in args_list.tokens:
+                        stack.append(tok)
+                else:
+                    stack.append(args_list)
+                if isinstance(func, StackerCore):
+                    self._eval_block(func, stack=stack)
+                elif isinstance(func, StackerLambda):
+                    largs: list[object] = []
+                    for _ in range(func.arg_count):
+                        largs.insert(0, self._pop_and_eval(stack))
+                    stack.append(func(*largs))
+                elif isinstance(func, str):
+                    self._execute(func, stack)
             elif token == "include":
                 filename = stack.pop()
                 op["func"](self, filename)
