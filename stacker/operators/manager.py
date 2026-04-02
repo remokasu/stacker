@@ -121,6 +121,12 @@ special_operators = {
         "push_result_to_stack": True,
         "desc": "Converts an iterable to a list.",
     },
+    "apply": {
+        "func": None,
+        "arg_count": 2,
+        "push_result_to_stack": True,
+        "desc": "Expands list elements onto the stack and applies the function.",
+    },
     # REMOVED: "tuplen" operator - () now creates code blocks, not tuples
     # Use lists [] instead of tuples for data structures
 }

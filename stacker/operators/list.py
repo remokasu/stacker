@@ -1,6 +1,35 @@
 from __future__ import annotations
 
 
+def _car(xs: list | tuple) -> object:
+    """Returns the first element of a list."""
+    if not xs:
+        raise ValueError("car: empty list")
+    return xs[0]
+
+
+def _cdr(xs: list | tuple) -> list:
+    """Returns the list without the first element."""
+    if not xs:
+        raise ValueError("cdr: empty list")
+    return list(xs[1:])
+
+
+def _cons(x: object, xs: list) -> list:
+    """Prepends x to the list xs."""
+    return [x] + list(xs)
+
+
+def _null(xs: object) -> bool:
+    """Returns true if the list is empty."""
+    return xs == [] or xs == ()
+
+
+def _pair(xs: object) -> bool:
+    """Returns true if xs is a non-empty list."""
+    return isinstance(xs, (list, tuple)) and len(xs) > 0
+
+
 list_operators = {
     "seq": {
         "func": (lambda x1, x2: list(range(x1, x2 + 1))),
@@ -8,46 +37,34 @@ list_operators = {
         "push_result_to_stack": True,
         "desc": "Generate sequence from x1 to x2",
     },
-    # "range": {
-    #     "func": (lambda x1, x2: range(x1, x2)),
-    #     "arg_count": 2,
-    #     "push_result_to_stack": True,
-    #     "desc": "Generate range from x1 to x2",
-    # },
-    # "append": {
-    #     "func": (lambda xs, x: xs.append(x)),
-    #     "arg_count": 2,
-    #     "push_result_to_stack": True,
-    #     "desc": "Append value to list",
-    # },
-    # "extend": {
-    #     "func": (lambda xs1, xs2: xs1.extend(xs2)),
-    #     "arg_count": 2,
-    #     "push_result_to_stack": True,
-    #     "desc": "Extend list",
-    # },
-    # "insert": {
-    #     "func": (lambda xs, i, x: xs.insert(i, x)),
-    #     "arg_count": 3,
-    #     "push_result_to_stack": True,
-    #     "desc": "Insert value into list",
-    # },
-    # "reverse": {
-    #     "func": (lambda xs: xs.reverse()),
-    #     "arg_count": 1,
-    #     "push_result_to_stack": True,
-    #     "desc": "Reverse list",
-    # },
-    # "sort": {
-    #     "func": (lambda xs: xs.sort()),
-    #     "arg_count": 1,
-    #     "push_result_to_stack": True,
-    #     "desc": "Sort list",
-    # },
-    # "count": {
-    #     "func": (lambda xs, x: xs.count(x)),
-    #     "arg_count": 2,
-    #     "push_result_to_stack": True,
-    #     "desc": "Count value in list",
-    # },
+    "car": {
+        "func": (lambda xs: _car(xs)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns the first element of a list.",
+    },
+    "cdr": {
+        "func": (lambda xs: _cdr(xs)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns the list without the first element.",
+    },
+    "cons": {
+        "func": (lambda x, xs: _cons(x, xs)),
+        "arg_count": 2,
+        "push_result_to_stack": True,
+        "desc": "Prepends x to the list xs.",
+    },
+    "null?": {
+        "func": (lambda xs: _null(xs)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns true if the list is empty.",
+    },
+    "pair?": {
+        "func": (lambda xs: _pair(xs)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns true if xs is a non-empty list.",
+    },
 }
