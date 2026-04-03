@@ -55,6 +55,24 @@ def _if_else(
             parent.stack.append(false_block)
 
 
+def _cond(pairs: list[tuple[object, object]], parent: Stacker, stack: object) -> None:
+    """Evaluates condition-result pairs in order, executing the first matching result.
+    {c1} {r1} {c2} {r2} ... n cond
+    """
+    for condition, result in pairs:
+        if isinstance(condition, type(parent)):
+            parent.evaluate(condition.tokens, stack=stack)  # type: ignore[arg-type]
+            cond_val = stack.pop()  # type: ignore[union-attr]
+        else:
+            cond_val = condition
+        if cond_val:
+            if isinstance(result, type(parent)):
+                parent.evaluate(result.tokens, stack=stack)  # type: ignore[arg-type]
+            else:
+                stack.append(result)  # type: ignore[union-attr]
+            return
+
+
 def _iferror(
     try_block: Stacker | object,
     catch_block: Stacker | object,
@@ -78,6 +96,12 @@ def _iferror(
 
 
 condition_operators = {
+    "cond": {
+        "func": (lambda pairs, parent, stack: _cond(pairs, parent, stack)),
+        "arg_count": 0,
+        "push_result_to_stack": False,
+        "desc": "Evaluates condition-result pairs in order. {c1} {r1} ... n cond",
+    },
     "if": {
         "func": (
             lambda condition, blockstack, parent: _if(condition, blockstack, parent)

@@ -465,6 +465,14 @@ class StackerCore:
                 op["func"](condition, body, self)
             elif token == "break":
                 raise BreakException()
+            elif token == "cond":
+                n = self._pop_and_eval(stack)
+                pairs = []
+                for _ in range(n):  # type: ignore[arg-type]
+                    result = stack.pop()
+                    condition = stack.pop()
+                    pairs.insert(0, (condition, result))
+                op["func"](pairs, self, stack)
             elif token == "if":
                 true_block = stack.pop()
                 condition = stack.pop()
