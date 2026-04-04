@@ -752,6 +752,7 @@ print(stacker.eval("3 4 +"))
 | complex? | Returns true if the value is a complex number         | `1+2j complex?`            |
 | list?    | Returns true if the value is a list                   | `[1 2 3] list?`            |
 | null?    | Returns true if the value is null or an empty list    | `null null?`               |
+| number?  | Returns true if the value is a number (int, float, or complex) | `42 number?`    |
 
 
 ### Other Operators

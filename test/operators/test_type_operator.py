@@ -204,3 +204,33 @@ class TestUnit(unittest.TestCase):
         self.stacker.stack.clear()
         ans = self.stacker.eval("0 null?")
         self.assertFalse(ans[-1])
+
+    def test_number_check_true_for_int(self):
+        self.stacker.stack.clear()
+        ans = self.stacker.eval("42 number?")
+        self.assertTrue(ans[-1])
+
+    def test_number_check_true_for_float(self):
+        self.stacker.stack.clear()
+        ans = self.stacker.eval("3.14 number?")
+        self.assertTrue(ans[-1])
+
+    def test_number_check_true_for_complex(self):
+        self.stacker.stack.clear()
+        ans = self.stacker.eval("1+2j number?")
+        self.assertTrue(ans[-1])
+
+    def test_number_check_false_for_bool(self):
+        self.stacker.stack.clear()
+        ans = self.stacker.eval("true number?")
+        self.assertFalse(ans[-1])
+
+    def test_number_check_false_for_string(self):
+        self.stacker.stack.clear()
+        ans = self.stacker.eval("'hello' number?")
+        self.assertFalse(ans[-1])
+
+    def test_number_check_false_for_list(self):
+        self.stacker.stack.clear()
+        ans = self.stacker.eval("[1 2 3] number?")
+        self.assertFalse(ans[-1])
