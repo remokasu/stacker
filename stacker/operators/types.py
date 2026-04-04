@@ -74,4 +74,10 @@ type_operators = {
         "push_result_to_stack": True,
         "desc": "Returns true if the value is a list",
     },
+    "number?": {
+        "func": (lambda x: isinstance(x, (int, float, complex)) and not isinstance(x, bool)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns true if the value is a number (int, float, or complex)",
+    },
 }
