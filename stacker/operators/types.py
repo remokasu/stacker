@@ -38,4 +38,40 @@ type_operators = {
         "push_result_to_stack": True,
         "desc": "Get type",
     },
+    "int?": {
+        "func": (lambda x: isinstance(x, int) and not isinstance(x, bool)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns true if the value is an int",
+    },
+    "float?": {
+        "func": (lambda x: isinstance(x, float)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns true if the value is a float",
+    },
+    "str?": {
+        "func": (lambda x: isinstance(x, str)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns true if the value is a string",
+    },
+    "bool?": {
+        "func": (lambda x: isinstance(x, bool)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns true if the value is a bool",
+    },
+    "complex?": {
+        "func": (lambda x: isinstance(x, complex)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns true if the value is a complex number",
+    },
+    "list?": {
+        "func": (lambda x: isinstance(x, list)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns true if the value is a list",
+    },
 }

@@ -736,6 +736,24 @@ print(stacker.eval("3 4 +"))
 | any      | Check if any element of an array satisfies a condition | `[1 2 3 4 5] {2 % 0 ==} any` |
 
 
+### Type Operators
+| Operator | Description                                           | Example                    |
+|----------|-------------------------------------------------------|----------------------------|
+| int      | Convert to int                                        | `3.7 int`                  |
+| float    | Convert to float                                      | `3 float`                  |
+| str      | Convert to string                                     | `42 str`                   |
+| bool     | Convert to bool                                       | `1 bool`                   |
+| complex  | Convert to complex number                             | `3 complex`                |
+| type     | Get the type of a value                               | `42 type`                  |
+| int?     | Returns true if the value is an int (not bool)        | `42 int?`                  |
+| float?   | Returns true if the value is a float                  | `3.14 float?`              |
+| str?     | Returns true if the value is a string                 | `"hello" str?`             |
+| bool?    | Returns true if the value is a bool                   | `true bool?`               |
+| complex? | Returns true if the value is a complex number         | `1+2j complex?`            |
+| list?    | Returns true if the value is a list                   | `[1 2 3] list?`            |
+| null?    | Returns true if the value is null or an empty list    | `null null?`               |
+
+
 ### Other Operators
 | Operator | Description                                           | Example                    |
 |----------|-------------------------------------------------------|----------------------------|
