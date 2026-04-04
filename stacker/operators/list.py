@@ -21,8 +21,8 @@ def _cons(x: object, xs: list) -> list:
 
 
 def _null(xs: object) -> bool:
-    """Returns true if the list is empty."""
-    return xs == [] or xs == ()
+    """Returns true if the value is null (None) or an empty list."""
+    return xs is None or xs == [] or xs == ()
 
 
 def _pair(xs: object) -> bool:
