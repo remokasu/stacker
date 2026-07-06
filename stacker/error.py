@@ -84,6 +84,18 @@ class UndefinedSymbolError(StackerError):
         super().__init__(message)
 
 
+class NoValueProducedError(StackerError):
+    """Raised when a block that must produce a value leaves the stack empty."""
+
+    def __init__(self, operator: str, message: str | None = None) -> None:
+        if message is None:
+            message = (
+                f"The block passed to `{operator}` must leave a value on the stack. "
+                f"Use `dolist` for side-effect-only iteration."
+            )
+        super().__init__(message)
+
+
 class SemanticError(StackerError):
     """Semantic error"""
 

@@ -5,6 +5,7 @@ import ast
 from functools import lru_cache
 from stacker.constant import constants
 from stacker.error import (
+    NoValueProducedError,
     StackUnderflowError,
     StackerSyntaxError,
     UndefinedSymbolError,
@@ -576,7 +577,7 @@ class StackerCore:
                     stack.append(lst[n])  # type: ignore[index]
             elif token == "expand":
                 iterable = stack.pop()
-                if isinstance(iterable, list or tuple):
+                if isinstance(iterable, (list, tuple)):
                     stack.extend(iterable)  # type: ignore[arg-type]
                 elif isinstance(iterable, StackerCore):
                     stack.extend(iterable.tokens)
@@ -646,7 +647,7 @@ class StackerCore:
                 body = stack.pop()
                 hof_args = stack.pop()
                 args_org = copy.deepcopy(hof_args)
-                func = self._get_hof_func(body)
+                func = self._get_hof_func(body, token)
                 hof_args = hof_args.tokens if isinstance(hof_args, StackerCore) else hof_args
                 if op["push_result_to_stack"]:
                     lst = op["func"](func, hof_args)
@@ -689,7 +690,7 @@ class StackerCore:
                     if len(result_stack) == 1:
                         return result_stack[0]
                     elif len(result_stack) == 0:
-                        return None
+                        raise NoValueProducedError(token)
                     return result_stack[0]
 
                 fold_args = fold_args.tokens if isinstance(fold_args, StackerCore) else fold_args
@@ -810,9 +811,9 @@ class StackerCore:
                     return symbol.tokens[0]  # type: ignore[return-value]
         raise StackerSyntaxError(f"Expected a symbol, got {symbol}")
 
-    def _get_hof_func(self, body: object) -> Callable[..., object]:
+    def _get_hof_func(self, body: object, operator: str) -> Callable[..., object]:
         if isinstance(body, StackerCore):
-            return lambda args: self._stacker_lambda(args, body.copy())
+            return lambda args: self._stacker_lambda(args, body.copy(), operator)
         elif isinstance(body, StackerLambda):
             return body
         else:
@@ -858,14 +859,14 @@ class StackerCore:
         macro: StackerMacro = self.macros[name]  # type: ignore[assignment]
         self._evaluate(macro.blockstack.tokens, stack=stack)
 
-    def _stacker_lambda(self, arg: object, body: StackerCore) -> object:
+    def _stacker_lambda(self, arg: object, body: StackerCore, operator: str) -> object:
         lstack: list[object] = []
         body.tokens.insert(0, arg)
         body._evaluate(body.tokens, stack=lstack)
         if len(lstack) == 1:
             return lstack[0]
         elif len(lstack) == 0:
-            return self._substack("{}")
+            raise NoValueProducedError(operator)
         return lstack
 
     def copy(self) -> StackerCore:
