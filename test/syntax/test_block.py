@@ -27,7 +27,7 @@ class TestUnit(unittest.TestCase):
         ans = stacker.eval(expr)
         assert ans[-1].tokens == [0, 1, "+"]
 
-    # Tests for () code blocks (Lisp-style syntax)
+    # Tests for () code blocks
     def test_paren_empty_block(self):
         stacker = Stacker()
         expr = "()"
@@ -59,7 +59,7 @@ class TestUnit(unittest.TestCase):
         # Should execute block when condition is true
         self.assertEqual(list(stacker.stack), [30])
 
-    def test_paren_lisp_style_function(self):
+    def test_paren_style_function(self):
         stacker = Stacker()
         stacker.eval("(x y) (x y *) $mul defun")
         ans = stacker.eval("3 4 mul")
