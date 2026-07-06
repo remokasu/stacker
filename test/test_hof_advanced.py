@@ -1,5 +1,6 @@
 import unittest
 
+from stacker.error import NoValueProducedError
 from stacker.stacker import Stacker
 
 
@@ -30,6 +31,36 @@ class TestStacker(unittest.TestCase):
             "[1 2 3 4 5] {x} {x 2 % 0 ==} lambda filter list {x} {x x *} lambda map list"
         )
         self.assertEqual(ans[-1], [4, 16])
+
+    def test_map_block_with_no_result_raises_clear_error(self):
+        # Regression: a block producing no stack value crashed with an
+        # internal TypeError. HOF blocks must leave a value (ADR-0001);
+        # the error should name the operator and point to dolist.
+        self.stacker.stack.clear()
+        with self.assertRaises(NoValueProducedError) as ctx:
+            self.stacker.eval("[1 2] {drop} map")
+        self.assertIn("map", str(ctx.exception))
+        self.assertIn("dolist", str(ctx.exception))
+
+    def test_filter_block_with_no_result_raises_clear_error(self):
+        self.stacker.stack.clear()
+        with self.assertRaises(NoValueProducedError) as ctx:
+            self.stacker.eval("[1 2 3] {drop} filter")
+        self.assertIn("filter", str(ctx.exception))
+
+    def test_reduce_block_with_no_result_raises_clear_error(self):
+        # Regression: reduce_func returned None, causing an unrelated
+        # TypeError (`None 2 +`) on the next fold step
+        self.stacker.stack.clear()
+        with self.assertRaises(NoValueProducedError) as ctx:
+            self.stacker.eval("[1 2 3] 0 acc x {acc x + drop} reduce")
+        self.assertIn("reduce", str(ctx.exception))
+
+    def test_fold_block_with_no_result_raises_clear_error(self):
+        self.stacker.stack.clear()
+        with self.assertRaises(NoValueProducedError) as ctx:
+            self.stacker.eval("[1 2 3] 0 acc x {acc x + drop} fold")
+        self.assertIn("fold", str(ctx.exception))
 
     def test_reduce_sum(self):
         self.stacker.stack.clear()

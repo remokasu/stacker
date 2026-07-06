@@ -154,6 +154,8 @@ class ReplMode(ExecutionMode):
                 return f"Define '{var_name}' before using it: '0 {var_name} ='"
         elif "IndexError" in error_type and "pop from an empty deque" in message:
             return "Stack underflow: Not enough elements on the stack for this operation"
+        elif "NoValueProduced" in error_type:
+            return "Make the block leave a value on the stack, or use `dolist` for side-effect-only iteration"
         elif "ZeroDivisionError" in error_type:
             return "Cannot divide by zero"
         elif "TypeError" in error_type:
