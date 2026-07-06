@@ -241,6 +241,26 @@ Stacker allows for straightforward RPN input. For example:
 
     Result: Pushes `7` onto the stack as `x` equals `0`.
 
+  - ##### cond Statement
+
+    The `cond` statement evaluates condition-result pairs in order and executes the first matching branch.
+
+    Syntax:
+    ```bash
+    {condition1} {result1} {condition2} {result2} ... n cond
+    ```
+
+    `n` is the number of condition-result pairs.
+
+    Example:
+    ```bash
+    stacker:0> 5 $x set
+    stacker:1> {x 0 >} {"positive"} {x 0 <} {"negative"} {true} {"zero"} 3 cond
+    ["positive"]
+    ```
+
+    Result: Pushes `"positive"` onto the stack as `x` is greater than `0`. Use `{true}` as the last condition to provide a default branch.
+
   - #### Loops
 
     Loops in Stacker allow for repeated execution of code blocks.
@@ -707,11 +727,14 @@ print(stacker.eval("3 4 +"))
 ### Control Operators
 | Operator | Description                                           | Example                    |
 |----------|-------------------------------------------------------|----------------------------|
-| if       | Conditional statement                                 | `{...} true  if`           |
-| ifelse   | Conditional statement with an else block              | `{true block} {false block} true ifelse`  |
+| if       | Conditional statement                                 | `true {...} if`            |
+| ifelse   | Conditional statement with an else block              | `true {true block} {false block} ifelse`  |
 | iferror  | Conditional statement for error handling              | `{try block} {catch block} iferror` |
+| cond     | Multi-branch conditional (first matching pair wins)   | `{x 0 >} {"pos"} {true} {"other"} 2 cond` |
 | do       | Loop                                                  | `0 10 i {i echo} do`      |
+| dolist   | Loop over the elements of a list                      | `[1 2 3] x {x echo} dolist` |
 | times    | Loop a specified number of times                      | `{dup ++} 10 times`        |
+| while    | Loop while a condition is true                        | `{i 10 <} {i ++ $i set} while` |
 | break    | Break out of a loop                                    | `break`                   |
 
 
@@ -734,6 +757,13 @@ print(stacker.eval("3 4 +"))
 | filter   | Filter an array based on a condition                  | `[1 2 3 4 5] {2 % 0 ==} filter` |
 | all      | Check if all elements of an array satisfy a condition  | `[1 2 3 4 5] {2 % 0 ==} all` |
 | any      | Check if any element of an array satisfies a condition | `[1 2 3 4 5] {2 % 0 ==} any` |
+| car      | Return the first element of a list                    | `[1 2 3] car`              |
+| cdr      | Return the list without its first element             | `[1 2 3] cdr`              |
+| cons     | Prepend an element to a list                          | `1 [2 3] cons`             |
+| pair?    | Return true if the value is a non-empty list          | `[1 2 3] pair?`            |
+| apply    | Expand list elements onto the stack and apply a function | `[3 4] {+} apply`       |
+
+Note: Blocks passed to `map`, `filter`, `reduce`, and `fold` must leave a value on the stack. For side-effect-only iteration (e.g. printing each element), use `dolist` instead.
 
 
 ### Type Operators

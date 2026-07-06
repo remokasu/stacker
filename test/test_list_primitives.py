@@ -3,7 +3,7 @@ import unittest
 from stacker.stacker import Stacker
 
 
-class TestLispPrimitives(unittest.TestCase):
+class TestListPrimitives(unittest.TestCase):
     def setUp(self):
         self.stacker = Stacker()
 

@@ -8,8 +8,8 @@ if TYPE_CHECKING:
 
 def _if(condition: Stacker | bool, blockstack: Stacker | object, parent: Stacker) -> None:
     """Executes a block of code if a condition is true.
-    {block}
     {condition}
+    {block}
     if
     """
     if isinstance(condition, type(parent)):
@@ -32,9 +32,9 @@ def _if_else(
     parent: Stacker,
 ) -> None:
     """Executes a block of code if a condition is true, otherwise executes another block of code.
+    {condition}
     {true block}
     {false block}
-    {condition}
     ifelse
     """
     if isinstance(condition, type(parent)):

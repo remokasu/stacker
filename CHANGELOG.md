@@ -1,5 +1,65 @@
 # CHANGE LOG
 
+## [1.10.0] - 2026-07-06
+
+### Added
+
+- **`while` Loop**:
+  - Repeats a code block while a condition is true
+  - Syntax: `{condition} {body} while`
+  - Example: `1 $i set 0 $s set {i 6 <=} {s i + $s set i ++ $i set} while` sums 1 through 6
+  - `break` works inside `while` like in other loops
+
+- **`cond` Multi-branch Conditional**:
+  - Evaluates condition-result pairs in order and executes the first matching branch
+  - Syntax: `{c1} {r1} {c2} {r2} ... n cond` (n = number of pairs)
+  - Example: `{x 0 >} {"positive"} {x 0 <} {"negative"} {true} {"zero"} 3 cond`
+
+- **`apply` Operator**:
+  - Expands a list onto the stack and applies a function to the elements
+  - Example: `[3 4] {+} apply` returns `7`
+  - Works with code blocks, lambdas, and operator names
+
+- **List Primitives**:
+  - `car`: first element of a list — `[1 2 3] car` returns `1`
+  - `cdr`: list without its first element — `[1 2 3] cdr` returns `[2 3]`
+  - `cons`: prepend an element — `1 [2 3] cons` returns `[1 2 3]`
+  - `null?`: true if the list is empty — `[] null?` returns `true`
+  - `pair?`: true if the value is a non-empty list — `[1 2 3] pair?` returns `true`
+
+- **Type Predicate Operators**:
+  - `int?`, `float?`, `str?`, `bool?`, `complex?`, `list?`, `number?`
+  - Example: `42 int?` returns `true` (`true int?` returns `false` — bools are not ints)
+
+### Changed
+
+- **Type Annotations**:
+  - Added comprehensive type annotations across the engine and operators
+- **Test Suite**:
+  - Expanded with new test files covering `while`, `cond`, `apply`, list primitives, type operators, and advanced `defun`/`defmacro`/HOF behavior
+- **Documentation**:
+  - Documented `while`, clarified `break` semantics, and added the Type Operators table in README
+- **Benchmarks**:
+  - Removed benchmark scripts (`benchmarks/*.stk`)
+
+### Fixed
+
+- **`break` in Loops**:
+  - Fixed `break` not reliably terminating loops
+  - `break` now cleanly exits the innermost loop (`do`, `dolist`, `times`, `while`)
+- **Nested Variable Scope in Loops**:
+  - Fixed variable references inside nested code blocks within loops
+  - Fixed code block detection in the parser
+- **Code Block Evaluation in Functions and Lambdas**:
+  - Fixed substack handling when evaluating code blocks inside user-defined functions and lambdas
+- **Higher-order Functions with Value-less Blocks**:
+  - Blocks passed to `map` / `filter` / `reduce` / `fold` must now leave a value on the stack
+  - Previously `map`/`filter` crashed with an internal `TypeError`, and `reduce`/`fold` leaked `None` into the accumulator causing a confusing type error on the next step
+  - Now a clear `NoValueProducedError` names the operator and suggests `dolist` for side-effect-only iteration
+  - Example: `[1 2] {drop} map` reports: ``The block passed to `map` must leave a value on the stack. Use `dolist` for side-effect-only iteration.``
+- **`expand` on Tuples**:
+  - Fixed `expand` rejecting tuples pushed onto the stack by plugins or the Python API
+
 ## [1.9.1] - 2024-12-25
 
 ### Fixed
