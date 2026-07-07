@@ -24,6 +24,7 @@ from stacker.syntax.parser import (
 )
 from stacker.error import BreakException
 from stacker.engine.data_type import String, UndefinedSymbol, stack_data, VOID
+from stacker.syntax.token_rules import is_string_token, strip_string_delimiters
 from stacker.engine.slambda import StackerLambda
 from stacker.engine.scope import ScopedVariables
 from stacker.operators.manager import OperatorManager
@@ -83,10 +84,8 @@ def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
     for i, token in enumerate(tokens):
         if not isinstance(token, str):
             entries.append((K_VALUE, token, None))
-        elif (token.startswith("'") and token.endswith("'")) or (
-            token.startswith('"') and token.endswith('"')
-        ):
-            entries.append((K_STRING, token, String(token[1:-1])))
+        elif is_string_token(token):
+            entries.append((K_STRING, token, String(strip_string_delimiters(token))))
         elif is_list(token):
             try:
                 template = ast.literal_eval(
@@ -219,10 +218,8 @@ class StackerCore:
         # Try to evaluate as literal (numbers, strings, etc.)
         # but fallback to string if it's an identifier
         try:
-            if (token.startswith("'") and token.endswith("'")) or (
-                token.startswith('"') and token.endswith('"')
-            ):
-                return String(token[1:-1])
+            if is_string_token(token):
+                return String(strip_string_delimiters(token))
             else:
                 return _cached_literal_eval(token)
         except Exception:
@@ -418,12 +415,8 @@ class StackerCore:
         return stack
 
     def _var_str_to_literal(self, value: object) -> object:
-        # Inline is_string check for performance
-        if isinstance(value, str) and (
-            (value.startswith("'") and value.endswith("'"))
-            or (value.startswith('"') and value.endswith('"'))
-        ):
-            return String(value[1:-1])
+        if isinstance(value, str) and is_string_token(value):
+            return String(strip_string_delimiters(value))
         elif isinstance(value, str) and is_symbol(value):
             if value[1:] in self.variables:
                 return self.variables[value[1:]]
@@ -449,11 +442,8 @@ class StackerCore:
             return temp_stack.pop()
         elif token in self.variables:
             return self.variables[token]
-        # Inline is_string check for performance
-        elif (token.startswith("'") and token.endswith("'")) or (
-            token.startswith('"') and token.endswith('"')
-        ):
-            return String(token[1:-1])
+        elif is_string_token(token):
+            return String(strip_string_delimiters(token))
         else:
             # Check cache first for common literals
             if token in StackerCore._literal_cache:
@@ -471,11 +461,8 @@ class StackerCore:
             temp_stack: stack_data[object] = stack_data()
             self._substack(token, temp_stack)
             return temp_stack.pop()
-        # Inline is_string check for performance
-        elif (token.startswith("'") and token.endswith("'")) or (
-            token.startswith('"') and token.endswith('"')
-        ):
-            return String(token[1:-1])
+        elif is_string_token(token):
+            return String(strip_string_delimiters(token))
         else:
             # Use cached literal_eval for performance
             return _cached_literal_eval(token)
