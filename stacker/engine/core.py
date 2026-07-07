@@ -51,6 +51,95 @@ def _cached_literal_eval(token: str) -> object:
         return token
 
 
+# Token classification kinds. Every decision below is a pure function of
+# the token values (never of interpreter state), so a classification can be
+# computed once per token list and reused across evaluations.
+K_VALUE = 0  # non-str token: push as-is
+K_STRING = 1  # quoted string literal: payload is the prebuilt String
+K_LIST = 2  # list literal: payload is the parsed template (or None)
+K_SYMBOL = 3  # $name: payload is the name without the $ prefix
+K_BLOCK = 4  # code-block source: substack is created at evaluation time
+K_LOOKAHEAD_SYMBOL = 5  # bare name treated as a symbol due to lookahead
+K_DYNAMIC = 6  # name resolved against runtime state on every evaluation
+
+
+def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
+    """Classify tokens by the purely syntactic part of the evaluation chain.
+
+    Mirrors the branch order of ``StackerCore._evaluate`` exactly, minus the
+    macro check (macros are runtime state, so that check stays in the
+    evaluation loop). Quote checks call the token object's own
+    ``startswith``/``endswith`` so ``String`` subclass overrides behave as
+    they do at runtime.
+
+    Args:
+        tokens: Token list as produced by the parser / block formatter.
+
+    Returns:
+        One ``(kind, token, payload)`` entry per token.
+    """
+    entries: list[tuple[int, object, object]] = []
+    n = len(tokens)
+    for i, token in enumerate(tokens):
+        if not isinstance(token, str):
+            entries.append((K_VALUE, token, None))
+        elif (token.startswith("'") and token.endswith("'")) or (
+            token.startswith('"') and token.endswith('"')
+        ):
+            entries.append((K_STRING, token, String(token[1:-1])))
+        elif is_list(token):
+            try:
+                template = ast.literal_eval(
+                    convert_custom_array_to_proper_list(token)
+                )
+            except Exception:
+                # Malformed list token: leave the payload empty so the
+                # evaluation loop re-parses (and raises) at the token's
+                # execution position, exactly as before.
+                template = None
+            entries.append((K_LIST, token, template))
+        elif is_symbol(token):
+            entries.append((K_SYMBOL, token, token[1:]))
+        elif is_code_block(token):
+            entries.append((K_BLOCK, token, None))
+        else:
+            next_token = tokens[i + 1] if i + 1 < n else None
+            next_next_token = tokens[i + 2] if i + 2 < n else None
+            if next_token in _SYMBOL_CONSUMING_COMMANDS or (
+                is_code_block(str(next_token)) and next_next_token in _DO_DOLIST
+            ):
+                entries.append((K_LOOKAHEAD_SYMBOL, token, None))
+            else:
+                entries.append((K_DYNAMIC, token, None))
+    return entries
+
+
+class TokenList(list):
+    """Token list carrying a lazily computed classification cache.
+
+    The cache is invalidated by a length guard: every in-place tokens
+    mutation in the codebase changes the list's length (lambda/reduce
+    ``insert`` calls), and wholesale replacements create a fresh
+    ``TokenList``. ``deepcopy`` intentionally drops the cache so copies
+    reclassify after their own mutations.
+    """
+
+    def classification(self) -> list[tuple[int, object, object]]:
+        """Return cached classification entries, recomputing when stale."""
+        entries = getattr(self, "_cls_entries", None)
+        if entries is None or self._cls_len != len(self):
+            entries = _classify_tokens(self)
+            self._cls_entries = entries
+            self._cls_len = len(self)
+        return entries
+
+    def __deepcopy__(self, memo: dict[int, object]) -> "TokenList":
+        new = TokenList()
+        memo[id(self)] = new
+        new.extend(copy.deepcopy(item, memo) for item in self)
+        return new
+
+
 class StackerCore:
     """A class for evaluating RPN expressions."""
 
@@ -79,7 +168,7 @@ class StackerCore:
         self.child: StackerCore | None = None
         self.trace: list[object] = []  # for error trace
         self.stack: stack_data[object] = stack_data()
-        self.tokens: list[object] = []
+        self.tokens: list[object] = TokenList()
         self.bracket_type: str = "{"  # Default bracket type for display ({} or ())
 
         # Source location tracking for error reporting
@@ -99,7 +188,7 @@ class StackerCore:
             self.current_line = self.parent.current_line
             self.source_lines = self.parent.source_lines
             if expression is not None:
-                self.tokens = list(
+                self.tokens = TokenList(
                     map(self._block_token_format, parse_expression(expression))
                 )
             return
@@ -165,7 +254,9 @@ class StackerCore:
 
     def _substack_with_tokens(self, tokens: list[object], stack: stack_data[object]) -> None:
         self.child = type(self)(parent=self)
-        self.child.tokens = tokens
+        # Callers always pass freshly built lists, so wrapping copies no
+        # shared state; the TokenList carries the classification cache.
+        self.child.tokens = TokenList(tokens)
         stack.append(self.child)
 
     def _safe_pop(self, stack: stack_data[object], operator: str = "unknown", num_args: int = 1) -> object:
@@ -241,47 +332,25 @@ class StackerCore:
             stack = stack_data()
         self.trace = tokens
 
-        for i, token in enumerate(tokens):
-            if not isinstance(token, str):
-                stack.append(token)  # Literal value
-            elif token in self.macros:
-                self._expand_macro(token, stack)
-            # Inline is_string check for performance
-            elif (token.startswith("'") and token.endswith("'")) or (
-                token.startswith('"') and token.endswith('"')
-            ):
-                stack.append(String(token[1:-1]))
-            # REMOVED: Tuple handling - () now creates code blocks like {}
-            elif is_list(token):
-                stack.append(
-                    list(
-                        map(
-                            self._var_str_to_literal,
-                            ast.literal_eval(
-                                convert_custom_array_to_proper_list(token)
-                            ),
-                        )
-                    )
-                )
-            elif is_symbol(token):
-                token = token[1:]
-                stack.append(token)
-            # Check for code blocks (both {} and ())
-            elif is_code_block(token):
-                self._substack(token, stack)
-            else:
-                # For all other string tokens, perform lookahead to determine treatment
-                next_token = tokens[i + 1] if i + 1 < len(tokens) else None
-                next_next_token = tokens[i + 2] if i + 2 < len(tokens) else None
-                should_treat_as_symbol = next_token in _SYMBOL_CONSUMING_COMMANDS or (
-                    is_code_block(str(next_token))
-                    and next_next_token in _DO_DOLIST
-                )
+        # Block/function bodies hold long-lived TokenLists whose
+        # classification is computed once; top-level token lists are fresh
+        # per call and classified in a single throwaway pass.
+        if isinstance(tokens, TokenList):
+            entries = tokens.classification()
+        else:
+            entries = _classify_tokens(tokens)
+        macros = self.macros
 
-                if should_treat_as_symbol:
-                    # Treat as symbol name regardless of whether it's a variable or operator
-                    stack.append(token)
-                elif (value := self.variables.get(token, _MISSING)) is not _MISSING:
+        for kind, token, payload in entries:
+            if kind == K_VALUE:
+                stack.append(token)  # Literal value
+                continue
+            # Macros take precedence over every other string-token kind,
+            # matching the former chain where the macro check came first.
+            if token in macros:
+                self._expand_macro(token, stack)
+            elif kind == K_DYNAMIC:
+                if (value := self.variables.get(token, _MISSING)) is not _MISSING:
                     # Variable reference - evaluate it
                     if isinstance(value, StackerLambda):
                         args: list[object] = []
@@ -306,6 +375,46 @@ class StackerCore:
                         stack.append(UndefinedSymbol(evaluated))
                     else:
                         stack.append(evaluated)
+            elif kind == K_STRING:
+                stack.append(payload)
+            elif kind == K_LIST:
+                if payload is None:
+                    # Malformed template: reproduce the original inline parse
+                    # so the error is raised here, at execution position.
+                    stack.append(
+                        list(
+                            map(
+                                self._var_str_to_literal,
+                                ast.literal_eval(
+                                    convert_custom_array_to_proper_list(token)
+                                ),
+                            )
+                        )
+                    )
+                else:
+                    # Re-resolve top-level string elements on every
+                    # evaluation and re-materialize nested containers so no
+                    # state is shared between evaluations (same output as
+                    # the former fresh ast.literal_eval per evaluation).
+                    stack.append(
+                        [
+                            self._var_str_to_literal(element)
+                            if isinstance(element, str)
+                            else (
+                                copy.deepcopy(element)
+                                if isinstance(element, (list, tuple))
+                                else element
+                            )
+                            for element in payload
+                        ]
+                    )
+            elif kind == K_SYMBOL:
+                stack.append(payload)
+            elif kind == K_BLOCK:
+                self._substack(token, stack)
+            else:  # K_LOOKAHEAD_SYMBOL
+                # Treat as symbol name regardless of whether it's a variable or operator
+                stack.append(token)
         return stack
 
     def _var_str_to_literal(self, value: object) -> object:
