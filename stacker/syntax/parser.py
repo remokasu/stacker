@@ -11,6 +11,7 @@ from stacker.syntax.lexer import (
     TupleNode,
     UnifiedLexer,
 )
+from stacker.syntax.token_rules import is_string_token
 
 __transpose_symbol__ = "^T"
 
@@ -322,9 +323,7 @@ def is_code_block(expression: str) -> bool:
 def is_string(expression: str) -> bool:
     if not isinstance(expression, str):
         return False
-    return (expression.startswith("'") and expression.endswith("'")) or (
-        expression.startswith('"') and expression.endswith('"')
-    )
+    return is_string_token(expression)
 
 
 def is_list(expression: str) -> bool:
