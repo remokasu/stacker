@@ -132,6 +132,21 @@ special_operators = {
 }
 
 
+# Category lookup order for the unified dispatch table. Must mirror the
+# elif order of the dispatch chain in StackerCore._execute_impl.
+_DISPATCH_ORDER = (
+    "priority",
+    "stack",
+    "system",
+    "regular",
+    "hof",
+    "transform",
+    "aggregate",
+    "file",
+    "settings",
+)
+
+
 class OperatorManager:
     def __init__(self) -> None:
         self._regular_operators = {}
@@ -185,6 +200,27 @@ class OperatorManager:
         self.built_in_operators = set()
         for kind in self.operators.keys():
             self.built_in_operators.update(self.operators[kind].keys())
+
+        self._rebuild_dispatch_table()
+
+    def _rebuild_dispatch_table(self) -> None:
+        """Build the unified operator lookup table.
+
+        Maps each operator name to its ``(category, definition)`` pair.
+        Categories are visited in the same order as the dispatch chain in
+        ``StackerCore._execute_impl``; first match wins, so a name present
+        in several categories (e.g. file operators, which are also merged
+        into ``regular``) resolves to the same category as before.
+
+        Must be called again whenever a category dict is mutated
+        (see ``register_operator``).
+        """
+        table: dict[str, tuple[str, dict[str, object]]] = {}
+        for category in _DISPATCH_ORDER:
+            for name, opdef in self.operators[category].items():
+                if name not in table:
+                    table[name] = (category, opdef)
+        self.dispatch_table = table
 
     def get_all_keys_for_completer(self) -> list[str]:
         return list(
@@ -426,5 +462,8 @@ class OperatorManager:
                     "push_result_to_stack": push_result_to_stack,
                     "desc": desc,
                 }
+                # The definition dict is replaced (not mutated), so the
+                # dispatch table must be rebuilt to point at the new one.
+                self._rebuild_dispatch_table()
                 return
         return

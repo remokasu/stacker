@@ -54,12 +54,13 @@ class ScopedVariables:
         Raises:
             KeyError: If variable is not found in any scope
         """
-        if key in self._local:
-            return self._local[key]
-        elif self._parent is not None:
-            return self._parent[key]
-        else:
-            raise KeyError(key)
+        scope: ScopedVariables | None = self
+        while scope is not None:
+            local = scope._local
+            if key in local:
+                return local[key]
+            scope = scope._parent
+        raise KeyError(key)
 
     def __setitem__(self, key: str, value: object) -> None:
         """
@@ -81,12 +82,10 @@ class ScopedVariables:
             key: Variable name
             value: Variable value
         """
-        if self._parent is None:
-            # We are at the root (global) scope
-            self._local[key] = value
-        else:
-            # Recurse up to the root
-            self._parent.set_global(key, value)
+        scope = self
+        while scope._parent is not None:
+            scope = scope._parent
+        scope._local[key] = value
 
     def update_existing(self, key: str, value: object) -> bool:
         """
@@ -102,16 +101,13 @@ class ScopedVariables:
         Returns:
             True if variable was found and updated, False otherwise
         """
-        if key in self._local:
-            # Found in local scope, update it
-            self._local[key] = value
-            return True
-        elif self._parent is not None:
-            # Recurse to parent scope
-            return self._parent.update_existing(key, value)
-        else:
-            # Not found anywhere
-            return False
+        scope: ScopedVariables | None = self
+        while scope is not None:
+            if key in scope._local:
+                scope._local[key] = value
+                return True
+            scope = scope._parent
+        return False
 
     def __delitem__(self, key: str) -> None:
         """
@@ -135,7 +131,12 @@ class ScopedVariables:
         Returns:
             True if variable exists in any scope
         """
-        return key in self._local or (self._parent is not None and key in self._parent)
+        scope: ScopedVariables | None = self
+        while scope is not None:
+            if key in scope._local:
+                return True
+            scope = scope._parent
+        return False
 
     def get(self, key: str, default: object = None) -> object:
         """
@@ -148,10 +149,13 @@ class ScopedVariables:
         Returns:
             Variable value or default
         """
-        try:
-            return self[key]
-        except KeyError:
-            return default
+        scope: ScopedVariables | None = self
+        while scope is not None:
+            local = scope._local
+            if key in local:
+                return local[key]
+            scope = scope._parent
+        return default
 
     def pop(self, key: str, default: object = None) -> object:
         """
