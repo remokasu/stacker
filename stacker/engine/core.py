@@ -514,6 +514,11 @@ class StackerCore:
                 # These categories may omit arg_count (matches the former
                 # per-category walk's .get default)
                 return op.get("arg_count", 0)  # type: ignore[return-value]
+            if category == "transform":
+                # The former per-category walk never checked "transform",
+                # so these operators always fell through to the default;
+                # preserve that so StackUnderflowError text stays identical.
+                return 1
             return op["arg_count"]  # type: ignore[return-value]
         return 1  # Default
 
@@ -561,6 +566,7 @@ class StackerCore:
     def _exec_priority(
         self, token: str, op: dict[str, object], stack: stack_data[object]
     ) -> None:
+        """Execute a priority operator via its per-name handler (see _PRIORITY_HANDLERS)."""
         handler = self._PRIORITY_HANDLERS.get(token)
         # Some priority operators (e.g. `ans`) have no handler; falling
         # through silently preserves the former elif chain's behavior.
@@ -790,6 +796,7 @@ class StackerCore:
     def _exec_stack(
         self, token: str, op: dict[str, object], stack: stack_data[object]
     ) -> None:
+        """Execute a stack-category operator; the stack itself is the last argument."""
         op_args: list[object] = [stack]
         for _ in range(op["arg_count"]):  # type: ignore[arg-type]
             op_args.insert(0, self._pop_and_eval(stack))
@@ -803,6 +810,7 @@ class StackerCore:
     def _exec_system(
         self, token: str, op: dict[str, object], stack: stack_data[object]
     ) -> None:
+        """Execute a system-category operator; receives the stack and interpreter as trailing arguments."""
         sys_args: list[object] = [stack, self]
         for _ in range(op["arg_count"]):  # type: ignore[arg-type]
             sys_args.insert(0, self._pop_and_eval(stack))
@@ -816,6 +824,7 @@ class StackerCore:
     def _exec_regular(
         self, token: str, op: dict[str, object], stack: stack_data[object]
     ) -> None:
+        """Execute a regular operator: pop arg_count evaluated arguments, push non-VOID results."""
         reg_args: list[object] = []
         for _ in range(op["arg_count"]):  # type: ignore[arg-type]
             reg_args.insert(0, self._pop_and_eval(stack))
@@ -828,6 +837,7 @@ class StackerCore:
     def _exec_hof(
         self, token: str, op: dict[str, object], stack: stack_data[object]
     ) -> None:
+        """Execute a higher-order operator (map/filter, reduce/fold, zip) with per-name argument shapes."""
         if token in ["map", "filter"]:
             body = stack.pop()
             hof_args = stack.pop()
@@ -916,6 +926,7 @@ class StackerCore:
     def _exec_transform(
         self, token: str, op: dict[str, object], stack: stack_data[object]
     ) -> None:
+        """Execute a transform operator, preserving the input's container type on push."""
         tf_args = stack.pop()
         args_org = copy.deepcopy(tf_args)
         tf_args = (
@@ -942,6 +953,7 @@ class StackerCore:
     def _exec_aggregate(
         self, token: str, op: dict[str, object], stack: stack_data[object]
     ) -> None:
+        """Execute an aggregate operator over a literal-evaluated block or list argument."""
         agg_args = stack.pop()
         agg_args = (
             list(map(self._literal_eval, agg_args.tokens))
@@ -958,6 +970,7 @@ class StackerCore:
     def _exec_file(
         self, token: str, op: dict[str, object], stack: stack_data[object]
     ) -> None:
+        """Execute a file operator: pop arg_count evaluated arguments, push non-VOID results."""
         file_args: list[object] = []
         for _ in range(op["arg_count"]):  # type: ignore[arg-type]
             file_args.insert(0, self._pop_and_eval(stack))
@@ -971,6 +984,7 @@ class StackerCore:
     def _exec_settings(
         self, token: str, op: dict[str, object], stack: stack_data[object]
     ) -> None:
+        """Execute a settings operator; disable_plugin additionally pops the target name."""
         if token == "disable_plugin":
             operator_name = stack.pop()
             op["func"](self, operator_name)  # type: ignore[operator]
