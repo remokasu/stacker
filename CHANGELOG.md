@@ -1,5 +1,15 @@
 # CHANGE LOG
 
+## [1.11.0] - 2026-07-07
+
+### Changed
+
+- **Evaluation-Loop Performance**:
+  - Interpreter core is 2.7x faster on loop-heavy programs (`0 s set 1 100000 $i {s i + s set} do` runs in 0.37s, down from 1.00s) with no language behavior change
+  - Operator dispatch now uses a unified lookup table instead of walking up to nine category dicts per operator
+  - Code blocks classify their tokens once and reuse the classification across evaluations (loop bodies, function bodies, macros); list literals such as `[i i]` parse once and still re-resolve variables freshly on every evaluation
+  - Dynamic semantics are preserved exactly: mid-loop redefinition via `set`/`defun`/`defmacro`, variable shadowing of operators, runtime operator overrides, error messages and error ordering all behave as before (pinned by a new semantics-freeze test suite)
+
 ## [1.10.1] - 2026-07-07
 
 ### Fixed
