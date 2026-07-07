@@ -23,7 +23,7 @@ from stacker.syntax.parser import (
     parse_expression,
 )
 from stacker.error import BreakException
-from stacker.engine.data_type import String, stack_data, VOID
+from stacker.engine.data_type import String, UndefinedSymbol, stack_data, VOID
 from stacker.engine.slambda import StackerLambda
 from stacker.engine.scope import ScopedVariables
 from stacker.operators.manager import OperatorManager
@@ -31,6 +31,14 @@ from stacker.operators.manager import OperatorManager
 if TYPE_CHECKING:
     # from stacker.engine.sfunction import StackerFunction
     from stacker.engine.smacro import StackerMacro
+
+
+# Commands that expect a symbol name as the preceding argument
+_SYMBOL_CONSUMING_COMMANDS = frozenset({"set", "=", "defun", "defmacro"})
+# Loop commands whose preceding block is itself preceded by a symbol name
+_DO_DOLIST = frozenset({"do", "dolist"})
+# Sentinel for single-lookup scope reads (None is a valid variable value)
+_MISSING = object()
 
 
 # Cache for literal_eval to avoid re-evaluating the same tokens
@@ -185,8 +193,6 @@ class StackerCore:
         return
 
     def _pop_and_eval(self, stack: stack_data[object]) -> object:
-        from stacker.engine.data_type import UndefinedSymbol
-
         value = stack.pop()
 
         # Check if value is an UndefinedSymbol
@@ -214,8 +220,6 @@ class StackerCore:
                 return value
             elif isinstance(value, String):
                 return value.value
-            elif value in self.variables:
-                return self.variables[value]
             return self.variables.get(value, value)
 
     def _eval(self, expr: str, stack: stack_data[object] | None = None) -> stack_data[object]:
@@ -236,8 +240,6 @@ class StackerCore:
         if stack is None:
             stack = stack_data()
         self.trace = tokens
-        # Commands that expect a symbol name as the preceding argument
-        symbol_consuming_commands = {"set", "=", "defun", "defmacro"}
 
         for i, token in enumerate(tokens):
             if not isinstance(token, str):
@@ -271,17 +273,16 @@ class StackerCore:
                 # For all other string tokens, perform lookahead to determine treatment
                 next_token = tokens[i + 1] if i + 1 < len(tokens) else None
                 next_next_token = tokens[i + 2] if i + 2 < len(tokens) else None
-                should_treat_as_symbol = next_token in symbol_consuming_commands or (
+                should_treat_as_symbol = next_token in _SYMBOL_CONSUMING_COMMANDS or (
                     is_code_block(str(next_token))
-                    and next_next_token in {"do", "dolist"}
+                    and next_next_token in _DO_DOLIST
                 )
 
                 if should_treat_as_symbol:
                     # Treat as symbol name regardless of whether it's a variable or operator
                     stack.append(token)
-                elif token in self.variables:
+                elif (value := self.variables.get(token, _MISSING)) is not _MISSING:
                     # Variable reference - evaluate it
-                    value = self.variables[token]
                     if isinstance(value, StackerLambda):
                         args: list[object] = []
                         for _ in range(value.arg_count):
@@ -302,16 +303,12 @@ class StackerCore:
                         stack.append(evaluated)
                     elif isinstance(evaluated, str):
                         # Undefined identifiers are treated as UndefinedSymbol
-                        from stacker.engine.data_type import UndefinedSymbol
-
                         stack.append(UndefinedSymbol(evaluated))
                     else:
                         stack.append(evaluated)
         return stack
 
     def _var_str_to_literal(self, value: object) -> object:
-        from stacker.engine.data_type import UndefinedSymbol
-
         # Inline is_string check for performance
         if isinstance(value, str) and (
             (value.startswith("'") and value.endswith("'"))
@@ -401,22 +398,14 @@ class StackerCore:
             return self.sfunctions[token]["arg_count"]  # type: ignore[index]
         elif token in self.plugins:
             return self.plugins[token]["arg_count"]  # type: ignore[index]
-        elif token in self.operator_manager.operators["priority"]:
-            return self.operator_manager.operators["priority"][token].get("arg_count", 0)
-        elif token in self.operator_manager.operators["stack"]:
-            return self.operator_manager.operators["stack"][token]["arg_count"]
-        elif token in self.operator_manager.operators["system"]:
-            return self.operator_manager.operators["system"][token]["arg_count"]
-        elif token in self.operator_manager.operators["regular"]:
-            return self.operator_manager.operators["regular"][token]["arg_count"]
-        elif token in self.operator_manager.operators["hof"]:
-            return self.operator_manager.operators["hof"][token]["arg_count"]
-        elif token in self.operator_manager.operators["aggregate"]:
-            return self.operator_manager.operators["aggregate"][token]["arg_count"]
-        elif token in self.operator_manager.operators["file"]:
-            return self.operator_manager.operators["file"][token]["arg_count"]
-        elif token in self.operator_manager.operators["settings"]:
-            return self.operator_manager.operators["settings"][token].get("arg_count", 0)
+        entry = self.operator_manager.dispatch_table.get(token)
+        if entry is not None:
+            category, op = entry
+            if category in ("priority", "settings"):
+                # These categories may omit arg_count (matches the former
+                # per-category walk's .get default)
+                return op.get("arg_count", 0)  # type: ignore[return-value]
+            return op["arg_count"]  # type: ignore[return-value]
         return 1  # Default
 
     def _execute_impl(self, token: str, stack: stack_data[object]) -> None:
@@ -446,357 +435,452 @@ class StackerCore:
                     stack.append(result)
             else:
                 op["func"](*args)  # type: ignore[index]
-        elif token in self.operator_manager.operators["priority"]:  # priority operators
-            op = self.operator_manager.operators["priority"][token]
-            if token == "do":
-                body = stack.pop()
-                symbol = stack.pop()
-                end_value = self._pop_and_eval(stack)
-                start_value = self._pop_and_eval(stack)
-                name = self._dollar_to_var_name(symbol)
-                op["func"](start_value, end_value, name, body, self)
-            elif token == "dolist":
-                body = stack.pop()
-                symbol = stack.pop()
-                lst = self._pop_and_eval(stack)
-                name = self._dollar_to_var_name(symbol)
-                op["func"](name, lst, body, self)
-            elif token == "times":
-                n_times = self._pop_and_eval(stack)
-                body = stack.pop()
-                op["func"](n_times, body, self)
-            elif token == "while":
-                body = stack.pop()
-                condition = stack.pop()
-                op["func"](condition, body, self)
-            elif token == "break":
-                raise BreakException()
-            elif token == "cond":
-                n = self._pop_and_eval(stack)
-                pairs = []
-                for _ in range(n):  # type: ignore[arg-type]
-                    result = stack.pop()
-                    condition = stack.pop()
-                    pairs.insert(0, (condition, result))
-                op["func"](pairs, self, stack)
-            elif token == "if":
-                true_block = stack.pop()
-                condition = stack.pop()
-                op["func"](condition, true_block, self)
-            elif token == "ifelse":
-                false_block = stack.pop()
-                true_block = stack.pop()
-                condition = stack.pop()
-                op["func"](condition, true_block, false_block, self)
-            elif token == "iferror":
-                catch_block = stack.pop()
-                try_block = stack.pop()
-                op["func"](try_block, catch_block, self)
-            elif token == "set" or token == "=":
-                symbol = stack.pop()
-                name = self._dollar_to_var_name(symbol)
-                value = self._pop_and_eval(stack)
-                # Try to update existing variable in scope chain
-                # If not found, create in local scope
-                if not self.variables.update_existing(name, value):
-                    self.variables[name] = value
-            elif token == "global":
-                # RPN: value varname global
-                # Stack: [..., value, varname]
-                symbol = stack.pop()  # Pop varname
-                name = self._dollar_to_var_name(symbol)
-                value = self._pop_and_eval(stack)  # Pop and eval value
-                # Always set in global (root) scope
-                self.variables.set_global(name, value)
-            elif token == "defun":
-                symbol = stack.pop()
-                name = self._dollar_to_var_name(symbol)
-                body = stack.pop()
-                fargs = stack.pop()  # str
-                if isinstance(fargs, tuple):
-                    fargs = list(fargs)
-                elif isinstance(fargs, list):
-                    fargs = fargs
-                elif isinstance(fargs, StackerCore):
-                    fargs = fargs.tokens
-                else:
-                    fargs = [fargs]
-                op["func"](self, name, fargs, body)
-            elif token == "defmacro":
-                symbol = stack.pop()
-                body = stack.pop()
-                name = self._dollar_to_var_name(symbol)
-                op["func"](self, name, body)
-            elif token == "lambda":
-                body = stack.pop()
-                fargs = stack.pop()
-                if op["push_result_to_stack"]:
-                    result = op["func"](fargs, body)
-                    if result is not VOID:
-                        stack.append(result)
-                else:
-                    op["func"](fargs, body)
-            elif token == "eval":
-                expression = stack.pop()
-                if expression in self.variables:
-                    expression = self.variables[expression]
-                if isinstance(expression, String):
-                    self._eval(expression.value, stack=stack)
-                elif isinstance(expression, StackerCore):
-                    self._eval_block(expression, stack=stack)
-                elif isinstance(expression, StackerLambda):
-                    largs: list[object] = []
-                    for _ in range(expression.arg_count):
-                        largs.insert(0, self._pop_and_eval(stack))
-                    stack.append(expression(*largs))
-                else:
-                    stack.append(expression)
-            elif token == "sub":
-                token = stack.pop()
-                self._substack_with_tokens([token], stack)
-            elif token == "subn":
-                n = stack.pop()
-                elms = [stack.pop() for _ in range(n)]  # type: ignore[arg-type]
-                elms.reverse()
-                self._substack_with_tokens(elms, stack)
-            elif token == "listn":
-                n = stack.pop()
-                elms = [stack.pop() for _ in range(n)]  # type: ignore[arg-type]
-                elms.reverse()
-                stack.append(elms)
-            elif token == "read-from-string":
-                self._substack_with_expression(stack.pop(), stack)  # type: ignore[arg-type]
-            elif token == "read":
-                self._substack_with_expression(input(), stack)
-            elif token == "split":
-                sep = stack.pop()
-                word = stack.pop()
-                for string in word.split(sep):  # type: ignore[union-attr]
-                    stack.append(string)
-            elif token == "nth":
-                n = stack.pop()
-                lst = stack[-1]
-                if isinstance(lst, String):
-                    stack.append(String(lst[n]))  # type: ignore[index]
-                else:
-                    stack.append(lst[n])  # type: ignore[index]
-            elif token == "expand":
-                iterable = stack.pop()
-                if isinstance(iterable, (list, tuple)):
-                    stack.extend(iterable)  # type: ignore[arg-type]
-                elif isinstance(iterable, StackerCore):
-                    stack.extend(iterable.tokens)
-                else:
-                    raise StackerSyntaxError(f"Cannot expand {iterable}")
-            elif token == "apply":
-                func = stack.pop()
-                args_list = self._pop_and_eval(stack)
-                if isinstance(args_list, (list, tuple)):
-                    for arg in args_list:
-                        stack.append(arg)
-                elif isinstance(args_list, StackerCore):
-                    for tok in args_list.tokens:
-                        stack.append(tok)
-                else:
-                    stack.append(args_list)
-                if isinstance(func, StackerCore):
-                    self._eval_block(func, stack=stack)
-                elif isinstance(func, StackerLambda):
-                    largs: list[object] = []
-                    for _ in range(func.arg_count):
-                        largs.insert(0, self._pop_and_eval(stack))
-                    stack.append(func(*largs))
-                elif isinstance(func, str):
-                    self._execute(func, stack)
-            elif token == "include":
-                filename = stack.pop()
-                op["func"](self, filename)
-            elif token == "exit":
-                op["func"]()
-        elif token in self.operator_manager.operators["stack"]:  # stack operators
-            op = self.operator_manager.operators["stack"][token]
-            op_args: list[object] = [stack]
-            for _ in range(op["arg_count"]):
-                op_args.insert(0, self._pop_and_eval(stack))
-            if op["push_result_to_stack"]:
-                result = op["func"](*op_args)
-                if result is not VOID:
-                    stack.append(result)
-            else:
-                op["func"](*op_args)
-        elif token in self.operator_manager.operators["system"]:  # system operators
-            op = self.operator_manager.operators["system"][token]
-            sys_args: list[object] = [stack, self]
-            for _ in range(op["arg_count"]):
-                sys_args.insert(0, self._pop_and_eval(stack))
-            if op["push_result_to_stack"]:
-                result = op["func"](*sys_args)
-                if result is not VOID:
-                    stack.append(result)
-            else:
-                op["func"](*sys_args)
-        elif token in self.operator_manager.operators["regular"]:  # Other operators
-            op = self.operator_manager.operators["regular"][token]
-            reg_args: list[object] = []
-            for _ in range(op["arg_count"]):
-                reg_args.insert(0, self._pop_and_eval(stack))
-            if op["push_result_to_stack"]:
-                result = op["func"](*reg_args)
-                if result is not VOID:
-                    stack.append(result)
-            else:
-                op["func"](*reg_args)
-        elif token in self.operator_manager.operators["hof"]:  # higher-order functions
-            op = self.operator_manager.operators["hof"][token]
-            if token in ["map", "filter"]:
-                body = stack.pop()
-                hof_args = stack.pop()
-                args_org = copy.deepcopy(hof_args)
-                func = self._get_hof_func(body, token)
-                hof_args = hof_args.tokens if isinstance(hof_args, StackerCore) else hof_args
-                if op["push_result_to_stack"]:
-                    lst = op["func"](func, hof_args)
-                    if isinstance(args_org, list):
-                        stack.append(list(lst))
-                    elif isinstance(args_org, tuple):
-                        stack.append(tuple(lst))
-                    else:
-                        self._substack_with_tokens(list(lst), stack)
-                else:
-                    op["func"](func, hof_args)
-            elif token in ["reduce", "fold"]:
-                body = stack.pop()
-                symbol_x = stack.pop()  # Second variable name (element)
-                symbol_acc = stack.pop()  # First variable name (accumulator)
-                init = stack.pop()
-                fold_args = stack.pop()
+        else:
+            entry = self.operator_manager.dispatch_table.get(token)
+            if entry is None:
+                raise StackerSyntaxError(f"Unknown operator '{token}'")
+            category, op = entry
+            self._CATEGORY_EXECUTORS[category](self, token, op, stack)
+        return
 
-                # Extract variable names (same as dolist pattern)
-                name_acc = self._dollar_to_var_name(symbol_acc)
-                name_x = self._dollar_to_var_name(symbol_x)
+    # ------------------------------------------------------------------
+    # Category executors. Bodies are moved verbatim from the former
+    # _execute_impl elif chain; the unified dispatch table replaced the
+    # per-category membership checks.
+    # ------------------------------------------------------------------
 
-                # Create binary function with variable binding
-                def reduce_func(acc: object, x: object) -> object:
-                    # Create child scope for this reduction step
-                    original_parent_vars = self.variables
-                    original_parent_stack = self.stack
-                    result_stack: list[object] = []
-                    try:
-                        self.variables = self.variables.create_child_scope()
-                        # Bind accumulator and element to their variable names
-                        self.variables[name_acc] = acc
-                        self.variables[name_x] = x
-                        # Evaluate the body using a temporary stack
-                        self.stack = result_stack  # type: ignore[assignment]
-                        self._evaluate(body.tokens, stack=result_stack)  # type: ignore[union-attr]
-                    finally:
-                        # Restore parent scope and stack even if the body raised
-                        self.stack = original_parent_stack
-                        self.variables = original_parent_vars
-                    # Return the result
-                    if len(result_stack) == 1:
-                        return result_stack[0]
-                    elif len(result_stack) == 0:
-                        raise NoValueProducedError(token)
-                    return result_stack[0]
+    def _exec_priority(
+        self, token: str, op: dict[str, object], stack: stack_data[object]
+    ) -> None:
+        handler = self._PRIORITY_HANDLERS.get(token)
+        # Some priority operators (e.g. `ans`) have no handler; falling
+        # through silently preserves the former elif chain's behavior.
+        if handler is not None:
+            handler(self, op, stack)
 
-                fold_args = fold_args.tokens if isinstance(fold_args, StackerCore) else fold_args
-                if op["push_result_to_stack"]:
-                    result = op["func"](reduce_func, init, fold_args)
-                    stack.append(result)
-                else:
-                    op["func"](reduce_func, init, fold_args)
-            elif token in ["zip"]:
-                xs2 = stack.pop()
-                xs1 = stack.pop()
-                xs_org = copy.deepcopy(xs1)
-                # ys_org = copy.deepcopy(ys)
-                xs2 = (
-                    xs2.tokens
-                    if isinstance(xs2, StackerCore)
-                    else self._var_str_to_literal(xs2)
-                )
-                xs1 = (
-                    xs1.tokens
-                    if isinstance(xs1, StackerCore)
-                    else self._var_str_to_literal(xs1)
-                )
-                if op["push_result_to_stack"]:
-                    lst = op["func"](xs1, xs2)
-                    if isinstance(xs_org, list):
-                        stack.append(list(lst))
-                    elif isinstance(xs_org, tuple):
-                        stack.append(tuple(lst))
-                    else:
-                        self._substack_with_tokens(list(lst), stack)
-                else:
-                    op["func"](xs1, xs2)
-            else:
-                ...
-        elif (
-            token in self.operator_manager.operators["transform"]
-        ):  # transform operators
-            op = self.operator_manager.operators["transform"][token]
-            tf_args = stack.pop()
-            args_org = copy.deepcopy(tf_args)
-            tf_args = (
-                tf_args.tokens
-                if isinstance(tf_args, StackerCore)
-                else self._var_str_to_literal(tf_args)
-            )
+    def _prio_do(self, op, stack) -> None:
+        body = stack.pop()
+        symbol = stack.pop()
+        end_value = self._pop_and_eval(stack)
+        start_value = self._pop_and_eval(stack)
+        name = self._dollar_to_var_name(symbol)
+        op["func"](start_value, end_value, name, body, self)
+
+    def _prio_dolist(self, op, stack) -> None:
+        body = stack.pop()
+        symbol = stack.pop()
+        lst = self._pop_and_eval(stack)
+        name = self._dollar_to_var_name(symbol)
+        op["func"](name, lst, body, self)
+
+    def _prio_times(self, op, stack) -> None:
+        n_times = self._pop_and_eval(stack)
+        body = stack.pop()
+        op["func"](n_times, body, self)
+
+    def _prio_while(self, op, stack) -> None:
+        body = stack.pop()
+        condition = stack.pop()
+        op["func"](condition, body, self)
+
+    def _prio_break(self, op, stack) -> None:
+        raise BreakException()
+    def _prio_cond(self, op, stack) -> None:
+        n = self._pop_and_eval(stack)
+        pairs = []
+        for _ in range(n):  # type: ignore[arg-type]
+            result = stack.pop()
+            condition = stack.pop()
+            pairs.insert(0, (condition, result))
+        op["func"](pairs, self, stack)
+
+    def _prio_if(self, op, stack) -> None:
+        true_block = stack.pop()
+        condition = stack.pop()
+        op["func"](condition, true_block, self)
+
+    def _prio_ifelse(self, op, stack) -> None:
+        false_block = stack.pop()
+        true_block = stack.pop()
+        condition = stack.pop()
+        op["func"](condition, true_block, false_block, self)
+
+    def _prio_iferror(self, op, stack) -> None:
+        catch_block = stack.pop()
+        try_block = stack.pop()
+        op["func"](try_block, catch_block, self)
+
+    def _prio_set(self, op, stack) -> None:
+        symbol = stack.pop()
+        name = self._dollar_to_var_name(symbol)
+        value = self._pop_and_eval(stack)
+        # Try to update existing variable in scope chain
+        # If not found, create in local scope
+        if not self.variables.update_existing(name, value):
+            self.variables[name] = value
+
+    def _prio_global(self, op, stack) -> None:
+        # RPN: value varname global
+        # Stack: [..., value, varname]
+        symbol = stack.pop()  # Pop varname
+        name = self._dollar_to_var_name(symbol)
+        value = self._pop_and_eval(stack)  # Pop and eval value
+        # Always set in global (root) scope
+        self.variables.set_global(name, value)
+    def _prio_defun(self, op, stack) -> None:
+        symbol = stack.pop()
+        name = self._dollar_to_var_name(symbol)
+        body = stack.pop()
+        fargs = stack.pop()  # str
+        if isinstance(fargs, tuple):
+            fargs = list(fargs)
+        elif isinstance(fargs, list):
+            fargs = fargs
+        elif isinstance(fargs, StackerCore):
+            fargs = fargs.tokens
+        else:
+            fargs = [fargs]
+        op["func"](self, name, fargs, body)
+
+    def _prio_defmacro(self, op, stack) -> None:
+        symbol = stack.pop()
+        body = stack.pop()
+        name = self._dollar_to_var_name(symbol)
+        op["func"](self, name, body)
+
+    def _prio_lambda(self, op, stack) -> None:
+        body = stack.pop()
+        fargs = stack.pop()
+        if op["push_result_to_stack"]:
+            result = op["func"](fargs, body)
+            if result is not VOID:
+                stack.append(result)
+        else:
+            op["func"](fargs, body)
+
+    def _prio_eval(self, op, stack) -> None:
+        expression = stack.pop()
+        if expression in self.variables:
+            expression = self.variables[expression]
+        if isinstance(expression, String):
+            self._eval(expression.value, stack=stack)
+        elif isinstance(expression, StackerCore):
+            self._eval_block(expression, stack=stack)
+        elif isinstance(expression, StackerLambda):
+            largs: list[object] = []
+            for _ in range(expression.arg_count):
+                largs.insert(0, self._pop_and_eval(stack))
+            stack.append(expression(*largs))
+        else:
+            stack.append(expression)
+
+    def _prio_sub(self, op, stack) -> None:
+        token = stack.pop()
+        self._substack_with_tokens([token], stack)
+
+    def _prio_subn(self, op, stack) -> None:
+        n = stack.pop()
+        elms = [stack.pop() for _ in range(n)]  # type: ignore[arg-type]
+        elms.reverse()
+        self._substack_with_tokens(elms, stack)
+
+    def _prio_listn(self, op, stack) -> None:
+        n = stack.pop()
+        elms = [stack.pop() for _ in range(n)]  # type: ignore[arg-type]
+        elms.reverse()
+        stack.append(elms)
+
+    def _prio_read_from_string(self, op, stack) -> None:
+        self._substack_with_expression(stack.pop(), stack)  # type: ignore[arg-type]
+
+    def _prio_read(self, op, stack) -> None:
+        self._substack_with_expression(input(), stack)
+
+    def _prio_split(self, op, stack) -> None:
+        sep = stack.pop()
+        word = stack.pop()
+        for string in word.split(sep):  # type: ignore[union-attr]
+            stack.append(string)
+
+    def _prio_nth(self, op, stack) -> None:
+        n = stack.pop()
+        lst = stack[-1]
+        if isinstance(lst, String):
+            stack.append(String(lst[n]))  # type: ignore[index]
+        else:
+            stack.append(lst[n])  # type: ignore[index]
+
+    def _prio_expand(self, op, stack) -> None:
+        iterable = stack.pop()
+        if isinstance(iterable, (list, tuple)):
+            stack.extend(iterable)  # type: ignore[arg-type]
+        elif isinstance(iterable, StackerCore):
+            stack.extend(iterable.tokens)
+        else:
+            raise StackerSyntaxError(f"Cannot expand {iterable}")
+
+    def _prio_apply(self, op, stack) -> None:
+        func = stack.pop()
+        args_list = self._pop_and_eval(stack)
+        if isinstance(args_list, (list, tuple)):
+            for arg in args_list:
+                stack.append(arg)
+        elif isinstance(args_list, StackerCore):
+            for tok in args_list.tokens:
+                stack.append(tok)
+        else:
+            stack.append(args_list)
+        if isinstance(func, StackerCore):
+            self._eval_block(func, stack=stack)
+        elif isinstance(func, StackerLambda):
+            largs: list[object] = []
+            for _ in range(func.arg_count):
+                largs.insert(0, self._pop_and_eval(stack))
+            stack.append(func(*largs))
+        elif isinstance(func, str):
+            self._execute(func, stack)
+
+    def _prio_include(self, op, stack) -> None:
+        filename = stack.pop()
+        op["func"](self, filename)
+
+    def _prio_exit(self, op, stack) -> None:
+        op["func"]()
+
+    # Dispatch table for priority operators. Names absent here (e.g. `ans`)
+    # are silent no-ops, matching the former elif chain's fall-through.
+    _PRIORITY_HANDLERS = {
+        "do": _prio_do,
+        "dolist": _prio_dolist,
+        "times": _prio_times,
+        "while": _prio_while,
+        "break": _prio_break,
+        "cond": _prio_cond,
+        "if": _prio_if,
+        "ifelse": _prio_ifelse,
+        "iferror": _prio_iferror,
+        "set": _prio_set,
+        "=": _prio_set,
+        "global": _prio_global,
+        "defun": _prio_defun,
+        "defmacro": _prio_defmacro,
+        "lambda": _prio_lambda,
+        "eval": _prio_eval,
+        "sub": _prio_sub,
+        "subn": _prio_subn,
+        "listn": _prio_listn,
+        "read-from-string": _prio_read_from_string,
+        "read": _prio_read,
+        "split": _prio_split,
+        "nth": _prio_nth,
+        "expand": _prio_expand,
+        "apply": _prio_apply,
+        "include": _prio_include,
+        "exit": _prio_exit,
+    }
+    def _exec_stack(
+        self, token: str, op: dict[str, object], stack: stack_data[object]
+    ) -> None:
+        op_args: list[object] = [stack]
+        for _ in range(op["arg_count"]):  # type: ignore[arg-type]
+            op_args.insert(0, self._pop_and_eval(stack))
+        if op["push_result_to_stack"]:
+            result = op["func"](*op_args)  # type: ignore[operator]
+            if result is not VOID:
+                stack.append(result)
+        else:
+            op["func"](*op_args)  # type: ignore[operator]
+
+    def _exec_system(
+        self, token: str, op: dict[str, object], stack: stack_data[object]
+    ) -> None:
+        sys_args: list[object] = [stack, self]
+        for _ in range(op["arg_count"]):  # type: ignore[arg-type]
+            sys_args.insert(0, self._pop_and_eval(stack))
+        if op["push_result_to_stack"]:
+            result = op["func"](*sys_args)  # type: ignore[operator]
+            if result is not VOID:
+                stack.append(result)
+        else:
+            op["func"](*sys_args)  # type: ignore[operator]
+
+    def _exec_regular(
+        self, token: str, op: dict[str, object], stack: stack_data[object]
+    ) -> None:
+        reg_args: list[object] = []
+        for _ in range(op["arg_count"]):  # type: ignore[arg-type]
+            reg_args.insert(0, self._pop_and_eval(stack))
+        if op["push_result_to_stack"]:
+            result = op["func"](*reg_args)  # type: ignore[operator]
+            if result is not VOID:
+                stack.append(result)
+        else:
+            op["func"](*reg_args)  # type: ignore[operator]
+    def _exec_hof(
+        self, token: str, op: dict[str, object], stack: stack_data[object]
+    ) -> None:
+        if token in ["map", "filter"]:
+            body = stack.pop()
+            hof_args = stack.pop()
+            args_org = copy.deepcopy(hof_args)
+            func = self._get_hof_func(body, token)
+            hof_args = hof_args.tokens if isinstance(hof_args, StackerCore) else hof_args
             if op["push_result_to_stack"]:
-                lst = op["func"](tf_args)
-                if token == "list":
+                lst = op["func"](func, hof_args)  # type: ignore[operator]
+                if isinstance(args_org, list):
                     stack.append(list(lst))
-                elif token == "tuple":
+                elif isinstance(args_org, tuple):
                     stack.append(tuple(lst))
                 else:
-                    if isinstance(args_org, list):
-                        stack.append(list(lst))
-                    elif isinstance(args_org, tuple):
-                        stack.append(tuple(lst))
-                    else:
-                        self._substack_with_tokens(list(lst), stack)
+                    self._substack_with_tokens(list(lst), stack)
             else:
-                op["func"](tf_args)
-        elif (
-            token in self.operator_manager.operators["aggregate"]
-        ):  # aggregate operators
-            op = self.operator_manager.operators["aggregate"][token]
-            agg_args = stack.pop()
-            args_org = copy.deepcopy(agg_args)
-            agg_args = (
-                list(map(self._literal_eval, agg_args.tokens))
-                if isinstance(agg_args, StackerCore)
-                else self._var_str_to_literal(agg_args)
+                op["func"](func, hof_args)  # type: ignore[operator]
+        elif token in ["reduce", "fold"]:
+            body = stack.pop()
+            symbol_x = stack.pop()  # Second variable name (element)
+            symbol_acc = stack.pop()  # First variable name (accumulator)
+            init = stack.pop()
+            fold_args = stack.pop()
+
+            # Extract variable names (same as dolist pattern)
+            name_acc = self._dollar_to_var_name(symbol_acc)
+            name_x = self._dollar_to_var_name(symbol_x)
+
+            # Create binary function with variable binding
+            def reduce_func(acc: object, x: object) -> object:
+                # Create child scope for this reduction step
+                original_parent_vars = self.variables
+                original_parent_stack = self.stack
+                result_stack: list[object] = []
+                try:
+                    self.variables = self.variables.create_child_scope()
+                    # Bind accumulator and element to their variable names
+                    self.variables[name_acc] = acc
+                    self.variables[name_x] = x
+                    # Evaluate the body using a temporary stack
+                    self.stack = result_stack  # type: ignore[assignment]
+                    self._evaluate(body.tokens, stack=result_stack)  # type: ignore[union-attr]
+                finally:
+                    # Restore parent scope and stack even if the body raised
+                    self.stack = original_parent_stack
+                    self.variables = original_parent_vars
+                # Return the result
+                if len(result_stack) == 1:
+                    return result_stack[0]
+                elif len(result_stack) == 0:
+                    raise NoValueProducedError(token)
+                return result_stack[0]
+
+            fold_args = fold_args.tokens if isinstance(fold_args, StackerCore) else fold_args
+            if op["push_result_to_stack"]:
+                result = op["func"](reduce_func, init, fold_args)  # type: ignore[operator]
+                stack.append(result)
+            else:
+                op["func"](reduce_func, init, fold_args)  # type: ignore[operator]
+        elif token in ["zip"]:
+            xs2 = stack.pop()
+            xs1 = stack.pop()
+            xs_org = copy.deepcopy(xs1)
+            # ys_org = copy.deepcopy(ys)
+            xs2 = (
+                xs2.tokens
+                if isinstance(xs2, StackerCore)
+                else self._var_str_to_literal(xs2)
+            )
+            xs1 = (
+                xs1.tokens
+                if isinstance(xs1, StackerCore)
+                else self._var_str_to_literal(xs1)
             )
             if op["push_result_to_stack"]:
-                result = op["func"](agg_args)
-                if result is not VOID:
-                    stack.append(result)
+                lst = op["func"](xs1, xs2)  # type: ignore[operator]
+                if isinstance(xs_org, list):
+                    stack.append(list(lst))
+                elif isinstance(xs_org, tuple):
+                    stack.append(tuple(lst))
+                else:
+                    self._substack_with_tokens(list(lst), stack)
             else:
-                op["func"](agg_args)
-        elif token in self.operator_manager.operators["file"]:
-            op = self.operator_manager.operators["file"][token]
-            file_args: list[object] = []
-            for _ in range(op["arg_count"]):
-                file_args.insert(0, self._pop_and_eval(stack))
-            if op["push_result_to_stack"]:
-                result = op["func"](*file_args)
-                if result is not VOID:
-                    stack.append(result)
-            else:
-                op["func"](*file_args)
-        elif token in self.operator_manager.operators["settings"]:  # settings operators
-            op = self.operator_manager.operators["settings"][token]
-            if token == "disable_plugin":
-                operator_name = stack.pop()
-                op["func"](self, operator_name)
-            else:
-                op["func"](self)
+                op["func"](xs1, xs2)  # type: ignore[operator]
         else:
-            raise StackerSyntaxError(f"Unknown operator '{token}'")
-        return
+            ...
+    def _exec_transform(
+        self, token: str, op: dict[str, object], stack: stack_data[object]
+    ) -> None:
+        tf_args = stack.pop()
+        args_org = copy.deepcopy(tf_args)
+        tf_args = (
+            tf_args.tokens
+            if isinstance(tf_args, StackerCore)
+            else self._var_str_to_literal(tf_args)
+        )
+        if op["push_result_to_stack"]:
+            lst = op["func"](tf_args)  # type: ignore[operator]
+            if token == "list":
+                stack.append(list(lst))
+            elif token == "tuple":
+                stack.append(tuple(lst))
+            else:
+                if isinstance(args_org, list):
+                    stack.append(list(lst))
+                elif isinstance(args_org, tuple):
+                    stack.append(tuple(lst))
+                else:
+                    self._substack_with_tokens(list(lst), stack)
+        else:
+            op["func"](tf_args)  # type: ignore[operator]
+
+    def _exec_aggregate(
+        self, token: str, op: dict[str, object], stack: stack_data[object]
+    ) -> None:
+        agg_args = stack.pop()
+        agg_args = (
+            list(map(self._literal_eval, agg_args.tokens))
+            if isinstance(agg_args, StackerCore)
+            else self._var_str_to_literal(agg_args)
+        )
+        if op["push_result_to_stack"]:
+            result = op["func"](agg_args)  # type: ignore[operator]
+            if result is not VOID:
+                stack.append(result)
+        else:
+            op["func"](agg_args)  # type: ignore[operator]
+
+    def _exec_file(
+        self, token: str, op: dict[str, object], stack: stack_data[object]
+    ) -> None:
+        file_args: list[object] = []
+        for _ in range(op["arg_count"]):  # type: ignore[arg-type]
+            file_args.insert(0, self._pop_and_eval(stack))
+        if op["push_result_to_stack"]:
+            result = op["func"](*file_args)  # type: ignore[operator]
+            if result is not VOID:
+                stack.append(result)
+        else:
+            op["func"](*file_args)  # type: ignore[operator]
+
+    def _exec_settings(
+        self, token: str, op: dict[str, object], stack: stack_data[object]
+    ) -> None:
+        if token == "disable_plugin":
+            operator_name = stack.pop()
+            op["func"](self, operator_name)  # type: ignore[operator]
+        else:
+            op["func"](self)  # type: ignore[operator]
+
+    # Category -> executor. Keys must cover every category in
+    # OperatorManager's dispatch table (_DISPATCH_ORDER).
+    _CATEGORY_EXECUTORS = {
+        "priority": _exec_priority,
+        "stack": _exec_stack,
+        "system": _exec_system,
+        "regular": _exec_regular,
+        "hof": _exec_hof,
+        "transform": _exec_transform,
+        "aggregate": _exec_aggregate,
+        "file": _exec_file,
+        "settings": _exec_settings,
+    }
 
     def _dollar_to_var_name(self, symbol: object) -> str:
         """
