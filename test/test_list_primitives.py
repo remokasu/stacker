@@ -105,3 +105,35 @@ class TestIdentifierNaming(unittest.TestCase):
         self.stacker.eval("42 $my-val! set")
         ans = self.stacker.eval("my-val!")
         self.assertEqual(ans[-1], 42)
+
+
+class TestPrefixedNumericLiteralsInArrays(unittest.TestCase):
+    """Hex/octal/binary literals inside array literals must parse as
+    numbers (regression: the NUMBER token pattern lacked 0x/0o/0b)."""
+
+    def setUp(self):
+        self.stacker = Stacker()
+
+    def test_hex_in_array(self):
+        ans = self.stacker.eval("[0x1F 2]")
+        self.assertEqual(ans[-1], [31, 2])
+
+    def test_octal_in_array(self):
+        ans = self.stacker.eval("[0o17]")
+        self.assertEqual(ans[-1], [15])
+
+    def test_binary_in_array(self):
+        ans = self.stacker.eval("[0b101]")
+        self.assertEqual(ans[-1], [5])
+
+    def test_negative_hex_in_array(self):
+        ans = self.stacker.eval("[-0x1F]")
+        self.assertEqual(ans[-1], [-31])
+
+    def test_hex_outside_array_unchanged(self):
+        ans = self.stacker.eval("0x1F")
+        self.assertEqual(ans[-1], 31)
+
+    def test_float_and_exponent_in_array_unchanged(self):
+        ans = self.stacker.eval("[1.5 2e3]")
+        self.assertEqual(ans[-1], [1.5, 2000.0])

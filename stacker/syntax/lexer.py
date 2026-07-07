@@ -78,7 +78,11 @@ class TokenPattern:
             TokenType.COMPLEX_NUMBER,
             r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[+-](\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[jJ]",
         ),
-        (TokenType.NUMBER, r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[jJ]?"),
+        (
+            TokenType.NUMBER,
+            r"[+-]?(0[xX][0-9a-fA-F]+|0[oO][0-7]+|0[bB][01]+)"
+            r"|[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[jJ]?",
+        ),
         (TokenType.STRING, r"('([^'\\]|\\.)*'|\"([^\"\\]|\\.)*\")"),
         (TokenType.IDENTIFIER, r"[A-Za-z_][A-Za-z0-9_\-?!]*"),
         (TokenType.LBRACKET, r"\["),

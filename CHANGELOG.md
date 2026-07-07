@@ -1,5 +1,31 @@
 # CHANGE LOG
 
+## [1.10.1] - 2026-07-07
+
+### Fixed
+
+- **Code Block Re-evaluation**:
+  - Fixed stale results accumulating when the same code block object is evaluated more than once
+  - Example: `{1 2 +} dup +` now returns `6` instead of leaving an extra `3` on the stack
+
+- **fold/reduce Exception Safety**:
+  - Fixed permanent interpreter state corruption (stack type change and loop-variable leak into the surviving scope) when an exception is raised inside a `fold`/`reduce` body
+
+- **Inline Comments in Multi-line Strings**:
+  - Fixed `#` inside a string spanning multiple lines being stripped as a comment in script mode
+  - Example: a string opened mid-line as `5 """ part1` and closed on the next line `part2 # more """` now keeps the `#` as string content
+
+- **Circular Include Detection**:
+  - `include` now raises `IncludeError` on circular includes instead of recursing until the interpreter crashes
+  - Example: two scripts including each other now fail with `Circular include detected`
+
+- **Hex/Octal/Binary Literals in Arrays**:
+  - Fixed `0x`/`0o`/`0b` literals being silently mis-tokenized inside array literals
+  - Example: `[0x1F 2]` now returns `[31 2]` instead of `[0 x1F 2]` with an undefined symbol
+
+- **roll with Duplicate Values**:
+  - Fixed `roll` removing the first equal value from the bottom instead of the element at the given depth when the stack contains duplicates
+
 ## [1.10.0] - 2026-07-06
 
 ### Added

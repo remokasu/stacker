@@ -11,8 +11,17 @@ if TYPE_CHECKING:
     from stacker.stacker import Stacker
 
 
+# Files currently being included, used to detect circular includes
+_including: set[Path] = set()
+
+
 def include_stacker_script(filename: str | Path) -> Stacker:
-    """Import a stacker script and return the stacker object."""
+    """Import a stacker script and return the stacker object.
+
+    Raises:
+        IncludeError: If the file is missing, has a wrong extension, or is
+            already being included (circular include).
+    """
     if isinstance(filename, str):
         filename = remove_start_end_quotes(filename)
         # filename = Path(filename).resolve()
@@ -24,13 +33,18 @@ def include_stacker_script(filename: str | Path) -> Stacker:
     if filename.suffix != ".stk":
         raise IncludeError(f"File {filename} is not a stacker script.")
 
-    # with open(filename, 'r') as file:
-    # script_content = file.read()
+    resolved = filename.resolve()
+    if resolved in _including:
+        raise IncludeError(f"Circular include detected: {filename}")
 
     script_content = readtxt(filename)
 
     from stacker.stacker import Stacker
 
-    stacker = Stacker()
-    stacker.process_expression(script_content)
+    _including.add(resolved)
+    try:
+        stacker = Stacker()
+        stacker.process_expression(script_content)
+    finally:
+        _including.discard(resolved)
     return stacker

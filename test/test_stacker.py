@@ -316,5 +316,50 @@ class TestStacker(unittest.TestCase):
         self.assertEqual(self.stacker.stack[-1], 5)
 
 
+class TestBlockReEvaluation(unittest.TestCase):
+    """Re-evaluating the same code block must not accumulate results
+    from previous evaluations (regression: _pop_and_eval evaluated into
+    the block's persistent stack)."""
+
+    def setUp(self):
+        self.stacker = Stacker()
+
+    def test_dup_block_eval_returns_single_result(self):
+        ans = self.stacker.eval("{1 2 +} dup +")
+        self.assertEqual(list(ans), [6])
+
+    def test_dup_dup_block_eval(self):
+        ans = self.stacker.eval("{1 2 +} dup dup + +")
+        self.assertEqual(list(ans), [9])
+
+
+class TestRollWithDuplicates(unittest.TestCase):
+    """roll must move the element at the given depth, not the first
+    equal value found from the bottom (regression: used stack.remove)."""
+
+    def setUp(self):
+        self.stacker = Stacker()
+
+    def test_roll_1_is_identity_with_duplicates(self):
+        for v in ["X", "A", "B", "X"]:
+            self.stacker.push(v)
+        self.stacker.process_expression("1 roll")
+        self.assertEqual(list(self.stacker.stack), ["X", "A", "B", "X"])
+
+    def test_roll_moves_duplicate_at_depth_not_first_match(self):
+        # stack[-2] is the second "X" (index 2); a value-based removal
+        # would delete the first "X" (index 0) instead
+        for v in ["X", "A", "X", "B"]:
+            self.stacker.push(v)
+        self.stacker.process_expression("2 roll")
+        self.assertEqual(list(self.stacker.stack), ["X", "A", "B", "X"])
+
+    def test_roll_without_duplicates(self):
+        for v in [1, 2, 3]:
+            self.stacker.push(v)
+        self.stacker.process_expression("2 roll")
+        self.assertEqual(list(self.stacker.stack), [1, 3, 2])
+
+
 if __name__ == "__main__":
     unittest.main()

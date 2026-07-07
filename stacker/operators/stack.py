@@ -172,7 +172,7 @@ def _roll(n: int, stack: deque | list) -> None:
     if n > len(stack):
         raise RollError("Index out of range")
     item = stack[-n]
-    stack.remove(item)
+    del stack[-n]
     stack.append(item)
 
 

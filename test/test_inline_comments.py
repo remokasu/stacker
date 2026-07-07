@@ -174,5 +174,57 @@ add defun
             os.unlink(temp_file)
 
 
+class TestHashInsideTripleQuotedString(unittest.TestCase):
+    """A '#' inside a multi-line string must not be stripped as a comment
+    by script-mode preprocessing (regression: the string state was reset
+    on every physical line).
+
+    Note: triple-quote blocks whose delimiters start a line are block
+    comments by design (see readtxt), so only strings opened mid-line
+    can span lines and reach the inline-comment stripper.
+    """
+
+    def setUp(self):
+        self.stacker = Stacker()
+        self.script_mode = ScriptMode(self.stacker)
+
+    def _run_script(self, content):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".stk", delete=False) as f:
+            f.write(content)
+            temp_file = f.name
+        try:
+            self.script_mode.run(temp_file)
+        finally:
+            os.unlink(temp_file)
+
+    def test_hash_in_multiline_string_opened_mid_line(self):
+        # The string spans two lines (readtxt only treats line-initial
+        # triple quotes as block comments, so it keeps both lines); the
+        # '#' on the second line is string content, not a comment
+        self._run_script('5 """ part1\npart2 # more """\n')
+        joined = " ".join(str(v) for v in self.stacker.stack)
+        self.assertIn("# more", joined)
+
+    def test_hash_in_single_line_triple_quoted_string(self):
+        self._run_script('5 """ keep # this """\n')
+        joined = " ".join(str(v) for v in self.stacker.stack)
+        self.assertIn("keep # this", joined)
+
+    def test_docstring_block_is_still_a_comment(self):
+        # Triple-quote delimiters at line start form a block comment
+        # (readtxt behavior); code after the block must still run and
+        # comments must still be stripped
+        self._run_script(
+            '"""\ndocstring # text\n"""\n'
+            "# trailing comment line\n"
+            "1 1 +  # inline\n"
+        )
+        self.assertEqual(self.stacker.stack[-1], 2)
+        joined = " ".join(str(v) for v in self.stacker.stack)
+        self.assertNotIn("docstring", joined)
+        self.assertNotIn("trailing", joined)
+        self.assertNotIn("inline", joined)
+
+
 if __name__ == '__main__':
     unittest.main()

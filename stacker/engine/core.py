@@ -194,10 +194,15 @@ class StackerCore:
             raise UndefinedSymbolError(value.name)
 
         if isinstance(value, StackerCore):
+            # Note: operators such as ifelse evaluate onto parent.stack, so
+            # the evaluation stack must be the block's own stack attribute
             value._evaluate(value.tokens, stack=value.stack)
             sub = value.stack
             if sub:
                 stack.extend(sub)
+                # Clear leftovers so re-evaluating the same block object
+                # (e.g. after dup) does not accumulate stale results
+                sub.clear()
                 return stack.pop()
             else:
                 # Return VOID if the code block produces no value
@@ -675,17 +680,19 @@ class StackerCore:
                     # Create child scope for this reduction step
                     original_parent_vars = self.variables
                     original_parent_stack = self.stack
-                    self.variables = self.variables.create_child_scope()
-                    # Bind accumulator and element to their variable names
-                    self.variables[name_acc] = acc
-                    self.variables[name_x] = x
-                    # Evaluate the body using a temporary stack
                     result_stack: list[object] = []
-                    self.stack = result_stack  # type: ignore[assignment]
-                    self._evaluate(body.tokens, stack=result_stack)  # type: ignore[union-attr]
-                    # Restore parent scope and stack
-                    self.stack = original_parent_stack
-                    self.variables = original_parent_vars
+                    try:
+                        self.variables = self.variables.create_child_scope()
+                        # Bind accumulator and element to their variable names
+                        self.variables[name_acc] = acc
+                        self.variables[name_x] = x
+                        # Evaluate the body using a temporary stack
+                        self.stack = result_stack  # type: ignore[assignment]
+                        self._evaluate(body.tokens, stack=result_stack)  # type: ignore[union-attr]
+                    finally:
+                        # Restore parent scope and stack even if the body raised
+                        self.stack = original_parent_stack
+                        self.variables = original_parent_vars
                     # Return the result
                     if len(result_stack) == 1:
                         return result_stack[0]
