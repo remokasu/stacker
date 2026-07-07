@@ -110,13 +110,14 @@ class ExecutionMode:
 
         i = 0
         expression_start_line = None  # Track which line the expression started on
+        in_triple: str | None = None  # Open triple-quote delimiter spanning lines
 
         while i < len(lines):
             line = lines[i].strip()
             line_number = i + 1  # 1-indexed line numbers
 
-            # Skip empty lines and comments
-            if not line or line.startswith("#"):
+            # Skip empty lines and comments (not inside a multi-line string)
+            if in_triple is None and (not line or line.startswith("#")):
                 i += 1
                 continue
 
@@ -124,23 +125,8 @@ class ExecutionMode:
             if not expression.strip():
                 expression_start_line = line_number
 
-            # Remove inline comments from the line before adding to expression
-            # Find # that is not inside a string
-            clean_line = line
-            if '#' in line:
-                in_string = False
-                quote_char = None
-                for j, char in enumerate(line):
-                    if char in ('"', "'") and (j == 0 or line[j-1] != '\\'):
-                        if not in_string:
-                            in_string = True
-                            quote_char = char
-                        elif char == quote_char:
-                            in_string = False
-                            quote_char = None
-                    elif char == '#' and not in_string:
-                        clean_line = line[:j].rstrip()
-                        break
+            # Remove inline comments, keeping '#' inside string literals
+            clean_line, in_triple = self._strip_inline_comment(line, in_triple)
 
             expression += clean_line + " "
 
@@ -156,6 +142,49 @@ class ExecutionMode:
                     expression_start_line = None
 
             i += 1
+
+    @staticmethod
+    def _strip_inline_comment(line: str, in_triple: str | None) -> tuple[str, str | None]:
+        """Strip an inline '#' comment, tracking string state across lines.
+
+        Args:
+            line: The physical line to process.
+            in_triple: The active triple-quote delimiter (``'''`` or ``\"\"\"``)
+                if a previous line opened a multi-line string, otherwise None.
+
+        Returns:
+            The line without its comment part, and the updated triple-quote
+            state after processing this line.
+        """
+        quote_char: str | None = None  # Single-quoted string state (per line)
+        j = 0
+        while j < len(line):
+            if in_triple is not None:
+                if line.startswith(in_triple, j):
+                    in_triple = None
+                    j += 3
+                else:
+                    j += 1
+            elif quote_char is not None:
+                if line[j] == "\\":
+                    j += 2  # Skip the escaped character
+                elif line[j] == quote_char:
+                    quote_char = None
+                    j += 1
+                else:
+                    j += 1
+            else:
+                if line.startswith('"""', j) or line.startswith("'''", j):
+                    in_triple = line[j : j + 3]
+                    j += 3
+                elif line[j] in ('"', "'"):
+                    quote_char = line[j]
+                    j += 1
+                elif line[j] == "#":
+                    return line[:j].rstrip(), in_triple
+                else:
+                    j += 1
+        return line, in_triple
 
     def _is_balanced(self, expression: str) -> bool:
         # Inline comments are already removed before calling this method
