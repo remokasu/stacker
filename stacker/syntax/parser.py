@@ -167,21 +167,13 @@ def convert_custom_array_to_proper_list(input_str: str) -> str:
 
 @lru_cache(maxsize=512)
 def _parse_expression_cached(expression: str) -> tuple[str, ...]:
-    """Cached version of parse_expression that returns a tuple."""
-    ignore_tokens = ['"""', "'''"]
-    lexer = UnifiedLexer(expression)
-    tokens = []
+    """Cached version of parse_expression that returns a tuple.
 
-    for token in lexer.tokenize():
-        if token in ignore_tokens:
-            continue
-        elif token.startswith("#"):
-            return tuple(tokens)
-        elif any(token.startswith(c) for c in "[({'\""):
-            tokens.append(token)
-        else:
-            tokens.append(token)
-    return tuple(tokens)
+    Comment handling (``#`` line comments, ``#| |#`` block comments) and
+    triple-quote strings are fully handled by the lexer scan core, so no
+    token-level filtering is needed here.
+    """
+    return tuple(UnifiedLexer(expression).tokenize())
 
 
 def parse_expression(expression: str) -> list[str]:

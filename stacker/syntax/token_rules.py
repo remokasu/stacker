@@ -6,9 +6,9 @@ evaluation-loop classifier; that divergence caused real bugs (see ADR-0002,
 `.claude/docs/adr/0002-lexer-ssot-for-syntax-hardening.md`). Every call
 site must go through this module instead of re-implementing the checks.
 
-Currently only single-character quote pairs (``'...'`` / ``"..."``) are
-recognized. Triple-quote support (``\"\"\"...\"\"\"`` as one token) will be
-added HERE — and only here — as part of SPEC-0001 PR-B.
+Both single-character quote pairs (``'...'`` / ``"..."``) and
+triple-quoted tokens (``\"\"\"...\"\"\"`` / ``'''...'''``, one token with
+delimiters preserved, since 1.11.0) are recognized.
 
 Note:
     These helpers intentionally duck-type ``startswith``/``endswith``
@@ -38,11 +38,20 @@ def is_string_token(token) -> bool:
     )
 
 
+#: Length of a triple-quote delimiter (``\"\"\"`` or ``'''``).
+TRIPLE_QUOTE_LEN = 3
+
+#: Minimum length of a complete triple-quoted token (two delimiters).
+_MIN_TRIPLE_TOKEN_LEN = 2 * TRIPLE_QUOTE_LEN
+
+
 def strip_string_delimiters(token) -> str:
     """Return the string content with its quote delimiters removed.
 
-    Must only be called on tokens for which :func:`is_string_token` is
-    True.
+    Handles both single-character quote pairs (``'...'`` / ``"..."``)
+    and triple-quoted tokens (``\"\"\"...\"\"\"`` / ``'''...'''``, which
+    the lexer emits as one token, delimiters included). Must only be
+    called on tokens for which :func:`is_string_token` is True.
 
     Args:
         token: A quote-delimited string token.
@@ -50,4 +59,9 @@ def strip_string_delimiters(token) -> str:
     Returns:
         The token content between the delimiters.
     """
+    if len(token) >= _MIN_TRIPLE_TOKEN_LEN and (
+        (token.startswith('"""') and token.endswith('"""'))
+        or (token.startswith("'''") and token.endswith("'''"))
+    ):
+        return token[TRIPLE_QUOTE_LEN:-TRIPLE_QUOTE_LEN]
     return token[1:-1]

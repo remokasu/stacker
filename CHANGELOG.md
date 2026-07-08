@@ -1,6 +1,36 @@
 # CHANGE LOG
 
-## [1.11.0] - 2026-07-07
+## [1.11.0] - 2026-07-08
+
+### Added
+
+- **Block Comments `#| ... |#`**:
+  - New nestable block-comment syntax, consumed at the lexical layer in every execution path (script, REPL, `-e`)
+  - Example: `1 #| this is ignored |# 2 +` returns `3`
+  - Nesting works: `#| outer #| inner |# still outer |#`
+  - `#|` inside a string literal is plain content: `"a #| b"` is the string `a #| b`
+
+### Breaking Changes
+
+Note: This change is not backwards compatible with previous versions.
+
+- **Triple Quotes Are Always Multi-line String Literals**:
+  - `"""..."""` and `'''...'''` are string literals everywhere — including at the start of a line in scripts, where they previously formed docstring-style block comments that were silently discarded
+  - A triple-quoted string is one token; its newlines are preserved
+  - Example: a script line `""" abc """` now pushes the string ` abc ` — and REPL, scripts, and `-e` agree
+  - Single- and double-quoted strings may now also span lines (close the quote on a later line); in the REPL an open quote triggers continuation input
+- **Unterminated Constructs Are Syntax Errors**:
+  - Input ending inside an unclosed string, array `[`, block `{`/`(`, or block comment `#|` now raises `UnterminatedTokenError` (a `StackerSyntaxError`), with the starting line number in scripts
+  - Previously the rest of the input was silently fused into one token and pushed as an undefined symbol
+  - In the REPL, an unclosed string or block comment triggers continuation input instead (close the delimiter to finish)
+
+### Migration
+
+- Rewrite docstring-style comments to block comments:
+  - Before: `"""` / `comment text` / `"""` (each on its own line)
+  - After: `#|` / `comment text` / `|#`
+  - The bundled `slib/sfunction.stk` has been migrated accordingly
+- Scripts that accidentally relied on unterminated tokens being silently swallowed will now fail with `UnterminatedTokenError`; close the offending delimiter
 
 ### Changed
 

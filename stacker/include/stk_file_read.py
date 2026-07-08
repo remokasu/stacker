@@ -4,44 +4,19 @@ from pathlib import Path
 
 
 def readtxt(file_path: str | Path) -> str:
-    """
-    This function reads a text file and ignores lines that are either
-    within triple double quotes (\"\"\")
-    within triple single quotes (''')
-    start with a hash (#)
-    or are blank lines (including the last line if it's blank).
-    Additionally, it trims a final newline character if it exists.
+    """Read a stacker script file verbatim.
+
+    Comment handling (``#`` line comments, ``#| ... |#`` block comments)
+    and triple-quoted strings are the lexer scan core's responsibility
+    (ADR-0002); this function no longer strips anything. The historical
+    behavior of dropping triple-quote "docstring" blocks was removed in
+    1.11.0 — triple quotes are always string literals now.
+
+    Args:
+        file_path: Path to the script file.
+
+    Returns:
+        The file content, without a trailing newline.
     """
     with open(file_path, "r") as file:
-        lines = file.readlines()
-
-    # State flags to track if the current line is within a block comment
-    in_double_quote_comment = False
-    in_single_quote_comment = False
-
-    filtered_lines: list[str] = []
-
-    for line in lines:
-        if line.strip().startswith(
-            '"""'
-        ):  # Check for the start and end of triple double quote block
-            in_double_quote_comment = not in_double_quote_comment
-            continue  # Skip the line with triple quotes
-        if line.strip().startswith(
-            "'''"
-        ):  # Check for the start and end of triple single quote block
-            in_single_quote_comment = not in_single_quote_comment
-            continue  # Skip the line with triple quotes
-        if (
-            in_double_quote_comment or in_single_quote_comment
-        ):  # Skip lines within block comments
-            continue
-        filtered_lines.append(line)
-
-    # Trim the final newline character if it exists
-    if filtered_lines and not filtered_lines[-1].strip():
-        filtered_lines.pop()
-
-    return "".join(filtered_lines).rstrip(
-        "\n"
-    )  # Remove trailing newline if it's the last character
+        return file.read().rstrip("\n")
