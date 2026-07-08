@@ -5,14 +5,9 @@ from pathlib import Path
 from stacker.include.stk_file_read import readtxt
 from stacker.stacker import Stacker
 
-# Import parser utility functions (not lexer components)
-# Lexer components (TokenType, UnifiedLexer, etc.) are in stacker.syntax.lexer
-from stacker.syntax.parser import (
-    is_array_balanced,
-    is_brace_balanced,
-    # is_tuple_balanced,  # REMOVED: () now creates code blocks, use is_brace_balanced
-    remove_start_end_quotes,
-)
+from stacker.error import UnterminatedTokenError
+from stacker.syntax.lexer import TerminalScanner
+from stacker.syntax.parser import remove_start_end_quotes
 
 # from stacker.syntax.parser import is_string
 from stacker.util.disp import disp_stack
@@ -110,91 +105,56 @@ class ExecutionMode:
 
         i = 0
         expression_start_line = None  # Track which line the expression started on
-        in_triple: str | None = None  # Open triple-quote delimiter spanning lines
+        # Incremental scanner: feeds only the newly appended chunk, so a
+        # multi-line expression stays O(total size) instead of re-scanning
+        # the whole accumulated buffer on every line
+        scanner = TerminalScanner()
 
         while i < len(lines):
-            line = lines[i].strip()
             line_number = i + 1  # 1-indexed line numbers
 
-            # Skip empty lines and comments (not inside a multi-line string)
-            if in_triple is None and (not line or line.startswith("#")):
-                i += 1
-                continue
+            if scanner.state().complete:
+                line = lines[i].strip()
+                # Skip blank lines between expressions
+                if not expression and not line:
+                    i += 1
+                    continue
+                # Track the first line of the expression
+                if not expression:
+                    expression_start_line = line_number
+                chunk = line + "\n"
+            else:
+                # Inside an open string / block comment / bracket: keep the
+                # raw line so string content (including newlines) survives
+                chunk = lines[i] + "\n"
 
-            # Track the first line of the expression
-            if not expression.strip():
-                expression_start_line = line_number
+            expression += chunk
+            state = scanner.feed(chunk)
 
-            # Remove inline comments, keeping '#' inside string literals
-            clean_line, in_triple = self._strip_inline_comment(line, in_triple)
-
-            expression += clean_line + " "
-
-            if self._is_balanced(expression):
-                if self._is_complete_expression(expression):
-                    if expression[-2:] in {";]", ";)"}:
-                        closer = expression[-1]
-                        expression = expression[:-2] + closer
+            if state.complete:
+                candidate = expression.strip()
+                if candidate and self._is_complete_expression(candidate):
+                    if candidate[-2:] in {";]", ";)"}:
+                        closer = candidate[-1]
+                        candidate = candidate[:-2] + closer
                     # Set current line before processing expression
                     self.rpn_calculator.current_line = expression_start_line
-                    self.rpn_calculator.process_expression(expression)
+                    self.rpn_calculator.process_expression(candidate)
                     expression = ""
                     expression_start_line = None
+                    scanner = TerminalScanner()
 
             i += 1
 
-    @staticmethod
-    def _strip_inline_comment(line: str, in_triple: str | None) -> tuple[str, str | None]:
-        """Strip an inline '#' comment, tracking string state across lines.
-
-        Args:
-            line: The physical line to process.
-            in_triple: The active triple-quote delimiter (``'''`` or ``\"\"\"``)
-                if a previous line opened a multi-line string, otherwise None.
-
-        Returns:
-            The line without its comment part, and the updated triple-quote
-            state after processing this line.
-        """
-        quote_char: str | None = None  # Single-quoted string state (per line)
-        j = 0
-        while j < len(line):
-            if in_triple is not None:
-                if line.startswith(in_triple, j):
-                    in_triple = None
-                    j += 3
-                else:
-                    j += 1
-            elif quote_char is not None:
-                if line[j] == "\\":
-                    j += 2  # Skip the escaped character
-                elif line[j] == quote_char:
-                    quote_char = None
-                    j += 1
-                else:
-                    j += 1
-            else:
-                if line.startswith('"""', j) or line.startswith("'''", j):
-                    in_triple = line[j : j + 3]
-                    j += 3
-                elif line[j] in ('"', "'"):
-                    quote_char = line[j]
-                    j += 1
-                elif line[j] == "#":
-                    return line[:j].rstrip(), in_triple
-                else:
-                    j += 1
-        return line, in_triple
-
-    def _is_balanced(self, expression: str) -> bool:
-        # Inline comments are already removed before calling this method
-        return (
-            is_array_balanced(expression)
-            # REMOVED: is_tuple_balanced - () now handled by is_brace_balanced
-            and is_brace_balanced(expression)  # Handles both {} and () code blocks
-            and (expression.count('"""') % 2 == 0)
-            and (expression.count("'''") % 2 == 0)
-        )
+        # Unterminated construct at end of file: report the absolute line
+        if expression.strip():
+            _, state = scanner.finalize()
+            if not state.complete:
+                start = expression_start_line
+                if start is not None and state.start_line is not None:
+                    start = start + state.start_line - 1
+                self.rpn_calculator.current_line = start
+                raise UnterminatedTokenError(state.open_construct, start)
 
     def _is_complete_expression(self, expression: str) -> bool:
         """Check if the expression is complete and ready to execute.

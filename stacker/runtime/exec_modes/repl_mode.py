@@ -20,15 +20,8 @@ from stacker.error_formatter import ErrorFormatter
 
 # Import parser utility functions (not lexer components)
 # Lexer components (TokenType, UnifiedLexer, etc.) are in stacker.syntax.lexer
-from stacker.syntax.parser import (
-    is_array,
-    is_array_balanced,
-    is_brace,
-    is_brace_balanced,
-    is_code_block,
-    # is_tuple,  # REMOVED: Tuples no longer supported
-    # is_tuple_balanced,  # REMOVED: Use is_brace_balanced for () blocks
-)
+from stacker.syntax.lexer import analyze_terminals
+from stacker.syntax.parser import is_array
 
 
 class ReplMode(ExecutionMode):
@@ -217,77 +210,72 @@ class ReplMode(ExecutionMode):
                     closer = expression[-1]
                     expression = expression[:-2] + closer
 
-                if is_brace(expression):
+                # Continuation input is judged by the lexer scan core
+                # (analyze_terminals) so strings, comments, and brackets
+                # cannot diverge from what the tokenizer will accept
+                # (e.g. braces inside a `#| |#` comment are inert).
+                # REPL input is human-typed and bounded, so re-scanning
+                # the whole expression per line is fine here; only the
+                # script line loop needs the incremental TerminalScanner
+                aborted = False
+                if is_array(expression):
                     # """
-                    #     # Brace
-                    #     stacker:0> {1
-                    #                 3
-                    #                 +}
-                    #     {1 3 +}
-                    # """
-                    while not is_brace_balanced(expression):
-                        prompt_text = (
-                            " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> "
-                        )
-                        next_line = self.get_input(prompt_text, multiline=False)
-                        expression += " " + next_line
-                        if next_line in {"}"}:
-                            if is_brace_balanced(expression):
-                                break
-
-                if is_array(expression) or is_code_block(expression):
-                    # """
-                    #     # List
+                    #     # List: rows are joined with ";"
                     #     stacker:0> [1 2 3
                     #                 3 4 5]
                     #     [1 2 3; 3 4 5]
-                    #
-                    #     # Code Block
-                    #     stacker:0> (1 2 3
-                    #                 3 4 5)
-                    #     (1 2 3; 3 4 5)
                     # """
-                    while not is_array_balanced(expression) or not is_brace_balanced(
-                        expression
-                    ):
+                    while not (terminal := analyze_terminals(expression)).complete:
                         prompt_text = (
                             " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> "
                         )
                         next_line = self.get_input(prompt_text, multiline=False)
-                        if next_line.lower() == ("end"):
+                        if next_line.lower() == "end":
+                            aborted = True
                             break
+                        if terminal.open_construct in {
+                            "string",
+                            "block comment",
+                        }:
+                            # Inside a string/comment spanning rows: keep
+                            # the raw line, no row separator
+                            expression += "\n" + next_line
+                            continue
                         if next_line in {"]", ")"}:
                             expression += next_line
-                            if is_array_balanced(expression) or is_brace_balanced(
-                                expression
-                            ):
+                            if analyze_terminals(expression).complete:
                                 if expression[-2:] in {";]", ";)"}:
                                     closer = expression[-1]
                                     expression = expression[:-2] + closer
                                 break
+                            continue
                         if next_line[-2:] in {";]", ";)"}:
                             closer = next_line[-1]
                             next_line = next_line[:-2] + closer
+                        # Join with "\n" (not " ") so a trailing '#'
+                        # comment on the previous line cannot swallow
+                        # the row separator or this line
                         if not expression.endswith(";"):
-                            expression += "; " + next_line
+                            expression += ";\n" + next_line
                         else:
-                            expression += " " + next_line
+                            expression += "\n" + next_line
 
-                # # Process to continue until the input starting with double quotation or single quotation is closed
-                # while (
-                #     (expression.startswith('"""') and expression.count('"""') % 2 != 0) or
-                #     (expression.startswith("'''") and expression.count("'''") % 2 != 0)
-                # ):
-                #     """
-                #         stacker:0> '''
-                #         stacker:0> This is a multi-line
-                #         stacker:0> input example.
-                #         stacker:0> '''
-                #         ['\nThis is a multi-line\ninput example.\n']
-                #     """
-                #     prompt_text = " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> "
-                #     next_line = self.get_input(prompt_text, multiline=False)
-                #     expression += "\n" + next_line
+                # Generic continuation for any construct still open —
+                # blocks, strings, and block comments (subsumes the
+                # former `{`-specific loop):
+                # """
+                #     stacker:0> {1
+                #             > 3
+                #             > +}
+                #     {1 3 +}
+                # """
+                if not aborted:
+                    while not analyze_terminals(expression).complete:
+                        prompt_text = (
+                            " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> "
+                        )
+                        next_line = self.get_input(prompt_text, multiline=False)
+                        expression += "\n" + next_line
 
                 logging.debug("input expression: %s", expression)
 

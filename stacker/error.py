@@ -57,6 +57,24 @@ class StackerSyntaxError(StackerError):
         super().__init__(message)
 
 
+class UnterminatedTokenError(StackerSyntaxError):
+    """Raised when input ends inside an unterminated construct.
+
+    Covers strings (single or triple quoted), arrays, code blocks, and
+    block comments. Raised by the lexer scan core once the input is
+    final (script / ``-e`` / confirmed REPL input); interactive modes
+    use ``analyze_terminals`` first to offer continuation input instead.
+    """
+
+    def __init__(self, what: str, start_line: int | None = None) -> None:
+        message = f"Unterminated {what}"
+        if start_line is not None:
+            message += f" starting at line {start_line}"
+        super().__init__(message)
+        self.what = what
+        self.start_line = start_line
+
+
 class UnexpectedTokenError(StackerError):
     """Unexpected token error"""
 
