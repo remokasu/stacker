@@ -10,8 +10,16 @@ import stacker
 
 from stacker.runtime.exec_modes import CommandLineMode, ReplMode, ScriptMode
 
+from stacker.engine import recursion
 from stacker.lib import disp_logo
-from stacker.lib.config import plugins_dir_path, stacker_dotfile_path
+from stacker.lib.config import (
+    DEFAULT_RECURSION_LIMIT,
+    MAX_RECURSION_LIMIT,
+    RECURSION_BACKSTOP_MARGIN,
+    RECURSION_FRAMES_PER_LEVEL,
+    plugins_dir_path,
+    stacker_dotfile_path,
+)
 from stacker.stacker import Stacker
 from stacker.util import colored
 
@@ -21,10 +29,31 @@ parser.add_argument(
 )
 parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 parser.add_argument("-e", default=None, help="Execute the given command.")
+parser.add_argument(
+    "--recursion-limit",
+    metavar="N",
+    type=int,
+    default=DEFAULT_RECURSION_LIMIT,
+    help=(
+        "Maximum Stacker function recursion depth "
+        f"(1-{MAX_RECURSION_LIMIT}, default {DEFAULT_RECURSION_LIMIT})."
+    ),
+)
 parser.add_argument("script", nargs="?", default=None, help="Script file to run.")
 argv = parser.parse_args()
 
-sys.setrecursionlimit(1 << 30)
+if not 1 <= argv.recursion_limit <= MAX_RECURSION_LIMIT:
+    parser.error(
+        f"--recursion-limit must be between 1 and {MAX_RECURSION_LIMIT}, "
+        f"got {argv.recursion_limit}"
+    )
+recursion.set_limit(argv.recursion_limit)
+
+# Finite backstop replacing the old `1 << 30`: pathological recursion that
+# bypasses the function-call guard stops with RecursionError, not a segfault
+sys.setrecursionlimit(
+    MAX_RECURSION_LIMIT * RECURSION_FRAMES_PER_LEVEL + RECURSION_BACKSTOP_MARGIN
+)
 
 
 def load_stacker_lib(stacker: Stacker, dir_path: str) -> bool:
