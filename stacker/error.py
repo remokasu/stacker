@@ -102,6 +102,22 @@ class UndefinedSymbolError(StackerError):
         super().__init__(message)
 
 
+class StackerRecursionError(StackerError):
+    """Raised when Stacker-level function recursion exceeds the limit.
+
+    Raised by the process-wide recursion guard (engine/recursion.py) at
+    the entry of StackerFunction/StackerLambda calls, before the Python
+    C stack is at risk. The limit counts Stacker recursion levels and
+    can be changed with the --recursion-limit CLI flag.
+    """
+
+    def __init__(self, name: str, limit: int) -> None:
+        message = f"Maximum recursion depth ({limit}) exceeded in function `{name}`"
+        super().__init__(message)
+        self.name = name
+        self.limit = limit
+
+
 class NoValueProducedError(StackerError):
     """Raised when a block that must produce a value leaves the stack empty."""
 

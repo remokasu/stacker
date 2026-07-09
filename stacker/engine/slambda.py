@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import copy
 from typing import TYPE_CHECKING
+
+from stacker.engine import recursion
 from stacker.engine.data_type import stack_data
 from stacker.engine.scope import ScopedVariables
 
+#: Name reported by the recursion guard for anonymous lambdas
+LAMBDA_NAME = "<lambda>"
+
 if TYPE_CHECKING:
     from stacker.engine.core import StackerCore
-
-import copy
 
 
 class StackerLambda:
@@ -20,6 +24,13 @@ class StackerLambda:
         self.stack: stack_data[object] = stack_data()
 
     def __call__(self, *values: object) -> object:
+        recursion.enter(LAMBDA_NAME)
+        try:
+            return self._call_impl(*values)
+        finally:
+            recursion.leave()
+
+    def _call_impl(self, *values: object) -> object:
         values_list = list(values)
         if len(values_list) != len(self.args):
             raise ValueError(f"Expected {len(self.args)} arguments, got {len(values_list)}")

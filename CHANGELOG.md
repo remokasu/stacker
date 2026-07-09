@@ -1,5 +1,27 @@
 # CHANGE LOG
 
+## [1.12.0] - 2026-07-10
+
+### Added
+
+- **`--recursion-limit N` CLI Flag**:
+  - Sets the maximum Stacker function recursion depth for the run (1-1800, default 1500)
+  - Out-of-range values are rejected with an explicit error instead of being clamped
+- **Include Search Order**:
+  - Relative `include` paths now resolve against the including file's directory first, then the current working directory
+  - Example: `python -m stacker path/to/main.stk` now finds `"lib.stk" include` next to `main.stk`, regardless of where you run from
+  - Nested includes resolve each file relative to its own directory; when nothing matches, the `IncludeError` lists every tried absolute path
+
+### Breaking Changes
+
+Note: This change is not backwards compatible with previous versions.
+
+- **Default Recursion Limit**:
+  - Infinite recursion in user-defined functions now stops with `` StackerRecursionError: Maximum recursion depth (1500) exceeded in function `name` `` instead of crashing the interpreter with a segmentation fault
+  - The old `sys.setrecursionlimit(1 << 30)` is replaced by a finite backstop; extremely deep recursion that used to run (at the risk of a crash) now errors — raise the limit with `--recursion-limit` (up to 1800, bounded by the Python interpreter's own C-recursion ceiling)
+- **Include Resolution Order**:
+  - Scripts that relied on a relative include resolving against the current working directory while a same-named file exists next to the including script will now load the script-side file
+
 ## [1.11.0] - 2026-07-08
 
 ### Added

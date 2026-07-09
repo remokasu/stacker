@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from stacker.engine.core import StackerCore
 
+from stacker.engine import recursion
 from stacker.engine.data_type import stack_data
 from stacker.engine.scope import ScopedVariables
 
@@ -14,14 +15,22 @@ class StackerFunction:
     """A callable object that represents a function defined in Stacker."""
 
     def __init__(
-        self, args: list[str], blockstack: StackerCore
+        self, args: list[str], blockstack: StackerCore, name: str = "<anonymous>"
     ) -> None:
         self.args: list[str] = args
         self.blockstack: StackerCore = blockstack
         self.arg_count: int = len(args)
         self.stack: stack_data[object] = stack_data()
+        self.name: str = name
 
     def __call__(self, *values: object) -> object:
+        recursion.enter(self.name)
+        try:
+            return self._call_impl(*values)
+        finally:
+            recursion.leave()
+
+    def _call_impl(self, *values: object) -> object:
         self.stack.clear()
         values_list = list(values)
         if len(values_list) != len(self.args):

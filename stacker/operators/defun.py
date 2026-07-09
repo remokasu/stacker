@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 def defun_sfunction(
     stacker: Stacker, func_name: str, fargs: list[str], body: Stacker
 ) -> None:
-    function = StackerFunction(fargs, body)
+    function = StackerFunction(fargs, body, name=func_name)
     args_count = len(fargs)
     stacker.register_sfunction(
         func_name, function, args_count, push_result_to_stack=True
