@@ -31,6 +31,9 @@ class StackerLambda:
             recursion.leave()
 
     def _call_impl(self, *values: object) -> object:
+        # Parity with StackerFunction: clear the local stack per call so
+        # leftover multi-value results cannot accumulate across calls
+        self.stack.clear()
         values_list = list(values)
         if len(values_list) != len(self.args):
             raise ValueError(f"Expected {len(self.args)} arguments, got {len(values_list)}")

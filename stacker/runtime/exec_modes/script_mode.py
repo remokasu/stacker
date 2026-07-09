@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import traceback
 from pathlib import Path
 
 from stacker.error import ScriptReadError
@@ -55,6 +56,10 @@ class ScriptMode(ExecutionMode):
             )
 
             print(formatted_error, file=sys.stderr)
+
+            # Parity with ReplMode: show the Python traceback in debug mode
+            if self.debug:
+                traceback.print_exc()
             sys.exit(1)
 
     def _get_error_hint(self, error: Exception) -> str | None:

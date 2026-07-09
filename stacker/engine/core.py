@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 
 # Commands that expect a symbol name as the preceding argument
-_SYMBOL_CONSUMING_COMMANDS = frozenset({"set", "=", "defun", "defmacro"})
+_SYMBOL_CONSUMING_COMMANDS = frozenset({"set", "=", "defun", "defmacro", "global"})
 # Loop commands whose preceding block is itself preceded by a symbol name
 _DO_DOLIST = frozenset({"do", "dolist"})
 # Sentinel for single-lookup scope reads (None is a valid variable value)
@@ -1119,4 +1119,7 @@ class StackerCore:
         return self.__str__()
 
     def __hash__(self) -> int:
-        return hash(str(self))  # TODO Check if this is correct
+        # Must agree with __eq__ (token comparison): str(self) includes
+        # the bracket type, which made equal {…} and (…) blocks hash
+        # differently and violate the eq/hash contract
+        return hash(str(self.tokens))

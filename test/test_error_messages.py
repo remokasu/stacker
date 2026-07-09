@@ -151,3 +151,18 @@ class TestStackUnderflowErrorClass(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCommaInArrayMessage(unittest.TestCase):
+    """Regression (audit #16): commas in array literals used to leak the
+    internal Token repr through a bare SyntaxError."""
+
+    def test_comma_array_raises_stacker_syntax_error(self):
+        from stacker.error import StackerSyntaxError
+
+        stacker = Stacker()
+        with self.assertRaises(StackerSyntaxError) as ctx:
+            stacker.eval("[1, 2, 3]")
+        message = str(ctx.exception)
+        self.assertNotIn("Token(", message)
+        self.assertIn("space", message.lower())

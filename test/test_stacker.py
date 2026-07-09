@@ -363,3 +363,20 @@ class TestRollWithDuplicates(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestBlockHashContract(unittest.TestCase):
+    """Regression (audit #15): equal blocks must have equal hashes.
+    {1 2 3} == (1 2 3) (token equality) but their hashes differed
+    because __hash__ included the bracket type via str(self)."""
+
+    def test_equal_blocks_have_equal_hashes(self):
+        a = list(Stacker().eval("{1 2 3}"))[0]
+        b = list(Stacker().eval("(1 2 3)"))[0]
+        self.assertEqual(a, b)
+        self.assertEqual(hash(a), hash(b))
+
+    def test_equal_blocks_are_interchangeable_dict_keys(self):
+        a = list(Stacker().eval("{1 2 3}"))[0]
+        b = list(Stacker().eval("(1 2 3)"))[0]
+        self.assertIn(b, {a: "x"})

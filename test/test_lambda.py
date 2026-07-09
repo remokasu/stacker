@@ -34,3 +34,19 @@ class TestStacker(unittest.TestCase):
 """
         )
         self.assertEqual(ans[-1], 120)
+
+
+class TestLambdaStackAccumulation(unittest.TestCase):
+    """Regression (audit #11): a lambda's local stack must not
+    accumulate leftover values across calls (StackerFunction clears its
+    stack per call; StackerLambda used to skip that)."""
+
+    def test_lambda_stack_does_not_grow_across_calls(self):
+        stacker = Stacker()
+        stacker.eval("{x} {x x} lambda $dupfn set")
+        fn = stacker.variables["dupfn"]
+        stacker.eval("5 dupfn")
+        first_len = len(fn.stack)
+        stacker.eval("3 dupfn")
+        stacker.eval("9 dupfn")
+        self.assertEqual(len(fn.stack), first_len)
