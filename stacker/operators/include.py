@@ -16,7 +16,7 @@ def include(stacker: Stacker, filename: str) -> None:
     then the current working directory (ADR-0004). REPL and ``-e`` have
     no file context and fall back to cwd-only resolution.
     """
-    current_file = getattr(stacker, "current_file", None)
+    current_file = stacker.current_file
     base_dir = Path(current_file).parent if current_file else None
     _stacker = include_stacker_script(filename, base_dir=base_dir)
     _macros = _stacker.get_macros_ref()
