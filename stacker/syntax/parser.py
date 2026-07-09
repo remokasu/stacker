@@ -11,6 +11,7 @@ from stacker.syntax.lexer import (
     TupleNode,
     UnifiedLexer,
 )
+from stacker.error import StackerSyntaxError
 from stacker.syntax.token_rules import is_string_token
 
 __transpose_symbol__ = "^T"
@@ -94,8 +95,13 @@ class Parser:
             return Identifier(token.value)
         elif token.type == TokenType.SEMICOLON:
             return ";"
+        elif token.type == TokenType.COMMA:
+            raise StackerSyntaxError(
+                "Commas are not used in Stacker arrays; "
+                "separate elements with spaces: [1 2 3]"
+            )
         else:
-            raise SyntaxError(f"Unexpected token {token}")
+            raise StackerSyntaxError(f"Unexpected token `{token.value}`")
 
     def _split_by_semicolon(
         self, elements: list[object], node_class: type[ListNode | TupleNode]

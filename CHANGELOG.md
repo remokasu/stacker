@@ -1,5 +1,27 @@
 # CHANGE LOG
 
+## [1.12.1] - 2026-07-10
+
+### Fixed
+
+- **Stack Operator Boundaries**:
+  - `nip` removes the positional element instead of the first equal value (duplicates are safe now)
+  - `ins` rejects out-of-range indices instead of silently wrapping around to a bogus position
+  - `pick` can reach the bottom element (`4 pick` on a 4-deep stack) and large negative indices raise `PickError` instead of a misleading stack-underflow message
+  - `0 roll` is a no-op (Forth ROLL semantics); negative counts raise `RollError`
+- **Lambda Local Stack Leak**:
+  - A lambda's internal stack no longer accumulates leftover values across calls
+- **`global` with Defined Names**:
+  - `10 counter global` works when `counter` already holds a value; the name was previously evaluated to its value (`examples/functions/higher_order.stk` runs again)
+- **Empty-Stack Display**:
+  - `disp` on an empty stack no longer emits a truncated ANSI escape sequence
+- **Block Hash Contract**:
+  - Equal code blocks (`{1 2 3}` and `(1 2 3)`) now hash equally and are interchangeable as dict keys
+- **Comma Array Error Message**:
+  - `[1, 2, 3]` raises `StackerSyntaxError` explaining that elements are space-separated, instead of leaking the internal token repr
+- **`--debug` in Script Mode**:
+  - Failing scripts now print the Python traceback when `--debug` is set, matching the REPL
+
 ## [1.12.0] - 2026-07-10
 
 ### Added

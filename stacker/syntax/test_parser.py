@@ -24,8 +24,10 @@ from stacker.syntax.parser import (
     is_contains_transpose_command,
     convert_custom_array_to_proper_list,
     parse_expression,
-    lex_string,
 )
+
+# lex_string moved to the lexer module (kept as a deprecated wrapper)
+from stacker.syntax.lexer import lex_string
 
 
 class TestParser(unittest.TestCase):

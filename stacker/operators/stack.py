@@ -169,7 +169,9 @@ def _roll(n: int, stack: deque | list) -> None:
     """
     if len(stack) == 0:
         raise RollError("Stack is empty")
-    if n > len(stack):
+    if n == 0:
+        return  # Forth ROLL semantics: rolling zero elements is a no-op
+    if n < 0 or n > len(stack):
         raise RollError("Index out of range")
     item = stack[-n]
     del stack[-n]
@@ -214,10 +216,13 @@ def _pick(num: int, stack: deque | list) -> None:
     """
     if len(stack) == 0:
         raise PickError("Stack is empty")
-    elif num >= len(stack):
-        raise PickError("Index out of range")
     if num < 0:
         num = len(stack) + num + 1
+    if num < 1 or num > len(stack):
+        # Validate after normalization so a large negative num raises
+        # PickError instead of leaking a raw IndexError; num == len
+        # (the bottom element) is legal
+        raise PickError("Index out of range")
     index = len(stack) - num
     stack.append(stack[index])
 
@@ -232,7 +237,7 @@ def _nip(stack: deque | list) -> None:
     """
     if len(stack) < 2:
         raise NipError("Stack has less than 2 elements")
-    stack.remove(stack[-2])
+    del stack[-2]
 
 
 def _depth(stack: deque | list) -> int:
@@ -258,10 +263,12 @@ def _insert(index: int, value: object, stack: deque | list) -> None:
         # 2: 2    | 2: 'c'
         # 1: 'e'  | 1: 'd'
     """
-    index = len(stack) - index
-    if index > len(stack):
+    position = len(stack) - index
+    if position < 0 or position > len(stack):
+        # Out-of-range indices used to wrap around via Python's negative
+        # indexing and insert at a bogus position silently
         raise InsertError("index out of range")
-    stack.insert(index, value)
+    stack.insert(position, value)
 
 
 def _rev(stack: deque | list) -> None:

@@ -154,11 +154,16 @@ class TestErrorOrdering(unittest.TestCase):
         self.stacker = Stacker()
 
     def test_side_effect_before_malformed_list_error(self):
-        # `print` runs first; the malformed list token then raises
-        # SyntaxError when *it* is executed — never earlier (e.g. during an
-        # eager classification pass).
+        # `print` runs first; the malformed list token then raises a
+        # syntax error when *it* is executed — never earlier (e.g. during
+        # an eager classification pass).
+        # 1.12.1: the exception type changed from a bare SyntaxError to
+        # StackerSyntaxError (audit #16, project rule "no bare
+        # exceptions"); the ORDERING contract frozen here is unchanged.
+        from stacker.error import StackerSyntaxError
+
         buf = io.StringIO()
-        with self.assertRaises(SyntaxError):
+        with self.assertRaises(StackerSyntaxError):
             with contextlib.redirect_stdout(buf):
                 self.stacker.process_expression('"hello" print [1 2 }]')
         self.assertEqual(buf.getvalue(), "hello\n")

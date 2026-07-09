@@ -163,7 +163,10 @@ def disp_colored(stack_list: list[object]) -> str:
     for item in stack_list:
         stack_str += str(custom_print(item))
         stack_str += " "
-    stack_str = stack_str[0:-1]
+    if stack_list:
+        # Drop only the trailing separator; on an empty stack there is
+        # none, and trimming would truncate the bracket's ANSI reset code
+        stack_str = stack_str[0:-1]
     stack_str += colored("]", "yellow")
     return stack_str
 

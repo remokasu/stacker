@@ -884,3 +884,17 @@ result
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestGlobalWithDefinedName(unittest.TestCase):
+    """Regression: `value name global` failed when `name` already held a
+    value, because `global` was missing from the symbol-consuming
+    command set and the bare name got evaluated to its value
+    (examples/functions/higher_order.stk:134 crashed on this)."""
+
+    def test_global_reassigns_existing_variable(self):
+        stacker = Stacker()
+        stacker.process_expression("5 counter =")
+        stacker.process_expression("10 counter global")
+        stacker.process_expression("counter")
+        self.assertEqual(stacker.stack[-1], 10)
