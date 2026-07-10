@@ -310,6 +310,35 @@ class StackerCore:
                 return value.value
             return self.variables.get(value, value)
 
+    def _pop_and_resolve(self, stack: stack_data[object]) -> object:
+        """Pop an assignment value, binding code blocks without evaluating.
+
+        Assignment-only counterpart of ``_pop_and_eval`` (SPEC-0004):
+        ``=`` / ``set`` / ``global`` are binding forms — like the
+        defun/lambda/if/loop bodies — so a code block is returned raw
+        ("code is data") instead of being evaluated at assignment time.
+        Every other resolution rule (UndefinedSymbol check, list/String
+        handling, variable lookup) is identical to ``_pop_and_eval``.
+
+        Args:
+            stack: Stack to pop the assignment value from.
+
+        Returns:
+            The resolved value; code blocks are returned unevaluated.
+        """
+        value = stack.pop()
+
+        if isinstance(value, UndefinedSymbol):
+            raise UndefinedSymbolError(value.name)
+
+        if isinstance(value, StackerCore):
+            return value
+        if isinstance(value, (list, tuple)):
+            return value
+        if isinstance(value, String):
+            return value.value
+        return self.variables.get(value, value)
+
     def _eval(self, expr: str, stack: stack_data[object] | None = None) -> stack_data[object]:
         if stack is None:
             stack = stack_data()
@@ -352,7 +381,9 @@ class StackerCore:
                     if isinstance(value, StackerLambda):
                         args: list[object] = []
                         for _ in range(value.arg_count):
-                            args.insert(0, self._pop_and_eval(stack))
+                            # Parameters are binding forms: block
+                            # arguments bind raw (SPEC-0004)
+                            args.insert(0, self._pop_and_resolve(stack))
                         stack.append(value(*args))
                     else:
                         stack.append(value)
@@ -518,7 +549,9 @@ class StackerCore:
             args: list[object] = []
             sfunc = self.sfunctions[token]
             for _ in range(sfunc["arg_count"]):  # type: ignore[index]
-                args.insert(0, self._pop_and_eval(stack))
+                # Parameters are binding forms: block arguments bind
+                # raw (SPEC-0004)
+                args.insert(0, self._pop_and_resolve(stack))
             if sfunc["push_result_to_stack"]:  # type: ignore[index]
                 result = sfunc["func"](*args)  # type: ignore[index]
                 if result is not VOID:
@@ -615,7 +648,7 @@ class StackerCore:
     def _prio_set(self, op, stack) -> None:
         symbol = stack.pop()
         name = self._dollar_to_var_name(symbol)
-        value = self._pop_and_eval(stack)
+        value = self._pop_and_resolve(stack)
         # Try to update existing variable in scope chain
         # If not found, create in local scope
         if not self.variables.update_existing(name, value):
@@ -626,7 +659,7 @@ class StackerCore:
         # Stack: [..., value, varname]
         symbol = stack.pop()  # Pop varname
         name = self._dollar_to_var_name(symbol)
-        value = self._pop_and_eval(stack)  # Pop and eval value
+        value = self._pop_and_resolve(stack)  # Blocks bind raw (SPEC-0004)
         # Always set in global (root) scope
         self.variables.set_global(name, value)
     def _prio_defun(self, op, stack) -> None:

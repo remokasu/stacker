@@ -1,5 +1,32 @@
 # CHANGE LOG
 
+## [1.13.0] - 2026-07-10
+
+### Breaking Changes
+
+Note: This change is not backwards compatible with previous versions.
+
+- **Binding Forms Take Code Blocks Without Evaluating (Code Is Data)**:
+  - `=`, `set`, and `global` are binding forms now: a code-block value is stored raw instead of being evaluated at assignment time, matching the README's deferred-evaluation contract (broken since 1.9.0)
+  - Example: `{2 *} double_op =` stores the block; `5 double_op eval` returns `10` (previously crashed with a stack underflow)
+  - Example: `{5 3 +} x =` stores the block; `x eval` returns `8` (previously `x` held the pre-computed `8`)
+  - Function and lambda parameters bind block arguments raw too, so user-defined higher-order functions work: `{op a b} {a b op eval} apply2 defun` then `{+} 5 3 apply2` returns `8` (previously crashed)
+  - A bare reference to a block-valued variable pushes the block unevaluated; computing operators still force blocks as before (`{1 2 +} dup +` is still `6`)
+
+### Migration
+
+- Code that relied on assignment-time evaluation should evaluate explicitly:
+  - Before: `{5 3 +} x =` (x held `8`)
+  - After: `{5 3 +} eval x =` (same result), or keep the block and use `x eval` at the point of use
+- Code that passed a block to a function and relied on call-time evaluation should evaluate at the call site:
+  - Before: `{[4 5 6]} test_sum` (the argument arrived as `[4 5 6]`)
+  - After: `[4 5 6] test_sum`, or `{[4 5 6]} eval test_sum`
+
+### Fixed
+
+- **`examples/advanced/eval_examples.stk`**:
+  - The dynamic code-construction example runs to completion again (it exercised exactly the pattern this change restores)
+
 ## [1.12.1] - 2026-07-10
 
 ### Fixed

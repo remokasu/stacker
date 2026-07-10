@@ -13,6 +13,8 @@ import contextlib
 import io
 import unittest
 
+from stacker.engine.core import StackerCore
+
 from stacker import Stacker
 from stacker.engine.data_type import String, UndefinedSymbol
 from stacker.error import UndefinedSymbolError
@@ -67,10 +69,15 @@ class TestDynamicNameResolution(unittest.TestCase):
         self.stacker.process_expression("3 f")
         self.assertEqual(list(self.stacker.stack), [6])
 
-    def test_set_eagerly_evaluates_block_value(self):
-        # `set` evaluates a code-block value at assignment time; the variable
-        # holds the block's result, not the block itself.
+    def test_set_binds_block_value_lazily(self):
+        # 1.13.0 (SPEC-0004): `set` is a binding form — a code-block value
+        # is stored raw (code is data), and a bare reference pushes the
+        # block unevaluated; `eval` executes it. This test previously froze
+        # the opposite (eager) behavior, which contradicted the README and
+        # was reclassified as a bug.
         self.stacker.process_expression("{1 2 +} b set b")
+        self.assertIsInstance(self.stacker.stack[-1], StackerCore)
+        self.stacker.process_expression("eval")
         self.assertEqual(list(self.stacker.stack), [3])
 
 
