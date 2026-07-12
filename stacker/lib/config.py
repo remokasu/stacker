@@ -11,7 +11,7 @@ stacker_dotfile_path = Path.home() / stacker_dotfile
 
 script_extension_name = ".stk"
 
-# --- Recursion guard (ADR-0003) --------------------------------------------
+# --- Recursion guard --------------------------------------------
 # Measured on CPython 3.13: the engine's true recursion ceiling is the
 # interpreter's C-recursion protection (independent of
 # sys.setrecursionlimit), which stops this engine's call chain at 2000

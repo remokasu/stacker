@@ -1,4 +1,4 @@
-"""Process-wide recursion guard for Stacker function calls (ADR-0003).
+"""Process-wide recursion guard for Stacker function calls.
 
 The real resource being guarded is the process's C stack, which is shared
 by every Stacker instance (including child interpreters created by

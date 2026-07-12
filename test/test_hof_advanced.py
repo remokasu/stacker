@@ -34,7 +34,7 @@ class TestStacker(unittest.TestCase):
 
     def test_map_block_with_no_result_raises_clear_error(self):
         # Regression: a block producing no stack value crashed with an
-        # internal TypeError. HOF blocks must leave a value (ADR-0001);
+        # internal TypeError. HOF blocks must leave a value;
         # the error should name the operator and point to dolist.
         self.stacker.stack.clear()
         with self.assertRaises(NoValueProducedError) as ctx:

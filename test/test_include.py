@@ -55,7 +55,7 @@ class TestImportStacker(unittest.TestCase):
 
 class TestIncludeResolution(unittest.TestCase):
     """Relative includes resolve against the including file's directory
-    first, then the cwd (SPEC-0003 / ADR-0004)."""
+    first, then the cwd (1.12.0)."""
 
     def setUp(self):
         self._old_cwd = os.getcwd()

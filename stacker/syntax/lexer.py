@@ -136,7 +136,7 @@ _TRIPLE_DELIMS = ('"""', "'''")
 
 
 class TerminalScanner:
-    """Incremental scan core shared by all lexical judgments (ADR-0002).
+    """Incremental scan core shared by all lexical judgments.
 
     Single state machine that understands strings (single and triple
     quoted), line comments (``#`` to end of line), nestable block

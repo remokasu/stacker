@@ -1,4 +1,4 @@
-"""Tests for SPEC-0001: triple quotes are always multi-line string literals.
+"""Tests for triple quotes as multi-line string literals (1.11.0).
 
 Triple-quoted text is one token (delimiters preserved by the lexer,
 stripped by token_rules), in every execution path: eval, script, arrays.
@@ -85,7 +85,7 @@ class TestTripleQuoteInScripts(unittest.TestCase):
         self.assertEqual(list(self.stacker.stack), [5, " part1\npart2 "])
 
     def test_line_initial_triple_is_a_string_not_a_comment(self):
-        # Breaking change (SPEC-0001): the old docstring-comment behavior
+        # Breaking change in 1.11.0: the old docstring-comment behavior
         # of readtxt is gone; a line-initial triple quote is a string
         self._run_script('"""\ndoc\n"""\n')
         self.assertEqual(list(self.stacker.stack), ["\ndoc\n"])

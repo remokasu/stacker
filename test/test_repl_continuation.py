@@ -1,4 +1,4 @@
-"""Integration tests for REPL continuation input (SPEC-0001).
+"""Integration tests for REPL continuation input (1.11.0).
 
 Drives ReplMode.run() with a mocked get_input: continuation for strings,
 block comments, blocks, and arrays is judged by the lexer scan core, so

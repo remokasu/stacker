@@ -20,7 +20,7 @@ class TestStacker(unittest.TestCase):
         self.assertEqual(ans[-1], 6)
 
     def test_function_definition_and_call_3(self):
-        # 1.13.0 (SPEC-0004): arguments bind blocks raw, so pass the
+        # 1.13.0: arguments bind blocks raw, so pass the
         # list itself; previously `{[4 5 6]}` worked only because the
         # block was force-evaluated at call time
         self.stacker.stack.clear()
@@ -29,7 +29,7 @@ class TestStacker(unittest.TestCase):
         self.assertEqual(ans[-1], 15)
 
     def test_function_definition_and_call_4(self):
-        # 1.13.0 (SPEC-0004): a numeric block passed raw reaches the
+        # 1.13.0: a numeric block passed raw reaches the
         # body, where `sum` consumes its tokens natively
         self.stacker.stack.clear()
         self.stacker.eval("{xs} {xs sum} $test_sum defun")
