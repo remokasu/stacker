@@ -1,4 +1,4 @@
-"""Tests for SPEC-0001: unterminated constructs are syntax errors.
+"""Tests for unterminated-construct syntax errors (1.11.0).
 
 Finalized input (eval / script / -e) with an unterminated string, array,
 block, or block comment raises UnterminatedTokenError instead of the old

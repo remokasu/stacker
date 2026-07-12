@@ -1,4 +1,4 @@
-"""Regression tests for stack display (audit #12).
+"""Regression tests for stack display.
 
 disp_colored used to strip the trailing character of the opening
 bracket's ANSI reset code when the stack was empty, emitting a broken

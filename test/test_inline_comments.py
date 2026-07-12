@@ -177,7 +177,7 @@ add defun
 class TestHashInsideTripleQuotedString(unittest.TestCase):
     """A '#' inside a multi-line string must not be treated as a comment.
 
-    Since 1.11.0 (SPEC-0001) triple quotes are always string literals —
+    Since 1.11.0 triple quotes are always string literals —
     including at the start of a line — so '#' anywhere inside them is
     string content. Block comments use ``#| ... |#`` instead.
     """

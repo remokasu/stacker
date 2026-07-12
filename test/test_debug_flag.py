@@ -1,4 +1,4 @@
-"""Regression tests for --debug in script mode (audit #14).
+"""Regression tests for --debug in script mode.
 
 The flag was wired into ExecutionMode.debug but ScriptMode.run never
 read it, so failing scripts printed identical output with and without

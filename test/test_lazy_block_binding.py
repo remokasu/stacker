@@ -1,4 +1,4 @@
-"""Tests for SPEC-0004: assignment binds code blocks without evaluating.
+"""Tests for lazy block binding (1.13.0): assignment stores blocks raw.
 
 `=` / `set` / `global` are binding forms (like defun/lambda/if bodies),
 so a code-block value is stored raw and executed only explicitly via
@@ -66,7 +66,7 @@ class TestLazyBlockBinding(unittest.TestCase):
 
 
 class TestFunctionArgumentBinding(unittest.TestCase):
-    """SPEC-0004 amendment: function/lambda parameters are binding forms
+    """Function/lambda parameters are binding forms
     too — a block argument binds raw, which is what makes user-defined
     higher-order functions possible (the `apply` pattern in
     examples/advanced/eval_examples.stk)."""

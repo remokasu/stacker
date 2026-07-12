@@ -37,7 +37,7 @@ class TestStacker(unittest.TestCase):
 
 
 class TestLambdaStackAccumulation(unittest.TestCase):
-    """Regression (audit #11): a lambda's local stack must not
+    """Regression: a lambda's local stack must not
     accumulate leftover values across calls (StackerFunction clears its
     stack per call; StackerLambda used to skip that)."""
 

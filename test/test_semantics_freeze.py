@@ -70,7 +70,7 @@ class TestDynamicNameResolution(unittest.TestCase):
         self.assertEqual(list(self.stacker.stack), [6])
 
     def test_set_binds_block_value_lazily(self):
-        # 1.13.0 (SPEC-0004): `set` is a binding form — a code-block value
+        # 1.13.0: `set` is a binding form — a code-block value
         # is stored raw (code is data), and a bare reference pushes the
         # block unevaluated; `eval` executes it. This test previously froze
         # the opposite (eager) behavior, which contradicted the README and
@@ -165,7 +165,7 @@ class TestErrorOrdering(unittest.TestCase):
         # syntax error when *it* is executed — never earlier (e.g. during
         # an eager classification pass).
         # 1.12.1: the exception type changed from a bare SyntaxError to
-        # StackerSyntaxError (audit #16, project rule "no bare
+        # StackerSyntaxError (project rule "no bare
         # exceptions"); the ORDERING contract frozen here is unchanged.
         from stacker.error import StackerSyntaxError
 

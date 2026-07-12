@@ -313,7 +313,7 @@ class StackerCore:
     def _pop_and_resolve(self, stack: stack_data[object]) -> object:
         """Pop an assignment value, binding code blocks without evaluating.
 
-        Assignment-only counterpart of ``_pop_and_eval`` (SPEC-0004):
+        Assignment-only counterpart of ``_pop_and_eval``:
         ``=`` / ``set`` / ``global`` are binding forms — like the
         defun/lambda/if/loop bodies — so a code block is returned raw
         ("code is data") instead of being evaluated at assignment time.
@@ -382,7 +382,7 @@ class StackerCore:
                         args: list[object] = []
                         for _ in range(value.arg_count):
                             # Parameters are binding forms: block
-                            # arguments bind raw (SPEC-0004)
+                            # arguments bind raw (code is data)
                             args.insert(0, self._pop_and_resolve(stack))
                         stack.append(value(*args))
                     else:
@@ -550,7 +550,7 @@ class StackerCore:
             sfunc = self.sfunctions[token]
             for _ in range(sfunc["arg_count"]):  # type: ignore[index]
                 # Parameters are binding forms: block arguments bind
-                # raw (SPEC-0004)
+                # raw (code is data)
                 args.insert(0, self._pop_and_resolve(stack))
             if sfunc["push_result_to_stack"]:  # type: ignore[index]
                 result = sfunc["func"](*args)  # type: ignore[index]
@@ -659,7 +659,7 @@ class StackerCore:
         # Stack: [..., value, varname]
         symbol = stack.pop()  # Pop varname
         name = self._dollar_to_var_name(symbol)
-        value = self._pop_and_resolve(stack)  # Blocks bind raw (SPEC-0004)
+        value = self._pop_and_resolve(stack)  # Blocks bind raw (code is data)
         # Always set in global (root) scope
         self.variables.set_global(name, value)
     def _prio_defun(self, op, stack) -> None:

@@ -1,4 +1,4 @@
-"""Tests for SPEC-0002: the Stacker-level recursion depth guard.
+"""Tests for the Stacker-level recursion depth guard (1.12.0).
 
 Infinite recursion must stop with StackerRecursionError (never a
 segfault), the error names the offending function, and the limit is

@@ -1,4 +1,4 @@
-"""Regression tests for stack-operator edge cases (audit #8, #9, #13, nip).
+"""Regression tests for stack-operator edge cases.
 
 All four operators used to mishandle boundaries or duplicate values:
 value-based removal picked the wrong element, out-of-range indices

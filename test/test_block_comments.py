@@ -1,4 +1,4 @@
-"""Tests for SPEC-0001: nestable block comments ``#| ... |#``.
+"""Tests for nestable block comments ``#| ... |#`` (1.11.0).
 
 Block comments are consumed at the lexical layer (no token produced),
 work in every execution path, and may span lines and nest.

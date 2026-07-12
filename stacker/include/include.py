@@ -16,7 +16,7 @@ _including: set[Path] = set()
 
 
 def resolve_include_path(filename: str | Path, base_dir: Path | None = None) -> Path:
-    """Resolve an include target using the search order (SSOT, ADR-0004).
+    """Resolve an include target using the search order.
 
     Absolute paths are taken as-is. Relative paths are searched first in
     ``base_dir`` (the including file's directory), then the current

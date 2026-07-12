@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
 
 class TestCommaInArrayMessage(unittest.TestCase):
-    """Regression (audit #16): commas in array literals used to leak the
+    """Regression: commas in array literals used to leak the
     internal Token repr through a bare SyntaxError."""
 
     def test_comma_array_raises_stacker_syntax_error(self):
