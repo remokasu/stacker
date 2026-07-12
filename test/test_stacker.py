@@ -366,7 +366,7 @@ if __name__ == "__main__":
 
 
 class TestBlockHashContract(unittest.TestCase):
-    """Regression (audit #15): equal blocks must have equal hashes.
+    """Regression: equal blocks must have equal hashes.
     {1 2 3} == (1 2 3) (token equality) but their hashes differed
     because __hash__ included the bracket type via str(self)."""
 

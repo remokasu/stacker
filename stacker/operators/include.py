@@ -13,7 +13,7 @@ def include(stacker: Stacker, filename: str) -> None:
     """Includes another stacker script.
 
     Relative paths resolve against the including file's directory first,
-    then the current working directory (ADR-0004). REPL and ``-e`` have
+    then the current working directory. REPL and ``-e`` have
     no file context and fall back to cwd-only resolution.
     """
     current_file = stacker.current_file

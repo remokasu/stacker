@@ -2,8 +2,7 @@
 
 "What is a string token" and "how are its delimiters stripped" used to be
 re-implemented inline at six call sites across the lexer, parser, and the
-evaluation-loop classifier; that divergence caused real bugs (see ADR-0002,
-`.claude/docs/adr/0002-lexer-ssot-for-syntax-hardening.md`). Every call
+evaluation-loop classifier; that divergence caused real bugs. Every call
 site must go through this module instead of re-implementing the checks.
 
 Both single-character quote pairs (``'...'`` / ``"..."``) and
