@@ -93,3 +93,17 @@ class TestUnit(unittest.TestCase):
         expr = "{1 1 +} {99} iferror"
         stacker.process_expression(expr)
         self.assertEqual(list(stacker.stack), [2])
+
+    def test_iferror_does_not_catch_break(self):
+        # break inside the try block must exit the enclosing loop instead of
+        # triggering the catch block. BreakException derives from BaseException
+        # precisely so that iferror's except Exception lets it through; if it
+        # were ever changed to derive from Exception, the catch block (999)
+        # would run and this test would fail.
+        stacker = Stacker()
+        expr = (
+            "0 $s set [1 2 3 4 5] $i"
+            " { {i 3 == {break} if s i + $s set} {999 $s set} iferror } dolist s"
+        )
+        stacker.process_expression(expr)
+        self.assertEqual(stacker.stack[-1], 3)

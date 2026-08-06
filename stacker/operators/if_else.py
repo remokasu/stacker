@@ -88,6 +88,12 @@ def _iferror(
             parent.evaluate(try_block.tokens, stack=parent.stack)
         else:
             parent.stack.append(try_block)
+    # Deliberately Exception, not BaseException: control-flow signals such as
+    # BreakException derive from BaseException so they pass through iferror
+    # (a break inside the try block must exit the enclosing loop, not run the
+    # catch block). The broad catch itself is intentional: iferror is the
+    # language's user-facing generic try/catch construct, so it must catch
+    # every runtime error, unlike internal error handling.
     except Exception as _:
         if isinstance(catch_block, type(parent)):
             parent.evaluate(catch_block.tokens, stack=parent.stack)
