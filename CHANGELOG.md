@@ -1,5 +1,14 @@
 # CHANGE LOG
 
+## [1.14.0] - 2026-08-07
+
+### Fixed
+
+- **Fatal Parser Errors Are No Longer Silently Swallowed**:
+  - A pathological literal that overflows the Python parser (for example a token of 100,000 chained unary minuses) now raises a visible error instead of silently pushing a bogus `UndefinedSymbol` value onto the stack
+  - Benign malformed literals are unaffected and still fall back to symbol resolution: `42 $x set x` returns `42`, and an undefined token like `1st` still resolves to an `UndefinedSymbol`
+  - The REPL survives such errors and keeps the current stack intact
+
 ## [1.13.0] - 2026-07-10
 
 ### Breaking Changes
