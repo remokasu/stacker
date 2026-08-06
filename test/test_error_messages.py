@@ -166,3 +166,40 @@ class TestCommaInArrayMessage(unittest.TestCase):
         message = str(ctx.exception)
         self.assertNotIn("Token(", message)
         self.assertIn("space", message.lower())
+
+
+class TestFatalErrorPropagation(unittest.TestCase):
+    """Fatal interpreter errors must propagate, not be swallowed.
+
+    Regression: the literal-evaluation fallbacks caught bare ``Exception``,
+    so a pathological token that overflowed the Python parser (MemoryError /
+    RecursionError) was silently converted into an ``UndefinedSymbol`` value
+    on the stack instead of surfacing an error.
+    """
+
+    def test_parser_overflow_raises_instead_of_pushing_garbage(self):
+        # 100k unary minuses overflow ast.literal_eval's parser stack.
+        # Depending on the Python version this raises MemoryError or
+        # RecursionError; either way it must reach the caller.
+        stacker = Stacker()
+        pathological = "-" * 100_000 + "1"
+        with self.assertRaises((RecursionError, MemoryError)):
+            stacker.eval(pathological)
+
+    def test_malformed_literal_still_falls_back_to_symbol(self):
+        # The benign fallback must survive the fix. "1st" is not a variable,
+        # so it reaches ast.literal_eval and raises SyntaxError there — this
+        # exercises the narrowed except branch itself, unlike a plain
+        # variable lookup which resolves before literal evaluation.
+        from stacker.engine.data_type import UndefinedSymbol
+
+        stacker = Stacker()
+        ans = stacker.eval("1st")
+        self.assertIsInstance(ans[-1], UndefinedSymbol)
+
+    def test_variable_lookup_unaffected_by_narrowed_except(self):
+        # Plain variable resolution (no literal parsing involved) keeps
+        # working as before.
+        stacker = Stacker()
+        ans = stacker.eval("42 $x set x")
+        self.assertEqual(ans[-1], 42)

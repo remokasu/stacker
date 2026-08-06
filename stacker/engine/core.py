@@ -48,7 +48,10 @@ def _cached_literal_eval(token: str) -> object:
     """Cached version of ast.literal_eval for performance."""
     try:
         return ast.literal_eval(token)
-    except Exception:
+    except (ValueError, TypeError, SyntaxError):
+        # Malformed literal: fall back to the raw token (resolved later as a
+        # symbol/operator). MemoryError / RecursionError from pathological
+        # input must propagate instead of becoming a bogus stack value.
         return token
 
 
@@ -222,8 +225,9 @@ class StackerCore:
                 return String(strip_string_delimiters(token))
             else:
                 return _cached_literal_eval(token)
-        except Exception:
-            # Keep as string for lazy evaluation (variables, operators, etc.)
+        except (ValueError, TypeError, SyntaxError):
+            # Keep as string for lazy evaluation (variables, operators, etc.).
+            # Fatal errors (MemoryError / RecursionError) must propagate.
             return token
 
     def _substack(self, token: str, stack: stack_data[object]) -> None:
@@ -481,7 +485,9 @@ class StackerCore:
                 return StackerCore._literal_cache[token]
             try:
                 return ast.literal_eval(token)
-            except Exception:
+            except (ValueError, TypeError, SyntaxError):
+                # Malformed literal: fall back to the raw token. Fatal errors
+                # (MemoryError / RecursionError) must propagate.
                 return token
 
     def _literal_eval2(self, token: str) -> object:
