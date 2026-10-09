@@ -1,5 +1,53 @@
 # CHANGE LOG
 
+## [1.15.0] - 2026-10-10
+
+### Breaking Changes
+
+Note: This change is not backwards compatible with previous versions.
+
+- **`defmacro` Defines Real Macros**:
+  - `defmacro` now takes three arguments, `{args} {body} name defmacro`, like `defun`. The body runs when the macro is called, on its own stack and in its own scope, and must leave exactly one value: a code block is evaluated on the caller's stack, any other value is pushed. Argument names (and variables assigned inside the body) are substituted into the body's block literals, so control structures can be written in Stacker: `{c b} {{{c eval not {break} if b eval} loop}} {while} defmacro`
+  - The old two-argument form `{body} name defmacro` is gone. It was a named code snippet, which is now spelled `{body} {name} alias`
+  - Assignments inside a macro body are local to the macro and never change the caller's variables
+- **Built-in Names Are Protected From Accidental Rebinding**:
+  - A bare built-in operator name written right before `set` / `=` / `global` / `defun` / `defmacro` now runs as that operator instead of being taken as the name to bind. `{} {{2 *}} expand defmacro` used to silently define a macro named `expand`; it now runs `expand`
+  - Rebinding a built-in name still works with an explicit quote: `3 $dup set` or `3 {dup} set`. Your own variables, functions and macros can be redefined by their bare name as before
+- **`expand` On Code Blocks**:
+  - `{1 2 +} expand` now pushes one-token code blocks `{1} {2} {+}` instead of the raw token representation (which left the operator as a string and made `{1 2 +} expand +` fail). `expand` on lists is unchanged
+- **Prelude Is Loaded By `Stacker()`**:
+  - The Stacker-written standard words (`alias`, `mean`) are loaded by every new interpreter, not only by the command line, so embedding code and scripts see the same words. `Stacker(prelude=False)` gives a bare interpreter
+  - On the command line the prelude is now loaded before plugins (previously after), so the prelude cannot refer to plugin words
+
+### Migration
+
+- Named code snippets: `{2 *} double defmacro` becomes `{2 *} {double} alias`
+- Macros that need arguments: write them in the new form, e.g. `{x} {{x x +}} {twice} defmacro`
+- Code that rebinds a built-in name with a bare name, e.g. `0 sum set` or `} max defun`, must quote the name: `0 $sum set`, `} {max} defun`
+- Code that relied on `expand` turning a block into raw tokens should use `eval` on the pieces, or `concat-block` to build code
+- Embedding code that inspected a fresh interpreter's macros or functions and expected them to be empty should create it with `Stacker(prelude=False)`
+
+### Added
+
+- **`loop`**: `{body} loop` repeats a block on the current stack until `break`. It is the primitive all other loops can be written with
+- **`alias`** (prelude): `{body} {name} alias` names a code snippet that runs in place on the caller's stack
+- **`gensym`**: pushes a fresh unique name (prefixed `__g`) for temporaries in macro-generated code
+- **`macroexpand`**: `<args> {name} macroexpand` pushes a macro's expansion without running it
+- **`concat-block`**: `{a b} {c} concat-block` joins two code blocks
+- **Quoted names**: `{name}` is the documented way to pass a name as a value; every word that takes a name accepts it
+- **`Stacker(prelude=...)`**: Python API flag to skip loading the prelude
+- Redefining a prelude word logs a warning (`redefining prelude word 'alias'`) through the standard `logging` module
+
+### Fixed
+
+- **Control Flow In `-e` And `Stacker.eval()`**:
+  - `if`, `ifelse`, `iferror`, `times`, `while`, `do` and `dolist` evaluated their blocks on the interpreter's own stack instead of the stack they were called on, so `stacker -e "5 {dup ++} 3 times"` failed and `Stacker().eval("true {3} if")` returned an empty result. They now use the calling stack, like `cond` already did
+  - `do` and `dolist` restore the enclosing scope even when the body raises
+- A defined macro can be redefined by its bare name (`{} {{2}} m defmacro` used to fail with `Expected a symbol, got 1`)
+- Macro recursion is stopped by the recursion guard with a `StackerRecursionError` naming the macro, instead of Python's `RecursionError`
+- `{} 5 five defmacro` reports a Stacker syntax error instead of leaking an `AttributeError`
+- Prelude files load in a fixed order (a manifest in the `slib` package) instead of directory-listing order
+
 ## [1.14.0] - 2026-08-07
 
 ### Fixed

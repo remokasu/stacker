@@ -143,8 +143,11 @@ Stacker allows for straightforward RPN input. For example:
 
     **Note:** The `=` operator is an alias for `set` and can be used interchangeably. Use whichever feels more natural for your coding style.
 
-    **Important:** Avoid using built-in operator names (like `sum`, `max`, `min`) as variable names,
-    as this will shadow the operator. See [VARIABLE_NAMING.md](VARIABLE_NAMING.md) for details.
+    **Built-in names are protected.** A bare name written right before `set`, `=`, `global`, `defun` or
+    `defmacro` is the name being bound, except when it is a built-in operator: then it runs as that operator
+    (`3 dup set` duplicates the 3 and `set` fails). To rebind a built-in name on purpose, quote it with
+    `$name` or `{name}`: `3 $dup set` or `3 {dup} set`. Your own variables, functions and macros can be
+    redefined by their bare name. Redefining a word that comes from the prelude (such as `alias`) logs a warning.
 
 - Arrays:
   - Single-line array:
@@ -196,6 +199,12 @@ Stacker allows for straightforward RPN input. For example:
   ```
 
   **Note**: Code blocks are stored but not executed until explicitly triggered. This allows for flexible program control, lazy evaluation, and higher-order programming patterns.
+
+  **Quoted names:** a block holding a single name, such as `{double}`, is the way to pass a *name* as a value.
+  Every word that takes a name (`set`, `=`, `global`, `defun`, `defmacro`, `alias`) accepts `{name}` as well as
+  `$name`. Macros that define things take their names in this form. This is also how a *variable name* is passed to
+  a macro: `{n} incr!` hands over the name `n`, whereas `n incr!` or `$n incr!` would hand over the variable's
+  current value.
 
 - ### Control Structures in Stacker
 
@@ -353,9 +362,25 @@ Stacker allows for straightforward RPN input. For example:
 
     Note: Use `{condition}` as a code block that leaves a boolean on the stack. The loop terminates when the condition evaluates to false.
 
+  - ##### loop
+
+    `loop` repeats a code block forever until `break` is executed. It is the primitive every other loop
+    can be built from; the body runs on the current stack, in the current scope.
+
+    Syntax:
+    ```bash
+    {body} loop
+    ```
+
+    Example:
+    ```bash
+    stacker:0> 0 {1 + dup 10 > {break} if} loop
+    [11]
+    ```
+
   - #### break
 
-    `break` immediately exits the innermost loop (`do`, `dolist`, `times`, `while`).
+    `break` immediately exits the innermost loop (`do`, `dolist`, `times`, `while`, `loop`).
 
     Syntax:
     ```bash
@@ -383,18 +408,55 @@ Stacker allows for straightforward RPN input. For example:
     ```
     This defines a function named `multiply` that takes two arguments `x` and `y` and multiplies them together.
 
-- ### Define a macro:
+- ### Define an alias:
   - syntax:
     ```bash
-    {body} name defmacro
+    {body} {name} alias
     ```
   - example:
     ```bash
-    stacker:0> {2 ^ 3 * 5 +} calculatePowerAndAdd defmacro
+    stacker:0> {2 ^ 3 * 5 +} {calculatePowerAndAdd} alias
     stacker:1> 5 calculatePowerAndAdd
     [80]
     ```
-    This defines a macro with the body `{2 ^ 3 * 5 +}` and assigns it the name `calculatePowerAndAdd`. This macro squares the number on the stack, multiplies it by 3, and then adds 5.
+    An alias names a code snippet. Calling the name runs the body right there, on the caller's stack and in
+    the caller's scope, exactly as if the body had been written in place. (Before 1.15.0 this was what
+    `defmacro` did.)
+
+- ### Define a macro:
+  - syntax:
+    ```bash
+    {args} {body} name defmacro
+    ```
+  - example:
+    ```bash
+    stacker:0> {cond body} { {cond eval not {body eval} if} } {unless} defmacro
+    stacker:1> -3 {0 >} {"not positive" echo} unless
+    not positive
+    ```
+    A macro receives its arguments as *code* (blocks are not evaluated) and runs its body when it is called
+    to build the code that will actually run. Inside a block literal of the body, an argument name is
+    replaced by the argument passed in, so the body above produces
+    `{{0 >} eval not {{"not positive" echo} eval} if}`, which is then evaluated on the caller's stack.
+    This lets you define new control structures in Stacker itself.
+
+    The rules:
+    - The body runs on its own stack, in a scope of its own where the arguments are bound. It must leave
+      exactly one value: a code block is evaluated in the caller's context, any other value is pushed as is.
+    - Every name bound in that scope (the arguments, and variables assigned with `=` / `set` inside the body)
+      is substituted into the body's block literals at the moment each literal is pushed. The substituted
+      values are not scanned again, and `$name`, string literals and list literals are left untouched.
+    - Assignments inside the body are local to the macro; they never change the caller's variables.
+    - Argument names may be anything, including built-in names; every occurrence in the block literals is
+      replaced, so choose them with care.
+    - `gensym` returns a fresh unique name (prefixed `__g`; do not use that prefix yourself) for temporaries
+      in generated code:
+      ```bash
+      stacker:0> {x} { gensym t = { x eval t set t t + } } {double!} defmacro
+      stacker:1> {3 4 +} double!
+      [14]
+      ```
+    - `{name} macroexpand` pushes the expansion without running it, which is the easiest way to debug a macro.
 
 - ### Lambda Functions
   Lambda functions are anonymous functions that can be defined and executed on the fly. They are useful for creating temporary functions without the need for a formal definition.
@@ -425,6 +487,10 @@ Stacker allows for straightforward RPN input. For example:
   stacker:0>  "my_script.stk" include
   ```
   All functions, macros and variables defined in "my_script.stk" are added to the current stack.
+
+- ### The prelude
+  Some words are written in Stacker itself and loaded into every interpreter at start-up (`alias` and `mean`
+  for now). They behave like any other word; `macros` and `funcs` mark them with `(prelude)`.
 
 
 ## Running Scripts
@@ -626,6 +692,7 @@ from stacker import Stacker
 stacker = Stacker()
 print(stacker.eval("3 4 +"))
 ```
+`Stacker()` loads the prelude like the command line does. Pass `Stacker(prelude=False)` for a bare interpreter.
 
 ## Supported Operations
 
@@ -735,6 +802,7 @@ print(stacker.eval("3 4 +"))
 | dolist   | Loop over the elements of a list                      | `[1 2 3] x {x echo} dolist` |
 | times    | Loop a specified number of times                      | `{dup ++} 10 times`        |
 | while    | Loop while a condition is true                        | `{i 10 <} {i ++ $i set} while` |
+| loop     | Repeat a block until `break`                          | `0 {1 + dup 10 > {break} if} loop` |
 | break    | Break out of a loop                                    | `break`                   |
 
 
@@ -742,7 +810,10 @@ print(stacker.eval("3 4 +"))
 | Operator | Description                                           | Example                    |
 |----------|-------------------------------------------------------|----------------------------|
 | defun    | Define a function                                     | `{x y} {x y *} multiply defun` |
-| defmacro    | Define a macro                                     | `{2 ^ 3 * 5 +} calculatePowerAndAdd defmacro` |
+| alias    | Name a code snippet (prelude)                         | `{2 ^ 3 * 5 +} {calculatePowerAndAdd} alias` |
+| defmacro | Define a macro                                        | `{c b} {{c eval not {b eval} if}} {unless} defmacro` |
+| macroexpand | Push a macro's expansion without running it        | `{0 >} {"neg" echo} {unless} macroexpand` |
+| gensym   | Push a fresh unique name for macro temporaries        | `gensym t =`               |
 | lambda   | Create a lambda function                              | `{x y} {x y *} lambda`    |
 | set      | Assign a value to a variable                          | `3 x set`                |
 | =        | Assign a value to a variable (alias for `set`)        | `3 x =`                  |
@@ -762,6 +833,8 @@ print(stacker.eval("3 4 +"))
 | cons     | Prepend an element to a list                          | `1 [2 3] cons`             |
 | pair?    | Return true if the value is a non-empty list          | `[1 2 3] pair?`            |
 | apply    | Expand list elements onto the stack and apply a function | `[3 4] {+} apply`       |
+| expand   | Push the elements of a list, or each token of a code block as a one-token block | `[1 2 3] expand`, `{a b} expand` |
+| concat-block | Join two code blocks                              | `{a b} {c} concat-block`   |
 
 Note: Blocks passed to `map`, `filter`, `reduce`, and `fold` must leave a value on the stack. For side-effect-only iteration (e.g. printing each element), use `dolist` instead.
 
