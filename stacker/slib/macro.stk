@@ -1,0 +1,5 @@
+#|
+alias: Name a code snippet. `{body} {name} alias` makes `name` run `body`
+on the caller's stack, exactly as if the body had been written in place.
+|#
+{body name} { {{} {body} name defmacro} } {alias} defmacro

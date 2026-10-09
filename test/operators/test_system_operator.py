@@ -42,6 +42,7 @@ class TestSystemOperators(unittest.TestCase):
 
     def test_funcs_no_functions(self):
         """Test funcs when no functions are defined."""
+        self.stacker = Stacker(prelude=False)  # the prelude defines functions
         self.stacker.stack.clear()
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
@@ -72,6 +73,7 @@ class TestSystemOperators(unittest.TestCase):
 
     def test_macros_no_macros(self):
         """Test macros when no macros are defined."""
+        self.stacker = Stacker(prelude=False)  # the prelude defines macros
         self.stacker.stack.clear()
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
