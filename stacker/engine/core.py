@@ -605,24 +605,28 @@ class StackerCore:
         end_value = self._pop_and_eval(stack)
         start_value = self._pop_and_eval(stack)
         name = self._dollar_to_var_name(symbol)
-        op["func"](start_value, end_value, name, body, self)
+        op["func"](start_value, end_value, name, body, self, stack)
 
     def _prio_dolist(self, op, stack) -> None:
         body = stack.pop()
         symbol = stack.pop()
         lst = self._pop_and_eval(stack)
         name = self._dollar_to_var_name(symbol)
-        op["func"](name, lst, body, self)
+        op["func"](name, lst, body, self, stack)
 
     def _prio_times(self, op, stack) -> None:
         n_times = self._pop_and_eval(stack)
         body = stack.pop()
-        op["func"](n_times, body, self)
+        op["func"](n_times, body, self, stack)
 
     def _prio_while(self, op, stack) -> None:
         body = stack.pop()
         condition = stack.pop()
-        op["func"](condition, body, self)
+        op["func"](condition, body, self, stack)
+
+    def _prio_loop(self, op, stack) -> None:
+        body = stack.pop()
+        op["func"](body, self, stack)
 
     def _prio_break(self, op, stack) -> None:
         raise BreakException()
@@ -638,18 +642,18 @@ class StackerCore:
     def _prio_if(self, op, stack) -> None:
         true_block = stack.pop()
         condition = stack.pop()
-        op["func"](condition, true_block, self)
+        op["func"](condition, true_block, self, stack)
 
     def _prio_ifelse(self, op, stack) -> None:
         false_block = stack.pop()
         true_block = stack.pop()
         condition = stack.pop()
-        op["func"](condition, true_block, false_block, self)
+        op["func"](condition, true_block, false_block, self, stack)
 
     def _prio_iferror(self, op, stack) -> None:
         catch_block = stack.pop()
         try_block = stack.pop()
-        op["func"](try_block, catch_block, self)
+        op["func"](try_block, catch_block, self, stack)
 
     def _prio_set(self, op, stack) -> None:
         symbol = stack.pop()
@@ -795,6 +799,7 @@ class StackerCore:
         "dolist": _prio_dolist,
         "times": _prio_times,
         "while": _prio_while,
+        "loop": _prio_loop,
         "break": _prio_break,
         "cond": _prio_cond,
         "if": _prio_if,
@@ -1032,11 +1037,21 @@ class StackerCore:
     }
 
     def _dollar_to_var_name(self, symbol: object) -> str:
-        """
-        - $symbol -> symbol
-        - {$symbol} -> symbol
-        - symbol -> raise StackerSyntaxError
-        - {symbol} -> raise StackerSyntaxError
+        """Normalizes the forms a name can be written in to the bare name.
+
+        - ``$symbol`` -> ``symbol``
+        - ``symbol`` (bare name or symbol value) -> ``symbol``
+        - ``{symbol}`` / ``{$symbol}`` (quoted symbol: a one-token block) -> ``symbol``
+        - anything else (a multi-token block, a number, ...) -> ``StackerSyntaxError``
+
+        Args:
+            symbol: Value popped from the stack at a name position.
+
+        Returns:
+            The bare name.
+
+        Raises:
+            StackerSyntaxError: If ``symbol`` cannot denote a name.
         """
         if isinstance(symbol, str):
             if is_symbol(symbol):

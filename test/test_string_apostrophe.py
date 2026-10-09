@@ -42,20 +42,20 @@ def test_multiple_apostrophes():
 def test_apostrophe_in_nested_blocks():
     """Test apostrophe in nested code blocks."""
     stacker = Stacker()
-    stacker.eval('true {true {"won\'t"} if} if')
-    result = stacker.stack.pop()
+    # `eval` runs on its own stack; control-flow words leave their results there.
+    result = stacker.eval('true {true {"won\'t"} if} if').pop()
     assert result == "won't"
 
 
 def test_apostrophe_with_ifelse():
     """Test apostrophe in ifelse blocks."""
     stacker = Stacker()
-    stacker.eval('true {"it\'s true"} {"it\'s false"} ifelse')
-    assert stacker.stack.pop() == "it's true"
+    result = stacker.eval('true {"it\'s true"} {"it\'s false"} ifelse')
+    assert result.pop() == "it's true"
 
     stacker = Stacker()
-    stacker.eval('false {"it\'s true"} {"it\'s false"} ifelse')
-    assert stacker.stack.pop() == "it's false"
+    result = stacker.eval('false {"it\'s true"} {"it\'s false"} ifelse')
+    assert result.pop() == "it's false"
 
 
 def test_escaped_quotes():
