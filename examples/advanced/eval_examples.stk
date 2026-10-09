@@ -104,7 +104,7 @@ condition {
 
 {operation a b} {
     a b operation eval
-} apply defun
+} {apply} defun  # `apply` is a built-in word, so the name is quoted to redefine it
 
 "5 + 3 =" echo
 {+} 5 3 apply echo

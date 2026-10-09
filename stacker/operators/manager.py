@@ -113,7 +113,25 @@ special_operators = {
         "func": None,
         "arg_count": 1,
         "push_result_to_stack": False,
-        "desc": "Unlists a iterable.",
+        "desc": "Pushes the elements of a list, or each token of a code block as a one-token block.",
+    },
+    "gensym": {
+        "func": None,
+        "arg_count": 0,
+        "push_result_to_stack": True,
+        "desc": "Pushes a fresh unique symbol (for temporaries in macro-generated code).",
+    },
+    "macroexpand": {
+        "func": None,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Pushes a macro's expansion without evaluating it: <args> {name} macroexpand",
+    },
+    "concat-block": {
+        "func": None,
+        "arg_count": 2,
+        "push_result_to_stack": True,
+        "desc": "Joins two code blocks into one: {a b} {c} concat-block -> {a b c}",
     },
     "listn": {
         "func": None,

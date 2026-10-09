@@ -196,7 +196,7 @@ class TestMacroScope(unittest.TestCase):
     def test_macro_expansion(self):
         """Test basic macro expansion."""
         self.stacker.stack.clear()
-        self.stacker.eval("{5 +} $add5 defmacro")
+        self.stacker.eval("{} {{5 +}} $add5 defmacro")
         result = self.stacker.eval("10 add5")
         self.assertEqual(result[-1], 15)
 
@@ -204,7 +204,7 @@ class TestMacroScope(unittest.TestCase):
         """Test macro $accessing global variables."""
         self.stacker.stack.clear()
         self.stacker.eval("100 $base set")
-        self.stacker.eval("{base +} $add_base defmacro")
+        self.stacker.eval("{} {{base +}} $add_base defmacro")
         result = self.stacker.eval("25 add_base")
         self.assertEqual(result[-1], 125)
 
@@ -214,7 +214,7 @@ class TestMacroScope(unittest.TestCase):
         # Function evaluates in its own scope
         self.stacker.eval("{x} {x 2 *} $f_double defun")
         # Macro expands in caller's scope
-        self.stacker.eval("{2 *} $m_double defmacro")
+        self.stacker.eval("{} {{2 *}} $m_double defmacro")
 
         result = self.stacker.eval("5 f_double")
         self.assertEqual(result[-1], 10)

@@ -36,25 +36,28 @@ def _funcs(core: StackerCore) -> None:
     if len(functions) == 0:
         print("No functions defined.")
         return
+    prelude_names = core._prelude["names"]
     for name, func_dict in functions.items():
         func = func_dict["func"]
-        print(f"{name}: args={func.args}, body={func.blockstack}")
+        suffix = " (prelude)" if name in prelude_names else ""
+        print(f"{name}: args={func.args}, body={func.blockstack}{suffix}")
 
 
 def _macros(core: StackerCore) -> None:
     """
     Display all defined macros.
     Example:
-        stacker> {x} {x x *} $square defmacro
+        stacker> {x} {{x x *}} $square defmacro
         stacker> macros
-        square: {x} {x x *}
+        square: {x} {{x x *}}
     """
     macros = core.macros
     if len(macros) == 0:
         print("No macros defined.")
         return
     for name, macro in macros.items():
-        print(f"{name}: {macro.blockstack}")
+        suffix = " (prelude)" if getattr(macro, "is_prelude", False) else ""
+        print(f"{name}: {macro!r}{suffix}")
 
 
 def _operators(core: StackerCore) -> None:

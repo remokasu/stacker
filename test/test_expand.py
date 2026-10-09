@@ -21,5 +21,7 @@ class TestExpand(unittest.TestCase):
         self.assertEqual(list(self.stacker.stack), [1, 2, 3])
 
     def test_expand_code_block(self):
+        # Each token of a code block becomes a one-token code block, so the
+        # pieces stay code instead of leaking the raw token representation.
         ans = self.stacker.eval("{1 2 3} expand")
-        self.assertEqual(list(ans), [1, 2, 3])
+        self.assertEqual([list(block.tokens) for block in ans], [[1], [2], [3]])

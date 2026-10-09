@@ -50,19 +50,19 @@ class TestNoDollarSyntax(unittest.TestCase):
     def test_defmacro_without_dollar(self):
         """Test macro definition without $ prefix."""
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval("{2 *} double defmacro 5 double")
+        result = stacker.eval("{} {{2 *}} double defmacro 5 double")
         self.assertEqual(result[-1], 10)
 
     def test_defmacro_with_dollar_backward_compatibility(self):
         """Test that defmacro with $ prefix still works."""
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval("{3 +} $addThree defmacro 10 addThree")
+        result = stacker.eval("{} {{3 +}} $addThree defmacro 10 addThree")
         self.assertEqual(result[-1], 13)
 
     def test_do_loop_without_dollar(self):
         """Test do loop without $ prefix (variable name in do)."""
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval("0 sum set 1 5 i {sum i + sum set} do sum")
+        result = stacker.eval("0 $sum set 1 5 i {sum i + $sum set} do sum")
         # Sum of 1 to 5 = 15
         self.assertEqual(result[-1], 15)
 
@@ -76,7 +76,7 @@ class TestNoDollarSyntax(unittest.TestCase):
     def test_dolist_without_dollar(self):
         """Test dolist without $ prefix (variable name in dolist)."""
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval("0 sum set [10 20 30] x {sum x + sum set} dolist sum")
+        result = stacker.eval("0 $sum set [10 20 30] x {sum x + $sum set} dolist sum")
         # Sum of 10, 20, 30 = 60
         self.assertEqual(result[-1], 60)
 

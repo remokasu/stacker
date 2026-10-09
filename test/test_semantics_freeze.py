@@ -17,7 +17,7 @@ from stacker.engine.core import StackerCore
 
 from stacker import Stacker
 from stacker.engine.data_type import String, UndefinedSymbol
-from stacker.error import UndefinedSymbolError
+from stacker.error import StackerSyntaxError, UndefinedSymbolError
 
 
 class TestDynamicNameResolution(unittest.TestCase):
@@ -37,6 +37,22 @@ class TestDynamicNameResolution(unittest.TestCase):
         )
         self.assertEqual(list(self.stacker.stack), [92])
 
+    def test_bare_kernel_word_before_set_executes_as_operator(self):
+        # Shadowing rule (1.15.0): only kernel words are protected. A bare
+        # `dup` right before `set` is not a name but the `dup` operator, so
+        # `set` then fails to find a name. `$dup` / `{dup}` shadow explicitly.
+        with self.assertRaises(StackerSyntaxError):
+            self.stacker.process_expression("3 dup set")
+        self.stacker.stack.clear()
+        self.stacker.process_expression("3 $dup set dup")
+        self.assertEqual(list(self.stacker.stack), [3])
+
+    def test_literal_block_forced_by_operator_with_prelude_loaded(self):
+        # `{1 2 +} dup +` = 6 must not change now that `Stacker()` loads the
+        # prelude by default.
+        self.stacker.process_expression("{1 2 +} dup +")
+        self.assertEqual(list(self.stacker.stack), [6])
+
     def test_set_shadows_symbolic_operator(self):
         # Variables are looked up before operators, even for symbolic names.
         self.stacker.process_expression("99 $+ set +")
@@ -54,9 +70,9 @@ class TestDynamicNameResolution(unittest.TestCase):
     def test_macro_redefined_mid_loop(self):
         # m is redefined on iteration 2; r = 0 + 1*2 + 2*3 + 3*3 + 4*3 = 29
         self.stacker.process_expression(
-            "{2 *} $m defmacro "
+            "{} {{2 *}} $m defmacro "
             "0 r set "
-            "1 4 $i { i 2 == { {3 *} $m defmacro } if r i m + r set } do "
+            "1 4 $i { i 2 == { {} {{3 *}} $m defmacro } if r i m + r set } do "
             "r"
         )
         self.assertEqual(list(self.stacker.stack), [29])

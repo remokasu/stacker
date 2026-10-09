@@ -37,7 +37,26 @@ This error is thrown when an undefined variable is referenced.
 
 
 class StackerError(Exception):
-    pass
+    """Base class for every error Stacker raises on purpose."""
+
+
+def attach_macro_context(error: StackerError, context: str) -> None:
+    """Appends a macro context to ``error``'s message, once.
+
+    Nested macros each try to attach their own context; only the innermost
+    (first) one sticks, so a message never carries more than one.
+
+    Args:
+        error: Error raised while expanding a macro or running its expansion.
+        context: Text such as ``"while expanding macro 'while'"``.
+    """
+    if getattr(error, "macro_context", None) is not None:
+        return
+    error.macro_context = context  # type: ignore[attr-defined]
+    if error.args:
+        error.args = (f"{error.args[0]} ({context})",) + tuple(error.args[1:])
+    else:
+        error.args = (f"({context})",)
 
 
 class StackUnderflowError(StackerError):
@@ -111,11 +130,33 @@ class StackerRecursionError(StackerError):
     can be changed with the --recursion-limit CLI flag.
     """
 
-    def __init__(self, name: str, limit: int) -> None:
-        message = f"Maximum recursion depth ({limit}) exceeded in function `{name}`"
+    def __init__(self, name: str, limit: int, kind: str = "function") -> None:
+        message = f"Maximum recursion depth ({limit}) exceeded in {kind} `{name}`"
         super().__init__(message)
         self.name = name
         self.limit = limit
+        self.kind = kind
+
+
+class MacroExpansionError(StackerError):
+    """Raised when a macro body leaves more than one value as its expansion."""
+
+    def __init__(self, name: str, count: int) -> None:
+        message = (
+            f"Macro `{name}` must leave exactly one value as its expansion, "
+            f"but left {count}."
+        )
+        super().__init__(message)
+        self.name = name
+        self.count = count
+
+
+class PreludeLoadError(StackerError):
+    """Raised when a prelude (slib) file fails to load."""
+
+    def __init__(self, filename: str, cause: BaseException) -> None:
+        super().__init__(f"Failed to load prelude file `{filename}`: {cause}")
+        self.filename = filename
 
 
 class NoValueProducedError(StackerError):

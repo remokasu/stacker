@@ -100,11 +100,11 @@ content "numbers.txt" write-to-file
 
 {message} {
     "[LOG] " message + "\n" + "app.log" append-to-file
-} log defun
+} write-log defun
 
-"Application started" log
-"Processing data" log
-"Task completed" log
+"Application started" write-log
+"Processing data" write-log
+"Task completed" write-log
 
 "app.log" read-from-file
 "Log contents:" echo
