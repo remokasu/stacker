@@ -54,7 +54,7 @@ def resolve_include_path(filename: str | Path, base_dir: Path | None = None) -> 
 
 
 def include_stacker_script(
-    filename: str | Path, base_dir: Path | None = None
+    filename: str | Path, base_dir: Path | None = None, prelude: bool = True
 ) -> Stacker:
     """Import a stacker script and return the stacker object.
 
@@ -63,6 +63,8 @@ def include_stacker_script(
         base_dir: Directory of the including file for relative
             resolution; None falls back to cwd-only search (keeps the
             pre-1.12.0 behavior for direct callers).
+        prelude: Whether the child interpreter loads the prelude; the
+            including interpreter passes its own setting through.
 
     Raises:
         IncludeError: If the file cannot be resolved, has a wrong
@@ -82,7 +84,7 @@ def include_stacker_script(
 
     _including.add(resolved)
     try:
-        stacker = Stacker()
+        stacker = Stacker(prelude=prelude)
         # The included file becomes the child's file context, so its own
         # includes resolve relative to its directory (nested includes)
         stacker.current_file = str(resolved)

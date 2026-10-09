@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Callable
 
 from stacker.engine.core import StackerCore
 from stacker.engine.scope import ScopedVariables
+from stacker.slib import load_prelude
 from stacker.syntax.parser import parse_expression
 
 if TYPE_CHECKING:
@@ -14,11 +15,26 @@ from stacker.engine.data_type import stack_data
 
 class Stacker(StackerCore):
     def __init__(
-        self, expression: str | None = None, parent: StackerCore | None = None
+        self,
+        expression: str | None = None,
+        parent: StackerCore | None = None,
+        prelude: bool = True,
     ) -> None:
+        """Creates an interpreter.
+
+        Args:
+            expression: Source of a code block (child cores only).
+            parent: Enclosing core when this is a code block's substack.
+            prelude: Whether a root interpreter loads the prelude (the
+                Stacker-written standard words). Ignored for child cores.
+        """
         super().__init__(expression, parent)
         self.trace: list[object] = []
         self.plugin_descriptions: dict[str, str | None] = {}
+        if parent is None:
+            self._prelude["enabled"] = prelude
+            if prelude:
+                load_prelude(self)
 
     def include(self, filename: str) -> None:
         return self.operator_manager.operators["priority"]["include"]["func"](

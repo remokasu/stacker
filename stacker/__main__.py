@@ -56,27 +56,6 @@ sys.setrecursionlimit(
 )
 
 
-def load_stacker_lib(stacker: Stacker, dir_path: str) -> bool:
-    """Load the Stacker library from the specified directory.
-    :param stacker: The Stacker instance to pass to the plugins.
-    :param dir_path: The directory to load the Stacker library from.
-    :return: None
-    """
-    # Add the library directory path
-    sys.path.insert(0, dir_path)
-    for filename in os.listdir(dir_path):
-        try:
-            if filename.endswith(".stk"):
-                include_stacker_script = Path(dir_path) / filename
-                stacker.include(str(include_stacker_script))
-        except Exception as e:
-            print(colored(f"Failed load slib ({filename}). {e}", "red"))
-            sys.path.pop(0)
-            return False
-    sys.path.pop(0)
-    return True
-
-
 def load_plugins(stacker: Stacker, plugins_dir_path: str) -> bool:
     """Load plugins from the plugins directory.
     :param stacker: The Stacker instance to pass to the plugins.
@@ -165,11 +144,6 @@ def main() -> None:
     if Path(plugins_dir).exists():
         if not load_plugins(rpn_calculator, plugins_dir):
             sys.exit(1)
-
-    # load the Stacker library
-    library_dir = os.path.join(script_dir, "slib")
-    if not load_stacker_lib(rpn_calculator, library_dir):
-        sys.exit(1)
 
     if argv.e is not None:
         # Execute the given command
