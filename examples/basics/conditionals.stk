@@ -109,7 +109,7 @@ num 0 < {
 # Max function
 {a b} {
     a b > {a} {b} ifelse
-} max defun
+} {max} defun  # `max` is a built-in word, so the name is quoted to redefine it
 
 5 3 max "Max of 5 and 3:" swap echo
 

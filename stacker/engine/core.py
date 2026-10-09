@@ -1,14 +1,18 @@
 from __future__ import annotations
 import copy
-from typing import TYPE_CHECKING, Callable, Iterator
+import logging
+from collections.abc import Callable, Iterator
 import ast
 from functools import lru_cache
 from stacker.constant import constants
 from stacker.error import (
+    MacroExpansionError,
     NoValueProducedError,
     StackUnderflowError,
+    StackerError,
     StackerSyntaxError,
     UndefinedSymbolError,
+    attach_macro_context,
     # UnexpectedTokenError,
 )
 from stacker.syntax.parser import (
@@ -27,11 +31,16 @@ from stacker.engine.data_type import String, UndefinedSymbol, stack_data, VOID
 from stacker.syntax.token_rules import is_string_token, strip_string_delimiters
 from stacker.engine.slambda import StackerLambda
 from stacker.engine.scope import ScopedVariables
+from stacker.engine import recursion
+from stacker.engine.smacro import StackerMacro, gensym
 from stacker.operators.manager import OperatorManager
 
-if TYPE_CHECKING:
-    # from stacker.engine.sfunction import StackerFunction
-    from stacker.engine.smacro import StackerMacro
+_LOGGER = logging.getLogger("stacker")
+
+_DEFMACRO_USAGE = (
+    "`defmacro` takes three arguments: {args} {body} name defmacro. "
+    "For a plain named code snippet use `alias`: {body} {name} alias."
+)
 
 
 # Commands that expect a symbol name as the preceding argument
@@ -63,8 +72,9 @@ K_STRING = 1  # quoted string literal: payload is the prebuilt String
 K_LIST = 2  # list literal: payload is the parsed template (or None)
 K_SYMBOL = 3  # $name: payload is the name without the $ prefix
 K_BLOCK = 4  # code-block source: substack is created at evaluation time
-K_LOOKAHEAD_SYMBOL = 5  # bare name treated as a symbol due to lookahead
+K_LOOKAHEAD_SYMBOL = 5  # bare name right before a binding form (set/defun/...)
 K_DYNAMIC = 6  # name resolved against runtime state on every evaluation
+K_LOOP_VAR = 7  # bare loop-variable name before `{block} do` / `{block} dolist`
 
 
 def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
@@ -107,10 +117,10 @@ def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
         else:
             next_token = tokens[i + 1] if i + 1 < n else None
             next_next_token = tokens[i + 2] if i + 2 < n else None
-            if next_token in _SYMBOL_CONSUMING_COMMANDS or (
-                is_code_block(str(next_token)) and next_next_token in _DO_DOLIST
-            ):
+            if next_token in _SYMBOL_CONSUMING_COMMANDS:
                 entries.append((K_LOOKAHEAD_SYMBOL, token, None))
+            elif is_code_block(str(next_token)) and next_next_token in _DO_DOLIST:
+                entries.append((K_LOOP_VAR, token, None))
             else:
                 entries.append((K_DYNAMIC, token, None))
     return entries
@@ -178,6 +188,13 @@ class StackerCore:
         self.current_line: int | None = None
         self.source_lines: dict[int, str] = {}  # Map line number to source code
 
+        # Macro expansion state: set only on the throwaway core that runs a
+        # macro body. `_interp_scope` is the expansion scope whose own
+        # bindings get interpolated into block literals; `_interp_target_vars`
+        # is the caller's scope the interpolated copies must run in.
+        self._interp_scope: ScopedVariables | None = None
+        self._interp_target_vars: ScopedVariables | None = None
+
         if self.parent is not None:  # it is a substack of a parent stacker
             self.operator_manager = self.parent.operator_manager
             self.macros = self.parent.macros
@@ -185,6 +202,7 @@ class StackerCore:
             self.plugins = self.parent.plugins
             self.sfunctions = self.parent.sfunctions
             self.labels = self.parent.labels
+            self._prelude = self.parent._prelude
             # Share source location tracking with parent
             self.current_file = self.parent.current_file
             self.current_line = self.parent.current_line
@@ -206,6 +224,17 @@ class StackerCore:
         self.plugins: dict[str, object] = {}
         self.sfunctions: dict[str, object] = {}
         self.labels: dict[str, int] = {}
+        # Prelude bookkeeping, shared by reference with every child core:
+        # names defined by the prelude (for redefinition warnings), the very
+        # objects it defined (so `include` can tell them from user
+        # definitions), whether the prelude is being loaded right now, and
+        # whether it is enabled.
+        self._prelude: dict[str, object] = {
+            "names": set(),
+            "objects": {},
+            "loading": False,
+            "enabled": True,
+        }
 
     def _block_token_format(self, token: str) -> object:
         # Check if token is a nested code block
@@ -370,16 +399,37 @@ class StackerCore:
         else:
             entries = _classify_tokens(tokens)
         macros = self.macros
+        # Parameter interpolation applies only while a macro body (this
+        # core's own token list) is being run; any other token list -- an
+        # interpolated copy, a caller-supplied block, a runtime-built block --
+        # is left untouched.
+        interp = self._interp_scope if tokens is self.tokens else None
+        kernel_words = self.operator_manager.built_in_operators
+        plugins = self.plugins
 
         for kind, token, payload in entries:
             if kind == K_VALUE:
-                stack.append(token)  # Literal value
+                if interp is not None and isinstance(token, StackerCore):
+                    stack.append(self._interpolate(token, interp))
+                else:
+                    stack.append(token)  # Literal value
                 continue
-            # Macros take precedence over every other string-token kind,
-            # matching the former chain where the macro check came first.
+            if kind == K_LOOKAHEAD_SYMBOL:
+                # Shadowing rule: only kernel words are protected. Any other
+                # bare name before a binding form is the name being bound, so
+                # user definitions can be rebound by their bare name.
+                if token not in kernel_words and token not in plugins:
+                    stack.append(token)
+                    continue
+            elif kind == K_LOOP_VAR:
+                stack.append(token)
+                continue
+            # Macros take precedence over variables and operators. (At the
+            # lookahead position only kernel-word names get this far; any
+            # other name was just pushed as the name being bound.)
             if token in macros:
                 self._expand_macro(token, stack)
-            elif kind == K_DYNAMIC:
+            elif kind == K_DYNAMIC or kind == K_LOOKAHEAD_SYMBOL:
                 if (value := self.variables.get(token, _MISSING)) is not _MISSING:
                     # Variable reference - evaluate it
                     if isinstance(value, StackerLambda):
@@ -444,9 +494,6 @@ class StackerCore:
                 stack.append(payload)
             elif kind == K_BLOCK:
                 self._substack(token, stack)
-            else:  # K_LOOKAHEAD_SYMBOL
-                # Treat as symbol name regardless of whether it's a variable or operator
-                stack.append(token)
         return stack
 
     def _var_str_to_literal(self, value: object) -> object:
@@ -659,6 +706,8 @@ class StackerCore:
         symbol = stack.pop()
         name = self._dollar_to_var_name(symbol)
         value = self._pop_and_resolve(stack)
+        if name in self._prelude["names"]:
+            self._warn_prelude_redefinition(name)
         # Try to update existing variable in scope chain
         # If not found, create in local scope
         if not self.variables.update_existing(name, value):
@@ -670,11 +719,21 @@ class StackerCore:
         symbol = stack.pop()  # Pop varname
         name = self._dollar_to_var_name(symbol)
         value = self._pop_and_resolve(stack)  # Blocks bind raw (code is data)
+        if name in self._prelude["names"]:
+            self._warn_prelude_redefinition(name)
         # Always set in global (root) scope
         self.variables.set_global(name, value)
+
+    def _warn_prelude_redefinition(self, name: str) -> None:
+        """Logs a warning when user code redefines a word the prelude defined."""
+        if not self._prelude["loading"]:
+            _LOGGER.warning("redefining prelude word '%s'", name)
+
     def _prio_defun(self, op, stack) -> None:
         symbol = stack.pop()
         name = self._dollar_to_var_name(symbol)
+        if name in self._prelude["names"]:
+            self._warn_prelude_redefinition(name)
         body = stack.pop()
         fargs = stack.pop()  # str
         if isinstance(fargs, tuple):
@@ -688,10 +747,59 @@ class StackerCore:
         op["func"](self, name, fargs, body)
 
     def _prio_defmacro(self, op, stack) -> None:
+        """``{args} {body} name defmacro`` -- validates the three parts at definition time."""
         symbol = stack.pop()
         body = stack.pop()
+        try:
+            fargs = stack.pop()
+        except IndexError:
+            # The pre-1.15 two-term form `{body} name defmacro` lands here.
+            raise StackerSyntaxError(_DEFMACRO_USAGE) from None
         name = self._dollar_to_var_name(symbol)
-        op["func"](self, name, body)
+        if not isinstance(body, StackerCore):
+            raise StackerSyntaxError(
+                f"`defmacro` expects a code block as the macro body, got {body}. {_DEFMACRO_USAGE}"
+            )
+        if not isinstance(fargs, StackerCore):
+            raise StackerSyntaxError(
+                f"`defmacro` expects a code block of argument names, got {fargs}. {_DEFMACRO_USAGE}"
+            )
+        # Blocks store regular operator names as `String` (so `{+}` is a valid
+        # argument list), but a `String` that is not an operator name is a
+        # string literal and must be rejected like any other non-name token.
+        regular = self.operator_manager.operators["regular"]
+        args: list[str] = []
+        for token in fargs.tokens:
+            is_name = type(token) is str and not is_symbol(token)
+            is_operator_name = isinstance(token, String) and token.value in regular
+            if not (is_name or is_operator_name):
+                raise StackerSyntaxError(
+                    f"`defmacro` argument names must be bare names, got {token}"
+                )
+            args.append(str(token))
+        if len(set(args)) != len(args):
+            raise StackerSyntaxError(f"`defmacro` argument names must be unique: {{{' '.join(args)}}}")
+        if name in self._prelude["names"]:
+            self._warn_prelude_redefinition(name)
+        op["func"](self, name, args, body)
+
+    def _prio_macroexpand(self, op, stack) -> None:
+        name = self._dollar_to_var_name(stack.pop())
+        if name not in self.macros:
+            raise StackerSyntaxError(f"`macroexpand` expects a macro name, `{name}` is not a macro")
+        self._expand_macro(name, stack, evaluate=False)
+
+    def _prio_gensym(self, op, stack) -> None:
+        stack.append(gensym())
+
+    def _prio_concat_block(self, op, stack) -> None:
+        second = stack.pop()
+        first = stack.pop()
+        if not isinstance(first, StackerCore) or not isinstance(second, StackerCore):
+            raise StackerSyntaxError(
+                f"`concat-block` expects two code blocks, got {first} and {second}"
+            )
+        self._substack_with_tokens(list(first.tokens) + list(second.tokens), stack)
 
     def _prio_lambda(self, op, stack) -> None:
         body = stack.pop()
@@ -760,7 +868,10 @@ class StackerCore:
         if isinstance(iterable, (list, tuple)):
             stack.extend(iterable)  # type: ignore[arg-type]
         elif isinstance(iterable, StackerCore):
-            stack.extend(iterable.tokens)
+            # Each token becomes a one-token code block, so the pieces stay
+            # code (`{+}`) rather than leaking the raw token representation.
+            for token in iterable.tokens:
+                self._substack_with_tokens([token], stack)
         else:
             raise StackerSyntaxError(f"Cannot expand {iterable}")
 
@@ -810,6 +921,9 @@ class StackerCore:
         "global": _prio_global,
         "defun": _prio_defun,
         "defmacro": _prio_defmacro,
+        "macroexpand": _prio_macroexpand,
+        "gensym": _prio_gensym,
+        "concat-block": _prio_concat_block,
         "lambda": _prio_lambda,
         "eval": _prio_eval,
         "sub": _prio_sub,
@@ -1109,10 +1223,136 @@ class StackerCore:
             else:
                 raise StackerSyntaxError(f"Unknown operator '{body}'")
 
-    def _expand_macro(self, name: str, stack: stack_data[object]) -> None:
-        """Executes a macro."""
+    def _pop_macro_arg(self, stack: stack_data[object]) -> object:
+        """Pops a macro argument without evaluating it.
+
+        Like ``_pop_and_resolve`` (blocks stay raw, variable names resolve),
+        except that an undefined bare name is handed over as a symbol value
+        and a ``String`` keeps its type, so the interpolation rules can tell
+        a string literal from a name.
+
+        Args:
+            stack: Stack to pop from.
+
+        Returns:
+            The argument value.
+        """
+        value = stack.pop()
+        if isinstance(value, UndefinedSymbol):
+            return value.name
+        if isinstance(value, (StackerCore, list, tuple, String)):
+            return value
+        return self.variables.get(value, value)
+
+    def _interpolate(self, block: StackerCore, scope: ScopedVariables) -> StackerCore:
+        """Copies ``block`` with the expansion scope's own bindings spliced in.
+
+        Only the template tree is walked: values spliced in are never
+        re-scanned, so caller-supplied code is left exactly as written.
+        Bare-name tokens (and ``String`` tokens that are regular operator
+        names, since blocks store those as ``String``) bound in ``scope``
+        are replaced by their values; ``$name``, string literals and list
+        literals are untouched.
+
+        Args:
+            block: Block literal from the macro body.
+            scope: Expansion scope; only its own bindings are consulted.
+
+        Returns:
+            A fresh block whose scope is the caller's.
+        """
+        bindings = scope.own_bindings()
+        regular = self.operator_manager.operators["regular"]
+
+        def substitute(token: object) -> object:
+            if isinstance(token, StackerCore):
+                return build(token)
+            if type(token) is str:
+                name = token
+            elif isinstance(token, String) and token.value in regular:
+                name = token.value
+            else:
+                return token
+            if is_symbol(name) or name not in bindings:
+                return token
+            # A plain `str` value (from `$name` / `gensym`) becomes a bare
+            # name; a `String` stays a literal; anything else is spliced as-is.
+            return bindings[name]
+
+        def build(template: StackerCore) -> StackerCore:
+            copy_core = type(self)(parent=self)
+            copy_core.tokens = TokenList([substitute(token) for token in template.tokens])
+            copy_core.bracket_type = template.bracket_type
+            copy_core.variables = self._interp_target_vars  # type: ignore[assignment]
+            return copy_core
+
+        return build(block)
+
+    def _expand_macro(self, name: str, stack: stack_data[object], *, evaluate: bool = True) -> None:
+        """Expands a macro call and (by default) evaluates the expansion.
+
+        The body runs on a throwaway stack in a child scope of the caller
+        where the arguments are bound and assignments stay local. Exactly one
+        value must remain: a code block is evaluated on ``stack`` in the
+        caller's scope, any other value is pushed.
+
+        Args:
+            name: Macro name (already known to be in ``self.macros``).
+            stack: Caller's evaluation stack.
+            evaluate: When False (``macroexpand``), push the expansion instead
+                of evaluating it.
+
+        Raises:
+            StackUnderflowError: Not enough arguments on ``stack``.
+            NoValueProducedError: The body left nothing.
+            MacroExpansionError: The body left more than one value.
+        """
         macro: StackerMacro = self.macros[name]  # type: ignore[assignment]
-        self._evaluate(macro.blockstack.tokens, stack=stack)
+        recursion.enter(name, kind="macro")
+        try:
+            args: list[object] = []
+            for _ in range(macro.arg_count):
+                try:
+                    args.insert(0, self._pop_macro_arg(stack))
+                except IndexError:
+                    raise StackUnderflowError(name, macro.arg_count) from None
+
+            scope = self.variables.create_child_scope()
+            scope._write_barrier = True
+            for arg_name, value in zip(macro.args, args):
+                scope[arg_name] = value
+
+            expander = type(self)(parent=self)
+            expander.tokens = macro.body.tokens  # shared, read-only
+            expander.bracket_type = macro.body.bracket_type
+            expander.variables = scope
+            expander._interp_scope = scope
+            expander._interp_target_vars = self.variables
+            expansion_stack: stack_data[object] = stack_data()
+            try:
+                expander._evaluate(expander.tokens, stack=expansion_stack)
+            except StackerError as error:
+                attach_macro_context(error, f"while expanding macro '{name}'")
+                raise
+
+            if len(expansion_stack) == 0:
+                raise NoValueProducedError(
+                    name, f"Macro `{name}` left no value to use as its expansion."
+                )
+            if len(expansion_stack) > 1:
+                raise MacroExpansionError(name, len(expansion_stack))
+            result = expansion_stack.pop()
+
+            if not evaluate or not isinstance(result, StackerCore):
+                stack.append(result)
+                return
+            try:
+                self._eval_block(result, stack)
+            except StackerError as error:
+                attach_macro_context(error, f"in code generated by macro '{name}'")
+                raise
+        finally:
+            recursion.leave()
 
     def _stacker_lambda(self, arg: object, body: StackerCore, operator: str) -> object:
         lstack: list[object] = []

@@ -1,4 +1,4 @@
-"""Tests for using operator names as variables without $ prefix."""
+"""Tests for using operator names as variables (kernel words need an explicit `$name`)."""
 
 import unittest
 from stacker import Stacker
@@ -8,27 +8,27 @@ class TestOperatorNamesAsVariables(unittest.TestCase):
     """Test that operator names can be used as variable names without $."""
 
     def test_sum_as_variable(self):
-        """Test using 'sum' (a built-in operator) as a variable name."""
+        """Test using 'sum' (a built-in operator) as a variable name via `$sum`."""
         stacker = Stacker()
-        result = stacker.eval("10 sum set sum")
+        result = stacker.eval("10 $sum set sum")
         self.assertEqual(result[-1], 10)
 
     def test_sum_in_block_reassignment(self):
         """Test reassigning 'sum' variable inside a block."""
         stacker = Stacker()
-        result = stacker.eval("0 sum set 1 3 i {sum i + sum set} do sum")
+        result = stacker.eval("0 $sum set 1 3 i {sum i + $sum set} do sum")
         self.assertEqual(result[-1], 6)  # 0 + 1 + 2 + 3 = 6
 
     def test_max_as_variable(self):
-        """Test using 'max' (a built-in operator) as a variable name."""
+        """Test using 'max' (a built-in operator) as a variable name via `$max`."""
         stacker = Stacker()
-        result = stacker.eval("42 max set max")
+        result = stacker.eval("42 $max set max")
         self.assertEqual(result[-1], 42)
 
     def test_min_as_variable(self):
-        """Test using 'min' (a built-in operator) as a variable name."""
+        """Test using 'min' (a built-in operator) as a variable name via `$min`."""
         stacker = Stacker()
-        result = stacker.eval("99 min set min")
+        result = stacker.eval("99 $min set min")
         self.assertEqual(result[-1], 99)
 
     def test_operator_name_in_dolist(self):
@@ -49,7 +49,7 @@ class TestOperatorNamesAsVariables(unittest.TestCase):
     def test_variable_then_operator_same_name(self):
         """Test using a name as both variable and operator."""
         stacker = Stacker()
-        stacker.eval("100 sum set")  # Set sum as variable
+        stacker.eval("100 $sum set")  # Set sum as variable
         result = stacker.eval("sum")  # Get variable value
         self.assertEqual(result[-1], 100)
 

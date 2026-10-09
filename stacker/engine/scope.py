@@ -40,6 +40,10 @@ class ScopedVariables:
         """
         self._local: dict[str, object] = local_vars if local_vars is not None else {}
         self._parent: ScopedVariables | None = parent
+        # When True, `update_existing` stops at this scope instead of walking
+        # further up, so assignments made under it never touch outer scopes.
+        # Used by macro expansion scopes ("expansion is a pure computation").
+        self._write_barrier: bool = False
 
     def __getitem__(self, key: str) -> object:
         """
@@ -71,6 +75,14 @@ class ScopedVariables:
             value: Variable value
         """
         self._local[key] = value
+
+    def own_bindings(self) -> dict[str, object]:
+        """Returns this scope's own bindings (parents excluded), by reference.
+
+        Returns:
+            The local name-to-value mapping. Callers must not mutate it.
+        """
+        return self._local
 
     def set_global(self, key: str, value: object) -> None:
         """
@@ -106,6 +118,8 @@ class ScopedVariables:
             if key in scope._local:
                 scope._local[key] = value
                 return True
+            if scope._write_barrier:
+                return False
             scope = scope._parent
         return False
 

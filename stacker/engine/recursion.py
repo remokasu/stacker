@@ -29,18 +29,19 @@ _depth = 0
 _limit = DEFAULT_RECURSION_LIMIT
 
 
-def enter(name: str) -> None:
-    """Register entry into a Stacker function call.
+def enter(name: str, kind: str = "function") -> None:
+    """Register entry into a Stacker function call or macro expansion.
 
     Args:
-        name: Function name reported when the limit is exceeded.
+        name: Function or macro name reported when the limit is exceeded.
+        kind: ``"function"`` or ``"macro"``; only affects the error message.
 
     Raises:
         StackerRecursionError: If the call would exceed the limit.
     """
     global _depth
     if _depth >= _limit:
-        raise StackerRecursionError(name, _limit)
+        raise StackerRecursionError(name, _limit, kind)
     _depth += 1
 
 

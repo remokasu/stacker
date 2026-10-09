@@ -5,7 +5,7 @@
     {a}
     {b a b % gcd}
     ifelse
-} gcd defun
+} {gcd} defun  # `gcd` is a built-in word, so the name is quoted to redefine it
 
 # Calculate GCD of 48 and 18
 48 18 gcd echo  # Output: 6
