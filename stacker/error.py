@@ -121,6 +121,14 @@ class UndefinedSymbolError(StackerError):
         super().__init__(message)
 
 
+class StackerTypeError(StackerError, TypeError):
+    """Raised when a value of the wrong type reaches a word.
+
+    Also a ``TypeError`` so that callers catching Python's type errors keep
+    working.
+    """
+
+
 class StackerRecursionError(StackerError):
     """Raised when Stacker-level function recursion exceeds the limit.
 

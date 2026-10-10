@@ -12,7 +12,12 @@ from stacker.syntax.lexer import (
     UnifiedLexer,
 )
 from stacker.error import StackerSyntaxError
-from stacker.syntax.token_rules import is_string_token
+from stacker.syntax.token_rules import (  # noqa: F401 -- re-exported
+    is_code_block,
+    is_list,
+    is_string_token,
+    is_symbol,
+)
 
 __transpose_symbol__ = "^T"
 
@@ -284,76 +289,10 @@ def is_block(expression: str) -> bool:
     return expression.count("{") == expression.count("}") > 0
 
 
-def is_code_block(expression: str) -> bool:
-    """Check if expression is a code block (either {} or ()).
-
-    Code blocks can be delimited by either curly braces {} or parentheses ().
-    Both notations are functionally identical and create StackerCore substack objects.
-
-    Args:
-        expression: String to check
-
-    Returns:
-        True if expression has balanced braces or parentheses (non-empty), False otherwise
-
-    Examples:
-        >>> is_code_block("{1 2 +}")
-        True
-        >>> is_code_block("(1 2 +)")
-        True
-        >>> is_code_block("[1 2 3]")
-        False
-    """
-    if not isinstance(expression, str):
-        return False
-    # Fast path: check first and last characters before counting
-    if len(expression) < 2:
-        return False
-    first_char = expression[0]
-    last_char = expression[-1]
-    if first_char == "{" and last_char == "}":
-        return expression.count("{") == expression.count("}")
-    elif first_char == "(" and last_char == ")":
-        return expression.count("(") == expression.count(")")
-    return False
-
-
 def is_string(expression: str) -> bool:
     if not isinstance(expression, str):
         return False
     return is_string_token(expression)
-
-
-def is_list(expression: str) -> bool:
-    if not isinstance(expression, str):
-        return False
-    return expression.startswith("[") and expression.endswith("]")
-
-
-def is_symbol(expression: str) -> bool:
-    """Check if expression is a valid symbol (e.g., $name, $my_var).
-
-    Valid symbols:
-    - Start with exactly one $
-    - Followed by at least one character
-    - Do not contain $ elsewhere
-
-    Examples:
-        $name -> True
-        $x -> True
-        $ -> False (no name after $)
-        $$x -> False (multiple $ at start)
-        $name$ -> False ($ at end)
-    """
-    if not isinstance(expression, str):
-        return False
-    if len(expression) < 2:  # At least "$x"
-        return False
-    if not expression.startswith("$"):
-        return False
-    if "$" in expression[1:]:  # No $ after the first character
-        return False
-    return True
 
 
 def is_label_symbol(expression: str) -> bool:

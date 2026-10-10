@@ -3,9 +3,10 @@ from __future__ import annotations
 import os
 
 from stacker import constant, error, stacker
+from stacker.engine.data_type import Symbol
 from stacker.stacker import Stacker
 
-__all__ = ["stacker", "error", "constant", "include", "Stacker"]
+__all__ = ["stacker", "error", "constant", "include", "Stacker", "Symbol"]
 
 # リソースフォルダへのパスを取得する
 resource_path = os.path.join(os.path.dirname(__file__), "data")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
+from functools import total_ordering
 
 # class Operator:
 #     def __init__(self, name, func):
@@ -132,6 +133,54 @@ class String(str):
 
     def endswith(self, value: str) -> bool:  # type: ignore[override]
         return self.value.endswith(value)
+
+
+@total_ordering
+class Symbol:
+    """A name as a value.
+
+    ``$x``, a bare name at a name position, ``gensym`` and ``symbol`` push
+    one. A symbol is not a ``str``: it never compares equal to a string and
+    is never looked up by its text. Two symbols are equal when their names
+    are. Instances are immutable and may be shared freely.
+
+    Attributes:
+        name: The bare name.
+    """
+
+    __slots__ = ("name",)
+
+    def __init__(self, name: str) -> None:
+        object.__setattr__(self, "name", name)
+
+    def __setattr__(self, key: str, value: object) -> None:
+        raise AttributeError("Symbol is immutable")
+
+    def __delattr__(self, key: str) -> None:
+        raise AttributeError("Symbol is immutable")
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Symbol) and other.name == self.name
+
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, Symbol):
+            return NotImplemented
+        return self.name < other.name
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return f"Symbol({self.name!r})"
+
+    def __copy__(self) -> Symbol:
+        return self
+
+    def __deepcopy__(self, memo: dict[int, object]) -> Symbol:
+        return self
 
 
 class UndefinedSymbol(str):
