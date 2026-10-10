@@ -15,6 +15,8 @@ Note: This change is not backwards compatible with previous versions.
   - Rebinding a built-in name still works with an explicit quote: `3 $dup set` or `3 {dup} set`. Your own variables, functions and macros can be redefined by their bare name as before
 - **`expand` On Code Blocks**:
   - `{1 2 +} expand` now pushes one-token code blocks `{1} {2} {+}` instead of the raw token representation (which left the operator as a string and made `{1 2 +} expand +` fail). `expand` on lists is unchanged
+- **Name Positions Are Always Names**:
+  - A bare name right before `macroexpand`, and the two names before the block of `reduce` / `fold`, are now read as names, like the name before `set` or the loop variable of `do`. A variable that happened to hold a name can no longer be used there by its bare name (`$m which set which macroexpand` used to expand `m`); write the name itself: `m macroexpand`, `{m} macroexpand`
 - **Prelude Is Loaded By `Stacker()`**:
   - The Stacker-written standard words (`alias`, `mean`) are loaded by every new interpreter, not only by the command line, so embedding code and scripts see the same words. `Stacker(prelude=False)` gives a bare interpreter
   - On the command line the prelude is now loaded before plugins (previously after), so the prelude cannot refer to plugin words
@@ -26,6 +28,8 @@ Note: This change is not backwards compatible with previous versions.
 - Code that rebinds a built-in name with a bare name, e.g. `0 sum set` or `} max defun`, must quote the name: `0 $sum set`, `} {max} defun`
 - Code that relied on `expand` turning a block into raw tokens should use `eval` on the pieces, or `concat-block` to build code
 - Embedding code that inspected a fresh interpreter's macros or functions and expected them to be empty should create it with `Stacker(prelude=False)`
+- Code that passed a macro name to `macroexpand`, or accumulator / element names to `reduce` / `fold`, through a variable should write the names directly (`m macroexpand`, `0 acc x {acc x +} reduce`)
+- An operator name taken out of a block as data (`{+} 0 nth`) or wrapped with `sub` from a string (`"+" sub`) is a name, not code: `eval` on it no longer runs the operator. Use `expand` or `apply` to run code taken from a block
 
 ### Added
 
@@ -52,6 +56,11 @@ Note: This change is not backwards compatible with previous versions.
   - A string literal inside a block used to be looked up as a name when the block ran: `5 foo set {"foo"} eval` gave `5`, `3 4 {"+"} eval` added the numbers, and a macro named `foo` captured `"foo"` even at top level. A string literal now always evaluates to itself, wherever it is written
   - As a consequence, literals whose text looks like other syntax stay strings inside blocks too: `{"$x"}`, `{"[1 2]"}` and `{"{x}"}` push the strings `$x`, `[1 2]` and `{x}` (they used to be read as a symbol, a list and a block)
   - A block displays its string literals with their quotes: `{"a b" echo}` shows as `{"a b" echo}`
+- `"..." eval` no longer substitutes variable values while tokenizing, so `5 x set "6 x set x" eval` rebinds `x` and gives `6`, the same as `read-from-string eval`. A lambda held in a variable is now called when its name appears in the evaluated string, as it is inside a block
+- A bare literal (`5 3 set`, `5 True set`) or a quoted literal (`3 {5} set`) is never taken as a name; these report a syntax error instead of binding a variable named `3`, `True` or `5`
+- `[1 2] eval` pushes the list back instead of raising a Python `TypeError`
+- An undefined name given to the aggregate operators (`len`, `sum`, ...), the transforms (`list`, `sorted`, `reversed`, `enumerate`) or `zip` raises `UndefinedSymbolError` instead of being treated as the text of the name (`foo len` gave 3)
+- Inside a block given to an aggregate, a string literal is a string: `5 a set {"a"} max` gives `a`, not 5, and `{"1" "2"} sum` is a type error like `["1" "2"] sum`
 
 ## [1.14.0] - 2026-08-07
 

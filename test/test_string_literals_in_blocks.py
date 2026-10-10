@@ -87,6 +87,12 @@ class TestBlocksReadAsData:
     def test_map(self):
         assert run('{"a" "b"} {"!" +} map') == [["a!", "b!"]]
 
+    def test_aggregates_do_not_reread_literals_as_code(self):
+        # `{"a"} max` used to look up the variable `a`; `{"1" "2"} sum` used to add 3.
+        assert run("5 a set", '{"a"} max') == ["a"]
+        with pytest.raises(TypeError):
+            run('{"1" "2"} sum')
+
 
 def test_block_display_shows_string_literals_with_quotes():
     (block,) = run('{"a b" echo}')

@@ -203,6 +203,17 @@ class TestErrorOrdering(unittest.TestCase):
                 self.stacker.process_expression('"hello" print [1 2 }]')
         self.assertEqual(buf.getvalue(), "hello\n")
 
+    def test_side_effect_before_fatal_literal_error(self):
+        # A pathological literal (1.14.0) raises MemoryError or RecursionError
+        # from ast.literal_eval. Like any other error it must be raised when
+        # the token executes, after `print` has run, never during the
+        # classification pass that looks ahead for names.
+        pathological = "-" * 100_000 + "1"
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            with self.assertRaises((RecursionError, MemoryError)):
+                self.stacker.process_expression(f'"hello" print {pathological}')
+        self.assertIn("hello", buf.getvalue())
 
 if __name__ == "__main__":
     unittest.main()

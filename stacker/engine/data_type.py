@@ -140,7 +140,10 @@ class UndefinedSymbol(str):
     This type is used for identifiers that are not yet defined.
     When pushed to the stack, they remain as UndefinedSymbol.
     If an operation tries to use them (e.g., arithmetic), an error is raised.
-    They can be consumed by 'set', 'defun', 'defmacro', 'do', 'dolist' as symbol names.
+    When one reaches a name position (`set`, `=`, `global`, `defun`, `defmacro`,
+    `macroexpand`, and the names before the block of `do`, `dolist`, `reduce`,
+    `fold`) it is used as that name. Normally a bare name written in such a
+    position is already read as a name and never becomes an UndefinedSymbol.
     """
 
     def __init__(self, name: str) -> None:

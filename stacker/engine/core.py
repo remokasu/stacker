@@ -44,9 +44,15 @@ _DEFMACRO_USAGE = (
 
 
 # Commands that expect a symbol name as the preceding argument
-_SYMBOL_CONSUMING_COMMANDS = frozenset({"set", "=", "defun", "defmacro", "global"})
-# Loop commands whose preceding block is itself preceded by a symbol name
+_SYMBOL_CONSUMING_COMMANDS = frozenset({"set", "=", "defun", "defmacro", "global", "macroexpand"})
+# Words of the form `... name {block} WORD`: the name before the block is bound
 _DO_DOLIST = frozenset({"do", "dolist"})
+# Words of the form `... name name {block} WORD`: both names are bound
+_REDUCE_FOLD = frozenset({"reduce", "fold"})
+_BLOCK_BINDING_WORDS = _DO_DOLIST | _REDUCE_FOLD
+# First characters a Python literal can start with; anything else is a name
+# without consulting ast.literal_eval (keeps the classifier cheap).
+_LITERAL_START = frozenset("0123456789+-.([{'\"NTFbBrRuUfFs")
 # Sentinel for single-lookup scope reads (None is a valid variable value)
 _MISSING = object()
 
@@ -74,7 +80,7 @@ K_SYMBOL = 3  # $name: payload is the name without the $ prefix
 K_BLOCK = 4  # code-block source: substack is created at evaluation time
 K_LOOKAHEAD_SYMBOL = 5  # bare name right before a binding form (set/defun/...)
 K_DYNAMIC = 6  # name resolved against runtime state on every evaluation
-K_LOOP_VAR = 7  # bare loop-variable name before `{block} do` / `{block} dolist`
+K_LOOP_VAR = 7  # bare name bound by do / dolist / reduce / fold (before their block)
 
 
 def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
@@ -120,13 +126,62 @@ def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
         else:
             next_token = tokens[i + 1] if i + 1 < n else None
             next_next_token = tokens[i + 2] if i + 2 < n else None
-            if next_token in _SYMBOL_CONSUMING_COMMANDS:
-                entries.append((K_LOOKAHEAD_SYMBOL, token, None))
-            elif is_code_block(str(next_token)) and next_next_token in _DO_DOLIST:
-                entries.append((K_LOOP_VAR, token, None))
+            third_token = tokens[i + 3] if i + 3 < n else None
+            # Only raw source tokens are words; a String literal that reads
+            # "set" or a list value must never be mistaken for one.
+            word1 = next_token if type(next_token) is str else None
+            word2 = next_next_token if type(next_next_token) is str else None
+            word3 = third_token if type(third_token) is str else None
+            if word1 in _SYMBOL_CONSUMING_COMMANDS:
+                kind = K_LOOKAHEAD_SYMBOL
+            elif word2 in _BLOCK_BINDING_WORDS and _is_block_token(next_token):
+                # `name {block} do`, and the second name of `acc x {block} reduce`
+                kind = K_LOOP_VAR
+            elif (
+                word3 in _REDUCE_FOLD
+                and _is_block_token(next_next_token)
+                and _is_bare_name(next_token)
+            ):
+                # the first name of `acc x {block} reduce`
+                kind = K_LOOP_VAR
             else:
-                entries.append((K_DYNAMIC, token, None))
+                kind = K_DYNAMIC
+            if kind != K_DYNAMIC and not _reads_as_name(token):
+                kind = K_DYNAMIC  # a literal (number, True, None, ...) is never a name
+            entries.append((kind, token, None))
     return entries
+
+
+def _reads_as_name(token: str) -> bool:
+    """True if a raw token is a name rather than a Python literal.
+
+    A fatal error from a pathological token (``MemoryError`` /
+    ``RecursionError``) is swallowed here and the token is treated as a
+    name, exactly as before any literal check existed; the error is then
+    raised at the token's execution position, not during classification.
+    """
+    if not token or token[0] not in _LITERAL_START:
+        return True
+    try:
+        return isinstance(_cached_literal_eval(token), str)
+    except (MemoryError, RecursionError):
+        return True
+
+
+def _is_block_token(token: object) -> bool:
+    """True if ``token`` is a code block, as source text or already built."""
+    return isinstance(token, StackerCore) or (type(token) is str and is_code_block(token))
+
+
+def _is_bare_name(token: object) -> bool:
+    """True if ``token`` is a bare name: a raw str that is not a literal, list or block."""
+    return (
+        type(token) is str
+        and not is_string_token(token)
+        and not is_list(token)
+        and not is_code_block(token)
+        and _reads_as_name(token)
+    )
 
 
 class TokenList(list):
@@ -377,7 +432,9 @@ class StackerCore:
     def _eval(self, expr: str, stack: stack_data[object] | None = None) -> stack_data[object]:
         if stack is None:
             stack = stack_data()
-        tokens = list(map(self._literal_eval, parse_expression(expr)))
+        # Same path as `read-from-string`: build block tokens and evaluate
+        # them, so names resolve at evaluation time, not while tokenizing.
+        tokens = TokenList(map(self._block_token_format, parse_expression(expr)))
         self._evaluate(tokens, stack=stack)
         return stack
 
@@ -500,6 +557,9 @@ class StackerCore:
         return stack
 
     def _var_str_to_literal(self, value: object) -> object:
+        if isinstance(value, UndefinedSymbol):
+            # Popped from the stack: the same error every other consumer raises.
+            raise UndefinedSymbolError(value.name)
         if isinstance(value, str) and is_string_token(value):
             return String(strip_string_delimiters(value))
         elif isinstance(value, str) and is_symbol(value):
@@ -796,7 +856,7 @@ class StackerCore:
 
     def _prio_eval(self, op, stack) -> None:
         expression = stack.pop()
-        if expression in self.variables:
+        if isinstance(expression, str) and expression in self.variables:
             expression = self.variables[expression]
         if isinstance(expression, String):
             self._eval(expression.value, stack=stack)
@@ -1084,7 +1144,9 @@ class StackerCore:
         """Execute an aggregate operator over a literal-evaluated block or list argument."""
         agg_args = stack.pop()
         agg_args = (
-            list(map(self._literal_eval, agg_args.tokens))
+            # A String token is already a literal; re-evaluating its text
+            # would read `{"a"} max` as the variable `a`.
+            [t if isinstance(t, String) else self._literal_eval(t) for t in agg_args.tokens]
             if isinstance(agg_args, StackerCore)
             else self._var_str_to_literal(agg_args)
         )
@@ -1155,12 +1217,10 @@ class StackerCore:
                 return symbol[1:]
             else:
                 return symbol
-        elif isinstance(symbol, StackerCore):
-            if len(symbol.tokens) == 1:
-                if is_symbol(symbol.tokens[0]):
-                    return symbol.tokens[0][1:]  # type: ignore[index]
-                else:
-                    return symbol.tokens[0]  # type: ignore[return-value]
+        elif isinstance(symbol, StackerCore) and len(symbol.tokens) == 1:
+            token = symbol.tokens[0]
+            if isinstance(token, str):
+                return token[1:] if is_symbol(token) else token
         raise StackerSyntaxError(f"Expected a symbol, got {symbol}")
 
     def _get_hof_func(self, body: object, operator: str) -> Callable[..., object]:
@@ -1363,7 +1423,9 @@ class StackerCore:
             if isinstance(item, StackerCore):
                 return str(item)
             elif isinstance(item, String):
-                return f'"{item.value}"'  # a string literal, quotes and all
+                # A string literal, quotes and all (single quotes if the text has double ones).
+                quote = "'" if '"' in item.value and "'" not in item.value else '"'
+                return f"{quote}{item.value}{quote}"
             elif is_list(item):
                 return item.replace(",", " ")  # type: ignore[union-attr]
             # REMOVED: Tuple handling - () now creates code blocks
