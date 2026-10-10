@@ -144,15 +144,17 @@ Stacker allows for straightforward RPN input. For example:
     **Three ways to write a name.** A name can be written bare (`x`), as a symbol (`$x`) or quoted (`{x}`).
     Which one you need depends on where it stands:
 
-    - Right before `set`, `=`, `global`, `defun` or `defmacro`, and as the loop variable of `do` / `dolist`,
-      a bare name is read as the name being bound, so `3 x set` and `0 10 i {i echo} do` need no `$`.
-      The one exception is a built-in operator name right before a binding form: `3 dup set` runs `dup` (and
-      `set` then fails). To bind a built-in name on purpose, write `3 $dup set` or `3 {dup} set`. (A loop
-      variable may have any name.) Your own variables, functions and macros can be redefined by their bare
-      name; redefining a prelude word such as `alias` logs a warning.
+    - Right before `set`, `=`, `global`, `defun`, `defmacro` or `macroexpand`, as the loop variable of
+      `do` / `dolist`, and as the two names before the block of `reduce` / `fold`, a bare name is read as the
+      name being bound, so `3 x set`, `0 10 i {i echo} do` and `[1 2 3] 0 acc x {acc x +} reduce` need no `$`.
+      The one exception is a built-in operator name right before `set`, `=`, `global`, `defun`, `defmacro` or
+      `macroexpand`: `3 dup set` runs `dup` (and `set` then fails). To bind a built-in name on purpose, write
+      `3 $dup set` or `3 {dup} set`. (A loop or accumulator variable may have any name.) Your own variables,
+      functions and macros can be redefined by their bare name; redefining a prelude word such as `alias`
+      logs a warning. A literal is never a name: `5 3 set` is an error.
     - Anywhere else a bare name is looked up: as a macro, then a variable, then an operator, otherwise it
-      stays an undefined symbol. `$x` instead pushes the symbol `x` itself as a value, which is what words such as
-      `macroexpand` expect: `{x} {{x x}} m defmacro 3 $m macroexpand`.
+      stays an undefined symbol. `$x` instead pushes the symbol `x` itself as a value, which is how a name is
+      handed to a word that does not read it from the position right before itself, such as a macro.
     - `{x}` (a block holding only the name) is the form that means "this name" everywhere, including as an
       argument to a macro. Prefer it when passing a name to `alias`, `macroexpand` or your own macros: a macro
       argument written `$x` or `x` is resolved as a variable reference when a variable `x` exists.

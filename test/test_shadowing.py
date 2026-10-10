@@ -109,3 +109,49 @@ def test_plugin_registered_after_a_function_body_was_classified_is_protected():
     # operator, so `set` receives 14 instead of a name.
     with pytest.raises(StackerSyntaxError, match="14"):
         stacker.eval("f", stack=stacker.stack)
+
+
+class TestLiteralsAreNeverNames:
+    """`5 3 set 3` used to bind a variable named `3`, and `3 {5} set` one
+    keyed by the integer 5."""
+
+    @pytest.mark.parametrize(
+        "expression",
+        ["5 3 set", "3 {5} set", "{a} {a} 7 defun", "5 True set", "5 None set"],
+        ids=["number-set", "quoted-number", "number-defun", "True", "None"],
+    )
+    def test_literal_in_a_name_position_is_a_syntax_error(self, expression):
+        with pytest.raises(StackerSyntaxError):
+            run(expression)
+
+    @pytest.mark.parametrize(
+        ("name", "value"), [("{x}", 5), ('{"x"}', 5), ("{$x}", 5)], ids=["bare", "string", "dollar"]
+    )
+    def test_one_token_blocks_holding_text_are_names(self, name, value):
+        assert run(f"{value} {name} set x") == [value]
+
+    def test_multi_token_block_is_not_a_name(self):
+        with pytest.raises(StackerSyntaxError):
+            run("5 {x y} set")
+
+
+class TestEveryNameTakingWordReadsBareNames:
+    """Bare names right before `macroexpand`, and the two names before the
+    block of `reduce` / `fold`, used to be looked up as variables."""
+
+    def test_bare_macro_name_before_macroexpand(self):
+        (block,) = run("{} {{1}} m defmacro", "m macroexpand")
+        assert list(block.tokens) == [1]
+
+    @pytest.mark.parametrize("word", ["reduce", "fold"])
+    def test_both_names_before_the_block_are_names_even_when_variables_exist(self, word):
+        assert run("9 x set 9 acc set", f"[1 2 3] 0 acc x {{acc x +}} {word}") == [6]
+
+    @pytest.mark.parametrize("word", ["reduce", "fold"])
+    def test_dollar_names_still_work(self, word):
+        assert run(f"[1 2 3] 0 $acc $x {{acc x +}} {word}") == [6]
+
+    @pytest.mark.parametrize("word", ["set", "=", "global", "defun", "defmacro", "macroexpand", "do"])
+    def test_string_literal_reading_like_a_binding_word_is_not_a_binding_word(self, word):
+        # `{x "set"}`: the literal "set" must not turn the `x` before it into a name.
+        assert run("5 x set", f'{{x "{word}"}} eval') == [5, word]

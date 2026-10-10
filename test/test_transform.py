@@ -65,3 +65,16 @@ class TestUnit(unittest.TestCase):
     # REMOVED: test_list_tuple - () now creates code blocks, not tuples
 
     # REMOVED: All tuple operator tests - tuple operator deprecated
+
+
+class TestUndefinedNameArgument(unittest.TestCase):
+    """An undefined name given to a transform (or to `zip`, which shares the
+    argument handling) used to be treated as a one-character string."""
+
+    def test_undefined_name_raises(self):
+        from stacker.error import UndefinedSymbolError
+
+        for expression in ("q list", "q sorted", "q reversed", "q enumerate", "q [1] zip"):
+            with self.subTest(expression=expression):
+                with self.assertRaises(UndefinedSymbolError):
+                    Stacker().eval(expression)

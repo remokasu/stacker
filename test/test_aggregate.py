@@ -118,3 +118,20 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(ans[-1], 3)
 
     # REMOVED: test_len_tuple - () now creates code blocks, not tuples
+
+
+class TestUndefinedNameArgument(unittest.TestCase):
+    """An undefined name used to be treated as a one-character string
+    (`q len` answered 1); it is an error, as for every other operator."""
+
+    def test_undefined_name_raises(self):
+        from stacker.error import UndefinedSymbolError
+
+        for operator in ("len", "sum", "max", "min", "any", "all"):
+            with self.subTest(operator=operator):
+                with self.assertRaises(UndefinedSymbolError):
+                    Stacker().eval(f"q {operator}")
+
+    def test_defined_name_still_works(self):
+        stacker = Stacker()
+        self.assertEqual(stacker.eval("[1 2 3] q set q len").pop(), 3)
