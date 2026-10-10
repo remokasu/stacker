@@ -29,7 +29,7 @@ Note: This change is not backwards compatible with previous versions.
 - Code that relied on `expand` turning a block into raw tokens should use `eval` on the pieces, or `concat-block` to build code
 - Embedding code that inspected a fresh interpreter's macros or functions and expected them to be empty should create it with `Stacker(prelude=False)`
 - Code that passed a macro name to `macroexpand`, or accumulator / element names to `reduce` / `fold`, through a variable should write the names directly (`m macroexpand`, `0 acc x {acc x +} reduce`)
-- An operator name taken out of a block as data (`{+} 0 nth`) or wrapped with `sub` from a string (`"+" sub`) is a name, not code: `eval` on it no longer runs the operator. Use `expand` or `apply` to run code taken from a block
+- `eval` on an operator name taken out of a block as data (`{+} 0 nth`), or on a name wrapped with `sub` from a string (`"+" sub`), pushes it back instead of running the operator. Use `expand` or `apply` to run code taken from a block
 
 ### Added
 
