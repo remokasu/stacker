@@ -82,9 +82,10 @@ def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
 
     Mirrors the branch order of ``StackerCore._evaluate`` exactly, minus the
     macro check (macros are runtime state, so that check stays in the
-    evaluation loop). Quote checks call the token object's own
-    ``startswith``/``endswith`` so ``String`` subclass overrides behave as
-    they do at runtime.
+    evaluation loop). A ``String`` object is always a string literal
+    (``K_STRING``): blocks store their literals that way, and a literal must
+    never be looked up as a name, whatever text it holds. Quote checks on raw
+    source tokens go through ``is_string_token``.
 
     Args:
         tokens: Token list as produced by the parser / block formatter.
@@ -97,6 +98,8 @@ def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
     for i, token in enumerate(tokens):
         if not isinstance(token, str):
             entries.append((K_VALUE, token, None))
+        elif isinstance(token, String):
+            entries.append((K_STRING, token, token))
         elif is_string_token(token):
             entries.append((K_STRING, token, String(strip_string_delimiters(token))))
         elif is_list(token):
@@ -237,27 +240,26 @@ class StackerCore:
         }
 
     def _block_token_format(self, token: str) -> object:
-        # Check if token is a nested code block
+        """Converts one source token of a block into its stored form.
+
+        Nested blocks become ``StackerCore`` instances, string literals become
+        ``String`` values (which the classifier always treats as literals) and
+        other Python literals become values. Everything else, including
+        operator names and ``$x``, stays a raw token for lazy resolution.
+
+        Args:
+            token: One token of the block's source.
+
+        Returns:
+            The stored token.
+        """
         if is_code_block(token):
-            # Convert to StackerCore instance
             temp_stack: stack_data[object] = stack_data()
             self._substack(token, temp_stack)
             return temp_stack.pop()
-        # For non-code-block tokens, evaluate to preserve proper types
-        # but don't resolve variables (keep them as strings for lazy evaluation)
-        if token in self.operator_manager.operators["regular"]:
-            return self._literal_eval2(f'"{token}"')
-        # Try to evaluate as literal (numbers, strings, etc.)
-        # but fallback to string if it's an identifier
-        try:
-            if is_string_token(token):
-                return String(strip_string_delimiters(token))
-            else:
-                return _cached_literal_eval(token)
-        except (ValueError, TypeError, SyntaxError):
-            # Keep as string for lazy evaluation (variables, operators, etc.).
-            # Fatal errors (MemoryError / RecursionError) must propagate.
-            return token
+        if is_string_token(token):
+            return String(strip_string_delimiters(token))
+        return _cached_literal_eval(token)
 
     def _substack(self, token: str, stack: stack_data[object]) -> None:
         """Creates a substack from a code block.
@@ -414,6 +416,9 @@ class StackerCore:
                 else:
                     stack.append(token)  # Literal value
                 continue
+            if kind == K_STRING:
+                stack.append(payload)  # a string literal is never a name
+                continue
             if kind == K_LOOKAHEAD_SYMBOL:
                 # Shadowing rule: only kernel words are protected. Any other
                 # bare name before a binding form is the name being bound, so
@@ -457,8 +462,6 @@ class StackerCore:
                         stack.append(UndefinedSymbol(evaluated))
                     else:
                         stack.append(evaluated)
-            elif kind == K_STRING:
-                stack.append(payload)
             elif kind == K_LIST:
                 if payload is None:
                     # Malformed template: reproduce the original inline parse
@@ -536,20 +539,6 @@ class StackerCore:
                 # Malformed literal: fall back to the raw token. Fatal errors
                 # (MemoryError / RecursionError) must propagate.
                 return token
-
-    def _literal_eval2(self, token: str) -> object:
-        # Check for code blocks (both {} and ())
-        # token is guaranteed to be str by type hint, so no isinstance check needed
-        if is_code_block(token):
-            # Convert code block to StackerCore instance
-            temp_stack: stack_data[object] = stack_data()
-            self._substack(token, temp_stack)
-            return temp_stack.pop()
-        elif is_string_token(token):
-            return String(strip_string_delimiters(token))
-        else:
-            # Use cached literal_eval for performance
-            return _cached_literal_eval(token)
 
     def _execute(self, token: str, stack: stack_data[object]) -> None:
         """
@@ -764,19 +753,13 @@ class StackerCore:
             raise StackerSyntaxError(
                 f"`defmacro` expects a code block of argument names, got {fargs}. {_DEFMACRO_USAGE}"
             )
-        # Blocks store regular operator names as `String` (so `{+}` is a valid
-        # argument list), but a `String` that is not an operator name is a
-        # string literal and must be rejected like any other non-name token.
-        regular = self.operator_manager.operators["regular"]
         args: list[str] = []
         for token in fargs.tokens:
-            is_name = type(token) is str and not is_symbol(token)
-            is_operator_name = isinstance(token, String) and token.value in regular
-            if not (is_name or is_operator_name):
+            if type(token) is not str or is_symbol(token):
                 raise StackerSyntaxError(
                     f"`defmacro` argument names must be bare names, got {token}"
                 )
-            args.append(str(token))
+            args.append(token)
         if len(set(args)) != len(args):
             raise StackerSyntaxError(f"`defmacro` argument names must be unique: {{{' '.join(args)}}}")
         if name in self._prelude["names"]:
@@ -1249,10 +1232,8 @@ class StackerCore:
 
         Only the template tree is walked: values spliced in are never
         re-scanned, so caller-supplied code is left exactly as written.
-        Bare-name tokens (and ``String`` tokens that are regular operator
-        names, since blocks store those as ``String``) bound in ``scope``
-        are replaced by their values; ``$name``, string literals and list
-        literals are untouched.
+        Bare-name tokens bound in ``scope`` are replaced by their values;
+        ``$name``, string literals and list literals are untouched.
 
         Args:
             block: Block literal from the macro body.
@@ -1262,22 +1243,15 @@ class StackerCore:
             A fresh block whose scope is the caller's.
         """
         bindings = scope.own_bindings()
-        regular = self.operator_manager.operators["regular"]
 
         def substitute(token: object) -> object:
             if isinstance(token, StackerCore):
                 return build(token)
-            if type(token) is str:
-                name = token
-            elif isinstance(token, String) and token.value in regular:
-                name = token.value
-            else:
-                return token
-            if is_symbol(name) or name not in bindings:
-                return token
+            if type(token) is not str or is_symbol(token) or token not in bindings:
+                return token  # literals, `$name` and unbound names stay as written
             # A plain `str` value (from `$name` / `gensym`) becomes a bare
             # name; a `String` stays a literal; anything else is spliced as-is.
-            return bindings[name]
+            return bindings[token]
 
         def build(template: StackerCore) -> StackerCore:
             copy_core = type(self)(parent=self)
@@ -1388,6 +1362,8 @@ class StackerCore:
         def format_item(item: object) -> str:
             if isinstance(item, StackerCore):
                 return str(item)
+            elif isinstance(item, String):
+                return f'"{item.value}"'  # a string literal, quotes and all
             elif is_list(item):
                 return item.replace(",", " ")  # type: ignore[union-attr]
             # REMOVED: Tuple handling - () now creates code blocks

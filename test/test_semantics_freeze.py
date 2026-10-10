@@ -7,6 +7,11 @@ the language. Expected values were captured by running each program
 against the unmodified interpreter; they are frozen observations, not
 derived from first principles. If one of these tests fails after an
 optimization, the optimization changed the language.
+
+A frozen observation is not a specification: when one turns out to be a
+defect it is corrected on purpose, the test is rewritten to pin the fixed
+behavior, and the change is recorded in the CHANGELOG (see the String
+literal cases below and the lazy block binding case above).
 """
 
 import contextlib
@@ -124,8 +129,14 @@ class TestListLiteralFreshness(unittest.TestCase):
 
 
 class TestStringTokenQuirks(unittest.TestCase):
-    """String is a str subclass; the classification chain must keep treating
-    it exactly as today, including the block-built String quirk."""
+    """A string literal is a string literal wherever it is written.
+
+    Before 1.15.0 a literal inside a block lost its quotes when the block was
+    built, so `{"foo"}` was looked up as the name `foo` on evaluation (the
+    "block-built String quirk", frozen here as a known defect). The quirk is
+    fixed: the classifier treats every String object as a literal, so a
+    variable, operator or macro named `foo` cannot capture `"foo"`.
+    """
 
     def setUp(self):
         self.stacker = Stacker()
@@ -139,11 +150,12 @@ class TestStringTokenQuirks(unittest.TestCase):
         self.assertEqual(top, "foo")
 
     def test_string_token_in_block_with_same_named_variable(self):
-        # Inside a block, "foo" is pre-converted to String("foo") at block
-        # build time; on evaluation its overridden startswith sees no quotes,
-        # so it falls through to variable lookup and resolves to 5.
+        # Inside a block, "foo" stays a String literal even if a variable
+        # named foo exists, exactly as at top level.
         self.stacker.process_expression('5 foo set {"foo"} 1 times')
-        self.assertEqual(list(self.stacker.stack), [5])
+        top = self.stacker.stack[-1]
+        self.assertIsInstance(top, String)
+        self.assertEqual(list(self.stacker.stack), ["foo"])
 
 
 class TestUndefinedSymbolBehavior(unittest.TestCase):

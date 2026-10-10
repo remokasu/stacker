@@ -10,12 +10,13 @@ triple-quoted tokens (``\"\"\"...\"\"\"`` / ``'''...'''``, one token with
 delimiters preserved, since 1.11.0) are recognized.
 
 Note:
-    These helpers intentionally duck-type ``startswith``/``endswith``
-    instead of isinstance-checking, so that ``String`` subclass overrides
-    behave exactly as they do in the evaluation loop (pinned by
-    ``test_semantics_freeze.py::TestStringTokenQuirks``). Do not add an
+    These helpers duck-type ``startswith``/``endswith`` instead of
+    isinstance-checking, so any str-like token object works. Do not add an
     ``isinstance(token, str)`` guard here; callers that need one (e.g.
-    ``parser.is_string``) apply it themselves.
+    ``parser.is_string``) apply it themselves. A ``String`` object (a
+    literal whose delimiters are already stripped) is recognized by type in
+    the classifier before these predicates are consulted, so its overridden
+    ``startswith`` seeing no quotes no longer matters.
 
     The call sites previously inlined these checks as a hot-path
     optimization; benchmarks confirmed the function-call cost is
