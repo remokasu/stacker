@@ -20,11 +20,12 @@ class TestSystemOperators(unittest.TestCase):
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.stacker.process_expression("vars")
             output = fake_out.getvalue()
-            # Built-in constants should be present
+            # Built-in constants should be present; true / false / null are
+            # literals (1.16.0), not variables, so they are not listed
             self.assertIn("e =", output)
             self.assertIn("pi =", output)
-            self.assertIn("true =", output)
-            self.assertIn("false =", output)
+            self.assertNotIn("true =", output)
+            self.assertNotIn("false =", output)
 
     def test_vars_with_user_variables(self):
         """Test vars with user-defined variables."""

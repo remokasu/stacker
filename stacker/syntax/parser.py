@@ -18,6 +18,7 @@ from stacker.syntax.token_rules import (  # noqa: F401 -- re-exported
     is_string_token,
     is_symbol,
 )
+from stacker.syntax.token_rules import not_a_symbol_message
 
 __transpose_symbol__ = "^T"
 
@@ -98,6 +99,10 @@ class Parser:
             return ast.literal_eval(token.value)
         elif token.type == TokenType.IDENTIFIER:
             return Identifier(token.value)
+        elif token.type == TokenType.SYMBOL:
+            if not is_symbol(token.value):
+                raise StackerSyntaxError(not_a_symbol_message(token.value))
+            return Identifier(token.value)  # formatted as '$name', a symbol element
         elif token.type == TokenType.SEMICOLON:
             return ";"
         elif token.type == TokenType.COMMA:
