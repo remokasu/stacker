@@ -139,15 +139,22 @@ Stacker allows for straightforward RPN input. For example:
     ```
     In this example, we assign `3` to `x` using `set`, and `5` to `y` using `=`. Both operators work identically.
 
-    **Note:** The `$` prefix (e.g., `$x`) is supported for backward compatibility but no longer required.
-
     **Note:** The `=` operator is an alias for `set` and can be used interchangeably. Use whichever feels more natural for your coding style.
 
-    **Built-in names are protected.** A bare name written right before `set`, `=`, `global`, `defun` or
-    `defmacro` is the name being bound, except when it is a built-in operator: then it runs as that operator
-    (`3 dup set` duplicates the 3 and `set` fails). To rebind a built-in name on purpose, quote it with
-    `$name` or `{name}`: `3 $dup set` or `3 {dup} set`. Your own variables, functions and macros can be
-    redefined by their bare name. Redefining a word that comes from the prelude (such as `alias`) logs a warning.
+    **Three ways to write a name.** A name can be written bare (`x`), as a symbol (`$x`) or quoted (`{x}`).
+    Which one you need depends on where it stands:
+
+    - Right before `set`, `=`, `global`, `defun` or `defmacro`, and as the loop variable of `do` / `dolist`,
+      a bare name is read as the name being bound, so `3 x set` and `0 10 i {i echo} do` need no `$`.
+      The one exception is a built-in operator name: `3 dup set` runs `dup` (and `set` then fails). To bind
+      a built-in name on purpose, write `3 $dup set` or `3 {dup} set`. Your own variables, functions and
+      macros can be redefined by their bare name; redefining a prelude word such as `alias` logs a warning.
+    - Anywhere else a bare name is looked up: as a variable, then as an operator, otherwise it stays an
+      undefined symbol. `$x` instead pushes the symbol `x` itself as a value, which is what words such as
+      `macroexpand` expect: `{x} {{x x}} m defmacro 3 $m macroexpand`.
+    - `{x}` (a block holding only the name) is the form that means "this name" everywhere, including as an
+      argument to a macro. Prefer it when passing a name to `alias`, `macroexpand` or your own macros: a macro
+      argument written `$x` or `x` is resolved as a variable reference when a variable `x` exists.
 
 - Arrays:
   - Single-line array:
