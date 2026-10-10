@@ -106,10 +106,14 @@ class TestNoDollarSyntax(unittest.TestCase):
         with self.assertRaises(Exception):
             stacker.eval("5 undefined_var +")
 
-    def test_string_variable_name_still_works(self):
-        """Test that string-based variable names still work."""
+    def test_string_is_not_a_variable_name(self):
+        """A string is data (1.16.0); `symbol` turns it into a name."""
+        from stacker.error import StackerSyntaxError
+
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval('5 "stringvar" set stringvar')
+        with self.assertRaises(StackerSyntaxError):
+            stacker.eval('5 "stringvar" set')
+        result = stacker.eval('5 "stringvar" symbol set stringvar')
         self.assertEqual(result[-1], 5)
 
     def test_equal_operator_without_dollar(self):

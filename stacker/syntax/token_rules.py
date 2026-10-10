@@ -181,6 +181,15 @@ def cached_literal_eval(token: str) -> object:
         return token
 
 
+def is_symbol_name(name: object) -> bool:
+    """Return True if ``name`` can be the name of a symbol (written back as ``$name``).
+
+    Unlike a token from the lexer, a string value may hold whitespace, so
+    that is checked here in addition to :func:`is_bare_name`.
+    """
+    return is_bare_name(name) and not any(ch.isspace() for ch in name)  # type: ignore[union-attr]
+
+
 def not_a_symbol_message(token: str) -> str:
     """The error message for a ``$`` token that does not name anything."""
     return f"`{token}` is not a symbol: `$` must be followed by a name"

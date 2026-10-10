@@ -31,6 +31,7 @@ from stacker.syntax.token_rules import (
     is_list,
     is_string_token,
     is_symbol,
+    is_symbol_name,
     not_a_symbol_message,
     reads_as_name,
     strip_string_delimiters,
@@ -847,6 +848,25 @@ class StackerCore:
     def _prio_gensym(self, op, stack) -> None:
         stack.append(gensym())
 
+    def _prio_symbol(self, op, stack) -> None:
+        """``x symbol`` -- a symbol from a string, a quoted name or a symbol (identity)."""
+        value = stack.pop()
+        if isinstance(value, Symbol):
+            stack.append(value)
+        elif isinstance(value, str):
+            name = str(value)
+            if not is_symbol_name(name):
+                raise StackerSyntaxError(
+                    f"`symbol` expects a string that reads as a name, got {name!r}"
+                )
+            stack.append(Symbol(name))
+        elif isinstance(value, StackerCore) and len(value.tokens) == 1 and is_symbol(value.tokens[0]):
+            stack.append(Symbol(value.tokens[0][1:]))  # type: ignore[index]
+        elif isinstance(value, StackerCore) and len(value.tokens) == 1 and is_bare_name(value.tokens[0]):
+            stack.append(Symbol(value.tokens[0]))  # type: ignore[arg-type]
+        else:
+            raise StackerSyntaxError(f"`symbol` expects a string or a quoted name, got {value}")
+
     def _prio_concat_block(self, op, stack) -> None:
         second = stack.pop()
         first = stack.pop()
@@ -993,6 +1013,10 @@ class StackerCore:
 
     def _prio_include(self, op, stack) -> None:
         filename = stack.pop()
+        if not isinstance(filename, str):
+            raise StackerTypeError(
+                f'`include` expects the file path as a string, e.g. "lib.stk" include; got {filename}'
+            )
         op["func"](self, filename)
 
     def _prio_exit(self, op, stack) -> None:
@@ -1018,6 +1042,7 @@ class StackerCore:
         "defmacro": _prio_defmacro,
         "macroexpand": _prio_macroexpand,
         "gensym": _prio_gensym,
+        "symbol": _prio_symbol,
         "concat-block": _prio_concat_block,
         "lambda": _prio_lambda,
         "eval": _prio_eval,
@@ -1238,6 +1263,11 @@ class StackerCore:
         """Execute a settings operator; disable_plugin additionally pops the target name."""
         if token == "disable_plugin":
             operator_name = stack.pop()
+            if not isinstance(operator_name, str):
+                raise StackerTypeError(
+                    '`disable_plugin` expects the plugin name as a string, '
+                    f'e.g. "name" disable_plugin; got {operator_name}'
+                )
             op["func"](self, operator_name)  # type: ignore[operator]
         else:
             op["func"](self)  # type: ignore[operator]
@@ -1262,7 +1292,8 @@ class StackerCore:
         - a ``Symbol`` (``$name``, ``gensym``, a bare name read at a name
           position) -> its name
         - ``{name}`` / ``{$name}`` (quoted name: a one-token block) -> ``name``
-        - a string (temporarily, until strings stop naming things) -> its text
+        - a string is data, never a name -> ``StackerSyntaxError`` (the
+          message shows ``$name``, ``{name}`` and ``symbol``)
         - anything else (a multi-token block, a number, ...) -> ``StackerSyntaxError``
 
         Args:
@@ -1277,13 +1308,22 @@ class StackerCore:
         """
         if isinstance(symbol, Symbol):
             return symbol.name
+        if isinstance(symbol, UndefinedSymbol):
+            return symbol.name
         if isinstance(symbol, StackerCore) and len(symbol.tokens) == 1:
             token = symbol.tokens[0]
-            if isinstance(token, str):
-                return token[1:] if is_symbol(token) else token
-        elif isinstance(symbol, str):
-            return symbol[1:] if is_symbol(symbol) else str(symbol)
-        raise StackerSyntaxError(f"Expected a symbol, got {symbol}")
+            if is_symbol(token):
+                return token[1:]  # type: ignore[index]
+            if is_bare_name(token):
+                return token  # type: ignore[return-value]
+            if isinstance(token, String):
+                symbol = token  # `{"x"}` is a string literal, not a name
+        if isinstance(symbol, str):
+            raise StackerSyntaxError(
+                f"`{word}` expects a name, got the string {str(symbol)!r}. "
+                f"Write ${symbol} or {{{symbol}}}, or convert a string with `symbol`."
+            )
+        raise StackerSyntaxError(f"`{word}` expects a name, got {symbol}")
 
     def _parse_arg_names(self, fargs: object, word: str) -> list[str]:
         """Validates an argument list ``{a b ...}`` and returns the names.
