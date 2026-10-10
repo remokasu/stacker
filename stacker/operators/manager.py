@@ -121,6 +121,12 @@ special_operators = {
         "push_result_to_stack": True,
         "desc": "Pushes a fresh unique symbol (for temporaries in macro-generated code).",
     },
+    "symbol": {
+        "func": None,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": 'Makes a symbol from a string or a quoted name: "x" symbol -> $x, {x} symbol -> $x',
+    },
     "macroexpand": {
         "func": None,
         "arg_count": 1,

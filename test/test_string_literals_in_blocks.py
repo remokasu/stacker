@@ -8,6 +8,7 @@ variable, operator or macro with the same text captured the literal.
 import pytest
 
 from stacker.engine.data_type import String
+from stacker.error import StackerSyntaxError
 from stacker.stacker import Stacker
 
 
@@ -60,9 +61,11 @@ def test_literal_text_that_looks_like_other_syntax_stays_a_string(literal, expec
     assert result == [expected]
 
 
-def test_literal_right_before_set_names_the_variable():
-    # `"dup"` names the variable; it must not run the `dup` operator.
-    assert run('{5 "dup" set} eval dup') == [5]
+def test_literal_right_before_set_is_not_a_name():
+    # `"dup"` is a string, so `set` rejects it (1.16.0); the `dup` operator
+    # is not run either way.
+    with pytest.raises(StackerSyntaxError):
+        run('{5 "dup" set} eval')
 
 
 def test_literal_passed_to_a_macro_stays_a_literal_in_generated_code():

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from stacker.engine.data_type import Symbol
+
 
 type_operators = {
     "int": {
@@ -79,5 +81,11 @@ type_operators = {
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Returns true if the value is a number (int, float, or complex)",
+    },
+    "symbol?": {
+        "func": (lambda x: isinstance(x, Symbol)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns true if the value is a symbol ($name)",
     },
 }

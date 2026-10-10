@@ -124,11 +124,14 @@ class TestLiteralsAreNeverNames:
         with pytest.raises(StackerSyntaxError):
             run(expression)
 
-    @pytest.mark.parametrize(
-        ("name", "value"), [("{x}", 5), ('{"x"}', 5), ("{$x}", 5)], ids=["bare", "string", "dollar"]
-    )
-    def test_one_token_blocks_holding_text_are_names(self, name, value):
+    @pytest.mark.parametrize(("name", "value"), [("{x}", 5), ("{$x}", 5)], ids=["bare", "dollar"])
+    def test_one_token_blocks_holding_a_name_are_names(self, name, value):
         assert run(f"{value} {name} set x") == [value]
+
+    def test_one_token_block_holding_a_string_is_not_a_name(self):
+        # A string literal is data wherever it is written (1.16.0).
+        with pytest.raises(StackerSyntaxError):
+            run('5 {"x"} set')
 
     def test_multi_token_block_is_not_a_name(self):
         with pytest.raises(StackerSyntaxError):

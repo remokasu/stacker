@@ -338,3 +338,77 @@ class TestListLiterals:
     def test_lists_are_fresh_on_every_evaluation(self):
         assert run("[] lst set 1 3 $i {lst [i i] + lst set} do lst") == [[1, 1, 2, 2, 3, 3]]
 
+
+class TestStringsAreNotNames:
+    @pytest.mark.parametrize(
+        "program",
+        ['5 "x" set', '5 {"x"} set', '"m" macroexpand', '[1 2] 0 "acc" "x" {acc x +} reduce', '{a} {a} "f" defun'],
+    )
+    def test_rejected_at_name_positions(self, program):
+        with pytest.raises(StackerSyntaxError):
+            run(program)
+
+    def test_message_shows_the_three_ways_to_write_a_name(self):
+        with pytest.raises(StackerSyntaxError) as info:
+            run('5 "x" set')
+        assert "`set` expects a name, got the string 'x'" in str(info.value)
+        assert "$x or {x}" in str(info.value) and "`symbol`" in str(info.value)
+
+    def test_a_string_holding_a_dollar_name_is_still_a_string(self):
+        with pytest.raises(StackerSyntaxError):
+            run('5 "$x" set')
+
+    def test_non_names_are_rejected_with_the_word(self):
+        with pytest.raises(StackerSyntaxError) as info:
+            run("5 {x y} set")
+        assert "`set` expects a name" in str(info.value)
+
+
+class TestSymbolWord:
+    @pytest.mark.parametrize("program", ['"x" symbol', "{x} symbol", "{$x} symbol", "$x symbol"])
+    def test_makes_the_same_symbol(self, program):
+        assert run(program) == [Symbol("x")]
+
+    @pytest.mark.parametrize(
+        "program",
+        ['"1" symbol', '"a b" symbol', '"" symbol', '"$x" symbol', '"{x}" symbol', '"true" symbol',
+         '{"x"} symbol', "{x y} symbol", "5 symbol", "[1] symbol"],
+    )
+    def test_rejects_what_cannot_be_a_name(self, program):
+        with pytest.raises(StackerSyntaxError):
+            run(program)
+
+    def test_makes_a_name_usable_at_name_positions(self):
+        assert run('5 "x" symbol set x') == [5]
+        assert run('[1 4 9] "sqrt" symbol map') == [[1.0, 2.0, 3.0]]
+
+    def test_round_trip_with_str(self):
+        assert run('"x" symbol str') == ["x"]
+
+
+class TestSymbolPredicateAndType:
+    def test_symbol_predicate(self):
+        assert run("$x symbol?") == [True]
+        assert run('"x" symbol?') == [False]
+        assert run("5 symbol?") == [False]
+        assert run("{x} symbol?") == [False]
+
+    def test_str_predicate_is_false_for_symbols(self):
+        assert run("$x str?") == [False]
+        assert run('"x" str?') == [True]
+
+    def test_type_of_a_symbol(self):
+        assert run("$x type") == [Symbol]
+
+
+class TestStringArguments:
+    def test_disable_plugin_takes_a_string(self, capsys):
+        run('"nonexistent" disable_plugin')
+        assert "not registered" in capsys.readouterr().out
+        with pytest.raises(StackerTypeError):
+            run("$nonexistent disable_plugin")
+
+    def test_include_takes_a_string(self):
+        with pytest.raises(StackerTypeError):
+            run("$lib include")
+
