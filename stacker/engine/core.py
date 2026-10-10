@@ -19,7 +19,8 @@ from stacker.syntax.parser import (
     parse_expression,
 )
 from stacker.error import BreakException
-from stacker.engine.data_type import String, UndefinedSymbol, stack_data, VOID
+from stacker.engine.boundary import value_to_token
+from stacker.engine.data_type import String, Symbol, UndefinedSymbol, stack_data, VOID
 from stacker.syntax.token_rules import (
     cached_literal_eval,
     is_bare_name,
@@ -61,11 +62,11 @@ _MISSING = object()
 K_VALUE = 0  # non-str token: push as-is
 K_STRING = 1  # quoted string literal: payload is the prebuilt String
 K_LIST = 2  # list literal: payload is the parsed template (or None)
-K_SYMBOL = 3  # $name: payload is the name without the $ prefix
+K_SYMBOL = 3  # $name: payload is the Symbol
 K_BLOCK = 4  # code-block source: substack is created at evaluation time
-K_LOOKAHEAD_SYMBOL = 5  # bare name right before a binding form (set/defun/...)
+K_LOOKAHEAD_SYMBOL = 5  # bare name right before a binding form (set/defun/...): payload is the Symbol
 K_DYNAMIC = 6  # name resolved against runtime state on every evaluation
-K_LOOP_VAR = 7  # bare name bound by do / dolist / reduce / fold (before their block)
+K_LOOP_VAR = 7  # bare name bound by do / dolist / reduce / fold (before their block): payload is the Symbol
 
 
 def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
@@ -105,7 +106,7 @@ def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
                 template = None
             entries.append((K_LIST, token, template))
         elif is_symbol(token):
-            entries.append((K_SYMBOL, token, token[1:]))
+            entries.append((K_SYMBOL, token, Symbol(token[1:])))
         elif is_code_block(token):
             entries.append((K_BLOCK, token, None))
         else:
@@ -133,7 +134,7 @@ def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
                 kind = K_DYNAMIC
             if kind != K_DYNAMIC and not reads_as_name(token):
                 kind = K_DYNAMIC  # a literal (number, True, None, ...) is never a name
-            entries.append((kind, token, None))
+            entries.append((kind, token, None if kind == K_DYNAMIC else Symbol(token)))
     return entries
 
 
@@ -329,9 +330,21 @@ class StackerCore:
         return
 
     def _pop_and_eval(self, stack: stack_data[object]) -> object:
+        """Pops an operator argument, evaluating a code block to its value.
+
+        A ``String`` is handed to host functions as a plain ``str``. Every
+        other value, a ``Symbol`` included, is returned as it is: a name is
+        never looked up here, so ``$x`` stays the symbol ``x`` whether or
+        not a variable ``x`` exists.
+
+        Args:
+            stack: Stack to pop from.
+
+        Returns:
+            The argument value.
+        """
         value = stack.pop()
 
-        # Check if value is an UndefinedSymbol
         if isinstance(value, UndefinedSymbol):
             raise UndefinedSymbolError(value.name)
 
@@ -351,41 +364,29 @@ class StackerCore:
                 # This allows void functions (functions with side effects only)
                 # VOID will not be pushed to the stack, unlike None
                 return VOID
-        else:
-            if isinstance(value, (list, tuple)):
-                return value
-            elif isinstance(value, String):
-                return value.value
-            return self.variables.get(value, value)
+        if isinstance(value, String):
+            return value.value
+        return value
 
     def _pop_and_resolve(self, stack: stack_data[object]) -> object:
-        """Pop an assignment value, binding code blocks without evaluating.
+        """Pops a value for a binding form without evaluating it.
 
-        Assignment-only counterpart of ``_pop_and_eval``:
-        ``=`` / ``set`` / ``global`` are binding forms — like the
-        defun/lambda/if/loop bodies — so a code block is returned raw
-        ("code is data") instead of being evaluated at assignment time.
-        Every other resolution rule (UndefinedSymbol check, list/String
-        handling, variable lookup) is identical to ``_pop_and_eval``.
+        ``=`` / ``set`` / ``global`` and the parameters of functions and
+        lambdas are binding forms: a code block is bound raw ("code is
+        data"), a ``String`` keeps its type and a ``Symbol`` stays a symbol.
+        Nothing is looked up as a variable.
 
         Args:
-            stack: Stack to pop the assignment value from.
+            stack: Stack to pop the value from.
 
         Returns:
-            The resolved value; code blocks are returned unevaluated.
+            The value, unevaluated.
         """
         value = stack.pop()
 
         if isinstance(value, UndefinedSymbol):
             raise UndefinedSymbolError(value.name)
-
-        if isinstance(value, StackerCore):
-            return value
-        if isinstance(value, (list, tuple)):
-            return value
-        if isinstance(value, String):
-            return value.value
-        return self.variables.get(value, value)
+        return value
 
     def _eval(self, expr: str, stack: stack_data[object] | None = None) -> stack_data[object]:
         if stack is None:
@@ -439,10 +440,10 @@ class StackerCore:
                 # bare name before a binding form is the name being bound, so
                 # user definitions can be rebound by their bare name.
                 if token not in kernel_words and token not in plugins:
-                    stack.append(token)
+                    stack.append(payload)  # the Symbol
                     continue
             elif kind == K_LOOP_VAR:
-                stack.append(token)
+                stack.append(payload)  # the Symbol
                 continue
             # Macros take precedence over variables and operators. (At the
             # lookahead position only kernel-word names get this far; any
@@ -451,16 +452,9 @@ class StackerCore:
                 self._expand_macro(token, stack)
             elif kind == K_DYNAMIC or kind == K_LOOKAHEAD_SYMBOL:
                 if (value := self.variables.get(token, _MISSING)) is not _MISSING:
-                    # Variable reference - evaluate it
-                    if isinstance(value, StackerLambda):
-                        args: list[object] = []
-                        for _ in range(value.arg_count):
-                            # Parameters are binding forms: block
-                            # arguments bind raw (code is data)
-                            args.insert(0, self._pop_and_resolve(stack))
-                        stack.append(value(*args))
-                    else:
-                        stack.append(value)
+                    # A variable reference pushes the value, whatever it is:
+                    # a lambda is a value too and is called with `eval`.
+                    stack.append(value)
                 elif (
                     token in self.operator_manager.built_in_operators
                     or token in self.sfunctions
@@ -509,7 +503,7 @@ class StackerCore:
                         ]
                     )
             elif kind == K_SYMBOL:
-                stack.append(payload)
+                stack.append(payload)  # the Symbol
             elif kind == K_BLOCK:
                 self._substack(token, stack)
         return stack
@@ -662,14 +656,14 @@ class StackerCore:
         symbol = stack.pop()
         end_value = self._pop_and_eval(stack)
         start_value = self._pop_and_eval(stack)
-        name = self._dollar_to_var_name(symbol)
+        name = self._name_of(symbol, "do")
         op["func"](start_value, end_value, name, body, self, stack)
 
     def _prio_dolist(self, op, stack) -> None:
         body = stack.pop()
         symbol = stack.pop()
         lst = self._pop_and_eval(stack)
-        name = self._dollar_to_var_name(symbol)
+        name = self._name_of(symbol, "dolist")
         op["func"](name, lst, body, self, stack)
 
     def _prio_times(self, op, stack) -> None:
@@ -715,7 +709,7 @@ class StackerCore:
 
     def _prio_set(self, op, stack) -> None:
         symbol = stack.pop()
-        name = self._dollar_to_var_name(symbol)
+        name = self._name_of(symbol, "set")
         value = self._pop_and_resolve(stack)
         if name in self._prelude["names"]:
             self._warn_prelude_redefinition(name)
@@ -728,7 +722,7 @@ class StackerCore:
         # RPN: value varname global
         # Stack: [..., value, varname]
         symbol = stack.pop()  # Pop varname
-        name = self._dollar_to_var_name(symbol)
+        name = self._name_of(symbol, "global")
         value = self._pop_and_resolve(stack)  # Blocks bind raw (code is data)
         if name in self._prelude["names"]:
             self._warn_prelude_redefinition(name)
@@ -741,20 +735,13 @@ class StackerCore:
             _LOGGER.warning("redefining prelude word '%s'", name)
 
     def _prio_defun(self, op, stack) -> None:
+        """``{args} {body} name defun`` -- the argument list is validated like ``defmacro``'s."""
         symbol = stack.pop()
-        name = self._dollar_to_var_name(symbol)
+        name = self._name_of(symbol, "defun")
         if name in self._prelude["names"]:
             self._warn_prelude_redefinition(name)
         body = stack.pop()
-        fargs = stack.pop()  # str
-        if isinstance(fargs, tuple):
-            fargs = list(fargs)
-        elif isinstance(fargs, list):
-            fargs = fargs
-        elif isinstance(fargs, StackerCore):
-            fargs = fargs.tokens
-        else:
-            fargs = [fargs]
+        fargs = self._parse_arg_names(stack.pop(), "defun")
         op["func"](self, name, fargs, body)
 
     def _prio_defmacro(self, op, stack) -> None:
@@ -766,30 +753,18 @@ class StackerCore:
         except IndexError:
             # The pre-1.15 two-term form `{body} name defmacro` lands here.
             raise StackerSyntaxError(_DEFMACRO_USAGE) from None
-        name = self._dollar_to_var_name(symbol)
+        name = self._name_of(symbol, "defmacro")
         if not isinstance(body, StackerCore):
             raise StackerSyntaxError(
                 f"`defmacro` expects a code block as the macro body, got {body}. {_DEFMACRO_USAGE}"
             )
-        if not isinstance(fargs, StackerCore):
-            raise StackerSyntaxError(
-                f"`defmacro` expects a code block of argument names, got {fargs}. {_DEFMACRO_USAGE}"
-            )
-        args: list[str] = []
-        for token in fargs.tokens:
-            if type(token) is not str or is_symbol(token):
-                raise StackerSyntaxError(
-                    f"`defmacro` argument names must be bare names, got {token}"
-                )
-            args.append(token)
-        if len(set(args)) != len(args):
-            raise StackerSyntaxError(f"`defmacro` argument names must be unique: {{{' '.join(args)}}}")
+        args = self._parse_arg_names(fargs, "defmacro")
         if name in self._prelude["names"]:
             self._warn_prelude_redefinition(name)
         op["func"](self, name, args, body)
 
     def _prio_macroexpand(self, op, stack) -> None:
-        name = self._dollar_to_var_name(stack.pop())
+        name = self._name_of(stack.pop(), "macroexpand")
         if name not in self.macros:
             raise StackerSyntaxError(f"`macroexpand` expects a macro name, `{name}` is not a macro")
         self._expand_macro(name, stack, evaluate=False)
@@ -807,8 +782,9 @@ class StackerCore:
         self._substack_with_tokens(list(first.tokens) + list(second.tokens), stack)
 
     def _prio_lambda(self, op, stack) -> None:
+        """``{args} {body} lambda`` -- the argument list is validated like ``defmacro``'s."""
         body = stack.pop()
-        fargs = stack.pop()
+        fargs = self._parse_arg_names(stack.pop(), "lambda")
         if op["push_result_to_stack"]:
             result = op["func"](fargs, body)
             if result is not VOID:
@@ -817,30 +793,68 @@ class StackerCore:
             op["func"](fargs, body)
 
     def _prio_eval(self, op, stack) -> None:
+        """Evaluates the top value.
+
+        - a ``Symbol`` is evaluated as its name, exactly as if the bare name
+          had been written here (macro, variable, function or operator)
+        - a string is evaluated as source code
+        - a code block is evaluated on this stack
+        - a lambda is called with arguments taken from this stack
+        - anything else is pushed back
+        """
         expression = stack.pop()
-        if isinstance(expression, str) and expression in self.variables:
-            expression = self.variables[expression]
-        if isinstance(expression, String):
-            self._eval(expression.value, stack=stack)
+        if isinstance(expression, Symbol):
+            self._evaluate([expression.name], stack=stack)
+        elif isinstance(expression, UndefinedSymbol):
+            stack.append(expression)
+        elif isinstance(expression, str):
+            self._eval(str(expression), stack=stack)
         elif isinstance(expression, StackerCore):
             self._eval_block(expression, stack=stack)
         elif isinstance(expression, StackerLambda):
-            largs: list[object] = []
-            for _ in range(expression.arg_count):
-                largs.insert(0, self._pop_and_eval(stack))
-            stack.append(expression(*largs))
+            self._call_lambda(expression, stack)
         else:
             stack.append(expression)
 
+    def _call_lambda(self, fn: StackerLambda, stack: stack_data[object]) -> None:
+        """Calls a lambda value with arguments popped from ``stack``.
+
+        Parameters are binding forms, so a code-block argument is bound raw
+        (code is data), like a function parameter. A ``VOID`` result is not
+        pushed.
+
+        Args:
+            fn: The lambda to call.
+            stack: Stack holding the arguments; the result is pushed here.
+
+        Raises:
+            StackUnderflowError: Fewer than ``fn.arg_count`` values on ``stack``.
+        """
+        args: list[object] = []
+        try:
+            for _ in range(fn.arg_count):
+                args.insert(0, self._pop_and_resolve(stack))
+        except IndexError:
+            raise StackUnderflowError("lambda", fn.arg_count) from None
+        result = fn(*args)
+        if result is not VOID:
+            stack.append(result)
+
     def _prio_sub(self, op, stack) -> None:
-        token = stack.pop()
-        self._substack_with_tokens([token], stack)
+        self._substack_with_tokens([self._as_token(stack.pop())], stack)
 
     def _prio_subn(self, op, stack) -> None:
         n = stack.pop()
-        elms = [stack.pop() for _ in range(n)]  # type: ignore[arg-type]
+        elms = [self._as_token(stack.pop()) for _ in range(n)]  # type: ignore[arg-type]
         elms.reverse()
         self._substack_with_tokens(elms, stack)
+
+    @staticmethod
+    def _as_token(value: object) -> object:
+        """``value_to_token`` that still lets an ``UndefinedSymbol`` through as a bare name."""
+        if isinstance(value, UndefinedSymbol):
+            return value.name
+        return value_to_token(value)
 
     def _prio_listn(self, op, stack) -> None:
         n = stack.pop()
@@ -894,10 +908,7 @@ class StackerCore:
         if isinstance(func, StackerCore):
             self._eval_block(func, stack=stack)
         elif isinstance(func, StackerLambda):
-            largs: list[object] = []
-            for _ in range(func.arg_count):
-                largs.insert(0, self._pop_and_eval(stack))
-            stack.append(func(*largs))
+            self._call_lambda(func, stack)
         elif isinstance(func, str):
             self._execute(func, stack)
 
@@ -1012,8 +1023,8 @@ class StackerCore:
             fold_args = stack.pop()
 
             # Extract variable names (same as dolist pattern)
-            name_acc = self._dollar_to_var_name(symbol_acc)
-            name_x = self._dollar_to_var_name(symbol_x)
+            name_acc = self._name_of(symbol_acc, token)
+            name_x = self._name_of(symbol_x, token)
 
             # Create binary function with variable binding
             def reduce_func(acc: object, x: object) -> object:
@@ -1157,33 +1168,65 @@ class StackerCore:
         "settings": _exec_settings,
     }
 
-    def _dollar_to_var_name(self, symbol: object) -> str:
+    def _name_of(self, symbol: object, word: str) -> str:
         """Normalizes the forms a name can be written in to the bare name.
 
-        - ``$symbol`` -> ``symbol``
-        - ``symbol`` (bare name or symbol value) -> ``symbol``
-        - ``{symbol}`` / ``{$symbol}`` (quoted symbol: a one-token block) -> ``symbol``
+        - a ``Symbol`` (``$name``, ``gensym``, a bare name read at a name
+          position) -> its name
+        - ``{name}`` / ``{$name}`` (quoted name: a one-token block) -> ``name``
+        - a string (temporarily, until strings stop naming things) -> its text
         - anything else (a multi-token block, a number, ...) -> ``StackerSyntaxError``
 
         Args:
             symbol: Value popped from the stack at a name position.
+            word: The word reading the name (for the error message).
 
         Returns:
-            The bare name.
+            The bare name, the key used in the variable scopes.
 
         Raises:
             StackerSyntaxError: If ``symbol`` cannot denote a name.
         """
-        if isinstance(symbol, str):
-            if is_symbol(symbol):
-                return symbol[1:]
-            else:
-                return symbol
-        elif isinstance(symbol, StackerCore) and len(symbol.tokens) == 1:
+        if isinstance(symbol, Symbol):
+            return symbol.name
+        if isinstance(symbol, StackerCore) and len(symbol.tokens) == 1:
             token = symbol.tokens[0]
             if isinstance(token, str):
                 return token[1:] if is_symbol(token) else token
+        elif isinstance(symbol, str):
+            return symbol[1:] if is_symbol(symbol) else str(symbol)
         raise StackerSyntaxError(f"Expected a symbol, got {symbol}")
+
+    def _parse_arg_names(self, fargs: object, word: str) -> list[str]:
+        """Validates an argument list ``{a b ...}`` and returns the names.
+
+        Shared by ``defun``, ``lambda`` and ``defmacro``: the list must be a
+        code block whose tokens are distinct bare names (no ``$a``, string,
+        literal or nested block).
+
+        Args:
+            fargs: The value written where the argument list goes.
+            word: The defining word (for the error messages).
+
+        Returns:
+            The argument names in order.
+
+        Raises:
+            StackerSyntaxError: If ``fargs`` is not a valid argument list.
+        """
+        if not isinstance(fargs, StackerCore):
+            hint = f" {_DEFMACRO_USAGE}" if word == "defmacro" else ""
+            raise StackerSyntaxError(
+                f"`{word}` expects a code block of argument names, got {fargs}.{hint}"
+            )
+        names: list[str] = []
+        for token in fargs.tokens:
+            if type(token) is not str or is_symbol(token) or not is_bare_name(token):
+                raise StackerSyntaxError(f"`{word}` argument names must be bare names, got {token}")
+            names.append(token)
+        if len(set(names)) != len(names):
+            raise StackerSyntaxError(f"`{word}` argument names must be unique: {{{' '.join(names)}}}")
+        return names
 
     def _get_hof_func(self, body: object, operator: str) -> Callable[..., object]:
         if isinstance(body, StackerCore):
@@ -1231,10 +1274,9 @@ class StackerCore:
     def _pop_macro_arg(self, stack: stack_data[object]) -> object:
         """Pops a macro argument without evaluating it.
 
-        Like ``_pop_and_resolve`` (blocks stay raw, variable names resolve),
-        except that an undefined bare name is handed over as a symbol value
-        and a ``String`` keeps its type, so the interpolation rules can tell
-        a string literal from a name.
+        Like ``_pop_and_resolve``: blocks stay raw, a ``String`` keeps its
+        type and a ``Symbol`` stays a symbol. An undefined bare name (still
+        pushed as ``UndefinedSymbol`` for now) is handed over as a symbol.
 
         Args:
             stack: Stack to pop from.
@@ -1244,10 +1286,8 @@ class StackerCore:
         """
         value = stack.pop()
         if isinstance(value, UndefinedSymbol):
-            return value.name
-        if isinstance(value, (StackerCore, list, tuple, String)):
-            return value
-        return self.variables.get(value, value)
+            return Symbol(value.name)
+        return value
 
     def _interpolate(self, block: StackerCore, scope: ScopedVariables) -> StackerCore:
         """Copies ``block`` with the expansion scope's own bindings spliced in.
@@ -1271,9 +1311,9 @@ class StackerCore:
                 return build(token)
             if type(token) is not str or is_symbol(token) or token not in bindings:
                 return token  # literals, `$name` and unbound names stay as written
-            # A plain `str` value (from `$name` / `gensym`) becomes a bare
-            # name; a `String` stays a literal; anything else is spliced as-is.
-            return bindings[token]
+            # A symbol becomes a bare name, a string a string literal,
+            # anything else is spliced as a value (see engine/boundary.py).
+            return value_to_token(bindings[token])
 
         def build(template: StackerCore) -> StackerCore:
             copy_core = type(self)(parent=self)

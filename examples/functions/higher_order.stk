@@ -97,8 +97,8 @@
 
 # apply_twice - Apply function twice to a value
 {val func} {
-    val func
-    func
+    val func eval
+    func eval
 } apply_twice defun
 
 # Use it
@@ -112,7 +112,7 @@
 
 # compose - Apply two functions in sequence
 {x f g} {
-    x f g
+    x f eval g eval
 } compose defun
 
 10 {x} {x 2 *} lambda {x} {x 5 +} lambda compose

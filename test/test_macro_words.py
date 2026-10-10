@@ -2,7 +2,7 @@
 
 import pytest
 
-from stacker.engine.data_type import String, UndefinedSymbol
+from stacker.engine.data_type import String, Symbol, UndefinedSymbol
 from stacker.error import StackerSyntaxError
 from stacker.stacker import Stacker
 
@@ -26,9 +26,8 @@ class TestGensym:
     def test_returns_distinct_symbol_values(self):
         a, b = run("gensym gensym")
         assert a != b
-        assert a.startswith("__g") and b.startswith("__g")
-        assert type(a) is str  # same kind of value as `$name` pushes
-        assert not isinstance(a, (String, UndefinedSymbol))
+        assert isinstance(a, Symbol) and isinstance(b, Symbol)  # same kind of value as `$name` pushes
+        assert a.name.startswith("__g") and b.name.startswith("__g")
 
     def test_usable_as_a_name(self):
         assert run("gensym t =", "5 t set", "t eval") == [5]

@@ -27,7 +27,7 @@ class TestStacker(unittest.TestCase):
 { n } {
     n 1 <=
     { 1 }
-    { n n 1 - fact * }
+    { n n 1 - fact eval * }
     ifelse
 } lambda $fact set
 5 fact eval
@@ -45,8 +45,8 @@ class TestLambdaStackAccumulation(unittest.TestCase):
         stacker = Stacker()
         stacker.eval("{x} {x x} lambda $dupfn set")
         fn = stacker.variables["dupfn"]
-        stacker.eval("5 dupfn")
+        stacker.eval("5 dupfn eval")
         first_len = len(fn.stack)
-        stacker.eval("3 dupfn")
-        stacker.eval("9 dupfn")
+        stacker.eval("3 dupfn eval")
+        stacker.eval("9 dupfn eval")
         self.assertEqual(len(fn.stack), first_len)

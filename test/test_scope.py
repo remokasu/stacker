@@ -179,7 +179,7 @@ class TestLambdaScope(unittest.TestCase):
             {n} {
                 n 1 <=
                 {1}
-                {n n 1 - fact *}
+                {n n 1 - fact eval *}
                 ifelse
             } lambda $fact set
         """)

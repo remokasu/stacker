@@ -88,7 +88,7 @@ class TestFunctionArgumentBinding(unittest.TestCase):
 
     def test_lambda_receives_block_raw(self):
         self.stacker.process_expression("{x} {x} lambda idf set")
-        self.stacker.process_expression("{2 *} idf")
+        self.stacker.process_expression("{2 *} idf eval")
         self.assertIsInstance(self.stacker.stack[-1], StackerCore)
 
     def test_numeric_arguments_unchanged(self):

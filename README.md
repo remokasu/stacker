@@ -485,9 +485,13 @@ Stacker allows for straightforward RPN input. For example:
     ```bash
     stacker:0> {x y} {x y *} lambda multiply set
     stacker:1> 3 4 multiply
+    [3 4 λxλy.{x y *}]
+    stacker:3> eval
     [12]
     ```
-    This example defines a lambda function that multiplies two numbers and assigns it to the variable `multiply`. The function is then called with the arguments `3` and `4`.
+    This example defines a lambda function that multiplies two numbers and assigns it to the variable `multiply`.
+    A lambda held in a variable is a value: writing `multiply` pushes it, and `eval` calls it with the arguments
+    `3` and `4` (`3 4 multiply eval`). To call a function by its bare name, define it with `defun` instead.
 
 
 - ### Include Scripts
