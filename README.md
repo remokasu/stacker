@@ -142,22 +142,29 @@ Stacker allows for straightforward RPN input. For example:
     **Note:** The `=` operator is an alias for `set` and can be used interchangeably. Use whichever feels more natural for your coding style.
 
     **Three ways to write a name.** A name can be written bare (`x`), as a symbol (`$x`) or quoted (`{x}`).
-    Which one you need depends on where it stands:
+    The rule is short: a bare name is a *reference*, `$x` and `{x}` are the *name itself*, and `"x"` is a
+    string, never a name.
 
+    - A bare name is looked up: as a macro, then a variable, then a function or operator. A macro is expanded,
+      a variable's value is pushed (a lambda too; call it with `eval`), a function or operator is run. A name
+      that is none of these is an error right there, so a typo stops where it is written.
+    - `$x` pushes the symbol `x` itself as a value, whatever a variable `x` holds. A symbol is a type of its
+      own: `$x "x" ==` is false, `symbol?` tells it from a string, `str` gives its text and `symbol` makes one
+      from text (`"x" symbol`). `$` must be followed by a name (`$1` and `${x}` are errors). Symbols are how a
+      name is handed to a word that does not read it from the position right before itself, such as a macro,
+      and `[$a $b]` is a list of names.
+    - `{x}` (a block holding only the name) means "this name" everywhere a name is read, and as code it means
+      the same as `$x`: `$x eval` and `{x} eval` both do what writing `x` does.
     - Right before `set`, `=`, `global`, `defun`, `defmacro` or `macroexpand`, as the loop variable of
       `do` / `dolist`, and as the two names before the block of `reduce` / `fold`, a bare name is read as the
-      name being bound, so `3 x set`, `0 10 i {i echo} do` and `[1 2 3] 0 acc x {acc x +} reduce` need no `$`.
-      The one exception is a built-in operator name right before `set`, `=`, `global`, `defun`, `defmacro` or
-      `macroexpand`: `3 dup set` runs `dup` (and `set` then fails). To bind a built-in name on purpose, write
-      `3 $dup set` or `3 {dup} set`. (A loop or accumulator variable may have any name.) Your own variables,
-      functions and macros can be redefined by their bare name; redefining a prelude word such as `alias`
-      logs a warning. A literal is never a name: `5 3 set` is an error.
-    - Anywhere else a bare name is looked up: as a macro, then a variable, then an operator, otherwise it
-      stays an undefined symbol. `$x` instead pushes the symbol `x` itself as a value, which is how a name is
-      handed to a word that does not read it from the position right before itself, such as a macro.
-    - `{x}` (a block holding only the name) is the form that means "this name" everywhere, including as an
-      argument to a macro. Prefer it when passing a name to `alias`, `macroexpand` or your own macros: a macro
-      argument written `$x` or `x` is resolved as a variable reference when a variable `x` exists.
+      name being bound (shorthand for `$name`), so `3 x set`, `0 10 i {i echo} do` and
+      `[1 2 3] 0 acc x {acc x +} reduce` need no `$`. The one exception is a built-in operator name right
+      before `set`, `=`, `global`, `defun`, `defmacro` or `macroexpand`: `3 dup set` runs `dup` (and `set`
+      then fails). To bind a built-in name on purpose, write `3 $dup set` or `3 {dup} set`. (A loop or
+      accumulator variable may have any name.) Your own variables, functions and macros can be redefined by
+      their bare name; redefining a prelude word such as `alias` logs a warning. A literal is never a name
+      (`5 3 set` and `5 true set` are errors) and neither is a string (`5 "x" set` is an error too).
+    - Words you define yourself (macros, `alias`) take their names in the `{x}` or `$x` form.
 
 - Arrays:
   - Single-line array:
@@ -213,7 +220,7 @@ Stacker allows for straightforward RPN input. For example:
   **Quoted names:** a block holding a single name, such as `{double}`, is the way to pass a *name* as a value.
   Every word that takes a name (`set`, `=`, `global`, `defun`, `defmacro`, `alias`) accepts `{name}` as well as
   `$name`. Macros that define things take their names in this form. This is also how a *variable name* is passed to
-  a macro: `{n} incr!` hands over the name `n`, whereas `n incr!` or `$n incr!` would hand over the variable's
+  a macro: `{n} incr!` and `$n incr!` both hand over the name `n`, whereas `n incr!` hands over the variable's
   current value.
 
 - ### Control Structures in Stacker
@@ -454,8 +461,10 @@ Stacker allows for straightforward RPN input. For example:
     - The body runs on its own stack, in a scope of its own where the arguments are bound. It must leave
       exactly one value: a code block is evaluated in the caller's context, any other value is pushed as is.
     - Every name bound in that scope (the arguments, and variables assigned with `=` / `set` inside the body)
-      is substituted into the body's block literals at the moment each literal is pushed. The substituted
-      values are not scanned again, and `$name`, string literals and list literals are left untouched.
+      is substituted into the body's block literals at the moment each literal is pushed: a symbol (`$name`,
+      a `gensym` name) becomes a bare name in the generated code, a string becomes a string literal, a block
+      stays a block and any other value is spliced as a value. The substituted values are not scanned again,
+      and `$name`, string literals and list literals written in the body are left untouched.
     - Assignments inside the body are local to the macro; they never change the caller's variables.
     - Argument names may be anything, including built-in names; every occurrence in the block literals is
       replaced, so choose them with care.
@@ -554,7 +563,7 @@ Then reload VSCode (Ctrl+Shift+P → "Developer: Reload Window").
 - **Operators** (`+`, `-`, `and`, `or`, etc.) - Blue
 - **Control flow** (`if`, `do`, `times`) - Purple
 - **Function definitions** (`defun`, `defmacro`, `lambda`) - Teal, bold
-- **Variables** (`$x`, `a`) - Light blue
+- **Variables and symbols** (`a`, `$x`) - Light blue
 - **Assignment** (`set`, `=`, `global`) - White, bold
 - Auto-closing brackets (`{`, `[`, `"`, `'`)
 - Code folding support
@@ -828,6 +837,7 @@ print(stacker.eval("3 4 +"))
 | defmacro | Define a macro                                        | `{c b} {{c eval not {b eval} if}} {unless} defmacro` |
 | macroexpand | Push a macro's expansion without running it        | `{0 >} {"neg" echo} {unless} macroexpand` |
 | gensym   | Push a fresh unique name for macro temporaries        | `gensym t =`               |
+| symbol   | Make a symbol from a string or a quoted name          | `"x" symbol`               |
 | lambda   | Create a lambda function                              | `{x y} {x y *} lambda`    |
 | set      | Assign a value to a variable                          | `3 x set`                |
 | =        | Assign a value to a variable (alias for `set`)        | `3 x =`                  |
@@ -865,6 +875,7 @@ Note: Blocks passed to `map`, `filter`, `reduce`, and `fold` must leave a value 
 | int?     | Returns true if the value is an int (not bool)        | `42 int?`                  |
 | float?   | Returns true if the value is a float                  | `3.14 float?`              |
 | str?     | Returns true if the value is a string                 | `"hello" str?`             |
+| symbol?  | Returns true if the value is a symbol                 | `$x symbol?`               |
 | bool?    | Returns true if the value is a bool                   | `true bool?`               |
 | complex? | Returns true if the value is a complex number         | `1+2j complex?`            |
 | list?    | Returns true if the value is a list                   | `[1 2 3] list?`            |

@@ -1,5 +1,78 @@
 # CHANGE LOG
 
+## [1.16.0] - 2026-10-11
+
+### Breaking Changes
+
+Note: This change is not backwards compatible with previous versions.
+
+- **Symbols Are A Type Of Their Own**:
+  - `$name` always pushes the symbol `name`, whatever a variable `name` holds: `5 x set $x` is the symbol `x`, and a symbol never turns into a value later. The rule is now three lines long: a bare name is a reference (the value of the variable, or the word being run), `$name` and the quoted name `{name}` are the name itself, and a string is text
+  - A symbol is not a string: `$x "x" ==` is false, `$x str?` is false (`symbol?` is true), and `$x 1 +` is a type error whose message shows how to write the value (`x`) or the text (`$x str`). `str` turns a symbol into its text and `symbol` turns text back into a symbol
+  - `$` must be followed by a name: `$1`, `${x}`, `$"x"`, `$[1 2]` and a lone `$` are syntax errors
+- **A String Is Never A Name**:
+  - `5 "x" set`, `5 {"x"} set`, `"m" macroexpand`, `[1 4 9] "sqrt" map` and `[3 4] "+" apply` are errors. Write `$x` / `{x}`, or convert text with `symbol` (`"x" symbol`)
+- **An Undefined Name Is An Error Where It Is Referenced**:
+  - A bare name that is neither a macro, a variable, a function nor an operator used to be pushed as an undefined-symbol value that only failed when consumed. It now raises `UndefinedSymbolError` at its own position, so a typo stops where it is written. This includes a name inside a list literal (`[a b]`) and a macro argument written bare (`foo m`); write `[$a $b]` and `{foo} m` for the names themselves
+- **A Lambda Held In A Variable Is A Value**:
+  - Writing the name of a variable that holds a lambda pushes the lambda, like any other variable; it no longer calls it. Call it with `eval` (`3 4 multiply eval`) or `apply`, or hand it to `map` / `filter` by name (`[1 2] f map`). Functions defined with `defun` are still called by their bare name. A lambda's arguments bind code blocks raw, like a function's
+- **`eval` On A Symbol Runs The Name**:
+  - `$x eval` does what writing `x` does: a macro is expanded, a variable's value is pushed, a function or an operator is run. `3 4 $+ eval` is `7`, and `{+} 0 nth eval` runs `+` again (this undoes the 1.15.0 note on names taken out of a block). A block held in `b` is pushed by `$b eval`; `b eval` runs it
+- **Blocks Read As Data Hand Out Symbols**:
+  - `nth`, `apply`, `list`, `sorted`, `reversed`, `enumerate`, `zip` and the block argument of `map` / `filter` / `reduce` / `fold` give a symbol for every name written in the block: `{x} 0 nth` is the symbol `x` and `{x y} {} map` is `{x y}`, whatever `x` and `y` hold. Write a list literal `[x y]` when the values are wanted. The aggregates (`sum`, `max`, `all`, ...) still reference the names; `len` counts tokens
+  - Conversely, a value spliced into a block by `sub`, `subn`, parameter interpolation or a block-returning word becomes a token of its own kind: a symbol becomes a bare name, a string, literal or computed, becomes a string literal
+- **Conditions Are Values**:
+  - `if` / `ifelse` no longer look a string or symbol condition up as a variable: a symbol is true, a string is true unless empty. `0 x = $x {1} if` now runs the block; write `x {1} if` to test the variable
+- **`true`, `false` And `null` Are Literals**:
+  - Like `True` / `False` / `None`, they can no longer be rebound (`5 true set` is an error) and are not listed by `vars`. `pi`, `e` and the other constants are still variables
+- **Argument Lists Are Checked**:
+  - `defun` and `lambda` take their parameters as a block of distinct bare names, like `defmacro`: `{$a}`, `{"a"}`, a bare `$a` or a list is an error
+- **Display**:
+  - Every string is shown quoted, computed ones included (`"a" "b" +` shows `'ab'`); a symbol is shown bare. A code block shows its names as written, whether or not they are bound at the time
+- **Python API**:
+  - A name comes back as a `Symbol` object (`from stacker import Symbol`; `.name` is the text), not as a `str`. `UndefinedSymbol` is removed: catch `UndefinedSymbolError` instead of testing for the value. Plugins receive a `Symbol` for a symbol argument
+
+### Migration
+
+- `$x` used where its value was meant: write `x`. A lambda passed on with `$f`: write `f`
+- A string used as a name (`5 "x" set`, `"sqrt" map`, `"+" apply`, `"m" macroexpand`): write `$x` / `{x}`, or `"x" symbol` when the name is built from text
+- An undefined name used as data (`foo m`, `[a b]`, `{2 *} double alias`): write `{foo} m` or `$foo m`, `[$a $b]`, `{2 *} {double} alias`
+- `$x` or `"x"` written as a condition to test the variable `x`: write `x`
+- `$b eval` to run a block held in `b`: write `b eval`
+- A lambda called by its bare name (`{x y} {x y *} lambda multiply set 3 4 multiply`): write `3 4 multiply eval`, or define it with `defun`. `[1 2] {f} map` with a lambda in `f`: write `[1 2] f map`
+- `$x "x" ==`: write `$x str "x" ==`
+- `{$a} {a} lambda` or `$a {a 2 *} f defun`: write `{a}`
+- A block whose names were read as values by `map`, `reduce` or `list`: write a list literal `[x y]` instead of `{x y}`
+- Python code that tested `isinstance(v, str)` to recognize a name: test `isinstance(v, Symbol)`. Code that looked for `UndefinedSymbol` values: catch `UndefinedSymbolError`
+- To find `$name` written where a value was meant, look for `$name` that is not right before `set`, `=`, `global`, `defun`, `defmacro`, `macroexpand` or `alias`, nor the name before a `do` / `dolist` / `reduce` / `fold` block:
+  ```bash
+  grep -nE '\$[^[:space:]{}"]+' -r . --include='*.stk' \
+    | grep -vE '\$[^[:space:]]+[[:space:]]+(set|=|global|defun|defmacro|macroexpand|alias)([[:space:]]|$)' \
+    | grep -vE '\$[^[:space:]]+[[:space:]]+\{'
+  ```
+  (the accumulator name of `reduce` / `fold` still shows up; check those by eye)
+
+### Added
+
+- **`symbol`**: `"x" symbol` makes the symbol `x` from a string; `{x} symbol` from a quoted name; a symbol is returned as it is. Text that could not be written as `$name` (`"1"`, `"a b"`, `""`) is a syntax error
+- **`symbol?`**: true for a symbol
+- **Symbols in list literals**: `[$a $b]` is a list of two symbols
+- **`StackerTypeError`**: raised (it is a `TypeError` too) when a symbol reaches a word that needs a value; the message names the symbol and the two ways to write what was probably meant
+- **`Symbol`** is exported from the `stacker` package for embedding code
+
+### Fixed
+
+- `[3 4] 5 apply` silently did nothing; a function argument that is neither a block, a lambda nor a symbol is now a type error
+- Calling a lambda with too few arguments raised a Python `IndexError`; it is a `StackUnderflowError`
+- A lambda that returned nothing left a `VOID` marker on the stack
+- A code block showed an unbound name quoted (`{'foo'}`) and the same name bare once a variable existed
+- `5 "$x" set x` bound `x` through the text of the string, and `"$x" y set y list` read the string as `$x`
+- `$x 1 +` leaked a Python `TypeError`
+- `5 true set` silently replaced the constant `true`
+- A bare name inside a nested list literal (`[[x 1]]`) was kept as text instead of being the variable's value
+- README: the operator table named a `random` word that never existed (the word is `rand`) and described `all` / `any` with a two-argument form they never had
+- The `do` loop benchmark (`0 s set 1 100000 $i {s i + s set} do`) runs about 20% faster: the argument helpers no longer look every value up in the variable scopes
+
 ## [1.15.0] - 2026-10-10
 
 ### Breaking Changes
