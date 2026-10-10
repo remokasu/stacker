@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-
+from stacker.engine.data_type import Symbol
 from stacker.util import colored
-from stacker.engine.data_type import String, Symbol
 
 
 class CustomPrinter:

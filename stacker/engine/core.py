@@ -24,12 +24,14 @@ from stacker.error import BreakException
 from stacker.engine.boundary import token_to_value, value_to_token
 from stacker.engine.data_type import String, Symbol, UndefinedSymbol, stack_data, VOID
 from stacker.syntax.token_rules import (
+    KEYWORD_LITERALS,
     cached_literal_eval,
     is_bare_name,
     is_code_block,
     is_list,
     is_string_token,
     is_symbol,
+    not_a_symbol_message,
     reads_as_name,
     strip_string_delimiters,
 )
@@ -102,6 +104,7 @@ K_BLOCK = 4  # code-block source: substack is created at evaluation time
 K_LOOKAHEAD_SYMBOL = 5  # bare name right before a binding form (set/defun/...): payload is the Symbol
 K_DYNAMIC = 6  # name resolved against runtime state on every evaluation
 K_LOOP_VAR = 7  # bare name bound by do / dolist / reduce / fold (before their block): payload is the Symbol
+K_INVALID = 8  # a `$` token that names nothing: payload is the error message, raised when executed
 
 
 def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
@@ -131,19 +134,22 @@ def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
             entries.append((K_STRING, token, String(strip_string_delimiters(token))))
         elif is_list(token):
             try:
-                template = ast.literal_eval(
-                    convert_custom_array_to_proper_list(token)
-                )
+                template = _compile_list_template(token)
             except Exception:
                 # Malformed list token: leave the payload empty so the
                 # evaluation loop re-parses (and raises) at the token's
                 # execution position, exactly as before.
                 template = None
             entries.append((K_LIST, token, template))
-        elif is_symbol(token):
-            entries.append((K_SYMBOL, token, Symbol(token[1:])))
+        elif token.startswith("$"):
+            if is_symbol(token):
+                entries.append((K_SYMBOL, token, Symbol(token[1:])))
+            else:
+                entries.append((K_INVALID, token, not_a_symbol_message(token)))
         elif is_code_block(token):
             entries.append((K_BLOCK, token, None))
+        elif token in KEYWORD_LITERALS:
+            entries.append((K_VALUE, KEYWORD_LITERALS[token], None))  # true / false / null are values
         else:
             next_token = tokens[i + 1] if i + 1 < n else None
             next_next_token = tokens[i + 2] if i + 2 < n else None
@@ -161,7 +167,7 @@ def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
             elif (
                 word3 in _REDUCE_FOLD
                 and _is_block_token(next_next_token)
-                and is_bare_name(next_token)
+                and (is_bare_name(next_token) or is_symbol(next_token))
             ):
                 # the first name of `acc x {block} reduce`
                 kind = K_LOOP_VAR
@@ -171,6 +177,52 @@ def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
                 kind = K_DYNAMIC  # a literal (number, True, None, ...) is never a name
             entries.append((kind, token, None if kind == K_DYNAMIC else Symbol(token)))
     return entries
+
+
+def _compile_list_template(token: str) -> list[object]:
+    """Compiles a list-literal token into a template (done once per token).
+
+    String literals become ``String``, ``$name`` becomes a ``Symbol``,
+    ``true`` / ``false`` / ``null`` become values, numbers stay numbers and
+    nested lists are compiled recursively. A bare name stays a plain
+    ``str``: it is looked up every time the literal is evaluated
+    (``_build_list``). A code block is not allowed inside a list literal.
+
+    Args:
+        token: The ``[...]`` source token.
+
+    Returns:
+        The template, a nested list of values and plain-str names.
+
+    Raises:
+        StackerSyntaxError: A code block is written inside the literal.
+    """
+    parsed = ast.literal_eval(convert_custom_array_to_proper_list(token))
+    return _compile_list_elements(parsed if isinstance(parsed, list) else [parsed])
+
+
+def _compile_list_elements(elements: list[object]) -> list[object]:
+    compiled: list[object] = []
+    for element in elements:
+        if isinstance(element, (list, tuple)):
+            compiled.append(_compile_list_elements(list(element)))
+        elif type(element) is str:
+            if is_string_token(element):
+                compiled.append(String(strip_string_delimiters(element)))
+            elif element.startswith("$"):
+                compiled.append(Symbol(element[1:]))  # checked by the array lexer
+            elif element in KEYWORD_LITERALS:
+                compiled.append(KEYWORD_LITERALS[element])
+            elif is_code_block(element):
+                raise StackerSyntaxError(
+                    "a code block cannot be written inside a list literal; "
+                    "use {x} 1 listn, or [$x] for a symbol"
+                )
+            else:
+                compiled.append(element)  # a name, referenced on evaluation
+        else:
+            compiled.append(element)
+    return compiled
 
 
 def _is_block_token(token: object) -> bool:
@@ -512,57 +564,31 @@ class StackerCore:
                         stack.append(evaluated)
             elif kind == K_LIST:
                 if payload is None:
-                    # Malformed template: reproduce the original inline parse
-                    # so the error is raised here, at execution position.
-                    stack.append(
-                        list(
-                            map(
-                                self._var_str_to_literal,
-                                ast.literal_eval(
-                                    convert_custom_array_to_proper_list(token)
-                                ),
-                            )
-                        )
-                    )
-                else:
-                    # Re-resolve top-level string elements on every
-                    # evaluation and re-materialize nested containers so no
-                    # state is shared between evaluations (same output as
-                    # the former fresh ast.literal_eval per evaluation).
-                    stack.append(
-                        [
-                            self._var_str_to_literal(element)
-                            if isinstance(element, str)
-                            else (
-                                copy.deepcopy(element)
-                                if isinstance(element, (list, tuple))
-                                else element
-                            )
-                            for element in payload
-                        ]
-                    )
+                    # Malformed literal: compile it again here so the error
+                    # is raised at the token's execution position.
+                    payload = _compile_list_template(token)
+                stack.append(self._build_list(payload))
             elif kind == K_SYMBOL:
                 stack.append(payload)  # the Symbol
             elif kind == K_BLOCK:
                 self._substack(token, stack)
+            elif kind == K_INVALID:
+                raise StackerSyntaxError(payload)
         return stack
 
-    def _var_str_to_literal(self, value: object) -> object:
-        if isinstance(value, UndefinedSymbol):
-            # Popped from the stack: the same error every other consumer raises.
-            raise UndefinedSymbolError(value.name)
-        if isinstance(value, String):
-            # A string literal popped from the stack is data; it must not be
-            # looked up as a variable (`5 ab set "ab" list` listed 5).
-            return value
-        if isinstance(value, str) and is_string_token(value):
-            return String(strip_string_delimiters(value))
-        elif isinstance(value, str) and value in self.variables:
-            return self.variables[value]
-        elif isinstance(value, str):
-            # Return UndefinedSymbol instead of raising error
-            return UndefinedSymbol(value)
-        return value
+    def _build_list(self, template: list[object]) -> list[object]:
+        """Builds a fresh list from a compiled list-literal template.
+
+        Names are looked up now (the value of the variable, or
+        ``UndefinedSymbolError``); nested lists are built fresh so no
+        state is shared between evaluations.
+        """
+        return [
+            self._lookup_name(element)
+            if type(element) is str
+            else (self._build_list(element) if isinstance(element, list) else element)
+            for element in template
+        ]
 
     def _literal_eval(self, token: object) -> object:
         # Handle non-string tokens (already evaluated)
@@ -1283,7 +1309,7 @@ class StackerCore:
             )
         names: list[str] = []
         for token in fargs.tokens:
-            if type(token) is not str or is_symbol(token) or not is_bare_name(token):
+            if not is_bare_name(token):
                 raise StackerSyntaxError(f"`{word}` argument names must be bare names, got {token}")
             names.append(token)
         if len(set(names)) != len(names):
@@ -1395,7 +1421,7 @@ class StackerCore:
         def substitute(token: object) -> object:
             if isinstance(token, StackerCore):
                 return build(token)
-            if type(token) is not str or is_symbol(token) or token not in bindings:
+            if type(token) is not str or token.startswith("$") or token not in bindings:
                 return token  # literals, `$name` and unbound names stay as written
             # A symbol becomes a bare name, a string a string literal,
             # anything else is spliced as a value (see engine/boundary.py).

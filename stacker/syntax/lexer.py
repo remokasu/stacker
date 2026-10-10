@@ -15,6 +15,7 @@ class TokenType(Enum):
     NUMBER = auto()
     STRING = auto()
     IDENTIFIER = auto()
+    SYMBOL = auto()
     LBRACKET = auto()
     RBRACKET = auto()
     LPAREN = auto()
@@ -94,6 +95,7 @@ class TokenPattern:
             r"|'([^'\\]|\\.)*'"
             r"|\"([^\"\\]|\\.)*\")",
         ),
+        (TokenType.SYMBOL, r"\$[^\s\[\]();,]*"),
         (TokenType.IDENTIFIER, r"[A-Za-z_][A-Za-z0-9_\-?!]*"),
         (TokenType.LBRACKET, r"\["),
         (TokenType.RBRACKET, r"\]"),

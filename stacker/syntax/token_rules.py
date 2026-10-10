@@ -15,8 +15,7 @@ Note:
     ``isinstance(token, str)`` guard here; callers that need one (e.g.
     ``parser.is_string``) apply it themselves. A ``String`` object (a
     literal whose delimiters are already stripped) is recognized by type in
-    the classifier before these predicates are consulted, so its overridden
-    ``startswith`` seeing no quotes no longer matters.
+    the classifier before these predicates are consulted.
 
     The call sites previously inlined these checks as a hot-path
     optimization; benchmarks confirmed the function-call cost is
@@ -82,6 +81,17 @@ def strip_string_delimiters(token) -> str:
 #: (keeps the classifier cheap).
 LITERAL_START = frozenset("0123456789+-.([{'\"NTFbBrRuUfFs")
 
+#: Word literals: these tokens are values, never names. ``true`` / ``false``
+#: / ``null`` are the Stacker spellings, the Python spellings work too.
+KEYWORD_LITERALS: dict[str, object] = {
+    "true": True,
+    "false": False,
+    "null": None,
+    "True": True,
+    "False": False,
+    "None": None,
+}
+
 
 def is_list(expression: object) -> bool:
     """Return True if ``expression`` is a list-literal token (``[...]``).
@@ -133,23 +143,22 @@ def is_code_block(expression: object) -> bool:
 def is_symbol(expression: object) -> bool:
     """Return True if ``expression`` is a ``$name`` token.
 
-    A symbol token starts with exactly one ``$`` followed by at least one
-    character and contains no other ``$``.
+    A symbol token is a raw ``str`` made of one ``$`` followed by a bare
+    name: something that, written without the ``$``, would read as a name
+    (not a literal, a string, a list or a block) and holds no other ``$``.
+    So every symbol can be written back as ``$name``.
 
     Args:
         expression: Token value.
 
     Returns:
-        True for ``$name``; False for ``$``, ``$$x``, ``$name$`` and non-str
-        values.
+        True for ``$x``, ``$+``, ``$x.y``; False for ``$``, ``$$x``, ``$1``,
+        ``${x}``, ``$"x"``, ``$[1 2]``, a ``String`` and non-str values.
     """
-    if not isinstance(expression, str):
+    if type(expression) is not str or not expression.startswith("$"):
         return False
-    if len(expression) < 2:
-        return False
-    if not expression.startswith("$"):
-        return False
-    return "$" not in expression[1:]
+    name = expression[1:]
+    return "$" not in name and is_bare_name(name)
 
 
 @lru_cache(maxsize=1024)
@@ -164,10 +173,17 @@ def cached_literal_eval(token: str) -> object:
         ``MemoryError`` / ``RecursionError`` from pathological input
         propagate instead of becoming a bogus value.
     """
+    if token in KEYWORD_LITERALS:
+        return KEYWORD_LITERALS[token]
     try:
         return ast.literal_eval(token)
     except (ValueError, TypeError, SyntaxError):
         return token
+
+
+def not_a_symbol_message(token: str) -> str:
+    """The error message for a ``$`` token that does not name anything."""
+    return f"`{token}` is not a symbol: `$` must be followed by a name"
 
 
 def reads_as_name(token: str) -> bool:
@@ -184,6 +200,8 @@ def reads_as_name(token: str) -> bool:
     Returns:
         True if the token does not read as a literal.
     """
+    if token in KEYWORD_LITERALS:
+        return False
     if not token or token[0] not in LITERAL_START:
         return True
     try:
@@ -195,8 +213,8 @@ def reads_as_name(token: str) -> bool:
 def is_bare_name(token: object) -> bool:
     """Return True if ``token`` is a bare name.
 
-    A bare name is a raw ``str`` that is not a string literal, a list
-    literal, a code block or a Python literal.
+    A bare name is a non-empty raw ``str`` that is not a ``$`` token, a
+    string literal, a list literal, a code block or a literal.
 
     Args:
         token: Token value.
@@ -206,6 +224,8 @@ def is_bare_name(token: object) -> bool:
     """
     return (
         type(token) is str
+        and bool(token)
+        and not token.startswith("$")
         and not is_string_token(token)
         and not is_list(token)
         and not is_code_block(token)

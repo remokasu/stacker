@@ -10,7 +10,12 @@ import pytest
 from stacker import Stacker
 from stacker.engine.core import StackerCore
 from stacker.engine.data_type import String, Symbol
-from stacker.error import StackerSyntaxError, StackerTypeError, StackUnderflowError
+from stacker.error import (
+    StackerSyntaxError,
+    StackerTypeError,
+    StackUnderflowError,
+    UndefinedSymbolError,
+)
 
 
 def run(*lines: str) -> list[object]:
@@ -138,7 +143,7 @@ class TestArgumentLists:
             "{$a} {a} lambda",
             '{"a"} {a} f defun',
             "$a {a 2 *} f defun",
-            "[a b] {a b +} f defun",
+            "[1 2] {a b +} f defun",
             "{a a} {a} f defun",
             "{5} {5} f defun",
             "{{a}} {a} f defun",
@@ -255,4 +260,81 @@ class TestDisplay:
     def test_lambda_display(self):
         (fn,) = run("{x y} {x y *} lambda")
         assert str(fn) == "λxλy.{x y *}"
+
+
+class TestDollarSyntax:
+    @pytest.mark.parametrize("token", ["$1", "${x}", '$"x"', "$[1 2]", "$", "$$x", "$x$", "$true"])
+    def test_dollar_must_be_followed_by_a_name(self, token):
+        with pytest.raises(StackerSyntaxError) as info:
+            run(token)
+        assert "is not a symbol" in str(info.value)
+
+    def test_operator_and_dotted_names_are_symbols(self):
+        assert run("$+ $x.y") == [Symbol("+"), Symbol("x.y")]
+
+    def test_error_is_raised_at_the_execution_position(self, capsys):
+        with pytest.raises(StackerSyntaxError):
+            run("1 echo $1")
+        assert capsys.readouterr().out.strip() == "1"
+
+    def test_inside_a_block_the_error_waits_for_evaluation(self):
+        (block,) = run("{$1}")
+        assert isinstance(block, StackerCore)
+        with pytest.raises(StackerSyntaxError):
+            run("{$1} eval")
+
+
+class TestKeywordLiterals:
+    def test_true_false_null_are_values(self):
+        assert run("true false null") == [True, False, None]
+        assert run("[true None null]") == [[True, None, None]]
+        assert run("{true false} all") == [False]
+
+    @pytest.mark.parametrize("program", ["5 true set", "5 false set", "5 null set", "5 True set", "5 $true set"])
+    def test_cannot_be_bound(self, program):
+        with pytest.raises(StackerSyntaxError):
+            run(program)
+
+    def test_other_constants_are_still_variables(self):
+        assert run("5 pi set pi") == [5]
+        assert run("1 3 e {e} do") == [1, 2, 3]
+
+    def test_not_listed_by_vars(self, capsys):
+        run("vars")
+        out = capsys.readouterr().out
+        assert "true =" not in out and "pi =" in out
+
+
+class TestListLiterals:
+    def test_symbols(self):
+        assert run("[$a $b]") == [[Symbol("a"), Symbol("b")]]
+        assert run("[$+]") == [[Symbol("+")]]
+
+    @pytest.mark.parametrize("program", ["[$]", "[$1]"])
+    def test_invalid_symbols(self, program):
+        with pytest.raises(StackerSyntaxError):
+            run(program)
+
+    def test_bare_names_are_references(self):
+        assert run("5 x set [x]") == [[5]]
+        with pytest.raises(UndefinedSymbolError):
+            run("[x]")
+
+    def test_nested_names_are_references_too(self):
+        assert run("5 x set [[x 1] [2 3]]") == [[[5, 1], [2, 3]]]
+        with pytest.raises(UndefinedSymbolError):
+            run("[[x]]")
+
+    def test_block_inside_a_list_literal_is_rejected(self):
+        with pytest.raises(StackerSyntaxError) as info:
+            run("[{x}]")
+        assert "cannot be written inside a list literal" in str(info.value)
+
+    def test_error_is_raised_at_the_execution_position(self, capsys):
+        with pytest.raises(StackerSyntaxError):
+            run("1 echo [{x}]")
+        assert capsys.readouterr().out.strip() == "1"
+
+    def test_lists_are_fresh_on_every_evaluation(self):
+        assert run("[] lst set 1 3 $i {lst [i i] + lst set} do lst") == [[1, 1, 2, 2, 3, 3]]
 

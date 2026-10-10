@@ -39,22 +39,24 @@ class TestUnit(unittest.TestCase):
     ############################
     def test_invalid_list(self):
         stacker = Stacker()
-        # Undefined symbols in lists are now treated as UndefinedSymbol objects
-        # They only raise errors when used in operations
-        result = stacker.eval("[x]")
-        # The list should contain an UndefinedSymbol
-        from stacker.engine.data_type import UndefinedSymbol
-
-        self.assertIsInstance(result[-1][0], UndefinedSymbol)
+        # A bare name inside a list literal is a reference (1.16.0): an
+        # undefined one is an error, a defined one is the variable's value.
+        with self.assertRaises(error.UndefinedSymbolError):
+            stacker.eval("[x]")
+        self.assertEqual(stacker.eval("5 x set [x]")[-1], [5])
 
     def test_invalid_list_2(self):
         stacker = Stacker()
-        # Undefined symbols in lists are now treated as UndefinedSymbol objects
-        result = stacker.eval("[x y]")
-        from stacker.engine.data_type import UndefinedSymbol
+        with self.assertRaises(error.UndefinedSymbolError):
+            stacker.eval("[x y]")
 
-        self.assertIsInstance(result[-1][0], UndefinedSymbol)
-        self.assertIsInstance(result[-1][1], UndefinedSymbol)
+    def test_symbol_elements(self):
+        from stacker.engine.data_type import Symbol
+
+        stacker = Stacker()
+        self.assertEqual(stacker.eval("[$x $y]")[-1], [Symbol("x"), Symbol("y")])
+        with self.assertRaises(error.StackerSyntaxError):
+            stacker.eval("[$1]")
 
     ############################
     # valid tuple

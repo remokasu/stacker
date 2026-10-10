@@ -10,7 +10,4 @@ constants: dict[str, int | float | bool | None] = {
     "tau": math.tau,
     "nan": math.nan,
     "inf": float("inf"),
-    "true": True,
-    "false": False,
-    "null": None,
 }

@@ -128,12 +128,6 @@ class String(str):
     def __radd__(self, other: str) -> str:
         return other + self.value
 
-    def startswith(self, value: str) -> bool:  # type: ignore[override]
-        return self.value.startswith(value)
-
-    def endswith(self, value: str) -> bool:  # type: ignore[override]
-        return self.value.endswith(value)
-
 
 @total_ordering
 class Symbol:
