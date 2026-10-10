@@ -2,7 +2,7 @@
 
 import pytest
 
-from stacker.engine.data_type import String, Symbol, UndefinedSymbol
+from stacker.engine.data_type import String, Symbol
 from stacker.error import StackerSyntaxError
 from stacker.stacker import Stacker
 

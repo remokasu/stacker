@@ -186,16 +186,17 @@ class TestFatalErrorPropagation(unittest.TestCase):
         with self.assertRaises((RecursionError, MemoryError)):
             stacker.eval(pathological)
 
-    def test_malformed_literal_still_falls_back_to_symbol(self):
+    def test_malformed_literal_still_falls_back_to_a_name(self):
         # The benign fallback must survive the fix. "1st" is not a variable,
         # so it reaches ast.literal_eval and raises SyntaxError there — this
-        # exercises the narrowed except branch itself, unlike a plain
-        # variable lookup which resolves before literal evaluation.
-        from stacker.engine.data_type import UndefinedSymbol
+        # exercises the narrowed except branch itself. It is then an
+        # undefined name, reported as such (1.16.0) rather than pushed.
+        from stacker.error import UndefinedSymbolError
 
         stacker = Stacker()
-        ans = stacker.eval("1st")
-        self.assertIsInstance(ans[-1], UndefinedSymbol)
+        with self.assertRaises(UndefinedSymbolError):
+            stacker.eval("1st")
+        self.assertEqual(stacker.eval("5 1st set 1st")[-1], 5)
 
     def test_variable_lookup_unaffected_by_narrowed_except(self):
         # Plain variable resolution (no literal parsing involved) keeps

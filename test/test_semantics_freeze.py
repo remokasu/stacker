@@ -18,10 +18,9 @@ import contextlib
 import io
 import unittest
 
-from stacker.engine.core import StackerCore
-
 from stacker import Stacker
-from stacker.engine.data_type import String, UndefinedSymbol
+from stacker.engine.core import StackerCore
+from stacker.engine.data_type import String
 from stacker.error import StackerSyntaxError, UndefinedSymbolError
 
 
@@ -187,7 +186,7 @@ class TestStringTokenQuirks(unittest.TestCase):
 
 
 class TestUndefinedSymbolBehavior(unittest.TestCase):
-    """Lookahead classification and the UndefinedSymbol fallback."""
+    """Lookahead classification and references to undefined names."""
 
     def setUp(self):
         self.stacker = Stacker()
@@ -202,11 +201,20 @@ class TestUndefinedSymbolBehavior(unittest.TestCase):
         with self.assertRaises(UndefinedSymbolError):
             self.stacker.process_expression("3 no_such_name +")
 
-    def test_bare_undefined_pushes_undefined_symbol(self):
-        self.stacker.process_expression("bare_undefined")
-        top = self.stacker.stack[-1]
-        self.assertIsInstance(top, UndefinedSymbol)
-        self.assertEqual(top, "bare_undefined")
+    def test_bare_undefined_is_an_error_where_it_is_referenced(self):
+        # Until 1.16.0 this froze the opposite: an undefined bare name was
+        # pushed as an UndefinedSymbol value and only failed later, when an
+        # operator consumed it. That let typos travel silently, so a
+        # reference to an undefined name now fails at its own position. The
+        # name itself is written `$bare_undefined` or `{bare_undefined}`.
+        with self.assertRaises(UndefinedSymbolError):
+            self.stacker.process_expression("bare_undefined")
+
+    def test_side_effect_before_undefined_reference_error(self):
+        buf = io.StringIO()
+        with self.assertRaises(UndefinedSymbolError), contextlib.redirect_stdout(buf):
+            self.stacker.process_expression('"hello" print bare_undefined')
+        self.assertEqual(buf.getvalue(), "hello\n")
 
 
 class TestErrorOrdering(unittest.TestCase):

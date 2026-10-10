@@ -22,7 +22,7 @@ from stacker.syntax.parser import (
 )
 from stacker.error import BreakException
 from stacker.engine.boundary import token_to_value, value_to_token
-from stacker.engine.data_type import String, Symbol, UndefinedSymbol, stack_data, VOID
+from stacker.engine.data_type import String, Symbol, stack_data, VOID
 from stacker.syntax.token_rules import (
     KEYWORD_LITERALS,
     cached_literal_eval,
@@ -260,24 +260,6 @@ class TokenList(list):
 class StackerCore:
     """A class for evaluating RPN expressions."""
 
-    _literal_cache: dict[str, int | bool] = {
-        "0": 0,
-        "1": 1,
-        "2": 2,
-        "3": 3,
-        "4": 4,
-        "5": 5,
-        "6": 6,
-        "7": 7,
-        "8": 8,
-        "9": 9,
-        "10": 10,
-        "true": True,
-        "false": False,
-        "True": True,
-        "False": False,
-    }
-
     def __init__(
         self, expression: str | None = None, parent: StackerCore | None = None
     ) -> None:
@@ -437,9 +419,6 @@ class StackerCore:
         """
         value = stack.pop()
 
-        if isinstance(value, UndefinedSymbol):
-            raise UndefinedSymbolError(value.name)
-
         if isinstance(value, StackerCore):
             # Note: operators such as ifelse evaluate onto parent.stack, so
             # the evaluation stack must be the block's own stack attribute
@@ -474,11 +453,7 @@ class StackerCore:
         Returns:
             The value, unevaluated.
         """
-        value = stack.pop()
-
-        if isinstance(value, UndefinedSymbol):
-            raise UndefinedSymbolError(value.name)
-        return value
+        return stack.pop()
 
     def _eval(self, expr: str, stack: stack_data[object] | None = None) -> stack_data[object]:
         if stack is None:
@@ -554,15 +529,13 @@ class StackerCore:
                 ):
                     self._execute(token, stack)
                 else:
-                    # Try to evaluate as literal
-                    evaluated = self._literal_eval(token)
-                    if isinstance(evaluated, String):
-                        stack.append(evaluated)
-                    elif isinstance(evaluated, str):
-                        # Undefined identifiers are treated as UndefinedSymbol
-                        stack.append(UndefinedSymbol(evaluated))
-                    else:
-                        stack.append(evaluated)
+                    # A literal (classified as a name only when the literal
+                    # check was skipped or deferred) pushes its value; any
+                    # other name is undefined, and that is an error here.
+                    evaluated = cached_literal_eval(token)
+                    if isinstance(evaluated, str):
+                        raise UndefinedSymbolError(token)
+                    stack.append(evaluated)
             elif kind == K_LIST:
                 if payload is None:
                     # Malformed literal: compile it again here so the error
@@ -590,31 +563,6 @@ class StackerCore:
             else (self._build_list(element) if isinstance(element, list) else element)
             for element in template
         ]
-
-    def _literal_eval(self, token: object) -> object:
-        # Handle non-string tokens (already evaluated)
-        if not isinstance(token, str):
-            return token
-        # Check for code blocks (both {} and ())
-        if is_code_block(token):
-            # Convert code block to StackerCore instance
-            temp_stack: stack_data[object] = stack_data()
-            self._substack(token, temp_stack)
-            return temp_stack.pop()
-        elif token in self.variables:
-            return self.variables[token]
-        elif is_string_token(token):
-            return String(strip_string_delimiters(token))
-        else:
-            # Check cache first for common literals
-            if token in StackerCore._literal_cache:
-                return StackerCore._literal_cache[token]
-            try:
-                return ast.literal_eval(token)
-            except (ValueError, TypeError, SyntaxError):
-                # Malformed literal: fall back to the raw token. Fatal errors
-                # (MemoryError / RecursionError) must propagate.
-                return token
 
     def _execute(self, token: str, stack: stack_data[object]) -> None:
         """
@@ -900,8 +848,6 @@ class StackerCore:
         expression = stack.pop()
         if isinstance(expression, Symbol):
             self._evaluate([expression.name], stack=stack)
-        elif isinstance(expression, UndefinedSymbol):
-            stack.append(expression)
         elif isinstance(expression, str):
             self._eval(str(expression), stack=stack)
         elif isinstance(expression, StackerCore):
@@ -936,20 +882,13 @@ class StackerCore:
             stack.append(result)
 
     def _prio_sub(self, op, stack) -> None:
-        self._substack_with_tokens([self._as_token(stack.pop())], stack)
+        self._substack_with_tokens([value_to_token(stack.pop())], stack)
 
     def _prio_subn(self, op, stack) -> None:
         n = stack.pop()
-        elms = [self._as_token(stack.pop()) for _ in range(n)]  # type: ignore[arg-type]
+        elms = [value_to_token(stack.pop()) for _ in range(n)]  # type: ignore[arg-type]
         elms.reverse()
         self._substack_with_tokens(elms, stack)
-
-    @staticmethod
-    def _as_token(value: object) -> object:
-        """``value_to_token`` that still lets an ``UndefinedSymbol`` through as a bare name."""
-        if isinstance(value, UndefinedSymbol):
-            return value.name
-        return value_to_token(value)
 
     def _prio_listn(self, op, stack) -> None:
         n = stack.pop()
@@ -1186,8 +1125,6 @@ class StackerCore:
         """
         if isinstance(value, StackerCore):
             return [token_to_value(token) for token in value.tokens]
-        if isinstance(value, UndefinedSymbol):
-            raise UndefinedSymbolError(value.name)
         return value
 
     def _push_like(self, source: object, result: object, stack: stack_data[object]) -> None:
@@ -1228,8 +1165,6 @@ class StackerCore:
                 stack.append(len(agg_args.tokens))
                 return
             agg_args = [self._block_token_value(t) for t in agg_args.tokens]
-        elif isinstance(agg_args, UndefinedSymbol):
-            raise UndefinedSymbolError(agg_args.name)
         try:
             if op["push_result_to_stack"]:
                 result = op["func"](agg_args)  # type: ignore[operator]
@@ -1307,8 +1242,6 @@ class StackerCore:
             StackerSyntaxError: If ``symbol`` cannot denote a name.
         """
         if isinstance(symbol, Symbol):
-            return symbol.name
-        if isinstance(symbol, UndefinedSymbol):
             return symbol.name
         if isinstance(symbol, StackerCore) and len(symbol.tokens) == 1:
             token = symbol.tokens[0]
@@ -1427,8 +1360,7 @@ class StackerCore:
         """Pops a macro argument without evaluating it.
 
         Like ``_pop_and_resolve``: blocks stay raw, a ``String`` keeps its
-        type and a ``Symbol`` stays a symbol. An undefined bare name (still
-        pushed as ``UndefinedSymbol`` for now) is handed over as a symbol.
+        type and a ``Symbol`` stays a symbol.
 
         Args:
             stack: Stack to pop from.
@@ -1436,10 +1368,7 @@ class StackerCore:
         Returns:
             The argument value.
         """
-        value = stack.pop()
-        if isinstance(value, UndefinedSymbol):
-            return Symbol(value.name)
-        return value
+        return stack.pop()
 
     def _interpolate(self, block: StackerCore, scope: ScopedVariables) -> StackerCore:
         """Copies ``block`` with the expansion scope's own bindings spliced in.

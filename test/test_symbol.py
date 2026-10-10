@@ -44,8 +44,11 @@ class TestDollarIsAlwaysASymbol:
         assert run('"x" $x ==') == [False]
 
     def test_symbol_is_not_a_quoted_name_block(self):
-        assert run("$x {x} ==") == [False]
-        assert run("{x} $x ==") == [False]
+        # `==` evaluates a block argument, so `x` must be bound for the comparison to happen.
+        assert run("5 x set $x {x} ==") == [False]
+        (block,) = run("{x}")
+        assert (Symbol("x") == block) is False
+        assert (block == Symbol("x")) is False
 
     def test_str_gives_the_name(self):
         assert run("5 x set $x str") == ["x"]
@@ -389,9 +392,10 @@ class TestSymbolWord:
 class TestSymbolPredicateAndType:
     def test_symbol_predicate(self):
         assert run("$x symbol?") == [True]
+        assert run("gensym symbol?") == [True]
         assert run('"x" symbol?') == [False]
         assert run("5 symbol?") == [False]
-        assert run("{x} symbol?") == [False]
+        assert run("[$x] symbol?") == [False]
 
     def test_str_predicate_is_false_for_symbols(self):
         assert run("$x str?") == [False]

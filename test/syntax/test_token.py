@@ -71,11 +71,12 @@ class TestUnit(unittest.TestCase):
     ############################
     def test_undefined_symbol(self):
         stacker = Stacker()
-        # Undefined symbols are now treated as UndefinedSymbol objects
-        from stacker.engine.data_type import UndefinedSymbol
-
-        result = stacker.eval("x")
-        self.assertIsInstance(result[-1], UndefinedSymbol)
-        # But using them in operations should raise an error
+        # A reference to an undefined name is an error (1.16.0); the name
+        # itself is written `$x`.
+        with self.assertRaises(error.UndefinedSymbolError):
+            stacker.eval("x")
         with self.assertRaises(error.UndefinedSymbolError):
             stacker.eval("x 5 +")
+        from stacker.engine.data_type import Symbol
+
+        self.assertEqual(stacker.eval("$x")[-1], Symbol("x"))

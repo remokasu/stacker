@@ -3,7 +3,7 @@ into the body's block literals at the moment each literal is pushed."""
 
 import pytest
 
-from stacker.engine.data_type import UndefinedSymbol
+from stacker.error import UndefinedSymbolError
 from stacker.stacker import Stacker
 
 
@@ -81,9 +81,10 @@ class TestValueKinds:
         assert run("{v} {{v}} m defmacro", '"hi" m') == ["hi"]
 
     def test_symbol_value_is_inserted_as_bare_name(self):
-        result = run("{v} {{v}} m defmacro", "$foo m")
-        assert isinstance(result[0], UndefinedSymbol)
-        assert result[0] == "foo"
+        # The expansion is `{foo}`, so evaluating it references `foo`.
+        with pytest.raises(UndefinedSymbolError):
+            run("{v} {{v}} m defmacro", "$foo m")
+        assert run("{v} {{v 1 +}} m defmacro", "3 foo =", "$foo m") == [4]
 
     def test_symbol_value_resolves_as_variable_in_generated_code(self):
         assert run("3 foo =", "{v} {{v}} m defmacro", "$foo m") == [3]
@@ -109,10 +110,9 @@ class TestExpansionScope:
 
 
 def test_name_set_in_body_is_not_visible_to_the_caller_after_expansion():
-    result = run("{} { 7 q = {q} } m defmacro", "m q")
-    assert result[0] == 7
-    assert isinstance(result[1], UndefinedSymbol)
-    assert result[1] == "q"
+    assert run("{} { 7 q = {q} } m defmacro", "m") == [7]
+    with pytest.raises(UndefinedSymbolError):
+        run("{} { 7 q = {q} } m defmacro", "m q")
 
 
 def test_expansion_scope_is_discarded_so_later_calls_start_fresh():

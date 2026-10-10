@@ -59,8 +59,10 @@ class TestInclude:
         script = tmp_path / "lib.stk"
         script.write_text("{3 *} {thrice} alias\n", encoding="utf-8")
         stacker = Stacker(prelude=False)
-        run(stacker, f'"{script}" include')
-        # Without the prelude `alias` is an undefined word, so nothing was defined.
+        # Without the prelude `alias` is an undefined word: the reference fails
+        # (1.16.0; it used to be pushed silently) and nothing is defined.
+        with pytest.raises(UndefinedSymbolError, match="alias"):
+            run(stacker, f'"{script}" include')
         assert "thrice" not in stacker.macros
 
     def test_include_child_of_a_disabled_prelude_cannot_call_prelude_functions(

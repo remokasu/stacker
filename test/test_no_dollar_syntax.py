@@ -89,15 +89,13 @@ class TestNoDollarSyntax(unittest.TestCase):
         # Sum of 5, 15, 25 = 45
         self.assertEqual(result[-1], 45)
 
-    def test_undefined_variable_becomes_undefined_symbol(self):
-        """Test that undefined variables are treated as UndefinedSymbol objects (not errors)."""
-        from stacker.engine.data_type import UndefinedSymbol
+    def test_undefined_variable_is_an_error(self):
+        """A reference to an undefined name fails where it is written (1.16.0)."""
+        from stacker.error import UndefinedSymbolError
 
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval("undefined_var")
-        # Undefined variable should be pushed as an UndefinedSymbol
-        self.assertIsInstance(result[-1], UndefinedSymbol)
-        self.assertEqual(str(result[-1]), "undefined_var")
+        with self.assertRaises(UndefinedSymbolError):
+            stacker.eval("undefined_var")
 
     def test_undefined_symbol_raises_error_when_used(self):
         """Test that UndefinedSymbol raises error when used in operations."""
