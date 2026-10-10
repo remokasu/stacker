@@ -16,6 +16,7 @@ is used when a block is read as data (``nth``, ``apply``, ``map`` / ``filter``,
 from __future__ import annotations
 
 from stacker.engine.data_type import String, Symbol
+from stacker.syntax.token_rules import is_bare_name, is_symbol
 
 
 def value_to_token(value: object) -> object:
@@ -37,3 +38,25 @@ def value_to_token(value: object) -> object:
     if isinstance(value, str):
         return value if isinstance(value, String) else String(value)
     return value
+
+
+def token_to_value(token: object) -> object:
+    """Return the value a block token stands for when the block is read as data.
+
+    A name token, ``$name`` or bare, becomes a ``Symbol``: the name itself,
+    not the value of a variable. A ``String`` literal, a nested block and
+    any other object are kept as they are. A raw token that is not a name
+    (a list literal that stayed text, an invalid ``$`` token) is also kept.
+
+    Args:
+        token: A token taken from a code block.
+
+    Returns:
+        The value to push or to hand to a host function.
+    """
+    if type(token) is str:
+        if is_symbol(token):
+            return Symbol(token[1:])
+        if is_bare_name(token):
+            return Symbol(token)
+    return token

@@ -10,6 +10,7 @@ from stacker.error import (
     StackUnderflowError,
     StackerError,
     StackerSyntaxError,
+    StackerTypeError,
     UndefinedSymbolError,
     attach_macro_context,
     # UnexpectedTokenError,
@@ -19,7 +20,7 @@ from stacker.syntax.parser import (
     parse_expression,
 )
 from stacker.error import BreakException
-from stacker.engine.boundary import value_to_token
+from stacker.engine.boundary import token_to_value, value_to_token
 from stacker.engine.data_type import String, Symbol, UndefinedSymbol, stack_data, VOID
 from stacker.syntax.token_rules import (
     cached_literal_eval,
@@ -299,11 +300,15 @@ class StackerCore:
         stack.append(self.child)
 
     def _substack_with_tokens(self, tokens: list[object], stack: stack_data[object]) -> None:
+        stack.append(self._block_of(tokens))
+
+    def _block_of(self, tokens: list[object]) -> StackerCore:
+        """Builds a code block holding ``tokens`` (a freshly built list)."""
         self.child = type(self)(parent=self)
         # Callers always pass freshly built lists, so wrapping copies no
         # shared state; the TokenList carries the classification cache.
         self.child.tokens = TokenList(tokens)
-        stack.append(self.child)
+        return self.child
 
     def _safe_pop(self, stack: stack_data[object], operator: str = "unknown", num_args: int = 1) -> object:
         """Safely pop from stack with informative error messages.
@@ -518,12 +523,6 @@ class StackerCore:
             return value
         if isinstance(value, str) and is_string_token(value):
             return String(strip_string_delimiters(value))
-        elif isinstance(value, str) and is_symbol(value):
-            if value[1:] in self.variables:
-                return self.variables[value[1:]]
-            else:
-                # Return UndefinedSymbol instead of raising error
-                return UndefinedSymbol(value[1:])
         elif isinstance(value, str) and value in self.variables:
             return self.variables[value]
         elif isinstance(value, str):
@@ -879,6 +878,8 @@ class StackerCore:
         lst = stack[-1]
         if isinstance(lst, String):
             stack.append(String(lst[n]))  # type: ignore[index]
+        elif isinstance(lst, StackerCore):
+            stack.append(token_to_value(lst.tokens[n]))  # type: ignore[index]
         else:
             stack.append(lst[n])  # type: ignore[index]
 
@@ -902,15 +903,17 @@ class StackerCore:
                 stack.append(arg)
         elif isinstance(args_list, StackerCore):
             for tok in args_list.tokens:
-                stack.append(tok)
+                stack.append(token_to_value(tok))
         else:
             stack.append(args_list)
         if isinstance(func, StackerCore):
             self._eval_block(func, stack=stack)
         elif isinstance(func, StackerLambda):
             self._call_lambda(func, stack)
-        elif isinstance(func, str):
-            self._execute(func, stack)
+        elif isinstance(func, Symbol):
+            self._evaluate([func.name], stack=stack)
+        else:
+            raise StackerTypeError(self._function_spec_message("apply", func))
 
     def _prio_include(self, op, stack) -> None:
         filename = stack.pop()
@@ -1002,25 +1005,21 @@ class StackerCore:
         if token in ["map", "filter"]:
             body = stack.pop()
             hof_args = stack.pop()
-            args_org = copy.deepcopy(hof_args)
-            func = self._get_hof_func(body, token)
-            hof_args = hof_args.tokens if isinstance(hof_args, StackerCore) else hof_args
-            if op["push_result_to_stack"]:
-                lst = op["func"](func, hof_args)  # type: ignore[operator]
-                if isinstance(args_org, list):
-                    stack.append(list(lst))
-                elif isinstance(args_org, tuple):
-                    stack.append(tuple(lst))
-                else:
-                    self._substack_with_tokens(list(lst), stack)
-            else:
-                op["func"](func, hof_args)  # type: ignore[operator]
+            func = self._resolve_function_spec(body, token)
+            lst = op["func"](func, self._data_items(hof_args))  # type: ignore[operator]
+            self._push_like(hof_args, lst, stack)
         elif token in ["reduce", "fold"]:
             body = stack.pop()
             symbol_x = stack.pop()  # Second variable name (element)
             symbol_acc = stack.pop()  # First variable name (accumulator)
             init = stack.pop()
             fold_args = stack.pop()
+            if isinstance(body, Symbol):
+                body = self._block_of([body.name])
+            if not isinstance(body, StackerCore):
+                raise StackerTypeError(
+                    f"`{token}` expects a code block as the function, got {body!r}"
+                )
 
             # Extract variable names (same as dolist pattern)
             name_acc = self._name_of(symbol_acc, token)
@@ -1051,78 +1050,63 @@ class StackerCore:
                     raise NoValueProducedError(token)
                 return result_stack[0]
 
-            fold_args = fold_args.tokens if isinstance(fold_args, StackerCore) else fold_args
-            if op["push_result_to_stack"]:
-                result = op["func"](reduce_func, init, fold_args)  # type: ignore[operator]
-                stack.append(result)
-            else:
-                op["func"](reduce_func, init, fold_args)  # type: ignore[operator]
+            result = op["func"](reduce_func, init, self._data_items(fold_args))  # type: ignore[operator]
+            stack.append(result)
         elif token in ["zip"]:
             xs2 = stack.pop()
             xs1 = stack.pop()
-            xs_org = copy.deepcopy(xs1)
-            # ys_org = copy.deepcopy(ys)
-            xs2 = (
-                xs2.tokens
-                if isinstance(xs2, StackerCore)
-                else self._var_str_to_literal(xs2)
-            )
-            xs1 = (
-                xs1.tokens
-                if isinstance(xs1, StackerCore)
-                else self._var_str_to_literal(xs1)
-            )
-            if op["push_result_to_stack"]:
-                lst = op["func"](xs1, xs2)  # type: ignore[operator]
-                if isinstance(xs_org, list):
-                    stack.append(list(lst))
-                elif isinstance(xs_org, tuple):
-                    stack.append(tuple(lst))
-                else:
-                    self._substack_with_tokens(list(lst), stack)
-            else:
-                op["func"](xs1, xs2)  # type: ignore[operator]
+            lst = op["func"](self._data_items(xs1), self._data_items(xs2))  # type: ignore[operator]
+            self._push_like(xs1, lst, stack)
+
+    def _data_items(self, value: object) -> object:
+        """Returns the items a data word iterates over.
+
+        A code block is read as data: each name token becomes a ``Symbol``
+        (see ``engine/boundary.py``); lists and other iterables are used as
+        they are.
+        """
+        if isinstance(value, StackerCore):
+            return [token_to_value(token) for token in value.tokens]
+        if isinstance(value, UndefinedSymbol):
+            raise UndefinedSymbolError(value.name)
+        return value
+
+    def _push_like(self, source: object, result: object, stack: stack_data[object]) -> None:
+        """Pushes ``result`` in the container type of ``source``.
+
+        A block in gives a block out (values are converted back to tokens),
+        a tuple gives a tuple, anything else a list.
+        """
+        if isinstance(source, StackerCore):
+            self._substack_with_tokens([value_to_token(v) for v in result], stack)  # type: ignore[union-attr]
+        elif isinstance(source, tuple):
+            stack.append(tuple(result))  # type: ignore[arg-type]
         else:
-            ...
+            stack.append(list(result))  # type: ignore[arg-type]
     def _exec_transform(
         self, token: str, op: dict[str, object], stack: stack_data[object]
     ) -> None:
         """Execute a transform operator, preserving the input's container type on push."""
         tf_args = stack.pop()
-        args_org = copy.deepcopy(tf_args)
-        tf_args = (
-            tf_args.tokens
-            if isinstance(tf_args, StackerCore)
-            else self._var_str_to_literal(tf_args)
-        )
-        if op["push_result_to_stack"]:
-            lst = op["func"](tf_args)  # type: ignore[operator]
-            if token == "list":
-                stack.append(list(lst))
-            elif token == "tuple":
-                stack.append(tuple(lst))
-            else:
-                if isinstance(args_org, list):
-                    stack.append(list(lst))
-                elif isinstance(args_org, tuple):
-                    stack.append(tuple(lst))
-                else:
-                    self._substack_with_tokens(list(lst), stack)
+        lst = op["func"](self._data_items(tf_args))  # type: ignore[operator]
+        if token == "list":
+            stack.append(list(lst))
         else:
-            op["func"](tf_args)  # type: ignore[operator]
+            self._push_like(tf_args, lst, stack)
 
     def _exec_aggregate(
         self, token: str, op: dict[str, object], stack: stack_data[object]
     ) -> None:
-        """Execute an aggregate operator over a literal-evaluated block or list argument."""
+        """Execute an aggregate operator over a block (names are referenced) or a list."""
         agg_args = stack.pop()
-        agg_args = (
-            # A String token is already a literal; re-evaluating its text
-            # would read `{"a"} max` as the variable `a`.
-            [t if isinstance(t, String) else self._literal_eval(t) for t in agg_args.tokens]
-            if isinstance(agg_args, StackerCore)
-            else self._var_str_to_literal(agg_args)
-        )
+        if isinstance(agg_args, StackerCore):
+            if token == "len":
+                # `len` counts tokens so `dup len` works on any block
+                stack.append(len(agg_args.tokens))
+                return
+            agg_args = [self._block_token_value(t) for t in agg_args.tokens]
+        elif isinstance(agg_args, UndefinedSymbol):
+            raise UndefinedSymbolError(agg_args.name)
         if op["push_result_to_stack"]:
             result = op["func"](agg_args)  # type: ignore[operator]
             if result is not VOID:
@@ -1228,48 +1212,72 @@ class StackerCore:
             raise StackerSyntaxError(f"`{word}` argument names must be unique: {{{' '.join(names)}}}")
         return names
 
-    def _get_hof_func(self, body: object, operator: str) -> Callable[..., object]:
-        if isinstance(body, StackerCore):
-            return lambda args: self._stacker_lambda(args, body.copy(), operator)
-        elif isinstance(body, StackerLambda):
-            return body
-        else:
-            if body in self.sfunctions:
-                return self.sfunctions[body]["func"]  # type: ignore[index]
-            elif body in self.plugins:
-                return self.plugins[body]["func"]  # type: ignore[index]
-            elif body in self.operator_manager.operators["regular"]:
-                return self.operator_manager.operators["regular"][body]["func"]  # type: ignore[index]
-            else:
-                raise StackerSyntaxError(f"Unknown operator '{body}'")
+    @staticmethod
+    def _function_spec_message(word: str, spec: object) -> str:
+        return f"`{word}` expects a code block, a lambda or a symbol as the function, got {spec!r}"
 
-    def _get_reduce_func(self, body: object) -> Callable[..., object]:
-        """Get a binary function for reduce/fold operations."""
-        if isinstance(body, StackerCore):
-            def binary_func(acc: object, x: object) -> object:
-                bstack: list[object] = []
-                body_copy = body.copy()
-                # Push accumulator and current element to stack
-                body_copy.tokens.insert(0, acc)
-                body_copy.tokens.insert(1, x)
-                body_copy._evaluate(body_copy.tokens, stack=bstack)
-                if len(bstack) == 1:
-                    return bstack[0]
-                elif len(bstack) == 0:
-                    return self._substack("{}")
-                return bstack[0]
-            return binary_func
-        elif isinstance(body, StackerLambda):
-            return body
-        else:
-            if body in self.sfunctions:
-                return self.sfunctions[body]["func"]  # type: ignore[index]
-            elif body in self.plugins:
-                return self.plugins[body]["func"]  # type: ignore[index]
-            elif body in self.operator_manager.operators["regular"]:
-                return self.operator_manager.operators["regular"][body]["func"]  # type: ignore[index]
-            else:
-                raise StackerSyntaxError(f"Unknown operator '{body}'")
+    def _resolve_function_spec(self, spec: object, word: str) -> Callable[[object], object]:
+        """Turns the function argument of ``map`` / ``filter`` into a callable.
+
+        A code block is run once per element with the element on its stack.
+        A lambda is called as it is. A symbol means the same as the quoted
+        name ``{name}``: the name is resolved like a bare name (macro,
+        variable, function, operator). As a shortcut, a symbol naming a
+        one-argument host word that is not shadowed by a macro or a
+        variable is called directly; the result is the same.
+
+        Args:
+            spec: The function argument as popped from the stack.
+            word: The calling word (for the error message).
+
+        Returns:
+            A one-argument callable.
+
+        Raises:
+            StackerTypeError: ``spec`` is none of the above (a string, a number, ...).
+        """
+        if isinstance(spec, StackerCore):
+            return lambda element: self._stacker_lambda(element, spec.copy(), word)
+        if isinstance(spec, StackerLambda):
+            return spec
+        if isinstance(spec, Symbol):
+            name = spec.name
+            if name not in self.macros and self.variables.get(name, _MISSING) is _MISSING:
+                sfunc = self.sfunctions.get(name)
+                if sfunc is not None and sfunc["arg_count"] == 1 and sfunc["push_result_to_stack"]:  # type: ignore[index]
+                    return sfunc["func"]  # type: ignore[index, return-value]
+                host = self.plugins.get(name)
+                if host is None:
+                    entry = self.operator_manager.dispatch_table.get(name)
+                    if entry is not None and entry[0] == "regular":
+                        host = entry[1]
+                if host is not None and host["arg_count"] == 1 and host["push_result_to_stack"]:  # type: ignore[index]
+                    func = host["func"]  # type: ignore[index]
+                    # The element is prepared as `_execute` would (a block is
+                    # evaluated, a String literal is unwrapped).
+                    return lambda element: func(self._pop_and_eval(stack_data([element])))
+            block = self._block_of([name])
+            return lambda element: self._stacker_lambda(element, block.copy(), word)
+        raise StackerTypeError(self._function_spec_message(word, spec))
+
+    def _lookup_name(self, name: str) -> object:
+        """Returns the value bound to ``name``, or raises ``UndefinedSymbolError``."""
+        value = self.variables.get(name, _MISSING)
+        if value is _MISSING:
+            raise UndefinedSymbolError(name)
+        return value
+
+    def _block_token_value(self, token: object) -> object:
+        """Reads a block token the way an aggregate does: names are referenced.
+
+        A bare name token is the value of that variable, ``$name`` is the
+        symbol, and literal tokens are themselves.
+        """
+        if type(token) is str:
+            if is_symbol(token):
+                return Symbol(token[1:])
+            return self._lookup_name(token)
+        return token
 
     def _pop_macro_arg(self, stack: stack_data[object]) -> object:
         """Pops a macro argument without evaluating it.
@@ -1391,8 +1399,12 @@ class StackerCore:
             recursion.leave()
 
     def _stacker_lambda(self, arg: object, body: StackerCore, operator: str) -> object:
-        lstack: list[object] = []
-        body.tokens.insert(0, arg)
+        """Runs ``body`` once with ``arg`` as the only value on its stack.
+
+        The element is pushed as a value, never spliced into the token
+        list, so a string element stays a string and a symbol a symbol.
+        """
+        lstack: list[object] = [arg]
         body._evaluate(body.tokens, stack=lstack)
         if len(lstack) == 1:
             return lstack[0]
