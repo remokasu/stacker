@@ -98,9 +98,9 @@ class TestRecursionGuardInProcess(unittest.TestCase):
     def test_lambda_reported_as_lambda(self):
         recursion.set_limit(5)
         stacker = Stacker()
-        stacker.process_expression("{x} {x recl} lambda $recl set")
+        stacker.process_expression("{x} {x recl eval} lambda $recl set")
         with self.assertRaises(StackerRecursionError) as ctx:
-            stacker.process_expression("1 recl")
+            stacker.process_expression("1 recl eval")
         self.assertEqual(ctx.exception.name, "<lambda>")
 
     def test_counter_does_not_leak_after_error(self):

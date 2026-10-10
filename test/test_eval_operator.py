@@ -25,9 +25,9 @@ class TestStringEval:
     def test_variables_are_still_resolved(self):
         assert run("5 x set", '"x x +" eval') == [10]
 
-    def test_lambda_held_in_a_variable_is_called_inside_the_string(self):
-        # The same as writing the name in a block.
-        assert run("{a} {a 1 +} lambda f set", '"5 f" eval') == [6]
+    def test_lambda_held_in_a_variable_is_a_value_inside_the_string(self):
+        # The same as writing the name in a block: `f` pushes the lambda, `eval` calls it.
+        assert run("{a} {a 1 +} lambda f set", '"5 f eval" eval') == [6]
 
 
 class TestEvalOnValues:

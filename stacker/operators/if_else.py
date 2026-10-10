@@ -10,12 +10,15 @@ if TYPE_CHECKING:
 
 
 def _resolve_condition(condition: object, parent: Stacker, stack: stack_data[object]) -> object:
-    """Evaluate a condition block on ``stack`` or resolve a variable name."""
+    """Evaluate a condition block on ``stack``; any other value is the condition itself.
+
+    A symbol or a string is never looked up as a variable here: a symbol is
+    truthy, a string is truthy when non-empty. Write the bare name to test a
+    variable's value.
+    """
     if isinstance(condition, type(parent)):
         parent.evaluate(condition.tokens, stack=stack)
         return stack.pop()
-    if isinstance(condition, str) and condition in parent.variables:
-        return parent.variables[condition]
     return condition
 
 

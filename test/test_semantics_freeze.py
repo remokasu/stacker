@@ -102,6 +102,34 @@ class TestDynamicNameResolution(unittest.TestCase):
         self.assertEqual(list(self.stacker.stack), [3])
 
 
+class TestSymbolValues(unittest.TestCase):
+    """1.16.0: a symbol is a value of its own and is never looked up as text."""
+
+    def setUp(self):
+        self.stacker = Stacker()
+
+    def test_symbol_does_not_resolve_to_a_bound_value(self):
+        from stacker.engine.data_type import Symbol
+
+        self.stacker.process_expression("5 x set $x")
+        self.assertEqual(list(self.stacker.stack), [Symbol("x")])
+
+    def test_symbol_eval_equals_quoted_name_eval(self):
+        self.stacker.process_expression("3 4 $+ eval")
+        self.assertEqual(list(self.stacker.stack), [7])
+        self.stacker.stack.clear()
+        self.stacker.process_expression("3 4 {+} eval")
+        self.assertEqual(list(self.stacker.stack), [7])
+
+    def test_lambda_in_a_variable_is_pushed_by_its_bare_name(self):
+        from stacker.engine.slambda import StackerLambda
+
+        self.stacker.process_expression("{a} {a 2 *} lambda f set 5 f")
+        self.assertIsInstance(self.stacker.stack[-1], StackerLambda)
+        self.stacker.process_expression("eval")
+        self.assertEqual(list(self.stacker.stack), [10])
+
+
 class TestListLiteralFreshness(unittest.TestCase):
     """List literals are re-materialized on every evaluation."""
 

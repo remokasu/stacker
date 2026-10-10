@@ -3,6 +3,8 @@ from __future__ import annotations
 import itertools
 from typing import TYPE_CHECKING
 
+from stacker.engine.data_type import Symbol
+
 if TYPE_CHECKING:
     from stacker.stacker import Stacker
 
@@ -11,9 +13,9 @@ GENSYM_PREFIX = "__g"
 _gensym_counter = itertools.count(1)
 
 
-def gensym() -> str:
-    """Returns a fresh, unique symbol value (same kind of value as ``$name``)."""
-    return f"{GENSYM_PREFIX}{next(_gensym_counter)}"
+def gensym() -> Symbol:
+    """Returns a fresh, unique symbol (the same kind of value as ``$name`` pushes)."""
+    return Symbol(f"{GENSYM_PREFIX}{next(_gensym_counter)}")
 
 
 class StackerMacro:
