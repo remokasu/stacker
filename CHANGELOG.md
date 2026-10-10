@@ -61,6 +61,7 @@ Note: This change is not backwards compatible with previous versions.
 - `[1 2] eval` pushes the list back instead of raising a Python `TypeError`
 - An undefined name given to the aggregate operators (`len`, `sum`, ...), the transforms (`list`, `sorted`, `reversed`, `enumerate`) or `zip` raises `UndefinedSymbolError` instead of being treated as the text of the name (`foo len` gave 3)
 - Inside a block given to an aggregate, a string literal is a string: `5 a set {"a"} max` gives `a`, not 5, and `{"1" "2"} sum` is a type error like `["1" "2"] sum`
+- A string given to an aggregate, a transform or `zip` is data even when a variable has the same name: `5 ab set "ab" list` gives `[a b]` (it used to try to list the number 5)
 
 ## [1.14.0] - 2026-08-07
 

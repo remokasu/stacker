@@ -78,3 +78,17 @@ class TestUndefinedNameArgument(unittest.TestCase):
             with self.subTest(expression=expression):
                 with self.assertRaises(UndefinedSymbolError):
                     Stacker().eval(expression)
+
+
+class TestStringArgumentIsData(unittest.TestCase):
+    """A string literal given to a transform used to be looked up as a
+    variable name when one existed (`5 ab set "ab" list` tried to list 5)."""
+
+    def test_string_with_a_variable_of_the_same_name(self):
+        for expression, expected in (
+            ('5 ab set "ab" list', ["a", "b"]),
+            ('5 ab set "ab" enumerate', [(0, "a"), (1, "b")]),
+        ):
+            with self.subTest(expression=expression):
+                self.assertEqual(Stacker().eval(expression).pop(), expected)
+

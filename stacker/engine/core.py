@@ -560,6 +560,10 @@ class StackerCore:
         if isinstance(value, UndefinedSymbol):
             # Popped from the stack: the same error every other consumer raises.
             raise UndefinedSymbolError(value.name)
+        if isinstance(value, String):
+            # A string literal popped from the stack is data; it must not be
+            # looked up as a variable (`5 ab set "ab" list` listed 5).
+            return value
         if isinstance(value, str) and is_string_token(value):
             return String(strip_string_delimiters(value))
         elif isinstance(value, str) and is_symbol(value):
