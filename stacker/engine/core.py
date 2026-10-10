@@ -62,7 +62,12 @@ _MISSING = object()
 
 
 def _symbol_in(args: object) -> str | None:
-    """Returns the name of the first ``Symbol`` among ``args`` (one container level deep)."""
+    """Returns the name of the first ``Symbol`` among ``args``.
+
+    Looks one container level deep (a symbol inside a list argument), which
+    covers the host functions' own error messages; deeper nesting is left
+    to Python's ``TypeError``.
+    """
     for arg in args:  # type: ignore[attr-defined]
         if isinstance(arg, Symbol):
             return arg.name
@@ -73,19 +78,25 @@ def _symbol_in(args: object) -> str | None:
     return None
 
 
-def _reraise_type_error(word: str, args: object, error: TypeError) -> NoReturn:
+def _reraise_type_error(word: str, args: object, error: Exception) -> NoReturn:
     """Re-raises ``error``, as a ``StackerTypeError`` when a symbol caused it.
 
-    Called from an ``except TypeError`` block in the operator executors, so
-    the happy path carries no type checks. A ``TypeError`` that involves no
-    symbol (``"a" 1 +``) is re-raised unchanged.
+    Called from an ``except (TypeError, AttributeError)`` block in the
+    operator executors, so the happy path carries no type checks. The error
+    is attributed to a symbol only when one is among ``args`` and the
+    message names the ``Symbol`` type (Python's own type and attribute
+    errors do: ``'Symbol' object has no attribute 'upper'``); an error
+    raised for another reason, such as ``"a" 1 +`` inside a ``map`` body,
+    is re-raised unchanged.
 
     Args:
         word: The operator being executed.
         args: Its arguments (the values handed to the host function).
-        error: The ``TypeError`` the host function raised.
+        error: The ``TypeError`` or ``AttributeError`` the host function raised.
     """
-    name = None if isinstance(error, StackerTypeError) else _symbol_in(args)
+    name = None
+    if not isinstance(error, StackerTypeError) and "Symbol" in str(error):
+        name = _symbol_in(args)
     if name is None:
         raise error
     raise StackerTypeError(
@@ -636,7 +647,7 @@ class StackerCore:
                         stack.append(result)
                 else:
                     op["func"](*args)  # type: ignore[index]
-            except TypeError as error:
+            except (TypeError, AttributeError) as error:
                 _reraise_type_error(token, args, error)
         else:
             entry = self.operator_manager.dispatch_table.get(token)
@@ -670,7 +681,7 @@ class StackerCore:
         name = self._name_of(symbol, "do")
         try:
             op["func"](start_value, end_value, name, body, self, stack)
-        except TypeError as error:
+        except (TypeError, AttributeError) as error:
             _reraise_type_error("do", [start_value, end_value], error)
 
     def _prio_dolist(self, op, stack) -> None:
@@ -680,7 +691,7 @@ class StackerCore:
         name = self._name_of(symbol, "dolist")
         try:
             op["func"](name, lst, body, self, stack)
-        except TypeError as error:
+        except (TypeError, AttributeError) as error:
             _reraise_type_error("dolist", [lst], error)
 
     def _prio_times(self, op, stack) -> None:
@@ -688,7 +699,7 @@ class StackerCore:
         body = stack.pop()
         try:
             op["func"](n_times, body, self, stack)
-        except TypeError as error:
+        except (TypeError, AttributeError) as error:
             _reraise_type_error("times", [n_times], error)
 
     def _prio_while(self, op, stack) -> None:
@@ -707,7 +718,7 @@ class StackerCore:
         pairs = []
         try:
             count = range(n)  # type: ignore[arg-type]
-        except TypeError as error:
+        except (TypeError, AttributeError) as error:
             _reraise_type_error("cond", [n], error)
         for _ in count:
             result = stack.pop()
@@ -886,13 +897,21 @@ class StackerCore:
 
     def _prio_subn(self, op, stack) -> None:
         n = stack.pop()
-        elms = [value_to_token(stack.pop()) for _ in range(n)]  # type: ignore[arg-type]
+        try:
+            count = range(n)  # type: ignore[arg-type]
+        except (TypeError, AttributeError) as error:
+            _reraise_type_error("subn", [n], error)
+        elms = [value_to_token(stack.pop()) for _ in count]
         elms.reverse()
         self._substack_with_tokens(elms, stack)
 
     def _prio_listn(self, op, stack) -> None:
         n = stack.pop()
-        elms = [stack.pop() for _ in range(n)]  # type: ignore[arg-type]
+        try:
+            count = range(n)  # type: ignore[arg-type]
+        except (TypeError, AttributeError) as error:
+            _reraise_type_error("listn", [n], error)
+        elms = [stack.pop() for _ in count]
         elms.reverse()
         stack.append(elms)
 
@@ -905,18 +924,24 @@ class StackerCore:
     def _prio_split(self, op, stack) -> None:
         sep = stack.pop()
         word = stack.pop()
-        for string in word.split(sep):  # type: ignore[union-attr]
-            stack.append(string)
+        try:
+            parts = word.split(sep)  # type: ignore[union-attr]
+        except (TypeError, AttributeError) as error:
+            _reraise_type_error("split", [word, sep], error)
+        stack.extend(parts)
 
     def _prio_nth(self, op, stack) -> None:
         n = stack.pop()
         lst = stack[-1]
-        if isinstance(lst, String):
-            stack.append(String(lst[n]))  # type: ignore[index]
-        elif isinstance(lst, StackerCore):
-            stack.append(token_to_value(lst.tokens[n]))  # type: ignore[index]
-        else:
-            stack.append(lst[n])  # type: ignore[index]
+        try:
+            if isinstance(lst, String):
+                stack.append(String(lst[n]))  # type: ignore[index]
+            elif isinstance(lst, StackerCore):
+                stack.append(token_to_value(lst.tokens[n]))  # type: ignore[index]
+            else:
+                stack.append(lst[n])  # type: ignore[index]
+        except (TypeError, AttributeError) as error:
+            _reraise_type_error("nth", [lst, n], error)
 
     def _prio_expand(self, op, stack) -> None:
         iterable = stack.pop()
@@ -1011,7 +1036,7 @@ class StackerCore:
                     stack.append(result)
             else:
                 op["func"](*op_args)  # type: ignore[operator]
-        except TypeError as error:
+        except (TypeError, AttributeError) as error:
             _reraise_type_error(token, op_args, error)
 
     def _exec_system(
@@ -1028,7 +1053,7 @@ class StackerCore:
                     stack.append(result)
             else:
                 op["func"](*sys_args)  # type: ignore[operator]
-        except TypeError as error:
+        except (TypeError, AttributeError) as error:
             _reraise_type_error(token, sys_args, error)
 
     def _exec_regular(
@@ -1045,7 +1070,7 @@ class StackerCore:
                     stack.append(result)
             else:
                 op["func"](*reg_args)  # type: ignore[operator]
-        except TypeError as error:
+        except (TypeError, AttributeError) as error:
             _reraise_type_error(token, reg_args, error)
     def _exec_hof(
         self, token: str, op: dict[str, object], stack: stack_data[object]
@@ -1058,7 +1083,7 @@ class StackerCore:
             items = self._data_items(hof_args)
             try:
                 self._push_like(hof_args, op["func"](func, items), stack)  # type: ignore[operator]
-            except TypeError as error:
+            except (TypeError, AttributeError) as error:
                 _reraise_type_error(token, [items], error)
         elif token in ["reduce", "fold"]:
             body = stack.pop()
@@ -1105,7 +1130,7 @@ class StackerCore:
             items = self._data_items(fold_args)
             try:
                 stack.append(op["func"](reduce_func, init, items))  # type: ignore[operator]
-            except TypeError as error:
+            except (TypeError, AttributeError) as error:
                 _reraise_type_error(token, [init, items], error)
         elif token in ["zip"]:
             xs2 = stack.pop()
@@ -1113,7 +1138,7 @@ class StackerCore:
             items1, items2 = self._data_items(xs1), self._data_items(xs2)
             try:
                 self._push_like(xs1, op["func"](items1, items2), stack)  # type: ignore[operator]
-            except TypeError as error:
+            except (TypeError, AttributeError) as error:
                 _reraise_type_error(token, [items1, items2], error)
 
     def _data_items(self, value: object) -> object:
@@ -1151,7 +1176,7 @@ class StackerCore:
                 stack.append(list(lst))
             else:
                 self._push_like(tf_args, lst, stack)
-        except TypeError as error:
+        except (TypeError, AttributeError) as error:
             _reraise_type_error(token, [items], error)
 
     def _exec_aggregate(
@@ -1172,7 +1197,7 @@ class StackerCore:
                     stack.append(result)
             else:
                 op["func"](agg_args)  # type: ignore[operator]
-        except TypeError as error:
+        except (TypeError, AttributeError) as error:
             _reraise_type_error(token, [agg_args], error)
 
     def _exec_file(
@@ -1189,7 +1214,7 @@ class StackerCore:
                     stack.append(result)
             else:
                 op["func"](*file_args)  # type: ignore[operator]
-        except TypeError as error:
+        except (TypeError, AttributeError) as error:
             _reraise_type_error(token, file_args, error)
 
     def _exec_settings(
@@ -1330,9 +1355,17 @@ class StackerCore:
                         host = entry[1]
                 if host is not None and host["arg_count"] == 1 and host["push_result_to_stack"]:  # type: ignore[index]
                     func = host["func"]  # type: ignore[index]
-                    # The element is prepared as `_execute` would (a block is
-                    # evaluated, a String literal is unwrapped).
-                    return lambda element: func(self._pop_and_eval(stack_data([element])))
+
+                    def call(element: object) -> object:
+                        # The element is prepared as `_execute` would (a block
+                        # is evaluated, a String literal is unwrapped), and a
+                        # type error names the word, as `_execute` would.
+                        try:
+                            return func(self._pop_and_eval(stack_data([element])))
+                        except (TypeError, AttributeError) as error:
+                            _reraise_type_error(name, [element], error)
+
+                    return call
             block = self._block_of([name])
             return lambda element: self._stacker_lambda(element, block.copy(), word)
         raise StackerTypeError(self._function_spec_message(word, spec))
@@ -1353,22 +1386,10 @@ class StackerCore:
         if type(token) is str:
             if is_symbol(token):
                 return Symbol(token[1:])
+            if is_list(token):
+                return self._build_list(_compile_list_template(token))
             return self._lookup_name(token)
         return token
-
-    def _pop_macro_arg(self, stack: stack_data[object]) -> object:
-        """Pops a macro argument without evaluating it.
-
-        Like ``_pop_and_resolve``: blocks stay raw, a ``String`` keeps its
-        type and a ``Symbol`` stays a symbol.
-
-        Args:
-            stack: Stack to pop from.
-
-        Returns:
-            The argument value.
-        """
-        return stack.pop()
 
     def _interpolate(self, block: StackerCore, scope: ScopedVariables) -> StackerCore:
         """Copies ``block`` with the expansion scope's own bindings spliced in.
@@ -1430,7 +1451,7 @@ class StackerCore:
             args: list[object] = []
             for _ in range(macro.arg_count):
                 try:
-                    args.insert(0, self._pop_macro_arg(stack))
+                    args.insert(0, self._pop_and_resolve(stack))  # blocks stay raw, symbols stay symbols
                 except IndexError:
                     raise StackUnderflowError(name, macro.arg_count) from None
 
