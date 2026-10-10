@@ -3,7 +3,6 @@ import copy
 import logging
 from collections.abc import Callable, Iterator
 import ast
-from functools import lru_cache
 from stacker.constant import constants
 from stacker.error import (
     MacroExpansionError,
@@ -17,18 +16,20 @@ from stacker.error import (
 )
 from stacker.syntax.parser import (
     convert_custom_array_to_proper_list,
-    is_code_block,
-    # is_contains_transpose_command,
-    # is_label_symbol,
-    is_list,
-    # is_transpose_command,
-    # is_tuple,  # REMOVED: Tuples no longer supported, () now creates code blocks
-    is_symbol,
     parse_expression,
 )
 from stacker.error import BreakException
 from stacker.engine.data_type import String, UndefinedSymbol, stack_data, VOID
-from stacker.syntax.token_rules import is_string_token, strip_string_delimiters
+from stacker.syntax.token_rules import (
+    cached_literal_eval,
+    is_bare_name,
+    is_code_block,
+    is_list,
+    is_string_token,
+    is_symbol,
+    reads_as_name,
+    strip_string_delimiters,
+)
 from stacker.engine.slambda import StackerLambda
 from stacker.engine.scope import ScopedVariables
 from stacker.engine import recursion
@@ -50,24 +51,8 @@ _DO_DOLIST = frozenset({"do", "dolist"})
 # Words of the form `... name name {block} WORD`: both names are bound
 _REDUCE_FOLD = frozenset({"reduce", "fold"})
 _BLOCK_BINDING_WORDS = _DO_DOLIST | _REDUCE_FOLD
-# First characters a Python literal can start with; anything else is a name
-# without consulting ast.literal_eval (keeps the classifier cheap).
-_LITERAL_START = frozenset("0123456789+-.([{'\"NTFbBrRuUfFs")
 # Sentinel for single-lookup scope reads (None is a valid variable value)
 _MISSING = object()
-
-
-# Cache for literal_eval to avoid re-evaluating the same tokens
-@lru_cache(maxsize=1024)
-def _cached_literal_eval(token: str) -> object:
-    """Cached version of ast.literal_eval for performance."""
-    try:
-        return ast.literal_eval(token)
-    except (ValueError, TypeError, SyntaxError):
-        # Malformed literal: fall back to the raw token (resolved later as a
-        # symbol/operator). MemoryError / RecursionError from pathological
-        # input must propagate instead of becoming a bogus stack value.
-        return token
 
 
 # Token classification kinds. Every decision below is a pure function of
@@ -140,48 +125,21 @@ def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
             elif (
                 word3 in _REDUCE_FOLD
                 and _is_block_token(next_next_token)
-                and _is_bare_name(next_token)
+                and is_bare_name(next_token)
             ):
                 # the first name of `acc x {block} reduce`
                 kind = K_LOOP_VAR
             else:
                 kind = K_DYNAMIC
-            if kind != K_DYNAMIC and not _reads_as_name(token):
+            if kind != K_DYNAMIC and not reads_as_name(token):
                 kind = K_DYNAMIC  # a literal (number, True, None, ...) is never a name
             entries.append((kind, token, None))
     return entries
 
 
-def _reads_as_name(token: str) -> bool:
-    """True if a raw token is a name rather than a Python literal.
-
-    A fatal error from a pathological token (``MemoryError`` /
-    ``RecursionError``) is swallowed here and the token is treated as a
-    name, exactly as before any literal check existed; the error is then
-    raised at the token's execution position, not during classification.
-    """
-    if not token or token[0] not in _LITERAL_START:
-        return True
-    try:
-        return isinstance(_cached_literal_eval(token), str)
-    except (MemoryError, RecursionError):
-        return True
-
-
 def _is_block_token(token: object) -> bool:
     """True if ``token`` is a code block, as source text or already built."""
     return isinstance(token, StackerCore) or (type(token) is str and is_code_block(token))
-
-
-def _is_bare_name(token: object) -> bool:
-    """True if ``token`` is a bare name: a raw str that is not a literal, list or block."""
-    return (
-        type(token) is str
-        and not is_string_token(token)
-        and not is_list(token)
-        and not is_code_block(token)
-        and _reads_as_name(token)
-    )
 
 
 class TokenList(list):
@@ -314,7 +272,7 @@ class StackerCore:
             return temp_stack.pop()
         if is_string_token(token):
             return String(strip_string_delimiters(token))
-        return _cached_literal_eval(token)
+        return cached_literal_eval(token)
 
     def _substack(self, token: str, stack: stack_data[object]) -> None:
         """Creates a substack from a code block.
