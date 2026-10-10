@@ -60,11 +60,15 @@ class CustomListPrinter(CustomPrinter):
         self.color = color
 
     def __str__(self) -> str:
-        _temp = list(map(custom_print, self.value))
-        return colored(str(_temp).replace(",", ""), self.color)
+        # Element by element, so commas inside strings survive and each
+        # element keeps its own color; only the brackets take the list color
+        # (the same scheme the top-level stack display uses).
+        inner = " ".join(str(custom_print(item)) for item in self.value)
+        return colored("[", self.color) + inner + colored("]", self.color)
 
     def __repr__(self) -> str:
-        return str(self.value).replace(",", "")
+        inner = " ".join(plain_text(item) for item in self.value)
+        return f"[{inner}]"
 
 
 # REMOVED: CustomTuplePrinter - () now creates code blocks, not tuples
@@ -101,10 +105,10 @@ class CustomStringPrinter(CustomPrinter):
         self.color = color
 
     def __str__(self) -> str:
-        return colored("'" + str(self.value) + "'", self.color)
+        return colored(repr(self), self.color)
 
     def __repr__(self) -> str:
-        return self.__str__()
+        return "'" + str(self.value) + "'"
 
 
 class CutomCallablePrinter(CustomPrinter):
@@ -171,8 +175,38 @@ def disp_colored(stack_list: list[object]) -> str:
     return stack_str
 
 
+def plain_text(item: object) -> str:
+    """Formats one stack item exactly like the colored display, minus the colors.
+
+    Each printer's ``__repr__`` is its color-free text, so the colored and the
+    plain display share one set of type cases (``custom_print``).
+
+    Args:
+        item: A value from the stack.
+
+    Returns:
+        The item's display text.
+    """
+    printed = custom_print(item)
+    # custom_print hands back unknown kinds of value unchanged; the colored
+    # display shows those with str(), so do the same here.
+    return repr(printed) if isinstance(printed, CustomPrinter) else str(printed)
+
+
 def disp_default(stack_list: list[object]) -> str:
-    return f"{stack_list}".replace(",", "")
+    """Formats the stack without colors: items space-separated inside brackets.
+
+    Built item by item rather than from ``str(list)`` with the commas
+    removed, which used to delete commas inside strings as well
+    (``"Hello, World!"`` showed as ``'Hello World!'``).
+
+    Args:
+        stack_list: The stack contents, bottom first.
+
+    Returns:
+        The display text, e.g. ``[3 'a, b' [1 2]]``.
+    """
+    return "[" + " ".join(plain_text(item) for item in stack_list) + "]"
 
 
 def disp_stack(stack_list: list[object], colored: bool = False) -> None:

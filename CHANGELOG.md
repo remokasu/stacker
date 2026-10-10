@@ -47,6 +47,7 @@ Note: This change is not backwards compatible with previous versions.
 - Macro recursion is stopped by the recursion guard with a `StackerRecursionError` naming the macro, instead of Python's `RecursionError`
 - `{} 5 five defmacro` reports a Stacker syntax error instead of leaking an `AttributeError`
 - Prelude files load in a fixed order (a manifest in the `slib` package) instead of directory-listing order
+- `disp` (and the non-colored stack display) no longer deletes commas inside strings: `"Hello, World!" disp` shows `['Hello, World!']`, and booleans print as `true` / `false` like the colored display
 
 ## [1.14.0] - 2026-08-07
 
