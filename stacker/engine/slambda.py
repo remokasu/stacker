@@ -65,8 +65,6 @@ class StackerLambda:
         if len(self.args) == 0:
             return "λ"
         body_str = self.blockstack.__str__()
-        for arg in self.args:
-            body_str = body_str.replace(f"'{arg}'", arg)
         if len(self.args) == 1:
             return f"λ{self.args[0]}." + body_str
         else:
