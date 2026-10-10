@@ -2,6 +2,7 @@ from __future__ import annotations
 import copy
 import logging
 from collections.abc import Callable, Iterator
+from typing import NoReturn
 import ast
 from stacker.constant import constants
 from stacker.error import (
@@ -55,6 +56,39 @@ _REDUCE_FOLD = frozenset({"reduce", "fold"})
 _BLOCK_BINDING_WORDS = _DO_DOLIST | _REDUCE_FOLD
 # Sentinel for single-lookup scope reads (None is a valid variable value)
 _MISSING = object()
+
+
+def _symbol_in(args: object) -> str | None:
+    """Returns the name of the first ``Symbol`` among ``args`` (one container level deep)."""
+    for arg in args:  # type: ignore[attr-defined]
+        if isinstance(arg, Symbol):
+            return arg.name
+        if isinstance(arg, (list, tuple)):
+            for item in arg:
+                if isinstance(item, Symbol):
+                    return item.name
+    return None
+
+
+def _reraise_type_error(word: str, args: object, error: TypeError) -> NoReturn:
+    """Re-raises ``error``, as a ``StackerTypeError`` when a symbol caused it.
+
+    Called from an ``except TypeError`` block in the operator executors, so
+    the happy path carries no type checks. A ``TypeError`` that involves no
+    symbol (``"a" 1 +``) is re-raised unchanged.
+
+    Args:
+        word: The operator being executed.
+        args: Its arguments (the values handed to the host function).
+        error: The ``TypeError`` the host function raised.
+    """
+    name = None if isinstance(error, StackerTypeError) else _symbol_in(args)
+    if name is None:
+        raise error
+    raise StackerTypeError(
+        f"`{word}` cannot use the symbol `{name}` as a value. "
+        f"Write `{name}` for the variable's value, or `${name} str` for its name as text."
+    ) from error
 
 
 # Token classification kinds. Every decision below is a pure function of
@@ -620,12 +654,15 @@ class StackerCore:
             op = self.plugins[token]
             for _ in range(op["arg_count"]):  # type: ignore[index]
                 args.insert(0, self._pop_and_eval(stack))
-            if op["push_result_to_stack"]:  # type: ignore[index]
-                result = op["func"](*args)  # type: ignore[index]
-                if result is not VOID:
-                    stack.append(result)
-            else:
-                op["func"](*args)  # type: ignore[index]
+            try:
+                if op["push_result_to_stack"]:  # type: ignore[index]
+                    result = op["func"](*args)  # type: ignore[index]
+                    if result is not VOID:
+                        stack.append(result)
+                else:
+                    op["func"](*args)  # type: ignore[index]
+            except TypeError as error:
+                _reraise_type_error(token, args, error)
         else:
             entry = self.operator_manager.dispatch_table.get(token)
             if entry is None:
@@ -656,19 +693,28 @@ class StackerCore:
         end_value = self._pop_and_eval(stack)
         start_value = self._pop_and_eval(stack)
         name = self._name_of(symbol, "do")
-        op["func"](start_value, end_value, name, body, self, stack)
+        try:
+            op["func"](start_value, end_value, name, body, self, stack)
+        except TypeError as error:
+            _reraise_type_error("do", [start_value, end_value], error)
 
     def _prio_dolist(self, op, stack) -> None:
         body = stack.pop()
         symbol = stack.pop()
         lst = self._pop_and_eval(stack)
         name = self._name_of(symbol, "dolist")
-        op["func"](name, lst, body, self, stack)
+        try:
+            op["func"](name, lst, body, self, stack)
+        except TypeError as error:
+            _reraise_type_error("dolist", [lst], error)
 
     def _prio_times(self, op, stack) -> None:
         n_times = self._pop_and_eval(stack)
         body = stack.pop()
-        op["func"](n_times, body, self, stack)
+        try:
+            op["func"](n_times, body, self, stack)
+        except TypeError as error:
+            _reraise_type_error("times", [n_times], error)
 
     def _prio_while(self, op, stack) -> None:
         body = stack.pop()
@@ -684,7 +730,11 @@ class StackerCore:
     def _prio_cond(self, op, stack) -> None:
         n = self._pop_and_eval(stack)
         pairs = []
-        for _ in range(n):  # type: ignore[arg-type]
+        try:
+            count = range(n)  # type: ignore[arg-type]
+        except TypeError as error:
+            _reraise_type_error("cond", [n], error)
+        for _ in count:
             result = stack.pop()
             condition = stack.pop()
             pairs.insert(0, (condition, result))
@@ -964,12 +1014,15 @@ class StackerCore:
         op_args: list[object] = [stack]
         for _ in range(op["arg_count"]):  # type: ignore[arg-type]
             op_args.insert(0, self._pop_and_eval(stack))
-        if op["push_result_to_stack"]:
-            result = op["func"](*op_args)  # type: ignore[operator]
-            if result is not VOID:
-                stack.append(result)
-        else:
-            op["func"](*op_args)  # type: ignore[operator]
+        try:
+            if op["push_result_to_stack"]:
+                result = op["func"](*op_args)  # type: ignore[operator]
+                if result is not VOID:
+                    stack.append(result)
+            else:
+                op["func"](*op_args)  # type: ignore[operator]
+        except TypeError as error:
+            _reraise_type_error(token, op_args, error)
 
     def _exec_system(
         self, token: str, op: dict[str, object], stack: stack_data[object]
@@ -978,12 +1031,15 @@ class StackerCore:
         sys_args: list[object] = [stack, self]
         for _ in range(op["arg_count"]):  # type: ignore[arg-type]
             sys_args.insert(0, self._pop_and_eval(stack))
-        if op["push_result_to_stack"]:
-            result = op["func"](*sys_args)  # type: ignore[operator]
-            if result is not VOID:
-                stack.append(result)
-        else:
-            op["func"](*sys_args)  # type: ignore[operator]
+        try:
+            if op["push_result_to_stack"]:
+                result = op["func"](*sys_args)  # type: ignore[operator]
+                if result is not VOID:
+                    stack.append(result)
+            else:
+                op["func"](*sys_args)  # type: ignore[operator]
+        except TypeError as error:
+            _reraise_type_error(token, sys_args, error)
 
     def _exec_regular(
         self, token: str, op: dict[str, object], stack: stack_data[object]
@@ -992,12 +1048,15 @@ class StackerCore:
         reg_args: list[object] = []
         for _ in range(op["arg_count"]):  # type: ignore[arg-type]
             reg_args.insert(0, self._pop_and_eval(stack))
-        if op["push_result_to_stack"]:
-            result = op["func"](*reg_args)  # type: ignore[operator]
-            if result is not VOID:
-                stack.append(result)
-        else:
-            op["func"](*reg_args)  # type: ignore[operator]
+        try:
+            if op["push_result_to_stack"]:
+                result = op["func"](*reg_args)  # type: ignore[operator]
+                if result is not VOID:
+                    stack.append(result)
+            else:
+                op["func"](*reg_args)  # type: ignore[operator]
+        except TypeError as error:
+            _reraise_type_error(token, reg_args, error)
     def _exec_hof(
         self, token: str, op: dict[str, object], stack: stack_data[object]
     ) -> None:
@@ -1006,8 +1065,11 @@ class StackerCore:
             body = stack.pop()
             hof_args = stack.pop()
             func = self._resolve_function_spec(body, token)
-            lst = op["func"](func, self._data_items(hof_args))  # type: ignore[operator]
-            self._push_like(hof_args, lst, stack)
+            items = self._data_items(hof_args)
+            try:
+                self._push_like(hof_args, op["func"](func, items), stack)  # type: ignore[operator]
+            except TypeError as error:
+                _reraise_type_error(token, [items], error)
         elif token in ["reduce", "fold"]:
             body = stack.pop()
             symbol_x = stack.pop()  # Second variable name (element)
@@ -1050,13 +1112,19 @@ class StackerCore:
                     raise NoValueProducedError(token)
                 return result_stack[0]
 
-            result = op["func"](reduce_func, init, self._data_items(fold_args))  # type: ignore[operator]
-            stack.append(result)
+            items = self._data_items(fold_args)
+            try:
+                stack.append(op["func"](reduce_func, init, items))  # type: ignore[operator]
+            except TypeError as error:
+                _reraise_type_error(token, [init, items], error)
         elif token in ["zip"]:
             xs2 = stack.pop()
             xs1 = stack.pop()
-            lst = op["func"](self._data_items(xs1), self._data_items(xs2))  # type: ignore[operator]
-            self._push_like(xs1, lst, stack)
+            items1, items2 = self._data_items(xs1), self._data_items(xs2)
+            try:
+                self._push_like(xs1, op["func"](items1, items2), stack)  # type: ignore[operator]
+            except TypeError as error:
+                _reraise_type_error(token, [items1, items2], error)
 
     def _data_items(self, value: object) -> object:
         """Returns the items a data word iterates over.
@@ -1088,11 +1156,15 @@ class StackerCore:
     ) -> None:
         """Execute a transform operator, preserving the input's container type on push."""
         tf_args = stack.pop()
-        lst = op["func"](self._data_items(tf_args))  # type: ignore[operator]
-        if token == "list":
-            stack.append(list(lst))
-        else:
-            self._push_like(tf_args, lst, stack)
+        items = self._data_items(tf_args)
+        try:
+            lst = op["func"](items)  # type: ignore[operator]
+            if token == "list":
+                stack.append(list(lst))
+            else:
+                self._push_like(tf_args, lst, stack)
+        except TypeError as error:
+            _reraise_type_error(token, [items], error)
 
     def _exec_aggregate(
         self, token: str, op: dict[str, object], stack: stack_data[object]
@@ -1107,12 +1179,15 @@ class StackerCore:
             agg_args = [self._block_token_value(t) for t in agg_args.tokens]
         elif isinstance(agg_args, UndefinedSymbol):
             raise UndefinedSymbolError(agg_args.name)
-        if op["push_result_to_stack"]:
-            result = op["func"](agg_args)  # type: ignore[operator]
-            if result is not VOID:
-                stack.append(result)
-        else:
-            op["func"](agg_args)  # type: ignore[operator]
+        try:
+            if op["push_result_to_stack"]:
+                result = op["func"](agg_args)  # type: ignore[operator]
+                if result is not VOID:
+                    stack.append(result)
+            else:
+                op["func"](agg_args)  # type: ignore[operator]
+        except TypeError as error:
+            _reraise_type_error(token, [agg_args], error)
 
     def _exec_file(
         self, token: str, op: dict[str, object], stack: stack_data[object]
@@ -1121,12 +1196,15 @@ class StackerCore:
         file_args: list[object] = []
         for _ in range(op["arg_count"]):  # type: ignore[arg-type]
             file_args.insert(0, self._pop_and_eval(stack))
-        if op["push_result_to_stack"]:
-            result = op["func"](*file_args)  # type: ignore[operator]
-            if result is not VOID:
-                stack.append(result)
-        else:
-            op["func"](*file_args)  # type: ignore[operator]
+        try:
+            if op["push_result_to_stack"]:
+                result = op["func"](*file_args)  # type: ignore[operator]
+                if result is not VOID:
+                    stack.append(result)
+            else:
+                op["func"](*file_args)  # type: ignore[operator]
+        except TypeError as error:
+            _reraise_type_error(token, file_args, error)
 
     def _exec_settings(
         self, token: str, op: dict[str, object], stack: stack_data[object]
@@ -1442,16 +1520,10 @@ class StackerCore:
                 return f"{quote}{item.value}{quote}"
             elif is_list(item):
                 return item.replace(",", " ")  # type: ignore[union-attr]
-            # REMOVED: Tuple handling - () now creates code blocks
             elif isinstance(item, str):
-                if item in self.operator_manager.built_in_operators:
-                    return item
-                elif is_code_block(item):
-                    return item
-                elif item in self.variables:
-                    return item
-                else:
-                    return repr(item)
+                # A raw token is a name, an operator or `$name`: shown as written,
+                # whether or not the name is bound right now.
+                return item
             return str(item)
 
         formatted_items = " ".join(map(format_item, self.tokens))

@@ -10,7 +10,7 @@ import pytest
 from stacker import Stacker
 from stacker.engine.core import StackerCore
 from stacker.engine.data_type import String, Symbol
-from stacker.error import StackerSyntaxError, StackUnderflowError
+from stacker.error import StackerSyntaxError, StackerTypeError, StackUnderflowError
 
 
 def run(*lines: str) -> list[object]:
@@ -187,3 +187,72 @@ class TestMacroArguments:
             "{x} { gensym t = { x eval t set t t + } } {double!} defmacro",
             "{3 4 +} double!",
         ) == [14]
+
+
+class TestSymbolInComputation:
+    def test_arithmetic_on_a_symbol_is_a_stacker_type_error(self):
+        with pytest.raises(StackerTypeError) as info:
+            run("$x 1 +")
+        assert "`+` cannot use the symbol `x` as a value" in str(info.value)
+        assert "Write `x`" in str(info.value)
+
+    def test_binding_does_not_help(self):
+        with pytest.raises(StackerTypeError):
+            run("5 x set $x 1 +")
+
+    def test_inside_a_block(self):
+        with pytest.raises(StackerTypeError):
+            run("{$x 1 +} eval")
+
+    @pytest.mark.parametrize(
+        "program",
+        ["2 n set 0 $n i {i} do", "{1} $n times", "$x {} map", "$xs x {x} dolist", "$n cond"],
+    )
+    def test_symbol_where_a_value_is_needed(self, program):
+        with pytest.raises(StackerTypeError):
+            run(program)
+
+    def test_plugin_argument(self):
+        stacker = Stacker()
+        stacker.register_plugin("twice", lambda x: x * 2)
+        with pytest.raises(StackerTypeError):
+            stacker.process_expression("$x twice")
+
+    def test_other_type_errors_are_unchanged(self):
+        with pytest.raises(TypeError) as info:
+            run('"a" 1 +')
+        assert not isinstance(info.value, StackerTypeError)
+
+    def test_stack_words_accept_symbols(self):
+        assert run("$x dup") == [Symbol("x"), Symbol("x")]
+
+    def test_iferror_catches_it(self):
+        assert run("{$q 1 +} {2} iferror") == [2]
+
+
+class TestDisplay:
+    def test_symbols_are_bare_and_strings_quoted(self):
+        from stacker.util.disp import disp_default
+
+        assert disp_default([Symbol("x"), "ab", String("ab")]) == "[x 'ab' 'ab']"
+
+    def test_computed_strings_are_quoted(self):
+        from stacker.util.disp import disp_default
+
+        assert disp_default(run('"a" "b" +')) == "['ab']"
+        assert disp_default(run('"hello" s = s')) == "['hello']"
+
+    def test_block_tokens_are_shown_as_written(self):
+        (block,) = run("{foo}")
+        assert str(block) == "{foo}"
+        (block,) = run("5 foo set {foo}")
+        assert str(block) == "{foo}"
+        (block,) = run("{$x}")
+        assert str(block) == "{$x}"
+        (block,) = run('{"a b" echo}')
+        assert str(block) == '{"a b" echo}'
+
+    def test_lambda_display(self):
+        (fn,) = run("{x y} {x y *} lambda")
+        assert str(fn) == "λxλy.{x y *}"
+

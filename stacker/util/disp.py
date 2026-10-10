@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 from stacker.util import colored
-from stacker.engine.data_type import String
+from stacker.engine.data_type import String, Symbol
 
 
 class CustomPrinter:
@@ -35,10 +35,18 @@ class CustromComplexPrinter(CustomPrinter):
         self.color = color
 
 
-class CustomStrPrinter(CustomPrinter):
-    def __init__(self, value: str, color: str) -> None:
+class CustomSymbolPrinter(CustomPrinter):
+    """A symbol is shown as its bare name."""
+
+    def __init__(self, value: Symbol, color: str) -> None:
         self.value = value
         self.color = color
+
+    def __str__(self) -> str:
+        return colored(self.value.name, self.color)
+
+    def __repr__(self) -> str:
+        return self.value.name
 
 
 class CustomBoolPrinter(CustomPrinter):
@@ -127,8 +135,8 @@ color_map: dict[str, str] = {
     "int": "default",
     "float": "default",
     "complex": "default",
-    "str": "default",  # variable symbol
-    "String": "lightgreen",
+    "symbol": "default",
+    "String": "lightgreen",  # every string, literal or computed
     "bool": "lightblue",
     "list": "red",
     # "tuple": "red",  # REMOVED: Tuples no longer supported
@@ -148,10 +156,11 @@ def custom_print(value: object) -> CustomPrinter | object:
         return CustomFloatPrinter(value, color_map["float"])
     if isinstance(value, complex):
         return CustromComplexPrinter(value, color_map["complex"])
-    if isinstance(value, String):
-        return CustomStringPrinter(value, color_map["String"])
+    if isinstance(value, Symbol):
+        return CustomSymbolPrinter(value, color_map["symbol"])
     if isinstance(value, str):
-        return CustomStrPrinter(value, color_map["str"])
+        # A string is shown quoted whether it is a literal or a computed value
+        return CustomStringPrinter(value, color_map["String"])
     if isinstance(value, list):
         return CustomListPrinter(value, color_map["list"])
     # REMOVED: tuple handling - () now creates code blocks
