@@ -146,11 +146,12 @@ Stacker allows for straightforward RPN input. For example:
 
     - Right before `set`, `=`, `global`, `defun` or `defmacro`, and as the loop variable of `do` / `dolist`,
       a bare name is read as the name being bound, so `3 x set` and `0 10 i {i echo} do` need no `$`.
-      The one exception is a built-in operator name: `3 dup set` runs `dup` (and `set` then fails). To bind
-      a built-in name on purpose, write `3 $dup set` or `3 {dup} set`. Your own variables, functions and
-      macros can be redefined by their bare name; redefining a prelude word such as `alias` logs a warning.
-    - Anywhere else a bare name is looked up: as a variable, then as an operator, otherwise it stays an
-      undefined symbol. `$x` instead pushes the symbol `x` itself as a value, which is what words such as
+      The one exception is a built-in operator name right before a binding form: `3 dup set` runs `dup` (and
+      `set` then fails). To bind a built-in name on purpose, write `3 $dup set` or `3 {dup} set`. (A loop
+      variable may have any name.) Your own variables, functions and macros can be redefined by their bare
+      name; redefining a prelude word such as `alias` logs a warning.
+    - Anywhere else a bare name is looked up: as a macro, then a variable, then an operator, otherwise it
+      stays an undefined symbol. `$x` instead pushes the symbol `x` itself as a value, which is what words such as
       `macroexpand` expect: `{x} {{x x}} m defmacro 3 $m macroexpand`.
     - `{x}` (a block holding only the name) is the form that means "this name" everywhere, including as an
       argument to a macro. Prefer it when passing a name to `alias`, `macroexpand` or your own macros: a macro
