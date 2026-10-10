@@ -69,10 +69,10 @@ class ScriptMode(ExecutionMode):
 
         # Undefined variable/symbol errors
         if "UndefinedSymbol" in error_type or "UndefinedVariable" in error_type:
-            # Extract variable name from message
+            # Extract the name from the message
             if "`" in message:
                 var_name = message.split("`")[1]
-                return f"Define '{var_name}' before using it: '0 {var_name} ='"
+                return f"To use the name itself, write `${var_name}` or `{{{var_name}}}`"
 
         # Stack underflow errors
         elif "StackUnderflow" in error_type:

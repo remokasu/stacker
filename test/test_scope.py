@@ -42,13 +42,12 @@ class TestVariableScope(unittest.TestCase):
         # Global answer should still be 42
         result = self.stacker.eval("answer")
         self.assertEqual(result[-1], 42)
-        # temp should not exist $in global scope - it becomes UndefinedSymbol
-        from stacker.engine.data_type import UndefinedSymbol
+        # temp does not exist in the global scope: referencing it is an error (1.16.0)
+        from stacker.error import UndefinedSymbolError
 
-        result = self.stacker.eval("temp")
-        self.assertIsInstance(result[-1], UndefinedSymbol)
-        # But using it in an operation should raise an error
-        with self.assertRaises(Exception):
+        with self.assertRaises(UndefinedSymbolError):
+            self.stacker.eval("temp")
+        with self.assertRaises(UndefinedSymbolError):
             self.stacker.eval("temp 5 +")
 
     def test_nested_function_calls_independent_scopes(self):

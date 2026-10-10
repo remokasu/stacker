@@ -8,7 +8,7 @@ pushed as-is.
 import pytest
 
 from stacker.engine import recursion
-from stacker.engine.data_type import String, UndefinedSymbol
+from stacker.engine.data_type import String
 from stacker.engine.slambda import StackerLambda
 from stacker.error import (
     MacroExpansionError,
@@ -16,6 +16,7 @@ from stacker.error import (
     StackerRecursionError,
     StackerSyntaxError,
     StackUnderflowError,
+    UndefinedSymbolError,
 )
 from stacker.stacker import Stacker
 
@@ -72,10 +73,11 @@ class TestArguments:
             "{7}",
         ]
 
-    def test_undefined_symbol_argument_becomes_a_bare_name(self):
-        result = run("{v} {{v}} m defmacro", "foo m")
-        assert isinstance(result[0], UndefinedSymbol)
-        assert result[0] == "foo"
+    def test_undefined_bare_name_argument_is_an_error(self):
+        # `foo` is referenced before the macro sees it; pass the name as `$foo` or `{foo}`.
+        with pytest.raises(UndefinedSymbolError):
+            run("{v} {{v}} m defmacro", "foo m")
+        assert [str(b) for b in run("{v} {{v}} m defmacro", "{foo} m")] == ["{foo}"]
 
 
 class TestDefinitionValidation:

@@ -774,7 +774,7 @@ print(stacker.eval("3 4 +"))
 | gcd      | Greatest common divisor                               | `4 2 gcd`                  |
 | !        | Factorial                                             | `4 !`                      |
 | radians  | Convert degrees to radians                            | `180 radians`              |
-| random   | Generate a random floating-point number between 0 and 1| `random`                  |
+| rand     | Generate a random floating-point number between 0 and 1| `rand`                    |
 | randint  | Generate a random integer within a specified range    | `1 6 randint`              |
 | uniform  | Generate a random floating-point number within a specified range | `1 2 uniform`   |
 | frac     | Fraction                                              | `3 6 frac`                 |
@@ -809,8 +809,8 @@ print(stacker.eval("3 4 +"))
 | Operator | Description                                           | Example                    |
 |----------|-------------------------------------------------------|----------------------------|
 | if       | Conditional statement                                 | `true {...} if`            |
-| ifelse   | Conditional statement with an else block              | `true {true block} {false block} ifelse`  |
-| iferror  | Conditional statement for error handling              | `{try block} {catch block} iferror` |
+| ifelse   | Conditional statement with an else block              | `true {"yes"} {"no"} ifelse`  |
+| iferror  | Conditional statement for error handling              | `{1 0 /} {"caught"} iferror` |
 | cond     | Multi-branch conditional (first matching pair wins)   | `5 x set {x 0 >} {"pos"} {true} {"other"} 2 cond` |
 | do       | Loop                                                  | `0 10 i {i echo} do`      |
 | dolist   | Loop over the elements of a list                      | `[1 2 3] x {x echo} dolist` |
