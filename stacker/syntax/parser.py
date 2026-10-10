@@ -12,13 +12,13 @@ from stacker.syntax.lexer import (
     UnifiedLexer,
 )
 from stacker.error import StackerSyntaxError
-from stacker.syntax.token_rules import (  # noqa: F401 -- re-exported
+from stacker.syntax.token_rules import (  # noqa: F401 -- is_code_block / is_list / is_symbol are re-exported
     is_code_block,
     is_list,
     is_string_token,
     is_symbol,
+    not_a_symbol_message,
 )
-from stacker.syntax.token_rules import not_a_symbol_message
 
 __transpose_symbol__ = "^T"
 

@@ -140,13 +140,18 @@ def is_code_block(expression: object) -> bool:
     return False
 
 
+#: Characters a name cannot hold: the lexer would split the token there (or
+#: start a string, a block, a list or a comment), so ``$name`` could not be
+#: written back as one token.
+NAME_DELIMITERS = frozenset(" \t\n\r$\"'()[]{}#;")
+
+
 def is_symbol(expression: object) -> bool:
     """Return True if ``expression`` is a ``$name`` token.
 
-    A symbol token is a raw ``str`` made of one ``$`` followed by a bare
-    name: something that, written without the ``$``, would read as a name
-    (not a literal, a string, a list or a block) and holds no other ``$``.
-    So every symbol can be written back as ``$name``.
+    A symbol token is a raw ``str`` made of one ``$`` followed by a symbol
+    name (:func:`is_symbol_name`). So every symbol can be written back as
+    ``$name``.
 
     Args:
         expression: Token value.
@@ -157,8 +162,23 @@ def is_symbol(expression: object) -> bool:
     """
     if type(expression) is not str or not expression.startswith("$"):
         return False
-    name = expression[1:]
-    return "$" not in name and is_bare_name(name)
+    return is_symbol_name(expression[1:])
+
+
+def is_symbol_name(name: object) -> bool:
+    """Return True if ``name`` can be the name of a symbol (written back as ``$name``).
+
+    The name must read as a bare name and hold none of :data:`NAME_DELIMITERS`
+    (whitespace, ``$``, quotes, brackets, ``#``, ``;``), which a token from
+    the lexer never does but a string value may.
+
+    Args:
+        name: The candidate name.
+
+    Returns:
+        True if ``$name`` would be one symbol token.
+    """
+    return is_bare_name(name) and not any(ch in NAME_DELIMITERS for ch in name)  # type: ignore[union-attr]
 
 
 @lru_cache(maxsize=1024)
@@ -179,15 +199,6 @@ def cached_literal_eval(token: str) -> object:
         return ast.literal_eval(token)
     except (ValueError, TypeError, SyntaxError):
         return token
-
-
-def is_symbol_name(name: object) -> bool:
-    """Return True if ``name`` can be the name of a symbol (written back as ``$name``).
-
-    Unlike a token from the lexer, a string value may hold whitespace, so
-    that is checked here in addition to :func:`is_bare_name`.
-    """
-    return is_bare_name(name) and not any(ch.isspace() for ch in name)  # type: ignore[union-attr]
 
 
 def not_a_symbol_message(token: str) -> str:
