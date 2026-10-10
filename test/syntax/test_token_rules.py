@@ -3,13 +3,15 @@
 import pytest
 
 from stacker.engine.data_type import String
-from stacker.syntax import parser
+from stacker.syntax import parser, token_rules
 from stacker.syntax.token_rules import (
     cached_literal_eval,
     is_bare_name,
     is_code_block,
     is_list,
     is_symbol,
+    is_symbol_name,
+    not_a_symbol_message,
     reads_as_name,
 )
 
@@ -142,3 +144,59 @@ def test_parser_reexports_the_predicates():
     assert parser.is_list is is_list
     assert parser.is_code_block is is_code_block
     assert parser.is_symbol is is_symbol
+
+
+@pytest.mark.parametrize(
+    "name, expected",
+    [
+        ("x", True),
+        ("+", True),
+        ("x.y", True),
+        ("1st", True),
+        ("a-b?", True),
+        ("", False),
+        ("1", False),
+        ("a b", False),
+        ("a\tb", False),
+        ("a\nb", False),
+        ("$x", False),
+        ("a$", False),
+        ('a"b', False),
+        ("a'b", False),
+        ("a[b", False),
+        ("a]b", False),
+        ("a(b", False),
+        ("a#b", False),
+        ("a;b", False),
+        ("true", False),
+        ("None", False),
+        (String("x"), False),
+        (5, False),
+        (None, False),
+    ],
+)
+def test_is_symbol_name(name, expected):
+    assert is_symbol_name(name) is expected
+
+
+@pytest.mark.parametrize("name", ["x", "+", "x.y", "1st", "a-b?"])
+def test_is_symbol_name_agrees_with_is_symbol(name):
+    assert is_symbol_name(name) is is_symbol("$" + name)
+
+
+def test_keyword_literals_are_values_not_names():
+    assert token_rules.KEYWORD_LITERALS == {
+        "true": True,
+        "false": False,
+        "null": None,
+        "True": True,
+        "False": False,
+        "None": None,
+    }
+    for word in token_rules.KEYWORD_LITERALS:
+        assert not is_bare_name(word)
+        assert not is_symbol("$" + word)
+
+
+def test_not_a_symbol_message_quotes_the_token():
+    assert not_a_symbol_message("$1") == "`$1` is not a symbol: `$` must be followed by a name"
