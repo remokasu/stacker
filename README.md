@@ -77,7 +77,7 @@ Stacker allows for straightforward RPN input. For example:
   stacker:0> 3
   [3]
   stacker:1> 4
-  [3, 4]
+  [3 4]
   stacker:2> +
   [7]
   ```
@@ -114,9 +114,9 @@ Stacker allows for straightforward RPN input. For example:
   - example:
     ```bash
     stacker:0> "Hello, World!"
-    ["Hello, World!"]
+    ['Hello, World!']
     ```
-    In this example, the string "Hello, World!" is added to the stack.
+    In this example, the string "Hello, World!" is added to the stack. Strings are written with double quotes and shown on the stack with single quotes.
 
 
 - ### Variables:
@@ -133,8 +133,8 @@ Stacker allows for straightforward RPN input. For example:
     [3]
 
     # Using = operator (equivalent to set)
-    stacker:2> 5 y =
-    stacker:3> y
+    stacker:0> 5 y =
+    stacker:1> y
     [5]
     ```
     In this example, we assign `3` to `x` using `set`, and `5` to `y` using `=`. Both operators work identically.
@@ -153,14 +153,14 @@ Stacker allows for straightforward RPN input. For example:
   - Single-line array:
     ```bash
     stacker:0> [1 2 3; 4 5 6]
-    [[1, 2, 3], [4, 5, 6]]
+    [[[1 2 3] [4 5 6]]]
     ```
 
   - Multi-line array:
     ```bash
     stacker:0> [1 2 3;
     ... > 4 5 6]
-    [[1, 2, 3], [4, 5, 6]]
+    [[[1 2 3] [4 5 6]]]
     ```
 
 
@@ -191,7 +191,7 @@ Stacker allows for straightforward RPN input. For example:
   [{1 2 +}]
 
   # Execute with eval
-  stacker:1> {1 2 +} eval
+  stacker:0> {1 2 +} eval
   [3]
 
   # Use in function definitions
@@ -265,7 +265,7 @@ Stacker allows for straightforward RPN input. For example:
     ```bash
     stacker:0> 5 $x set
     stacker:1> {x 0 >} {"positive"} {x 0 <} {"negative"} {true} {"zero"} 3 cond
-    ["positive"]
+    ['positive']
     ```
 
     Result: Pushes `"positive"` onto the stack as `x` is greater than `0`. Use `{true}` as the last condition to provide a default branch.
@@ -772,17 +772,17 @@ print(stacker.eval("3 4 +"))
 |----------|-----------------------------------------------------------|------------------------|
 | drop     | Drops the top element of the stack.                       | `drop`                 |
 | drop2    | Drops the top two elements of the stack.                  | `drop2`                |
-| dropn    | Drops the nth element from the top of the stack.          | `n drop`               |
+| dropn    | Drops the top n elements of the stack.                    | `2 dropn`              |
 | dup      | Duplicate the top element of the stack.                   | `dup`                  |
 | dup2     | Duplicate the top two elements of the stack.              | `dup2`                 |
-| dupn     | Duplicate the nth element from the top of the stack.      | `n dup`                |
+| dupn     | Duplicate the top n elements of the stack.                | `2 dupn`               |
 | swap     | Swap the top two elements of the stack.                   | `swap`                 |
 | rev      | Reverse the stack.                                        | `rev`                  |
 | rot      | Move the third element to the top of the stack.           | `rot`                  |
 | unrot    | Move the top element to the third position of the stack.  | `unrot`                |
-| roll     | Moves the nth element to the top of the stack.            | `roll`                 |
+| roll     | Moves the nth element to the top of the stack.            | `2 roll`               |
 | over     | Copy the second element from the top of the stack.        | `over`                 |
-| pick     | Copies the nth element to the top of the stack.           | `n pick`               |
+| pick     | Copies the nth element to the top of the stack.           | `2 pick`               |
 | nip      | Remove the second element from the top of the stack.      | `nip`                  |
 | depth    | Returns the depth of the stack.                           | `depth`                |
 | ins      | Insert the specified value at the specified position.     | `3 1 ins`              |
@@ -797,11 +797,11 @@ print(stacker.eval("3 4 +"))
 | if       | Conditional statement                                 | `true {...} if`            |
 | ifelse   | Conditional statement with an else block              | `true {true block} {false block} ifelse`  |
 | iferror  | Conditional statement for error handling              | `{try block} {catch block} iferror` |
-| cond     | Multi-branch conditional (first matching pair wins)   | `{x 0 >} {"pos"} {true} {"other"} 2 cond` |
+| cond     | Multi-branch conditional (first matching pair wins)   | `5 x set {x 0 >} {"pos"} {true} {"other"} 2 cond` |
 | do       | Loop                                                  | `0 10 i {i echo} do`      |
 | dolist   | Loop over the elements of a list                      | `[1 2 3] x {x echo} dolist` |
 | times    | Loop a specified number of times                      | `{dup ++} 10 times`        |
-| while    | Loop while a condition is true                        | `{i 10 <} {i ++ $i set} while` |
+| while    | Loop while a condition is true                        | `0 $i set {i 10 <} {i ++ $i set} while` |
 | loop     | Repeat a block until `break`                          | `0 {1 + dup 10 > {break} if} loop` |
 | break    | Break out of a loop                                    | `break`                   |
 
