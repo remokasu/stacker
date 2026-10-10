@@ -48,6 +48,10 @@ Note: This change is not backwards compatible with previous versions.
 - `{} 5 five defmacro` reports a Stacker syntax error instead of leaking an `AttributeError`
 - Prelude files load in a fixed order (a manifest in the `slib` package) instead of directory-listing order
 - `disp` (and the non-colored stack display) no longer deletes commas inside strings: `"Hello, World!" disp` shows `['Hello, World!']`, and booleans print as `true` / `false` like the colored display
+- **String Literals Inside Code Blocks Are Literals**:
+  - A string literal inside a block used to be looked up as a name when the block ran: `5 foo set {"foo"} eval` gave `5`, `3 4 {"+"} eval` added the numbers, and a macro named `foo` captured `"foo"` even at top level. A string literal now always evaluates to itself, wherever it is written
+  - As a consequence, literals whose text looks like other syntax stay strings inside blocks too: `{"$x"}`, `{"[1 2]"}` and `{"{x}"}` push the strings `$x`, `[1 2]` and `{x}` (they used to be read as a symbol, a list and a block)
+  - A block displays its string literals with their quotes: `{"a b" echo}` shows as `{"a b" echo}`
 
 ## [1.14.0] - 2026-08-07
 
