@@ -840,8 +840,8 @@ print(stacker.eval("3 4 +"))
 | map      | Apply a function to each element of an array          | `[1 2 3] {dup} map`        |
 | zip      | Combine two arrays into a single array                | `[1 2 3] [4 5 6] zip`      |
 | filter   | Filter an array based on a condition                  | `[1 2 3 4 5] {2 % 0 ==} filter` |
-| all      | Check if all elements of an array satisfy a condition  | `[1 2 3 4 5] {2 % 0 ==} all` |
-| any      | Check if any element of an array satisfies a condition | `[1 2 3 4 5] {2 % 0 ==} any` |
+| all      | Check if all elements of a list are true              | `[true true false] all`    |
+| any      | Check if any element of a list is true                | `[true false false] any`   |
 | car      | Return the first element of a list                    | `[1 2 3] car`              |
 | cdr      | Return the list without its first element             | `[1 2 3] cdr`              |
 | cons     | Prepend an element to a list                          | `1 [2 3] cons`             |
