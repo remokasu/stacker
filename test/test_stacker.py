@@ -285,8 +285,14 @@ class TestStacker(unittest.TestCase):
 
     # eval
     def test_eval_str(self):
+        # A string is text, not code (1.16.0): read it first.
+        from stacker.error import StackerTypeError
+
         self.stacker.stack.clear()
-        self.stacker.process_expression("'3 5 +' eval")
+        with self.assertRaises(StackerTypeError):
+            self.stacker.process_expression("'3 5 +' eval")
+        self.stacker.stack.clear()
+        self.stacker.process_expression("'3 5 +' read-from-string eval")
         self.assertEqual(self.stacker.stack[-1], 8)
 
         self.stacker.stack.clear()
@@ -304,7 +310,7 @@ class TestStacker(unittest.TestCase):
 
     def test_eval_list(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("'[3 5 6]' eval")
+        self.stacker.process_expression("'[3 5 6]' read-from-string eval")
         self.assertEqual(self.stacker.stack[-1], [3, 5, 6])
 
     # REMOVED: test_eval_tuple - () now creates code blocks, not tuples

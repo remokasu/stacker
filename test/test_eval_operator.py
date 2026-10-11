@@ -1,4 +1,4 @@
-"""`eval` on strings, names and other values."""
+"""`eval` on names, blocks and other values; text goes through `read-from-string`."""
 
 from stacker.stacker import Stacker
 
@@ -11,23 +11,29 @@ def run(*expressions: str) -> list[object]:
     return list(result)
 
 
-class TestStringEval:
-    """`"..." eval` used to substitute variable values while tokenizing, so
-    `"6 x set x" eval` failed when `x` already existed although the same
-    text worked through `read-from-string eval`."""
+class TestTextIsReadFirst:
+    """A string is data, not code (1.16.0): `eval` rejects it and
+    `read-from-string` turns text into a code block, whose names resolve
+    when the block runs (so `"6 x set x"` rebinds an existing `x`)."""
 
-    def test_assignment_inside_the_string_rebinds_an_existing_variable(self):
-        assert run("5 x set", '"6 x set x" eval') == [6]
+    def test_string_eval_is_a_type_error_with_a_hint(self):
+        import pytest
 
-    def test_string_eval_matches_read_from_string_eval(self):
-        assert run("5 x set", '"x 1 +" eval') == run("5 x set", '"x 1 +" read-from-string eval')
+        from stacker.error import StackerTypeError
 
-    def test_variables_are_still_resolved(self):
-        assert run("5 x set", '"x x +" eval') == [10]
+        with pytest.raises(StackerTypeError) as info:
+            run('"3 4 +" eval')
+        assert "read-from-string" in str(info.value)
 
-    def test_lambda_held_in_a_variable_is_a_value_inside_the_string(self):
+    def test_assignment_inside_the_text_rebinds_an_existing_variable(self):
+        assert run("5 x set", '"6 x set x" read-from-string eval') == [6]
+
+    def test_variables_are_resolved_when_the_block_runs(self):
+        assert run("5 x set", '"x x +" read-from-string eval') == [10]
+
+    def test_lambda_held_in_a_variable_is_a_value_inside_the_text(self):
         # The same as writing the name in a block: `f` pushes the lambda, `eval` calls it.
-        assert run("{a} {a 1 +} lambda f set", '"5 f eval" eval') == [6]
+        assert run("{a} {a 1 +} lambda f set", '"5 f eval" read-from-string eval') == [6]
 
 
 class TestEvalOnValues:

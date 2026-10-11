@@ -80,8 +80,11 @@ class TestSymbolEval:
     def test_bare_name_eval_of_a_block_variable_runs_it(self):
         assert run("{1 2 +} b set b eval") == [3]
 
-    def test_string_eval_is_source(self):
-        (block,) = run('{1 2 +} b set "b" eval')
+    def test_string_is_text_not_code(self):
+        with pytest.raises(StackerTypeError) as info:
+            run('{1 2 +} b set "b" eval')
+        assert "read-from-string" in str(info.value)
+        (block,) = run('{1 2 +} b set "b" read-from-string eval')
         assert isinstance(block, StackerCore)
 
     def test_symbol_eval_of_a_macro_expands_it(self):
@@ -437,8 +440,10 @@ class TestEdgeCasesNotCoveredElsewhere:
     def test_sub_of_a_string_evaluates_to_the_string_not_the_operator(self):
         assert run('3 4 "+" sub eval') == [3, 4, "+"]
 
-    def test_string_eval_runs_the_source(self):
-        assert run('3 4 "+" eval') == [7]
+    def test_string_eval_is_rejected_text_is_read_first(self):
+        with pytest.raises(StackerTypeError):
+            run('3 4 "+" eval')
+        assert run('3 4 "+" read-from-string eval') == [7]
 
     def test_symbol_equality_with_a_bound_variable_of_the_same_name(self):
         assert run("5 x set $x $x ==") == [True]
