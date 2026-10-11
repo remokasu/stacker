@@ -297,7 +297,7 @@ Stacker allows for straightforward RPN input. For example:
 
     Syntax:
     ```bash
-    start_value end_value symbol {body} do
+    start_value end_value name {body} do
     ```
 
     Example:
@@ -323,7 +323,7 @@ Stacker allows for straightforward RPN input. For example:
 
       Syntax:
       ```bash
-      [value1 value2 ... valueN] symbol {body} dolist
+      [value1 value2 ... valueN] name {body} dolist
       ```
 
       Example:
