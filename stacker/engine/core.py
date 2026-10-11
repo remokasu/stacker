@@ -466,15 +466,6 @@ class StackerCore:
         """
         return stack.pop()
 
-    def _eval(self, expr: str, stack: stack_data[object] | None = None) -> stack_data[object]:
-        if stack is None:
-            stack = stack_data()
-        # Same path as `read-from-string`: build block tokens and evaluate
-        # them, so names resolve at evaluation time, not while tokenizing.
-        tokens = TokenList(map(self._block_token_format, parse_expression(expr)))
-        self._evaluate(tokens, stack=stack)
-        return stack
-
     def _eval_block(self, block: StackerCore, stack: stack_data[object]) -> None:
         self._evaluate(block.tokens, stack=stack)
 
@@ -847,20 +838,25 @@ class StackerCore:
             op["func"](fargs, body)
 
     def _prio_eval(self, op, stack) -> None:
-        """Evaluates the top value.
+        """Evaluates the top value: code, never text.
 
+        - a code block is evaluated on this stack
         - a ``Symbol`` is evaluated as its name, exactly as if the bare name
           had been written here (macro, variable, function or operator)
-        - a string is evaluated as source code
-        - a code block is evaluated on this stack
         - a lambda is called with arguments taken from this stack
+        - a string is data, not code: ``StackerTypeError`` (parse text with
+          ``read-from-string`` first)
         - anything else is pushed back
         """
         expression = stack.pop()
         if isinstance(expression, Symbol):
             self._evaluate([expression.name], stack=stack)
         elif isinstance(expression, str):
-            self._eval(str(expression), stack=stack)
+            raise StackerTypeError(
+                f"`eval` expects a code block, a symbol or a lambda, got the string {str(expression)!r}. "
+                "A string is text, not code: parse it first with `read-from-string`, "
+                'e.g. "3 4 +" read-from-string eval'
+            )
         elif isinstance(expression, StackerCore):
             self._eval_block(expression, stack=stack)
         elif isinstance(expression, StackerLambda):

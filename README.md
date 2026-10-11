@@ -889,7 +889,7 @@ Note: Blocks passed to `map`, `filter`, `reduce`, and `fold` must leave a value 
 | sub      | Substack the top element of the stack                 | `sub`                      |
 | subn     | Cluster elements between the top and the nth (make substacks) | `3 subn`           |
 | include  | Include the specified file                            | `"file.stk" include`       |
-| eval     | Evaluate the specified RPN expression                 | `'3 5 +' eval`             |
+| eval     | Run a code block, a symbol or a lambda (text: `read-from-string` first) | `{3 5 +} eval`, `'3 5 +' read-from-string eval` |
 | echo     | Print the specified value to stdout without adding it to the stack | `3 4 + echo`  |
 | input    | Get input from the user                               | `input`                    |
 | read     | Reads a string from the console                       | `read`                     |
