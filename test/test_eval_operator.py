@@ -1,5 +1,8 @@
 """`eval` on names, blocks and other values; text goes through `read-from-string`."""
 
+import pytest
+
+from stacker.error import StackerTypeError
 from stacker.stacker import Stacker
 
 
@@ -17,10 +20,6 @@ class TestTextIsReadFirst:
     when the block runs (so `"6 x set x"` rebinds an existing `x`)."""
 
     def test_string_eval_is_a_type_error_with_a_hint(self):
-        import pytest
-
-        from stacker.error import StackerTypeError
-
         with pytest.raises(StackerTypeError) as info:
             run('"3 4 +" eval')
         assert "read-from-string" in str(info.value)

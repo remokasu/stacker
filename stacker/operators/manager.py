@@ -65,7 +65,7 @@ special_operators = {
         "func": None,
         "arg_count": 1,
         "push_result_to_stack": True,
-        "desc": "Evaluates a given RPN expression.",
+        "desc": "Runs a code block, a symbol or a lambda (text: read-from-string first).",
     },
     "break": {
         "func": None,

@@ -2,6 +2,7 @@ import cmath
 import math
 import unittest
 
+from stacker.error import StackerTypeError
 from stacker.stacker import Stacker
 
 from stacker.syntax.lexer import lex_string
@@ -286,8 +287,6 @@ class TestStacker(unittest.TestCase):
     # eval
     def test_eval_str(self):
         # A string is text, not code (1.16.0): read it first.
-        from stacker.error import StackerTypeError
-
         self.stacker.stack.clear()
         with self.assertRaises(StackerTypeError):
             self.stacker.process_expression("'3 5 +' eval")
@@ -308,7 +307,7 @@ class TestStacker(unittest.TestCase):
         self.stacker.process_expression("{3 5} {*} eval")
         self.assertEqual(self.stacker.stack[-1], 15)
 
-    def test_eval_list(self):
+    def test_eval_list_via_read_from_string(self):
         self.stacker.stack.clear()
         self.stacker.process_expression("'[3 5 6]' read-from-string eval")
         self.assertEqual(self.stacker.stack[-1], [3, 5, 6])
