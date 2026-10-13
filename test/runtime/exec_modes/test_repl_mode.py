@@ -54,6 +54,10 @@ class TestReplMode(unittest.TestCase):
             self.assertTrue(result)
             output = fake_out.getvalue()
             self.assertIn("operators", output.lower())
+            for word in ("map", "sum", "sorted"):
+                self.assertIn(f"  {word}:", output)
+            self.assertIn("$name", output)
+            self.assertNotIn("Tuple", output)
 
     def test_handle_repl_command_about(self):
         """Test that about command is handled correctly."""
