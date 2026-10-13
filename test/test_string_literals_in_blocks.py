@@ -52,8 +52,8 @@ def test_top_level_literal_is_not_captured_by_a_macro_either():
 
 @pytest.mark.parametrize(
     ("literal", "expected"),
-    [('"$x"', "$x"), ('"[1 2]"', "[1 2]"), ('"{x}"', "{x}")],
-    ids=["symbol-like", "list-like", "block-like"],
+    [('":x"', ":x"), ('"$x"', "$x"), ('"[1 2]"', "[1 2]"), ('"{x}"', "{x}")],
+    ids=["symbol-like", "dollar", "list-like", "block-like"],
 )
 def test_literal_text_that_looks_like_other_syntax_stays_a_string(literal, expected):
     result = run("7 x set", f"{{{literal}}} eval")

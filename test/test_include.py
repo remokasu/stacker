@@ -74,7 +74,7 @@ class TestIncludeResolution(unittest.TestCase):
     def test_resolves_relative_to_including_file(self):
         # Audit bug #10: running from another cwd used to break this
         with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as other:
-            self._write(d, "lib.stk", "10 $libval set\n")
+            self._write(d, "lib.stk", "10 :libval set\n")
             main = self._write(d, "main.stk", '"lib.stk" include\nlibval\n')
             os.chdir(other)
             stacker = self._run_script(main)
@@ -84,7 +84,7 @@ class TestIncludeResolution(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as other:
             sub = Path(d) / "sub"
             sub.mkdir()
-            self._write(sub, "c.stk", "7 $cval set\n")
+            self._write(sub, "c.stk", "7 :cval set\n")
             self._write(sub, "b.stk", '"c.stk" include\n')
             main = self._write(d, "main.stk", '"sub/b.stk" include\ncval\n')
             os.chdir(other)
@@ -93,8 +93,8 @@ class TestIncludeResolution(unittest.TestCase):
 
     def test_including_file_directory_takes_precedence_over_cwd(self):
         with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as other:
-            self._write(d, "lib.stk", "1 $which set\n")
-            self._write(other, "lib.stk", "2 $which set\n")
+            self._write(d, "lib.stk", "1 :which set\n")
+            self._write(other, "lib.stk", "2 :which set\n")
             main = self._write(d, "main.stk", '"lib.stk" include\nwhich\n')
             os.chdir(other)
             stacker = self._run_script(main)
@@ -103,7 +103,7 @@ class TestIncludeResolution(unittest.TestCase):
     def test_falls_back_to_cwd(self):
         with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as other:
             main = self._write(d, "main.stk", '"lib.stk" include\nlibval\n')
-            self._write(other, "lib.stk", "3 $libval set\n")
+            self._write(other, "lib.stk", "3 :libval set\n")
             os.chdir(other)
             stacker = self._run_script(main)
             self.assertEqual(stacker.stack[-1], 3)
@@ -111,7 +111,7 @@ class TestIncludeResolution(unittest.TestCase):
     def test_repl_like_include_uses_cwd(self):
         # No file context (current_file is None): cwd-only resolution
         with tempfile.TemporaryDirectory() as other:
-            self._write(other, "lib.stk", "4 $libval set\n")
+            self._write(other, "lib.stk", "4 :libval set\n")
             os.chdir(other)
             stacker = Stacker()
             stacker.process_expression('"lib.stk" include')

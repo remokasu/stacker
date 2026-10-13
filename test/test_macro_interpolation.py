@@ -35,14 +35,14 @@ def expansion(*expressions: str) -> object:
         ("{c} { {{{c}}} } m defmacro", "{9} {m} macroexpand", [[[[9]]]]),
         # Values already substituted are not walked again.
         ("{a b} { {a b} } m defmacro", "{b} {9} {m} macroexpand", [["b"], [9]]),
-        # `$name`, string literals and list literals are left alone.
-        ("{c} { {$c \"c\" [c]} } m defmacro", "5 {m} macroexpand", ["$c", "c", "[c]"]),
+        # `:name`, string literals and list literals are left alone.
+        ("{c} { {:c \"c\" [c]} } m defmacro", "5 {m} macroexpand", [":c", "c", "[c]"]),
         # A variable bound during expansion is interpolated too.
         ("{} { 5 k = {k k +} } m defmacro", "{m} macroexpand", [5, 5, "+"]),
         # Only names bound at push time are substituted.
         ("{} { {k} 5 k = } m defmacro", "{m} macroexpand", ["k"]),
-        # `$x` stays as the symbol while the bare `x` next to it is replaced.
-        ("{x} { {$x x} } m defmacro", "5 {m} macroexpand", ["$x", 5]),
+        # `:x` stays as the symbol while the bare `x` next to it is replaced.
+        ("{x} { {:x x} } m defmacro", "5 {m} macroexpand", [":x", 5]),
         # Only the bound name is replaced at every depth; `z` is unbound.
         ("{a} { {{{a z}}} } m defmacro", "9 {m} macroexpand", [[[9, "z"]]]),
         # An empty block argument is inserted as an empty block.
@@ -83,11 +83,11 @@ class TestValueKinds:
     def test_symbol_value_is_inserted_as_bare_name(self):
         # The expansion is `{foo}`, so evaluating it references `foo`.
         with pytest.raises(UndefinedSymbolError):
-            run("{v} {{v}} m defmacro", "$foo m")
-        assert run("{v} {{v 1 +}} m defmacro", "3 foo =", "$foo m") == [4]
+            run("{v} {{v}} m defmacro", ":foo m")
+        assert run("{v} {{v 1 +}} m defmacro", "3 foo =", ":foo m") == [4]
 
     def test_symbol_value_resolves_as_variable_in_generated_code(self):
-        assert run("3 foo =", "{v} {{v}} m defmacro", "$foo m") == [3]
+        assert run("3 foo =", "{v} {{v}} m defmacro", ":foo m") == [3]
 
     def test_number_and_list_are_inserted_as_values(self):
         assert run("{v} {{v}} m defmacro", "3 m [1 2] m") == [3, [1, 2]]

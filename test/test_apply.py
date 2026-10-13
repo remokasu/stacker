@@ -33,7 +33,7 @@ class TestApply(unittest.TestCase):
         # my-map defined recursively; the lambda held in `lf` is passed on as a value
         self.stacker.eval(
             "{xs lf} {xs null? {[]} {xs car lf eval  xs cdr lf my-map  cons} ifelse}"
-            " $my-map defun"
+            " :my-map defun"
         )
         ans = self.stacker.eval("[1 2 3] {x} {x 2 *} lambda my-map")
         self.assertEqual(ans[-1], [2, 4, 6])
@@ -45,7 +45,7 @@ class TestApply(unittest.TestCase):
             "  {xs car xs cdr pred my-filter cons}"
             "  {xs cdr pred my-filter}"
             "  ifelse} ifelse}"
-            " $my-filter defun"
+            " :my-filter defun"
         )
         ans = self.stacker.eval("[1 2 3 4 5] {x} {x 2 % 0 ==} lambda my-filter")
         self.assertEqual(ans[-1], [2, 4])

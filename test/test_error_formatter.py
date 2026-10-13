@@ -43,10 +43,10 @@ class TestErrorFormatter(unittest.TestCase):
             error_type="SyntaxError",
             message="Expected a symbol",
             source_line="123 variable set",
-            hint="Use '$variable' or 'variable' (without quotes)"
+            hint="Use ':variable' or 'variable' (without quotes)"
         )
         self.assertIn("hint:", result)
-        self.assertIn("Use '$variable'", result)
+        self.assertIn("Use ':variable'", result)
 
     def test_repl_error_no_filename(self):
         """Test error formatting for REPL (no filename)."""

@@ -202,5 +202,5 @@ class TestFatalErrorPropagation(unittest.TestCase):
         # Plain variable resolution (no literal parsing involved) keeps
         # working as before.
         stacker = Stacker()
-        ans = stacker.eval("42 $x set x")
+        ans = stacker.eval("42 :x set x")
         self.assertEqual(ans[-1], 42)

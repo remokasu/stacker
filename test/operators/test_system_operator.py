@@ -30,9 +30,9 @@ class TestSystemOperators(unittest.TestCase):
     def test_vars_with_user_variables(self):
         """Test vars with user-defined variables."""
         self.stacker.stack.clear()
-        self.stacker.process_expression("5 $x set")
-        self.stacker.process_expression("10 $y set")
-        self.stacker.process_expression("'hello' $msg set")
+        self.stacker.process_expression("5 :x set")
+        self.stacker.process_expression("10 :y set")
+        self.stacker.process_expression("'hello' :msg set")
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.stacker.process_expression("vars")
@@ -54,8 +54,8 @@ class TestSystemOperators(unittest.TestCase):
     def test_funcs_with_user_functions(self):
         """Test funcs with user-defined functions."""
         self.stacker.stack.clear()
-        self.stacker.process_expression("{x} {x x *} $square defun")
-        self.stacker.process_expression("{x y} {x y +} $add defun")
+        self.stacker.process_expression("{x} {x x *} :square defun")
+        self.stacker.process_expression("{x y} {x y +} :add defun")
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.stacker.process_expression("funcs")
@@ -68,7 +68,7 @@ class TestSystemOperators(unittest.TestCase):
     def test_funcs_execution(self):
         """Test that defined functions actually work."""
         self.stacker.stack.clear()
-        self.stacker.process_expression("{x} {x x *} $square defun")
+        self.stacker.process_expression("{x} {x x *} :square defun")
         self.stacker.process_expression("5 square")
         self.assertEqual(self.stacker.stack[-1], 25)
 
@@ -85,7 +85,7 @@ class TestSystemOperators(unittest.TestCase):
     def test_macros_with_user_macros(self):
         """Test macros with user-defined macros."""
         self.stacker.stack.clear()
-        self.stacker.process_expression("{x} {x x *} $sqr defmacro")
+        self.stacker.process_expression("{x} {x x *} :sqr defmacro")
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.stacker.process_expression("macros")
@@ -135,8 +135,8 @@ class TestSystemOperators(unittest.TestCase):
 
         # Create a temporary script file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".stk", delete=False) as f:
-            f.write("5 $x set\n")
-            f.write("10 $y set\n")
+            f.write("5 :x set\n")
+            f.write("10 :y set\n")
             f.write("vars\n")
             script_path = f.name
 

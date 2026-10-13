@@ -26,7 +26,7 @@ class TestGensym:
     def test_returns_distinct_symbol_values(self):
         a, b = run("gensym gensym")
         assert a != b
-        assert isinstance(a, Symbol) and isinstance(b, Symbol)  # same kind of value as `$name` pushes
+        assert isinstance(a, Symbol) and isinstance(b, Symbol)  # same kind of value as `:name` pushes
         assert a.name.startswith("__g") and b.name.startswith("__g")
 
     def test_usable_as_a_name(self):
@@ -44,7 +44,7 @@ class TestMacroexpand:
         assert shape(block) == [3, 3]
 
     def test_accepts_dollar_name(self):
-        (block,) = run("{} {{1}} m defmacro", "$m macroexpand")
+        (block,) = run("{} {{1}} m defmacro", ":m macroexpand")
         assert shape(block) == [1]
 
     def test_non_macro_is_a_syntax_error(self):

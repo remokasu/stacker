@@ -25,6 +25,8 @@ from stacker.engine.boundary import token_to_value, value_to_token
 from stacker.engine.data_type import String, Symbol, stack_data, VOID
 from stacker.syntax.token_rules import (
     KEYWORD_LITERALS,
+    OLD_SYMBOL_PREFIX,
+    SYMBOL_PREFIX,
     cached_literal_eval,
     is_bare_name,
     is_code_block,
@@ -33,7 +35,6 @@ from stacker.syntax.token_rules import (
     is_symbol,
     is_symbol_name,
     not_a_symbol_message,
-    reads_as_name,
     strip_string_delimiters,
 )
 from stacker.engine.slambda import StackerLambda
@@ -101,7 +102,7 @@ def _reraise_type_error(word: str, args: object, error: Exception) -> NoReturn:
         raise error
     raise StackerTypeError(
         f"`{word}` cannot use the symbol `{name}` as a value. "
-        f"Write `{name}` for the variable's value, or `${name} str` for its name as text."
+        f"Write `{name}` for the variable's value, or `:{name} str` for its name as text."
     ) from error
 
 
@@ -111,12 +112,12 @@ def _reraise_type_error(word: str, args: object, error: Exception) -> NoReturn:
 K_VALUE = 0  # non-str token: push as-is
 K_STRING = 1  # quoted string literal: payload is the prebuilt String
 K_LIST = 2  # list literal: payload is the parsed template (or None)
-K_SYMBOL = 3  # $name: payload is the Symbol
+K_SYMBOL = 3  # :name: payload is the Symbol
 K_BLOCK = 4  # code-block source: substack is created at evaluation time
 K_LOOKAHEAD_SYMBOL = 5  # bare name right before a binding form (set/defun/...): payload is the Symbol
 K_DYNAMIC = 6  # name resolved against runtime state on every evaluation
 K_LOOP_VAR = 7  # bare name bound by do / dolist / reduce / fold (before their block): payload is the Symbol
-K_INVALID = 8  # a `$` token that names nothing: payload is the error message, raised when executed
+K_INVALID = 8  # a `:` or `$` token that is not a symbol: payload is the error message, raised when executed
 
 
 def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
@@ -153,7 +154,7 @@ def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
                 # execution position, exactly as before.
                 template = None
             entries.append((K_LIST, token, template))
-        elif token.startswith("$"):
+        elif token.startswith((SYMBOL_PREFIX, OLD_SYMBOL_PREFIX)):
             if is_symbol(token):
                 entries.append((K_SYMBOL, token, Symbol(token[1:])))
             else:
@@ -185,7 +186,7 @@ def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
                 kind = K_LOOP_VAR
             else:
                 kind = K_DYNAMIC
-            if kind != K_DYNAMIC and not reads_as_name(token):
+            if kind != K_DYNAMIC and not is_bare_name(token):
                 kind = K_DYNAMIC  # a literal (number, True, None, ...) is never a name
             entries.append((kind, token, None if kind == K_DYNAMIC else Symbol(token)))
     return entries
@@ -194,7 +195,7 @@ def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
 def _compile_list_template(token: str) -> list[object]:
     """Compiles a list-literal token into a template (done once per token).
 
-    String literals become ``String``, ``$name`` becomes a ``Symbol``,
+    String literals become ``String``, ``:name`` becomes a ``Symbol``,
     ``true`` / ``false`` / ``null`` become values, numbers stay numbers and
     nested lists are compiled recursively. A bare name stays a plain
     ``str``: it is looked up every time the literal is evaluated
@@ -221,14 +222,14 @@ def _compile_list_elements(elements: list[object]) -> list[object]:
         elif type(element) is str:
             if is_string_token(element):
                 compiled.append(String(strip_string_delimiters(element)))
-            elif element.startswith("$"):
+            elif element.startswith(SYMBOL_PREFIX):
                 compiled.append(Symbol(element[1:]))  # checked by the array lexer
             elif element in KEYWORD_LITERALS:
                 compiled.append(KEYWORD_LITERALS[element])
             elif is_code_block(element):
                 raise StackerSyntaxError(
                     "a code block cannot be written inside a list literal; "
-                    "use {x} 1 listn, or [$x] for a symbol"
+                    "use {x} 1 listn, or [:x] for a symbol"
                 )
             else:
                 compiled.append(element)  # a name, referenced on evaluation
@@ -340,7 +341,7 @@ class StackerCore:
         Nested blocks become ``StackerCore`` instances, string literals become
         ``String`` values (which the classifier always treats as literals) and
         other Python literals become values. Everything else, including
-        operator names and ``$x``, stays a raw token for lazy resolution.
+        operator names and ``:x``, stays a raw token for lazy resolution.
 
         Args:
             token: One token of the block's source.
@@ -419,7 +420,7 @@ class StackerCore:
 
         A ``String`` is handed to host functions as a plain ``str``. Every
         other value, a ``Symbol`` included, is returned as it is: a name is
-        never looked up here, so ``$x`` stays the symbol ``x`` whether or
+        never looked up here, so ``:x`` stays the symbol ``x`` whether or
         not a variable ``x`` exists.
 
         Args:
@@ -1245,11 +1246,11 @@ class StackerCore:
     def _name_of(self, symbol: object, word: str) -> str:
         """Normalizes the forms a name can be written in to the bare name.
 
-        - a ``Symbol`` (``$name``, ``gensym``, a bare name read at a name
+        - a ``Symbol`` (``:name``, ``gensym``, a bare name read at a name
           position) -> its name
-        - ``{name}`` / ``{$name}`` (quoted name: a one-token block) -> ``name``
+        - ``{name}`` / ``{:name}`` (quoted name: a one-token block) -> ``name``
         - a string is data, never a name -> ``StackerSyntaxError`` (the
-          message shows ``$name``, ``{name}`` and ``symbol``)
+          message shows ``:name``, ``{name}`` and ``symbol``)
         - anything else (a multi-token block, a number, ...) -> ``StackerSyntaxError``
 
         Args:
@@ -1275,7 +1276,7 @@ class StackerCore:
         if isinstance(symbol, str):
             raise StackerSyntaxError(
                 f"`{word}` expects a name, got the string {str(symbol)!r}. "
-                f"Write ${symbol} or {{{symbol}}}, or convert a string with `symbol`."
+                f"Write :{symbol} or {{{symbol}}}, or convert a string with `symbol`."
             )
         raise StackerSyntaxError(f"`{word}` expects a name, got {symbol}")
 
@@ -1376,7 +1377,7 @@ class StackerCore:
     def _block_token_value(self, token: object) -> object:
         """Reads a block token the way an aggregate does: names are referenced.
 
-        A bare name token is the value of that variable, ``$name`` is the
+        A bare name token is the value of that variable, ``:name`` is the
         symbol, and literal tokens are themselves.
         """
         if type(token) is str:
@@ -1393,7 +1394,7 @@ class StackerCore:
         Only the template tree is walked: values spliced in are never
         re-scanned, so caller-supplied code is left exactly as written.
         Bare-name tokens bound in ``scope`` are replaced by their values;
-        ``$name``, string literals and list literals are untouched.
+        ``:name``, string literals and list literals are untouched.
 
         Args:
             block: Block literal from the macro body.
@@ -1407,8 +1408,8 @@ class StackerCore:
         def substitute(token: object) -> object:
             if isinstance(token, StackerCore):
                 return build(token)
-            if type(token) is not str or token.startswith("$") or token not in bindings:
-                return token  # literals, `$name` and unbound names stay as written
+            if type(token) is not str or token.startswith(SYMBOL_PREFIX) or token not in bindings:
+                return token  # literals, `:name` and unbound names stay as written
             # A symbol becomes a bare name, a string a string literal,
             # anything else is spliced as a value (see engine/boundary.py).
             return value_to_token(bindings[token])
@@ -1533,7 +1534,7 @@ class StackerCore:
             elif is_list(item):
                 return item.replace(",", " ")  # type: ignore[union-attr]
             elif isinstance(item, str):
-                # A raw token is a name, an operator or `$name`: shown as written,
+                # A raw token is a name, an operator or `:name`: shown as written,
                 # whether or not the name is bound right now.
                 return item
             return str(item)

@@ -109,8 +109,9 @@ class TestParser(unittest.TestCase):
         self.assertFalse(is_list("(1, 2, 3)"))
 
     def test_is_symbol(self):
-        self.assertTrue(is_symbol("$symbol"))
-        self.assertFalse(is_symbol("symbol$"))
+        self.assertTrue(is_symbol(":symbol"))
+        self.assertFalse(is_symbol("symbol:"))
+        self.assertFalse(is_symbol("$symbol"))  # the pre-1.16.0 spelling
 
     def test_is_label_symbol(self):
         self.assertTrue(is_label_symbol("label:"))

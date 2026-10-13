@@ -154,7 +154,7 @@ class ReplMode(ExecutionMode):
             # Extract the name from the message
             if "`" in message:
                 var_name = message.split("`")[1]
-                return f"To use the name itself, write `${var_name}` or `{{{var_name}}}`"
+                return f"To use the name itself, write `:{var_name}` or `{{{var_name}}}`"
         elif "IndexError" in error_type and "pop from an empty deque" in message:
             return "Stack underflow: Not enough elements on the stack for this operation"
         elif "NoValueProduced" in error_type:

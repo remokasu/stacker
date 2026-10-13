@@ -9,13 +9,13 @@ class TestStacker(unittest.TestCase):
 
     def test_function_definition_and_call_1(self):
         self.stacker.stack.clear()
-        self.stacker.eval("{x} {x 2 + x 3 * +} $f defun")
+        self.stacker.eval("{x} {x 2 + x 3 * +} :f defun")
         ans = self.stacker.eval("4 f")
         self.assertEqual(ans[-1], 18)
 
     def test_function_definition_and_call_2(self):
         self.stacker.stack.clear()
-        self.stacker.eval("{xs} {xs sum} $test_sum defun")
+        self.stacker.eval("{xs} {xs sum} :test_sum defun")
         ans = self.stacker.eval("[1 2 3] test_sum")
         self.assertEqual(ans[-1], 6)
 
@@ -24,7 +24,7 @@ class TestStacker(unittest.TestCase):
         # list itself; previously `{[4 5 6]}` worked only because the
         # block was force-evaluated at call time
         self.stacker.stack.clear()
-        self.stacker.eval("{xs} {xs sum} $test_sum defun")
+        self.stacker.eval("{xs} {xs sum} :test_sum defun")
         ans = self.stacker.eval("[4 5 6] test_sum")
         self.assertEqual(ans[-1], 15)
 
@@ -32,6 +32,6 @@ class TestStacker(unittest.TestCase):
         # 1.13.0: a numeric block passed raw reaches the
         # body, where `sum` consumes its tokens natively
         self.stacker.stack.clear()
-        self.stacker.eval("{xs} {xs sum} $test_sum defun")
+        self.stacker.eval("{xs} {xs sum} :test_sum defun")
         ans = self.stacker.eval("(7 8 9) test_sum")
         self.assertEqual(ans[-1], 24)

@@ -8,17 +8,17 @@ class TestCond(unittest.TestCase):
         self.stacker = Stacker()
 
     def test_cond_first_match(self):
-        self.stacker.eval("5 $x set")
+        self.stacker.eval("5 :x set")
         ans = self.stacker.eval("{x 0 >} {\"positive\"} {x 0 <} {\"negative\"} {true} {\"zero\"} 3 cond")
         self.assertEqual(ans[-1], "positive")
 
     def test_cond_second_match(self):
-        self.stacker.eval("-3 $x set")
+        self.stacker.eval("-3 :x set")
         ans = self.stacker.eval("{x 0 >} {\"positive\"} {x 0 <} {\"negative\"} {true} {\"zero\"} 3 cond")
         self.assertEqual(ans[-1], "negative")
 
     def test_cond_last_match(self):
-        self.stacker.eval("0 $x set")
+        self.stacker.eval("0 :x set")
         ans = self.stacker.eval("{x 0 >} {\"positive\"} {x 0 <} {\"negative\"} {true} {\"zero\"} 3 cond")
         self.assertEqual(ans[-1], "zero")
 
@@ -35,11 +35,11 @@ class TestCond(unittest.TestCase):
         self.assertEqual(ans[-1], 42)
 
     def test_cond_with_computation(self):
-        self.stacker.eval("7 $n set")
+        self.stacker.eval("7 :n set")
         ans = self.stacker.eval("{n 2 % 0 ==} {\"even\"} {true} {\"odd\"} 2 cond")
         self.assertEqual(ans[-1], "odd")
 
     def test_cond_result_is_expression(self):
-        self.stacker.eval("3 $n set")
+        self.stacker.eval("3 :n set")
         ans = self.stacker.eval("{n 0 >} {n 2 *} {true} {0} 2 cond")
         self.assertEqual(ans[-1], 6)

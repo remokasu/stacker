@@ -43,7 +43,7 @@ def value_to_token(value: object) -> object:
 def token_to_value(token: object) -> object:
     """Return the value a block token stands for when the block is read as data.
 
-    A name token, ``$name`` or bare, becomes a ``Symbol``: the name itself,
+    A name token, ``:name`` or bare, becomes a ``Symbol``: the name itself,
     not the value of a variable. A ``String`` literal, a nested block and
     any other object are kept as they are. A raw token that is not a name
     (a list literal that stayed text, an invalid ``$`` token) is also kept.

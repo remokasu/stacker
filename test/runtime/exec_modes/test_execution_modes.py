@@ -44,8 +44,8 @@ class TestExecutionMode(unittest.TestCase):
     def test_disp_all_variables(self):
         """Test variable display."""
         self.rpn_calculator.stack.clear()
-        self.rpn_calculator.process_expression("5 $x set")
-        self.rpn_calculator.process_expression("10 $y set")
+        self.rpn_calculator.process_expression("5 :x set")
+        self.rpn_calculator.process_expression("10 :y set")
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.exec_mode.disp_all_variables()
@@ -76,8 +76,8 @@ class TestExecutionMode(unittest.TestCase):
         """Test executing a dotfile."""
         # Create a temporary dotfile
         with tempfile.NamedTemporaryFile(mode="w", suffix=".stk", delete=False) as f:
-            f.write("5 $x set\n")
-            f.write("10 $y set\n")
+            f.write("5 :x set\n")
+            f.write("10 :y set\n")
             dotfile_path = f.name
 
         try:
@@ -96,7 +96,7 @@ class TestExecutionMode(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".stk", delete=False) as f:
             f.write("[1 2 3;\n")
             f.write("4 5 6]\n")
-            f.write("$matrix set\n")
+            f.write(":matrix set\n")
             dotfile_path = f.name
 
         try:
@@ -138,8 +138,8 @@ class TestScriptMode(unittest.TestCase):
     def test_script_mode_with_variables(self):
         """Test script execution with variables."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".stk", delete=False) as f:
-            f.write("5 $x set\n")
-            f.write("10 $y set\n")
+            f.write("5 :x set\n")
+            f.write("10 :y set\n")
             f.write("x y +\n")
             script_path = f.name
 
@@ -155,7 +155,7 @@ class TestScriptMode(unittest.TestCase):
     def test_script_mode_with_functions(self):
         """Test script execution with function definitions."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".stk", delete=False) as f:
-            f.write("{x} {x x *} $square defun\n")
+            f.write("{x} {x x *} :square defun\n")
             f.write("5 square\n")
             script_path = f.name
 
@@ -171,7 +171,7 @@ class TestScriptMode(unittest.TestCase):
     def test_script_mode_uses_system_operators(self):
         """Test that script mode can use system operators."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".stk", delete=False) as f:
-            f.write("5 $x set\n")
+            f.write("5 :x set\n")
             f.write("vars\n")
             script_path = f.name
 
@@ -208,7 +208,7 @@ class TestCommandLineMode(unittest.TestCase):
         self.rpn_calculator.stack.clear()
 
         # First set a variable (using process_expression to keep it in state)
-        self.rpn_calculator.process_expression("5 $x set")
+        self.rpn_calculator.process_expression("5 :x set")
         # Then use it via eval
         result = self.rpn_calculator.eval("x 10 +")
         self.assertEqual(result[-1], 15)
@@ -225,7 +225,7 @@ class TestCommandLineMode(unittest.TestCase):
         self.rpn_calculator.stack.clear()
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
-            self.cmd_mode.run("5 $x set")
+            self.cmd_mode.run("5 :x set")
             # Clear previous output
             fake_out.truncate(0)
             fake_out.seek(0)

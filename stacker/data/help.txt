@@ -7,13 +7,13 @@ Values:
   string:  "hello"   (shown on the stack as 'hello')
   list:    [1 2 3]   [1 2 3; 4 5 6]
   block:   {1 2 +}   (code, stored unevaluated; run it with eval)
-  symbol:  $name     (a name as a value)
+  symbol:  :name     (a name as a value)
   literals: true false null
 
 Names (three ways to write one):
   x      bare: a reference. A macro is expanded, a variable's value is
          pushed, a function or operator is run. Undefined: an error.
-  $x     the name itself, as a value (a symbol)
+  :x     the name itself, as a value (a symbol)
   {x}    the name itself, as a code block
   Right before set / = / global / defun / defmacro / macroexpand, and as the
   loop variable of do / dolist, a bare name is the name being bound.

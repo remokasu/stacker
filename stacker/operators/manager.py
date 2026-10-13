@@ -77,7 +77,7 @@ special_operators = {
         "func": None,
         "arg_count": 0,
         "push_result_to_stack": True,
-        "desc": "Wraps the top value in a one-token code block: $x sub -> {x}",
+        "desc": "Wraps the top value in a one-token code block: :x sub -> {x}",
     },
     "subn": {
         "func": None,
@@ -125,7 +125,7 @@ special_operators = {
         "func": None,
         "arg_count": 1,
         "push_result_to_stack": True,
-        "desc": 'Makes a symbol from a string or a quoted name: "x" symbol -> $x, {x} symbol -> $x',
+        "desc": 'Makes a symbol from a string or a quoted name: "x" symbol -> :x, {x} symbol -> :x',
     },
     "macroexpand": {
         "func": None,

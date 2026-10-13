@@ -1,7 +1,7 @@
 """A reference to an undefined bare name is an error where it is written.
 
 Until 1.16.0 an undefined name was pushed as a value and only failed later.
-The name itself is written `$name` or `{name}`.
+The name itself is written `:name` or `{name}`.
 """
 
 import pytest
@@ -44,7 +44,7 @@ class TestReferences:
         with pytest.raises(UndefinedSymbolError):
             run("{foo} eval")
 
-    @pytest.mark.parametrize("program", ["$foo eval", '"foo" read-from-string eval', "{foo} 0 nth eval"])
+    @pytest.mark.parametrize("program", [":foo eval", '"foo" read-from-string eval', "{foo} 0 nth eval"])
     def test_evaluating_an_undefined_name(self, program):
         with pytest.raises(UndefinedSymbolError):
             run(program)
@@ -59,12 +59,12 @@ class TestReferences:
         with pytest.raises(UndefinedSymbolError):
             run("{2 *} double alias")
         assert run("{2 *} {double} alias", "4 double") == [8]
-        assert run("{2 *} $double alias", "4 double") == [8]
+        assert run("{2 *} :double alias", "4 double") == [8]
 
 
 class TestNamesThemselves:
     def test_symbol_and_quoted_name_are_fine(self):
-        assert run("$foo") == [Symbol("foo")]
+        assert run(":foo") == [Symbol("foo")]
         assert str(run("{foo}")[0]) == "{foo}"
 
     def test_name_positions_are_not_references(self):
@@ -77,4 +77,4 @@ class TestHints:
     @pytest.mark.parametrize("mode_class", [ReplMode, ScriptMode])
     def test_undefined_name_hint_shows_how_to_write_the_name(self, mode_class):
         hint = mode_class._get_error_hint(None, UndefinedSymbolError("foo"))
-        assert hint == "To use the name itself, write `$foo` or `{foo}`"
+        assert hint == "To use the name itself, write `:foo` or `{foo}`"

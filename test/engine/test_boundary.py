@@ -31,15 +31,15 @@ class TestTokenToValue:
     def test_bare_name_becomes_a_symbol(self, token):
         assert token_to_value(token) == Symbol(token)
 
-    @pytest.mark.parametrize("token, name", [("$x", "x"), ("$+", "+"), ("$1st", "1st")])
-    def test_dollar_token_becomes_the_symbol_without_the_dollar(self, token, name):
+    @pytest.mark.parametrize("token, name", [(":x", "x"), (":+", "+"), (":1st", "1st")])
+    def test_symbol_token_becomes_the_symbol_without_the_prefix(self, token, name):
         assert token_to_value(token) == Symbol(name)
 
     def test_string_literal_is_kept(self):
         literal = String("x")
         assert token_to_value(literal) is literal
 
-    @pytest.mark.parametrize("token", ["[1 2]", "$1", "$", "$$x", "$true", "{x}", '"x"', "5", "True"])
+    @pytest.mark.parametrize("token", ["[1 2]", ":1", ":", "::x", ":true", "$x", "{x}", '"x"', "5", "True"])
     def test_raw_text_that_is_not_a_name_is_kept_as_text(self, token):
         value = token_to_value(token)
         assert type(value) is str and value == token
@@ -58,7 +58,7 @@ class TestRoundTrip:
     def test_symbol_survives_a_trip_through_a_block(self, value):
         assert token_to_value(value_to_token(value)) == value
 
-    @pytest.mark.parametrize("value", ["x", "", "a b", "$x", "{x}", "5", "[1 2]", String("x")])
+    @pytest.mark.parametrize("value", ["x", "", "a b", ":x", "{x}", "5", "[1 2]", String("x")])
     def test_string_survives_a_trip_and_stays_a_string(self, value):
         result = token_to_value(value_to_token(value))
         assert result == value
