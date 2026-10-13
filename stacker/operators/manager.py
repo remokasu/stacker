@@ -47,13 +47,13 @@ special_operators = {
         "func": None,
         "arg_count": 2,
         "push_result_to_stack": False,
-        "desc": "Sets a variable (updates existing or creates local).",
+        "desc": "Binds a value to a name (a block is stored unevaluated): 3 x set",
     },
     "=": {
         "func": None,
         "arg_count": 2,
         "push_result_to_stack": False,
-        "desc": "Sets a variable (updates existing or creates local).",
+        "desc": "Same as set: 3 x =",
     },
     "global": {
         "func": None,
@@ -77,19 +77,19 @@ special_operators = {
         "func": None,
         "arg_count": 0,
         "push_result_to_stack": True,
-        "desc": "Substack the top element",
+        "desc": "Wraps the top value in a one-token code block: $x sub -> {x}",
     },
     "subn": {
         "func": None,
         "arg_count": 1,
         "push_result_to_stack": True,
-        "desc": "Cluster elements between the top and the nth (make substacks)",
+        "desc": "Wraps the top n values in one code block: 1 2 2 subn -> {1 2}",
     },
     "read-from-string": {
         "func": None,
         "arg_count": 1,
         "push_result_to_stack": True,
-        "desc": "Reads a string and returns a list of words.",
+        "desc": "Parses text into a code block: \"3 4 +\" read-from-string -> {3 4 +}",
     },
     "read": {
         "func": None,
@@ -107,7 +107,7 @@ special_operators = {
         "func": None,
         "arg_count": 2,
         "push_result_to_stack": True,
-        "desc": "Returns the nth element of the iterable.",
+        "desc": "Pushes the nth element of a list, string or block (a name in a block is a symbol); the container stays",
     },
     "expand": {
         "func": None,
@@ -143,7 +143,7 @@ special_operators = {
         "func": None,
         "arg_count": 1,
         "push_result_to_stack": True,
-        "desc": "Converts an iterable to a list.",
+        "desc": "Makes a list of the top n values: 1 2 2 listn -> [1 2]",
     },
     "apply": {
         "func": None,

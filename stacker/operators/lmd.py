@@ -8,6 +8,6 @@ lambda_operators = {
         "func": lambda fargs, body: StackerLambda(fargs, body),
         "arg_count": 2,
         "push_result_to_stack": True,
-        "desc": "Defines a function.",
+        "desc": "Makes an anonymous function value (call it with eval): {args} {body} lambda",
     },
 }

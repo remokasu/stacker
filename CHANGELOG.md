@@ -74,6 +74,7 @@ Note: This change is not backwards compatible with previous versions.
 - `5 true set` silently replaced the constant `true`
 - A bare name inside a nested list literal (`[[x 1]]`) was kept as text instead of being the variable's value
 - README: the operator table named a `random` word that never existed (the word is `rand`) and described `all` / `any` with a two-argument form they never had
+- `help` and `operators` did not list `map`, `filter`, `reduce`, `fold`, `zip`, the aggregates or the transforms. The help text still described tuples, `$` on loop variables and the two-argument `defmacro`; it and the descriptions of `do`, `dolist`, `times`, `while`, `lambda`, `defun`, `set`, `sub`, `subn`, `listn`, `nth`, `read-from-string` and the higher-order words now match the language
 - The `do` loop benchmark (`0 s set 1 100000 $i {s i + s set} do`) runs about 20% faster: the argument helpers no longer look every value up in the variable scopes
 
 ## [1.15.0] - 2026-10-10

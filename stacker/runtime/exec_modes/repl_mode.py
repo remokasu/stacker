@@ -99,6 +99,16 @@ class ReplMode(ExecutionMode):
         ) in regular_operator_descriptions.items():
             print(f"  {operator_name}:\t{operator_descriptions}")
         print("")
+        manager = self.rpn_calculator.operator_manager
+        for title, descriptions in (
+            ("Higher-order operators:", manager.get_hof_descriptions()),
+            ("Aggregate operators:", manager.get_aggregate_descriptions()),
+            ("Transform operators:", manager.get_transform_descriptions()),
+        ):
+            print(title)
+            for operator_name, operator_descriptions in descriptions.items():
+                print(f"  {operator_name}:\t{operator_descriptions}")
+            print()
         print("Stack operators:")
         for (
             operator_name,

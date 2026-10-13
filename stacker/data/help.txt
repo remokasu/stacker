@@ -1,56 +1,47 @@
-Enter RPN expression, variable assignment, or function definition.
-Type 'exit' to quit.
+Enter an RPN expression. Values are pushed onto the stack; words take their
+arguments from it. Type 'exit' to quit, 'clear' to empty the stack.
 
-Usage:
-  Input numbers and operators in RPN notation, separated by spaces.
-  Press Enter to evaluate the expression and display the result.
-  The result will be pushed onto the stack.
-  To use the result in a subsequent calculation, input the next expression.
-  To clear the stack, type 'clear'.
+Values:
+  integer 3, float 3.14, scientific 1.23e-4, hex 0x1a, binary 0b1010,
+  octal 0o123, complex 1+2j
+  string:  "hello"   (shown on the stack as 'hello')
+  list:    [1 2 3]   [1 2 3; 4 5 6]
+  block:   {1 2 +}   (code, stored unevaluated; run it with eval)
+  symbol:  $name     (a name as a value)
+  literals: true false null
 
-Numbwer input:
-  integer: 3
-  float: 3.14
-  scientific notation: 1.23e-4
-  hexadecimal: 0x1a
-  binary: 0b1010
-  octal: 0o123
-  complex: 1+2j
+Names (three ways to write one):
+  x      bare: a reference. A macro is expanded, a variable's value is
+         pushed, a function or operator is run. Undefined: an error.
+  $x     the name itself, as a value (a symbol)
+  {x}    the name itself, as a code block
+  Right before set / = / global / defun / defmacro / macroexpand, and as the
+  loop variable of do / dolist, a bare name is the name being bound.
+  A string is never a name: "x" symbol turns text into a name.
 
-String input:
-  "hogefoovar"
+Variables:
+  3 x set        3 x =        42 answer global
 
-Array input:
-  [1 2 3 4 5]
-  [1 2 3; 4 5 6; 7 8 9]
-Tuple input:
-  (1 2 3 4 5)
-  (1 2 3; 4 5 6; 7 8 9)
+Conditionals:
+  cond {true-branch} if
+  cond {true-branch} {false-branch} ifelse
+  {c1} {r1} {c2} {r2} 2 cond
+  {try} {catch} iferror
 
-If statement:
-  condition <true expr> if
-  condition <true expr> <false expr> ifelse
+Loops:
+  1 10 i {i echo} do          [1 2 3] x {x echo} dolist
+  {body} 3 times              {cond} {body} while
+  {body} loop                 (repeat until break)
 
-Loop statement:
-  - do
-    stat end $loopVariable {body} do
-  - times
-    {body} n times
+Functions:
+  {a b} {a b +} add defun     then: 3 4 add
+  {a b} {a b +} lambda        an anonymous function value; call it with eval:
+  {a} {a 2 *} lambda f set    5 f eval
 
-Define Function:
-  {arg1 srg2 ...} {body} $funcName defun
+Macros:
+  {args} {body} name defmacro   the body runs at expansion time and returns code
+  {2 *} {double} alias          names a code snippet
+  gensym, macroexpand, concat-block, expand, sub, read-from-string
 
-Lambda:
-  {arg1 srg2 ...} {body} lambda
-
-Macro:
-  {body} $macroName defmacro
-
-parameters:
-  pi
-  e
-  inf
-  nan
-  true
-  false
-  null
+Constants:
+  pi  e  phi  tau  inf  nan

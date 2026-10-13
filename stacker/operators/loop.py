@@ -149,13 +149,13 @@ loop_operators = {
         ),
         "arg_count": 2,
         "push_result_to_stack": False,
-        "desc": "Executes a block of code while a condition is true.",
+        "desc": "Repeats a block while a condition block is true: {cond} {body} while",
     },
     "times": {
         "func": (lambda n_times, block, parent, stack: _times(n_times, block, parent, stack)),
         "arg_count": 2,
         "push_result_to_stack": False,
-        "desc": "Executes a block of code a specified number of times.",
+        "desc": "Repeats a block n times: {body} n times",
     },
     "do": {
         "func": (
@@ -165,7 +165,7 @@ loop_operators = {
         ),
         "arg_count": 4,
         "push_result_to_stack": False,
-        "desc": "Executes a block of code a specified number of times.",
+        "desc": "Runs a block for each integer of a range, bound to a name: 1 10 i {i echo} do",
     },
     "dolist": {
         "func": (
@@ -175,6 +175,6 @@ loop_operators = {
         ),
         "arg_count": 4,
         "push_result_to_stack": False,
-        "desc": "Executes a block of code a specified number of times.",
+        "desc": "Runs a block for each element of a list, bound to a name: [1 2 3] x {x echo} dolist",
     },
 }

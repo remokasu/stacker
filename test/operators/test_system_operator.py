@@ -179,3 +179,20 @@ class TestSystemOperators(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestOperatorsListsEveryCategory(unittest.TestCase):
+    """`operators` (and the REPL `help`) must list the higher-order, aggregate
+    and transform words, which used to be left out."""
+
+    def test_higher_order_aggregate_and_transform_words_are_listed(self):
+        from io import StringIO
+        from unittest.mock import patch
+
+        stacker = Stacker()
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            stacker.process_expression("operators")
+            output = fake_out.getvalue()
+        for word in ("map", "filter", "reduce", "fold", "zip", "sum", "len", "sorted", "list"):
+            self.assertIn(f"  {word}: ", output)
+        self.assertIn("Higher-order operators:", output)
