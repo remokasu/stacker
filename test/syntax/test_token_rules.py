@@ -53,21 +53,21 @@ def test_is_code_block(token, expected):
 @pytest.mark.parametrize(
     "token, expected",
     [
-        ("$x", True),
-        ("$+", True),
-        ("$x.y", True),
-        ("$1st", True),
+        (":x", True),
+        (":+", True),
+        (":x.y", True),
+        (":1st", True),
         ("$", False),
         ("$$x", False),
-        ("$x$", False),
+        (":x$", False),
         ("$1", False),
         ("${x}", False),
         ('$"x"', False),
         ("$[1 2]", False),
         ("$(x)", False),
-        ("$true", False),
+        (":true", False),
         ("x", False),
-        (String("$x"), False),
+        (String(":x"), False),
         (5, False),
     ],
 )
@@ -103,7 +103,7 @@ def test_reads_as_name(token, expected):
         ("x", True),
         ("+", True),
         ("1st", True),
-        ("$x", False),
+        (":x", False),
         ("", False),
         ("5", False),
         ("True", False),
@@ -159,7 +159,7 @@ def test_parser_reexports_the_predicates():
         ("a b", False),
         ("a\tb", False),
         ("a\nb", False),
-        ("$x", False),
+        (":x", False),
         ("a$", False),
         ('a"b', False),
         ("a'b", False),
@@ -181,7 +181,7 @@ def test_is_symbol_name(name, expected):
 
 @pytest.mark.parametrize("name", ["x", "+", "x.y", "1st", "a-b?"])
 def test_is_symbol_name_agrees_with_is_symbol(name):
-    assert is_symbol_name(name) is is_symbol("$" + name)
+    assert is_symbol_name(name) is is_symbol(":" + name)
 
 
 def test_keyword_literals_are_values_not_names():
@@ -195,8 +195,12 @@ def test_keyword_literals_are_values_not_names():
     }
     for word in token_rules.KEYWORD_LITERALS:
         assert not is_bare_name(word)
-        assert not is_symbol("$" + word)
+        assert not is_symbol(":" + word)
 
 
 def test_not_a_symbol_message_quotes_the_token():
-    assert not_a_symbol_message("$1") == "`$1` is not a symbol: `$` must be followed by a name"
+    assert not_a_symbol_message(":1") == "`:1` is not a symbol: `:` must be followed by a name"
+
+
+def test_old_dollar_spelling_points_at_the_new_one():
+    assert not_a_symbol_message("$x") == "`$x` is not a symbol: a symbol is written `:x` (`$` is no longer used)"

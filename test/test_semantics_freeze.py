@@ -34,9 +34,9 @@ class TestDynamicNameResolution(unittest.TestCase):
         # f is redefined on iteration 2; iterations 2..4 must use the new body:
         # r = 0 + f(1)=2, then +20, +30, +40 = 92
         self.stacker.process_expression(
-            "{x} {x 1 +} $f defun "
+            "{x} {x 1 +} :f defun "
             "0 r set "
-            "1 4 $i { i 2 == { {x} {x 10 *} $f defun } if r i f + r set } do "
+            "1 4 :i { i 2 == { {x} {x 10 *} :f defun } if r i f + r set } do "
             "r"
         )
         self.assertEqual(list(self.stacker.stack), [92])
@@ -44,11 +44,11 @@ class TestDynamicNameResolution(unittest.TestCase):
     def test_bare_kernel_word_before_set_executes_as_operator(self):
         # Shadowing rule (1.15.0): only kernel words are protected. A bare
         # `dup` right before `set` is not a name but the `dup` operator, so
-        # `set` then fails to find a name. `$dup` / `{dup}` shadow explicitly.
+        # `set` then fails to find a name. `:dup` / `{dup}` shadow explicitly.
         with self.assertRaises(StackerSyntaxError):
             self.stacker.process_expression("3 dup set")
         self.stacker.stack.clear()
-        self.stacker.process_expression("3 $dup set dup")
+        self.stacker.process_expression("3 :dup set dup")
         self.assertEqual(list(self.stacker.stack), [3])
 
     def test_literal_block_forced_by_operator_with_prelude_loaded(self):
@@ -59,7 +59,7 @@ class TestDynamicNameResolution(unittest.TestCase):
 
     def test_set_shadows_symbolic_operator(self):
         # Variables are looked up before operators, even for symbolic names.
-        self.stacker.process_expression("99 $+ set +")
+        self.stacker.process_expression("99 :+ set +")
         self.assertEqual(list(self.stacker.stack), [99])
 
     def test_set_shadows_symbolic_operator_mid_loop(self):
@@ -67,16 +67,16 @@ class TestDynamicNameResolution(unittest.TestCase):
         # the addition operator, so `s i +` pushes s, i and 99 and `s set`
         # consumes only the 99 — leaving s, i behind on the stack.
         self.stacker.process_expression(
-            "0 s set 1 3 $i { i 2 == { 99 $+ set } if s i + s set } do s"
+            "0 s set 1 3 :i { i 2 == { 99 :+ set } if s i + s set } do s"
         )
         self.assertEqual(list(self.stacker.stack), [1, 2, 99, 3, 99])
 
     def test_macro_redefined_mid_loop(self):
         # m is redefined on iteration 2; r = 0 + 1*2 + 2*3 + 3*3 + 4*3 = 29
         self.stacker.process_expression(
-            "{} {{2 *}} $m defmacro "
+            "{} {{2 *}} :m defmacro "
             "0 r set "
-            "1 4 $i { i 2 == { {} {{3 *}} $m defmacro } if r i m + r set } do "
+            "1 4 :i { i 2 == { {} {{3 *}} :m defmacro } if r i m + r set } do "
             "r"
         )
         self.assertEqual(list(self.stacker.stack), [29])
@@ -84,7 +84,7 @@ class TestDynamicNameResolution(unittest.TestCase):
     def test_operator_override_visible_in_defun_body(self):
         # A function body built *before* register_operator must see the
         # override when called *after* it: x 2 + -> 3 * 2 = 6.
-        self.stacker.process_expression("{x} {x 2 +} $f defun")
+        self.stacker.process_expression("{x} {x 2 +} :f defun")
         self.stacker.register_operator("+", lambda a, b: a * b, 2, True, "override")
         self.stacker.process_expression("3 f")
         self.assertEqual(list(self.stacker.stack), [6])
@@ -110,11 +110,11 @@ class TestSymbolValues(unittest.TestCase):
     def test_symbol_does_not_resolve_to_a_bound_value(self):
         from stacker.engine.data_type import Symbol
 
-        self.stacker.process_expression("5 x set $x")
+        self.stacker.process_expression("5 x set :x")
         self.assertEqual(list(self.stacker.stack), [Symbol("x")])
 
     def test_symbol_eval_equals_quoted_name_eval(self):
-        self.stacker.process_expression("3 4 $+ eval")
+        self.stacker.process_expression("3 4 :+ eval")
         self.assertEqual(list(self.stacker.stack), [7])
         self.stacker.stack.clear()
         self.stacker.process_expression("3 4 {+} eval")
@@ -138,7 +138,7 @@ class TestListLiteralFreshness(unittest.TestCase):
     def test_multi_var_list_literal_in_loop(self):
         # [i i] must re-resolve i on each iteration.
         self.stacker.process_expression(
-            "[] lst set 1 3 $i { lst [i i] + lst set } do lst"
+            "[] lst set 1 3 :i { lst [i i] + lst set } do lst"
         )
         self.assertEqual(list(self.stacker.stack), [[1, 1, 2, 2, 3, 3]])
 
@@ -206,7 +206,7 @@ class TestUndefinedSymbolBehavior(unittest.TestCase):
         # pushed as an UndefinedSymbol value and only failed later, when an
         # operator consumed it. That let typos travel silently, so a
         # reference to an undefined name now fails at its own position. The
-        # name itself is written `$bare_undefined` or `{bare_undefined}`.
+        # name itself is written `:bare_undefined` or `{bare_undefined}`.
         with self.assertRaises(UndefinedSymbolError):
             self.stacker.process_expression("bare_undefined")
 

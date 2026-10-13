@@ -156,7 +156,7 @@ class TestRedefinitionWarning:
     def test_set_over_a_prelude_word_warns_every_time(self, caplog):
         stacker = Stacker()
         with caplog.at_level(logging.WARNING, logger="stacker"):
-            run(stacker, "1 $mean set 2 $mean set")
+            run(stacker, "1 :mean set 2 :mean set")
         assert caplog.text.count("redefining prelude word 'mean'") == 2
 
     def test_defining_a_new_word_does_not_warn(self, caplog):

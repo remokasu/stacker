@@ -102,7 +102,7 @@ class Parser:
         elif token.type == TokenType.SYMBOL:
             if not is_symbol(token.value):
                 raise StackerSyntaxError(not_a_symbol_message(token.value))
-            return Identifier(token.value)  # formatted as '$name', a symbol element
+            return Identifier(token.value)  # formatted as ':name', a symbol element
         elif token.type == TokenType.SEMICOLON:
             return ";"
         elif token.type == TokenType.COMMA:

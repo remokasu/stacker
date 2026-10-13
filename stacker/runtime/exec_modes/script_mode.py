@@ -72,7 +72,7 @@ class ScriptMode(ExecutionMode):
             # Extract the name from the message
             if "`" in message:
                 var_name = message.split("`")[1]
-                return f"To use the name itself, write `${var_name}` or `{{{var_name}}}`"
+                return f"To use the name itself, write `:{var_name}` or `{{{var_name}}}`"
 
         # Stack underflow errors
         elif "StackUnderflow" in error_type:

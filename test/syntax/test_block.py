@@ -61,7 +61,7 @@ class TestUnit(unittest.TestCase):
 
     def test_paren_style_function(self):
         stacker = Stacker()
-        stacker.eval("(x y) (x y *) $mul defun")
+        stacker.eval("(x y) (x y *) :mul defun")
         ans = stacker.eval("3 4 mul")
         self.assertEqual(ans[-1], 12)
 

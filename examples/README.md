@@ -59,4 +59,4 @@ All examples use the modern Stacker syntax:
 - Variable assignment: `value variable =`
 - Variable reference: `variable`
 
-Note: `$name` pushes the symbol `name` as a value; see "Three ways to write a name" in the main README. To pass a name to a macro, prefer `{name}`.
+Note: `:name` pushes the symbol `name` as a value; see "Three ways to write a name" in the main README. To pass a name to a macro, prefer `{name}`.

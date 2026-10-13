@@ -173,12 +173,12 @@ class TestStacker(unittest.TestCase):
 
     def test_variable_assignment(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("5 $a set")
+        self.stacker.process_expression("5 :a set")
         self.assertEqual(self.stacker.variables["a"], 5)
 
     def test_function_definition_and_call(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("{x} {x x *} $f defun")
+        self.stacker.process_expression("{x} {x x *} :f defun")
         self.stacker.process_expression("4 f")
         self.assertEqual(self.stacker.stack[-1], 16)
 
@@ -267,13 +267,13 @@ class TestStacker(unittest.TestCase):
     # valiable
     def test_variable_assign_1(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("123 $a set")
+        self.stacker.process_expression("123 :a set")
         self.stacker.process_expression("a")
         self.assertEqual(self.stacker.pop_and_eval(self.stacker.stack), 123)
 
     def test_variable_assign_2(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("{30 50 +} $b set")
+        self.stacker.process_expression("{30 50 +} :b set")
         self.stacker.process_expression("b")
         # self.stacker.process_expression("pop")
         self.assertEqual(self.stacker.pop_and_eval(self.stacker.stack), 80)
@@ -316,7 +316,7 @@ class TestStacker(unittest.TestCase):
 
     def test_eval_variable(self):
         self.stacker.stack.clear()
-        self.stacker.process_expression("5 $a set")
+        self.stacker.process_expression("5 :a set")
         self.stacker.process_expression("a eval")
         self.assertEqual(self.stacker.stack[-1], 5)
 

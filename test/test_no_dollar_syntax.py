@@ -26,13 +26,13 @@ class TestNoDollarSyntax(unittest.TestCase):
     def test_set_with_dollar_backward_compatibility(self):
         """Test that $ prefix still works (backward compatibility)."""
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval("100 $legacy set legacy")
+        result = stacker.eval("100 :legacy set legacy")
         self.assertEqual(result[-1], 100)
 
     def test_set_mixed_syntax(self):
         """Test mixing $ and non-$ syntax."""
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval("10 $x set 20 y set x y +")
+        result = stacker.eval("10 :x set 20 y set x y +")
         self.assertEqual(result[-1], 30)
 
     def test_defun_without_dollar(self):
@@ -44,7 +44,7 @@ class TestNoDollarSyntax(unittest.TestCase):
     def test_defun_with_dollar_backward_compatibility(self):
         """Test that defun with $ prefix still works."""
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval("{a b} {a b *} $multiply defun 3 4 multiply")
+        result = stacker.eval("{a b} {a b *} :multiply defun 3 4 multiply")
         self.assertEqual(result[-1], 12)
 
     def test_defmacro_without_dollar(self):
@@ -56,27 +56,27 @@ class TestNoDollarSyntax(unittest.TestCase):
     def test_defmacro_with_dollar_backward_compatibility(self):
         """Test that defmacro with $ prefix still works."""
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval("{} {{3 +}} $addThree defmacro 10 addThree")
+        result = stacker.eval("{} {{3 +}} :addThree defmacro 10 addThree")
         self.assertEqual(result[-1], 13)
 
     def test_do_loop_without_dollar(self):
         """Test do loop without $ prefix (variable name in do)."""
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval("0 $sum set 1 5 i {sum i + $sum set} do sum")
+        result = stacker.eval("0 :sum set 1 5 i {sum i + :sum set} do sum")
         # Sum of 1 to 5 = 15
         self.assertEqual(result[-1], 15)
 
     def test_do_loop_with_dollar_backward_compatibility(self):
         """Test that do loop with $ prefix still works."""
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval("0 $total set 1 3 $i {total i + total set} do total")
+        result = stacker.eval("0 :total set 1 3 :i {total i + total set} do total")
         # Sum of 1 to 3 = 6
         self.assertEqual(result[-1], 6)
 
     def test_dolist_without_dollar(self):
         """Test dolist without $ prefix (variable name in dolist)."""
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval("0 $sum set [10 20 30] x {sum x + $sum set} dolist sum")
+        result = stacker.eval("0 :sum set [10 20 30] x {sum x + :sum set} dolist sum")
         # Sum of 10, 20, 30 = 60
         self.assertEqual(result[-1], 60)
 
@@ -84,7 +84,7 @@ class TestNoDollarSyntax(unittest.TestCase):
         """Test that dolist with $ prefix still works."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval(
-            "0 $total set [5 15 25] $x {total x + total set} dolist total"
+            "0 :total set [5 15 25] :x {total x + total set} dolist total"
         )
         # Sum of 5, 15, 25 = 45
         self.assertEqual(result[-1], 45)
@@ -129,13 +129,13 @@ class TestNoDollarSyntax(unittest.TestCase):
     def test_equal_operator_with_dollar_backward_compatibility(self):
         """Test that = operator with $ prefix still works."""
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval("99 $value = value")
+        result = stacker.eval("99 :value = value")
         self.assertEqual(result[-1], 99)
 
     def test_equal_operator_mixed_syntax(self):
         """Test mixing $ and non-$ syntax with = operator."""
         stacker = Stacker()  # Fresh instance
-        result = stacker.eval("15 $x = 25 y = x y +")
+        result = stacker.eval("15 :x = 25 y = x y +")
         self.assertEqual(result[-1], 40)
 
     def test_equal_vs_set_equivalence(self):

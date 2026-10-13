@@ -24,7 +24,7 @@ def run(*lines: str) -> list[object]:
 class TestAttribution:
     @pytest.mark.parametrize(
         "program",
-        ['[$x] {drop "a" 1 +} map', '[$x $y] {drop 1 "a" +} map', '[$x] {drop "a" 1 +} filter'],
+        ['[:x] {drop "a" 1 +} map', '[:x :y] {drop 1 "a" +} map', '[:x] {drop "a" 1 +} filter'],
     )
     def test_unrelated_error_in_a_body_is_not_blamed_on_the_element(self, program):
         with pytest.raises(TypeError) as info:
@@ -32,24 +32,24 @@ class TestAttribution:
         assert not isinstance(info.value, StackerTypeError)
 
     def test_symbol_element_that_is_dropped_causes_no_error(self):
-        assert run("5 x set [$x] {drop x 1 +} map") == [[6]]
+        assert run("5 x set [:x] {drop x 1 +} map") == [[6]]
 
     @pytest.mark.parametrize(
         "program",
-        ["$x 1 nth", "[1 2] $x nth", '"a" $x split', '$x "a" split', "$n listn", "$n subn"],
+        [":x 1 nth", "[1 2] :x nth", '"a" :x split', ':x "a" split', ":n listn", ":n subn"],
     )
     def test_priority_words_report_a_symbol(self, program):
         with pytest.raises(StackerTypeError):
             run(program)
 
-    @pytest.mark.parametrize("program", ["$x upper", "$x lower", '"," $x join'])
+    @pytest.mark.parametrize("program", [":x upper", ":x lower", '"," :x join'])
     def test_string_method_on_a_symbol_is_a_stacker_type_error(self, program):
         with pytest.raises(StackerTypeError):
             run(program)
 
     def test_shortcut_names_the_word_the_symbol_names(self):
         with pytest.raises(StackerTypeError) as info:
-            run("[1 $x] $neg map")
+            run("[1 :x] :neg map")
         assert "`neg` cannot use the symbol `x`" in str(info.value)
 
     def test_list_literal_inside_an_aggregated_block_is_a_value(self):

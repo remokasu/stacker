@@ -86,6 +86,6 @@ type_operators = {
         "func": (lambda x: isinstance(x, Symbol)),
         "arg_count": 1,
         "push_result_to_stack": True,
-        "desc": "Returns true if the value is a symbol ($name)",
+        "desc": "Returns true if the value is a symbol (:name)",
     },
 }

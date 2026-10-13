@@ -21,10 +21,10 @@ from stacker.stacker import Stacker
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-INFINITE_RECURSION = "{n} {n 1 + rundeep} $rundeep defun\n0 rundeep\n"
+INFINITE_RECURSION = "{n} {n 1 + rundeep} :rundeep defun\n0 rundeep\n"
 
 DEEP_LEGAL_RECURSION = (
-    "{n} {n 0 <= {0} {n 1 - deepok} ifelse} $deepok defun\n1000 deepok echo\n"
+    "{n} {n 0 <= {0} {n 1 - deepok} ifelse} :deepok defun\n1000 deepok echo\n"
 )
 
 
@@ -63,7 +63,7 @@ class TestRecursionGuardSubprocess(unittest.TestCase):
 
     def test_cli_flag_lowers_the_limit(self):
         deep_20 = (
-            "{n} {n 0 <= {0} {n 1 - go20} ifelse} $go20 defun\n20 go20 echo\n"
+            "{n} {n 0 <= {0} {n 1 - go20} ifelse} :go20 defun\n20 go20 echo\n"
         )
         result = _run_stacker(["--recursion-limit", "10"], script_content=deep_20)
         combined = result.stdout + result.stderr
@@ -89,7 +89,7 @@ class TestRecursionGuardInProcess(unittest.TestCase):
     def test_named_function_in_error(self):
         recursion.set_limit(5)
         stacker = Stacker()
-        stacker.process_expression("{n} {n 1 + selfcall} $selfcall defun")
+        stacker.process_expression("{n} {n 1 + selfcall} :selfcall defun")
         with self.assertRaises(StackerRecursionError) as ctx:
             stacker.process_expression("0 selfcall")
         self.assertEqual(ctx.exception.name, "selfcall")
@@ -98,7 +98,7 @@ class TestRecursionGuardInProcess(unittest.TestCase):
     def test_lambda_reported_as_lambda(self):
         recursion.set_limit(5)
         stacker = Stacker()
-        stacker.process_expression("{x} {x recl eval} lambda $recl set")
+        stacker.process_expression("{x} {x recl eval} lambda :recl set")
         with self.assertRaises(StackerRecursionError) as ctx:
             stacker.process_expression("1 recl eval")
         self.assertEqual(ctx.exception.name, "<lambda>")
@@ -106,11 +106,11 @@ class TestRecursionGuardInProcess(unittest.TestCase):
     def test_counter_does_not_leak_after_error(self):
         recursion.set_limit(5)
         stacker = Stacker()
-        stacker.process_expression("{n} {n 1 + boom} $boom defun")
+        stacker.process_expression("{n} {n 1 + boom} :boom defun")
         with self.assertRaises(StackerRecursionError):
             stacker.process_expression("0 boom")
         # The guard must be fully unwound: a shallow call succeeds
-        stacker.process_expression("{x} {x 1 +} $inc defun")
+        stacker.process_expression("{x} {x 1 +} :inc defun")
         stacker.process_expression("41 inc")
         self.assertEqual(stacker.pop(), 42)
 

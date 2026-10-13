@@ -2,7 +2,7 @@
 
 A bare name written right before a binding form is a name, unless it is a
 kernel word (a Python-side operator); then it executes as that operator and
-shadowing requires an explicit `$name` / `{name}`.
+shadowing requires an explicit `:name` / `{name}`.
 """
 
 import pytest
@@ -49,13 +49,13 @@ def test_bare_kernel_word_before_defun_executes_as_operator():
 
 
 def test_kernel_word_can_be_shadowed_with_explicit_quote():
-    assert run("3 $dup set dup") == [3]
+    assert run("3 :dup set dup") == [3]
     assert run("4 {dup} set dup") == [4]
 
 
 def test_macro_shadowing_a_kernel_word_wins_at_lookahead_position_too():
     # `dup` is a macro now; at the lookahead position it still expands.
-    assert run("{} {{$k}} $dup defmacro", "3 dup set k") == [3]
+    assert run("{} {{:k}} :dup defmacro", "3 dup set k") == [3]
 
 
 def test_do_loop_variable_named_like_a_constant_is_unaffected():
@@ -67,8 +67,8 @@ def test_dolist_loop_variable_named_like_a_kernel_word_is_unaffected():
 
 
 def test_symbolic_operator_shadowing_still_requires_quote():
-    # Frozen semantics: `99 $+ set +` pushes 99.
-    assert run("99 $+ set +") == [99]
+    # Frozen semantics: `99 :+ set +` pushes 99.
+    assert run("99 :+ set +") == [99]
 
 
 def test_bare_kernel_word_before_assign_executes_as_operator():
@@ -82,7 +82,7 @@ def test_bare_kernel_word_before_global_executes_as_operator():
 
 
 def test_kernel_word_can_be_assigned_and_made_global_with_explicit_quote():
-    assert run("3 $dup = dup") == [3]
+    assert run("3 :dup = dup") == [3]
     assert run("4 {dup} global dup") == [4]
 
 
@@ -124,7 +124,7 @@ class TestLiteralsAreNeverNames:
         with pytest.raises(StackerSyntaxError):
             run(expression)
 
-    @pytest.mark.parametrize(("name", "value"), [("{x}", 5), ("{$x}", 5)], ids=["bare", "dollar"])
+    @pytest.mark.parametrize(("name", "value"), [("{x}", 5), ("{:x}", 5)], ids=["bare", "dollar"])
     def test_one_token_blocks_holding_a_name_are_names(self, name, value):
         assert run(f"{value} {name} set x") == [value]
 
@@ -152,7 +152,7 @@ class TestEveryNameTakingWordReadsBareNames:
 
     @pytest.mark.parametrize("word", ["reduce", "fold"])
     def test_dollar_names_still_work(self, word):
-        assert run(f"[1 2 3] 0 $acc $x {{acc x +}} {word}") == [6]
+        assert run(f"[1 2 3] 0 :acc :x {{acc x +}} {word}") == [6]
 
     @pytest.mark.parametrize("word", ["set", "=", "global", "defun", "defmacro", "macroexpand", "do"])
     def test_string_literal_reading_like_a_binding_word_is_not_a_binding_word(self, word):

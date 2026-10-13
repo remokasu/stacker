@@ -24,7 +24,7 @@ Note:
     The list / block / symbol / name predicates further down were moved here
     from ``parser.py`` and ``engine/core.py`` (1.16.0) so that the main
     lexer, the array lexer and the classifier agree on what a list, a block,
-    a ``$name`` and a bare name are.
+    a ``:name`` and a bare name are.
 """
 
 from __future__ import annotations
@@ -140,45 +140,59 @@ def is_code_block(expression: object) -> bool:
     return False
 
 
-#: Characters a name cannot hold: the lexer would split the token there (or
-#: start a string, a block, a list or a comment), so ``$name`` could not be
-#: written back as one token.
-NAME_DELIMITERS = frozenset(" \t\n\r$\"'()[]{}#;")
+#: The character that marks a symbol: ``:name`` is the name itself, as a value.
+SYMBOL_PREFIX = ":"
+
+#: The symbol prefix of versions before 1.16.0. A token starting with it is a
+#: syntax error that points at the new spelling, so old code fails loudly
+#: instead of binding a name that happens to start with ``$``.
+OLD_SYMBOL_PREFIX = "$"
+
+#: Characters a name cannot hold: the symbol prefixes, and the characters
+#: the lexer splits a token on (or that start a string, a block, a list or a
+#: comment), so every name can be written back as one ``:name`` token.
+NAME_DELIMITERS = frozenset(" \t\n\r:$\"'()[]{}#;")
 
 
 def is_symbol(expression: object) -> bool:
-    """Return True if ``expression`` is a ``$name`` token.
+    """Return True if ``expression`` is a ``:name`` token.
 
-    A symbol token is a raw ``str`` made of one ``$`` followed by a symbol
+    A symbol token is a raw ``str`` made of one ``:`` followed by a symbol
     name (:func:`is_symbol_name`). So every symbol can be written back as
-    ``$name``.
+    ``:name``.
 
     Args:
         expression: Token value.
 
     Returns:
-        True for ``$x``, ``$+``, ``$x.y``; False for ``$``, ``$$x``, ``$1``,
-        ``${x}``, ``$"x"``, ``$[1 2]``, a ``String`` and non-str values.
+        True for ``:x``, ``:+``, ``:x.y``; False for ``:``, ``::x``, ``:1``,
+        ``:{x}``, ``:"x"``, ``:[1 2]``, a ``String`` and non-str values.
     """
-    if type(expression) is not str or not expression.startswith("$"):
+    if type(expression) is not str or not expression.startswith(SYMBOL_PREFIX):
         return False
     return is_symbol_name(expression[1:])
 
 
 def is_symbol_name(name: object) -> bool:
-    """Return True if ``name`` can be the name of a symbol (written back as ``$name``).
+    """Return True if ``name`` can be the name of a symbol (written back as ``:name``).
 
-    The name must read as a bare name and hold none of :data:`NAME_DELIMITERS`
-    (whitespace, ``$``, quotes, brackets, ``#``, ``;``), which a token from
-    the lexer never does but a string value may.
+    Same as :func:`is_bare_name`: the public name for the check that a
+    string value, which may hold anything, can become a symbol.
 
     Args:
         name: The candidate name.
 
     Returns:
-        True if ``$name`` would be one symbol token.
+        True if ``:name`` would be one symbol token.
     """
-    return is_bare_name(name) and not any(ch in NAME_DELIMITERS for ch in name)  # type: ignore[union-attr]
+    return is_bare_name(name)
+
+
+def not_a_symbol_message(token: str) -> str:
+    """The error message for a ``:`` or ``$`` token that is not a symbol."""
+    if token.startswith(OLD_SYMBOL_PREFIX):
+        return f"`{token}` is not a symbol: a symbol is written `:{token[1:]}` (`$` is no longer used)"
+    return f"`{token}` is not a symbol: `:` must be followed by a name"
 
 
 @lru_cache(maxsize=1024)
@@ -199,11 +213,6 @@ def cached_literal_eval(token: str) -> object:
         return ast.literal_eval(token)
     except (ValueError, TypeError, SyntaxError):
         return token
-
-
-def not_a_symbol_message(token: str) -> str:
-    """The error message for a ``$`` token that does not name anything."""
-    return f"`{token}` is not a symbol: `$` must be followed by a name"
 
 
 def reads_as_name(token: str) -> bool:
@@ -233,8 +242,10 @@ def reads_as_name(token: str) -> bool:
 def is_bare_name(token: object) -> bool:
     """Return True if ``token`` is a bare name.
 
-    A bare name is a non-empty raw ``str`` that is not a ``$`` token, a
-    string literal, a list literal, a code block or a literal.
+    A bare name is a non-empty raw ``str`` that is not a string literal, a
+    list literal, a code block or a literal, and holds none of
+    :data:`NAME_DELIMITERS` (so it is not a ``:name`` or ``$name`` token
+    either).
 
     Args:
         token: Token value.
@@ -245,9 +256,9 @@ def is_bare_name(token: object) -> bool:
     return (
         type(token) is str
         and bool(token)
-        and not token.startswith("$")
         and not is_string_token(token)
         and not is_list(token)
         and not is_code_block(token)
         and reads_as_name(token)
+        and not any(ch in NAME_DELIMITERS for ch in token)
     )

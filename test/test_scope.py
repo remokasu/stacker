@@ -14,18 +14,18 @@ class TestVariableScope(unittest.TestCase):
         self.stacker = Stacker()
 
     def test_global_variable_access_from_function(self):
-        """Test that functions can $access global variables."""
+        """Test that functions can :access global variables."""
         self.stacker.stack.clear()
-        self.stacker.eval("10 $global_var set")
-        self.stacker.eval("{x} {x global_var +} $add_global defun")
+        self.stacker.eval("10 :global_var set")
+        self.stacker.eval("{x} {x global_var +} :add_global defun")
         result = self.stacker.eval("5 add_global")
         self.assertEqual(result[-1], 15)
 
     def test_local_variable_shadows_global(self):
-        """Test that local variables $shadow global variables."""
+        """Test that local variables :shadow global variables."""
         self.stacker.stack.clear()
-        self.stacker.eval("100 $x set")
-        self.stacker.eval("{x} {x 2 *} $double defun")
+        self.stacker.eval("100 :x set")
+        self.stacker.eval("{x} {x 2 *} :double defun")
         result = self.stacker.eval("5 double")
         self.assertEqual(result[-1], 10)
         # Global x should still be 100
@@ -33,10 +33,10 @@ class TestVariableScope(unittest.TestCase):
         self.assertEqual(result[-1], 100)
 
     def test_function_does_not_modify_global_scope(self):
-        """Test that function-local variables don't $affect global scope."""
+        """Test that function-local variables don't :affect global scope."""
         self.stacker.stack.clear()
-        self.stacker.eval("42 $answer set")
-        self.stacker.eval("{n} {n $temp set temp 2 *} $calc defun")
+        self.stacker.eval("42 :answer set")
+        self.stacker.eval("{n} {n :temp set temp 2 *} :calc defun")
         result = self.stacker.eval("10 calc")
         self.assertEqual(result[-1], 20)
         # Global answer should still be 42
@@ -53,8 +53,8 @@ class TestVariableScope(unittest.TestCase):
     def test_nested_function_calls_independent_scopes(self):
         """Test that nested function calls have independent scopes."""
         self.stacker.stack.clear()
-        self.stacker.eval("{x} {x 1 +} $inc defun")
-        self.stacker.eval("{x} {x inc inc inc} $inc3 defun")
+        self.stacker.eval("{x} {x 1 +} :inc defun")
+        self.stacker.eval("{x} {x inc inc inc} :inc3 defun")
         result = self.stacker.eval("5 inc3")
         self.assertEqual(result[-1], 8)
 
@@ -68,7 +68,7 @@ class TestVariableScope(unittest.TestCase):
                 {n}
                 {n 1 - fib n 2 - fib +}
                 ifelse
-            } $fib defun
+            } :fib defun
         """)
         result = self.stacker.eval("6 fib")
         self.assertEqual(result[-1], 8)  # fib(6) = 8
@@ -76,7 +76,7 @@ class TestVariableScope(unittest.TestCase):
     def test_multiple_parameters_scoping(self):
         """Test that functions with multiple parameters maintain proper scoping."""
         self.stacker.stack.clear()
-        self.stacker.eval("{a b c} {a b * c +} $calc defun")
+        self.stacker.eval("{a b c} {a b * c +} :calc defun")
         result = self.stacker.eval("2 3 4 calc")
         self.assertEqual(result[-1], 10)  # 2*3 + 4 = 10
 
@@ -90,8 +90,8 @@ class TestFunctionScope(unittest.TestCase):
     def test_function_calls_another_function(self):
         """Test that a function can call another function."""
         self.stacker.stack.clear()
-        self.stacker.eval("{x} {x x *} $square defun")
-        self.stacker.eval("{x} {x square 2 *} $double_square defun")
+        self.stacker.eval("{x} {x x *} :square defun")
+        self.stacker.eval("{x} {x square 2 *} :double_square defun")
         result = self.stacker.eval("5 double_square")
         self.assertEqual(result[-1], 50)  # (5*5)*2 = 50
 
@@ -104,7 +104,7 @@ class TestFunctionScope(unittest.TestCase):
                 {1}
                 {n n 1 - fact *}
                 ifelse
-            } $fact defun
+            } :fact defun
         """)
         result = self.stacker.eval("5 fact")
         self.assertEqual(result[-1], 120)  # 5! = 120
@@ -118,7 +118,7 @@ class TestFunctionScope(unittest.TestCase):
                 {1}
                 {n 1 - is_odd}
                 ifelse
-            } $is_even defun
+            } :is_even defun
         """)
         self.stacker.eval("""
             {n} {
@@ -126,7 +126,7 @@ class TestFunctionScope(unittest.TestCase):
                 {0}
                 {n 1 - is_even}
                 ifelse
-            } $is_odd defun
+            } :is_odd defun
         """)
         result = self.stacker.eval("4 is_even")
         self.assertEqual(result[-1], 1)  # 4 is even
@@ -143,16 +143,16 @@ class TestLambdaScope(unittest.TestCase):
         self.stacker = Stacker()
 
     def test_lambda_access_global_variable(self):
-        """Test that lambda can $access global variables."""
+        """Test that lambda can :access global variables."""
         self.stacker.stack.clear()
-        self.stacker.eval("10 $offset set")
+        self.stacker.eval("10 :offset set")
         result = self.stacker.eval("[1 2 3] {x} {x offset +} lambda map")
         self.assertEqual(result[-1], [11, 12, 13])
 
     def test_lambda_parameter_shadows_global(self):
-        """Test that lambda parameters $shadow global variables."""
+        """Test that lambda parameters :shadow global variables."""
         self.stacker.stack.clear()
-        self.stacker.eval("100 $x set")
+        self.stacker.eval("100 :x set")
         result = self.stacker.eval("[1 2 3] {x} {x 2 *} lambda map")
         self.assertEqual(result[-1], [2, 4, 6])
         # Global x should still be 100
@@ -165,7 +165,7 @@ class TestLambdaScope(unittest.TestCase):
         self.stacker.eval("""
             {lst multiplier} {
                 lst {x} {x multiplier *} lambda map
-            } $multiply_list defun
+            } :multiply_list defun
         """)
         result = self.stacker.eval("[1 2 3 4] 3 multiply_list")
         self.assertEqual(result[-1], [3, 6, 9, 12])
@@ -180,7 +180,7 @@ class TestLambdaScope(unittest.TestCase):
                 {1}
                 {n n 1 - fact eval *}
                 ifelse
-            } lambda $fact set
+            } lambda :fact set
         """)
         result = self.stacker.eval("5 fact eval")
         self.assertEqual(result[-1], 120)  # 5! = 120
@@ -195,15 +195,15 @@ class TestMacroScope(unittest.TestCase):
     def test_macro_expansion(self):
         """Test basic macro expansion."""
         self.stacker.stack.clear()
-        self.stacker.eval("{} {{5 +}} $add5 defmacro")
+        self.stacker.eval("{} {{5 +}} :add5 defmacro")
         result = self.stacker.eval("10 add5")
         self.assertEqual(result[-1], 15)
 
     def test_macro_with_global_variable(self):
-        """Test macro $accessing global variables."""
+        """Test macro :accessing global variables."""
         self.stacker.stack.clear()
-        self.stacker.eval("100 $base set")
-        self.stacker.eval("{} {{base +}} $add_base defmacro")
+        self.stacker.eval("100 :base set")
+        self.stacker.eval("{} {{base +}} :add_base defmacro")
         result = self.stacker.eval("25 add_base")
         self.assertEqual(result[-1], 125)
 
@@ -211,9 +211,9 @@ class TestMacroScope(unittest.TestCase):
         """Test that macros and functions have different scoping behavior."""
         self.stacker.stack.clear()
         # Function evaluates in its own scope
-        self.stacker.eval("{x} {x 2 *} $f_double defun")
+        self.stacker.eval("{x} {x 2 *} :f_double defun")
         # Macro expands in caller's scope
-        self.stacker.eval("{} {{2 *}} $m_double defmacro")
+        self.stacker.eval("{} {{2 *}} :m_double defmacro")
 
         result = self.stacker.eval("5 f_double")
         self.assertEqual(result[-1], 10)
@@ -237,7 +237,7 @@ class TestComplexScopeScenarios(unittest.TestCase):
                 {0}
                 {n n 1 - sum_to +}
                 ifelse
-            } $sum_to defun
+            } :sum_to defun
         """)
         result = self.stacker.eval("10 sum_to")
         self.assertEqual(result[-1], 55)  # 1+2+3+...+10 = 55
@@ -251,7 +251,7 @@ class TestComplexScopeScenarios(unittest.TestCase):
                 {1}
                 {base base exp 1 - power *}
                 ifelse
-            } $power defun
+            } :power defun
         """)
         result = self.stacker.eval("2 3 power")
         self.assertEqual(result[-1], 8)  # 2^3 = 8
@@ -263,9 +263,9 @@ class TestComplexScopeScenarios(unittest.TestCase):
     def test_multiple_functions_same_parameter_names(self):
         """Test multiple functions with same parameter names don't interfere."""
         self.stacker.stack.clear()
-        self.stacker.eval("{x} {x 10 +} $add10 defun")
-        self.stacker.eval("{x} {x 20 +} $add20 defun")
-        self.stacker.eval("{x} {x 30 +} $add30 defun")
+        self.stacker.eval("{x} {x 10 +} :add10 defun")
+        self.stacker.eval("{x} {x 20 +} :add20 defun")
+        self.stacker.eval("{x} {x 30 +} :add30 defun")
 
         result = self.stacker.eval("5 add10")
         self.assertEqual(result[-1], 15)
@@ -277,10 +277,10 @@ class TestComplexScopeScenarios(unittest.TestCase):
     def test_scope_with_loops(self):
         """Test scoping behavior with loops."""
         self.stacker.stack.clear()
-        self.stacker.eval("0 $total set")
+        self.stacker.eval("0 :total set")
         self.stacker.eval("""
-            [1 2 3 4 5] $i {
-                total i + $total set
+            [1 2 3 4 5] :i {
+                total i + :total set
             } dolist
         """)
         result = self.stacker.eval("total")
@@ -289,7 +289,7 @@ class TestComplexScopeScenarios(unittest.TestCase):
     def test_constants_accessible_in_functions(self):
         """Test that built-in constants are accessible in functions."""
         self.stacker.stack.clear()
-        self.stacker.eval("{r} {r r * pi *} $circle_area defun")
+        self.stacker.eval("{r} {r r * pi *} :circle_area defun")
         result = self.stacker.eval("1 circle_area")
         # Should be approximately pi
         self.assertAlmostEqual(result[-1], 3.141592653589793, places=10)
@@ -303,10 +303,10 @@ class TestGlobalOperator(unittest.TestCase):
         self.script_mode = ScriptMode(self.stacker)
 
     def test_basic_global_declaration(self):
-        """Test $that global operator sets variable $in global scope."""
+        """Test :that global operator sets variable :in global scope."""
         script_content = """
-0 $counter global
-counter 1 + $counter global
+0 :counter global
+counter 1 + :counter global
 counter
 """
         with tempfile.NamedTemporaryFile(mode='w', suffix='.stk', delete=False) as f:
@@ -320,12 +320,12 @@ counter
             os.unlink(temp_file)
 
     def test_global_update_from_function(self):
-        """Test $that global variables can be updated from functions."""
+        """Test :that global variables can be updated from functions."""
         script_content = """
-0 $counter global
+0 :counter global
 
 {x} {
-    counter 1 + $counter global
+    counter 1 + :counter global
     x counter *
 } multiply_with_count defun
 
@@ -345,10 +345,10 @@ counter
     def test_global_multiple_function_calls(self):
         """Test global variable persists across multiple function calls."""
         script_content = """
-0 $counter global
+0 :counter global
 
 {} {
-    counter 1 + $counter global
+    counter 1 + :counter global
     counter
 } increment defun
 
@@ -370,11 +370,11 @@ counter
     def test_global_from_nested_function(self):
         """Test that nested functions can access and modify globals."""
         script_content = """
-0 $value global
+0 :value global
 
 {} {
     {x} {
-        x $value global
+        x :value global
         value
     } set_value defun
 
@@ -404,7 +404,7 @@ class TestSetVsGlobal(unittest.TestCase):
         self.script_mode = ScriptMode(self.stacker)
 
     def test_set_updates_existing_global(self):
-        """Test that set updates an $existing global variable."""
+        """Test that set updates an :existing global variable."""
         script_content = """
 10 x set
 
@@ -443,20 +443,20 @@ create_local
 
         try:
             self.script_mode.run(temp_file)
-            # newvar should not exist $in global scope
+            # newvar should not exist :in global scope
             self.assertNotIn('newvar', self.stacker.variables._local)
         finally:
             os.unlink(temp_file)
 
     def test_set_vs_global_difference(self):
-        """Test the difference between set $and global operators."""
+        """Test the difference between set :and global operators."""
         script_content = """
 0 a set
 0 b set
 
 {} {
     10 a set
-    20 $b global
+    20 :b global
     b
 } modify defun
 
@@ -472,7 +472,7 @@ b
             self.script_mode.run(temp_file)
             # a was updated with set (updates existing)
             self.assertEqual(self.stacker.stack[-2], 10)
-            # b was updated $with global
+            # b was updated :with global
             self.assertEqual(self.stacker.stack[-1], 20)
         finally:
             os.unlink(temp_file)
@@ -490,7 +490,7 @@ class TestLoopVariableScope(unittest.TestCase):
         script_content = """
 999 i set
 
-0 5 $i {
+0 5 :i {
     i
 } do
 
@@ -517,7 +517,7 @@ i
         script_content = """
 999 item set
 
-[10 20 30] $item {
+[10 20 30] :item {
     item
 } dolist
 
@@ -540,12 +540,12 @@ item
             os.unlink(temp_file)
 
     def test_accessing_global_from_loop(self):
-        """Test that loops can access and $modify global variables."""
+        """Test that loops can access and :modify global variables."""
         script_content = """
-0 $sum global
+0 :sum global
 
-1 5 $i {
-    sum i + $sum global
+1 5 :i {
+    sum i + :sum global
 } do
 
 sum
@@ -564,8 +564,8 @@ sum
     def test_nested_loops_with_same_variable_name(self):
         """Test nested loops with same variable name."""
         script_content = """
-0 1 $i {
-    10 11 $i {
+0 1 :i {
+    10 11 :i {
         i
     } do
 } do
@@ -591,7 +591,7 @@ sum
         script_content = """
 0 total set
 
-1 5 $i {
+1 5 :i {
     total i + total set
 } do
 
@@ -610,19 +610,19 @@ total
 
 
 class TestRecursiveWithGlobal(unittest.TestCase):
-    """Tests for recursive functions $using global variables."""
+    """Tests for recursive functions :using global variables."""
 
     def setUp(self):
         self.stacker = Stacker()
         self.script_mode = ScriptMode(self.stacker)
 
     def test_recursive_function_with_global_counter(self):
-        """Test recursive function that $uses global counter."""
+        """Test recursive function that :uses global counter."""
         script_content = """
-0 $count global
+0 :count global
 
 {n} {
-    count 1 + $count global
+    count 1 + :count global
     n 1 <= {
         1
     } {
@@ -647,15 +647,15 @@ count
             os.unlink(temp_file)
 
     def test_recursive_with_global_accumulator(self):
-        """Test recursive function that accumulates $in global variable."""
+        """Test recursive function that accumulates :in global variable."""
         script_content = """
-0 $acc global
+0 :acc global
 
 {n} {
     n 0 <= {
         acc
     } {
-        acc n + $acc global
+        acc n + :acc global
         n 1 - sum_recursive
     } ifelse
 } sum_recursive defun
@@ -675,20 +675,20 @@ count
 
 
 class TestComplexGlobalScenarios(unittest.TestCase):
-    """Tests for complex scenarios $mixing global, local, and set."""
+    """Tests for complex scenarios :mixing global, local, and set."""
 
     def setUp(self):
         self.stacker = Stacker()
         self.script_mode = ScriptMode(self.stacker)
 
     def test_mixed_global_local_set(self):
-        """Test $mixing global, local, and set in complex scenario."""
+        """Test :mixing global, local, and set in complex scenario."""
         script_content = """
-0 $a global
+0 :a global
 0 b set
 
 {} {
-    10 $a global
+    10 :a global
     20 b set
     30 c set
     0
@@ -704,23 +704,23 @@ b
 
         try:
             self.script_mode.run(temp_file)
-            # a was $set globally
+            # a was :set globally
             self.assertEqual(self.stacker.stack[-2], 10)
             # b was updated (it existed)
             self.assertEqual(self.stacker.stack[-1], 20)
-            # c should not $exist globally
+            # c should not :exist globally
             self.assertNotIn('c', self.stacker.variables._local)
         finally:
             os.unlink(temp_file)
 
     def test_loop_inside_function_with_global(self):
-        """Test loop variables inside function scope $with global accumulation."""
+        """Test loop variables inside function scope :with global accumulation."""
         script_content = """
-0 $total global
+0 :total global
 
 {n} {
-    1 n $i {
-        total i + $total global
+    1 n :i {
+        total i + :total global
         0
     } do
     total
@@ -741,16 +741,16 @@ total
             os.unlink(temp_file)
 
     def test_function_modifying_global_in_loop(self):
-        """Test function that $modifies global variable called in a loop."""
+        """Test function that :modifies global variable called in a loop."""
         script_content = """
-0 $total global
+0 :total global
 
 {x} {
-    total x + $total global
+    total x + :total global
     total
 } add_to_total defun
 
-1 5 $i {
+1 5 :i {
     i add_to_total drop
 } do
 
@@ -768,17 +768,17 @@ total
             os.unlink(temp_file)
 
     def test_multiple_functions_sharing_global(self):
-        """Test multiple functions sharing $same global variable."""
+        """Test multiple functions sharing :same global variable."""
         script_content = """
-0 $shared global
+0 :shared global
 
 {x} {
-    shared x + $shared global
+    shared x + :shared global
     shared
 } add_to_shared defun
 
 {x} {
-    shared x * $shared global
+    shared x * :shared global
     shared
 } multiply_shared defun
 
@@ -806,9 +806,9 @@ class TestScopeEdgeCases(unittest.TestCase):
         self.script_mode = ScriptMode(self.stacker)
 
     def test_parameter_shadowing_global(self):
-        """Test function parameter $shadowing global variable."""
+        """Test function parameter :shadowing global variable."""
         script_content = """
-999 $x global
+999 :x global
 
 {x} {
     x 2 *
@@ -831,11 +831,11 @@ x
             os.unlink(temp_file)
 
     def test_loop_variable_shadowing_global(self):
-        """Test loop variable $shadowing global variable."""
+        """Test loop variable :shadowing global variable."""
         script_content = """
-999 $i global
+999 :i global
 
-1 3 $i {
+1 3 :i {
     i
 } do
 
@@ -860,10 +860,10 @@ i
         """Test global declaration inside conditional block."""
         script_content = """
 1 {
-    42 $result global
+    42 :result global
     result
 } {
-    0 $result global
+    0 :result global
     result
 } ifelse
 

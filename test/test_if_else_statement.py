@@ -19,7 +19,7 @@ class TestUnit(unittest.TestCase):
 
     def test_if_3(self):
         stacker = Stacker()
-        expr = "-1 $x set {0 x >} {3 5 +} if"
+        expr = "-1 :x set {0 x >} {3 5 +} if"
         stacker.process_expression(expr)
         self.assertEqual(list(stacker.stack), [8])
 
@@ -39,7 +39,7 @@ class TestUnit(unittest.TestCase):
 
     def test_if_6(self):
         stacker = Stacker()
-        expr = "-1 $x set {0 x <} {3 5 +} if"
+        expr = "-1 :x set {0 x <} {3 5 +} if"
         stacker.process_expression(expr)
         self.assertEqual(list(stacker.stack), [])
 
@@ -61,7 +61,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(list(stacker.stack), [628])
 
         stacker = Stacker()
-        expr = "-1 $x set 0 x > {114 514 +} {810 1008 +}  ifelse"
+        expr = "-1 :x set 0 x > {114 514 +} {810 1008 +}  ifelse"
         stacker.process_expression(expr)
         self.assertEqual(list(stacker.stack), [628])
 
@@ -102,8 +102,8 @@ class TestUnit(unittest.TestCase):
         # would run and this test would fail.
         stacker = Stacker()
         expr = (
-            "0 $s set [1 2 3 4 5] $i"
-            " { {i 3 == {break} if s i + $s set} {999 $s set} iferror } dolist s"
+            "0 :s set [1 2 3 4 5] :i"
+            " { {i 3 == {break} if s i + :s set} {999 :s set} iferror } dolist s"
         )
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], 3)

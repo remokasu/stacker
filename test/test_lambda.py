@@ -29,7 +29,7 @@ class TestStacker(unittest.TestCase):
     { 1 }
     { n n 1 - fact eval * }
     ifelse
-} lambda $fact set
+} lambda :fact set
 5 fact eval
 """
         )
@@ -43,7 +43,7 @@ class TestLambdaStackAccumulation(unittest.TestCase):
 
     def test_lambda_stack_does_not_grow_across_calls(self):
         stacker = Stacker()
-        stacker.eval("{x} {x x} lambda $dupfn set")
+        stacker.eval("{x} {x x} lambda :dupfn set")
         fn = stacker.variables["dupfn"]
         stacker.eval("5 dupfn eval")
         first_len = len(fn.stack)

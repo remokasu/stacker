@@ -75,7 +75,7 @@ class TestListPrimitives(unittest.TestCase):
 
     # cons で再構築
     def test_cons_rebuild(self):
-        self.stacker.eval("[1 2 3] $xs set")
+        self.stacker.eval("[1 2 3] :xs set")
         ans = self.stacker.eval("xs car xs cdr cons")
         self.assertEqual(ans[-1], [1, 2, 3])
 
@@ -87,22 +87,22 @@ class TestIdentifierNaming(unittest.TestCase):
         self.stacker = Stacker()
 
     def test_question_mark_in_defun(self):
-        self.stacker.eval("{x} {x 0 >} $positive? defun")
+        self.stacker.eval("{x} {x 0 >} :positive? defun")
         ans = self.stacker.eval("5 positive?")
         self.assertEqual(ans[-1], True)
 
     def test_question_mark_false(self):
-        self.stacker.eval("{x} {x 0 >} $positive? defun")
+        self.stacker.eval("{x} {x 0 >} :positive? defun")
         ans = self.stacker.eval("-1 positive?")
         self.assertEqual(ans[-1], False)
 
     def test_hyphen_in_name(self):
-        self.stacker.eval("{x} {x 1 +} $add-one defun")
+        self.stacker.eval("{x} {x 1 +} :add-one defun")
         ans = self.stacker.eval("5 add-one")
         self.assertEqual(ans[-1], 6)
 
     def test_bang_in_name(self):
-        self.stacker.eval("42 $my-val! set")
+        self.stacker.eval("42 :my-val! set")
         ans = self.stacker.eval("my-val!")
         self.assertEqual(ans[-1], 42)
 

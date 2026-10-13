@@ -74,7 +74,7 @@ class TestArguments:
         ]
 
     def test_undefined_bare_name_argument_is_an_error(self):
-        # `foo` is referenced before the macro sees it; pass the name as `$foo` or `{foo}`.
+        # `foo` is referenced before the macro sees it; pass the name as `:foo` or `{foo}`.
         with pytest.raises(UndefinedSymbolError):
             run("{v} {{v}} m defmacro", "foo m")
         assert [str(b) for b in run("{v} {{v}} m defmacro", "{foo} m")] == ["{foo}"]
@@ -99,7 +99,7 @@ class TestDefinitionValidation:
 
     def test_symbol_argument_name_is_rejected(self):
         with pytest.raises(StackerSyntaxError):
-            run("{$x} {{x}} m defmacro")
+            run("{:x} {{x}} m defmacro")
 
 
 class TestRedefinition:
@@ -107,7 +107,7 @@ class TestRedefinition:
         assert run("{} {{1}} m defmacro", "{} {{2}} m defmacro", "m") == [2]
 
     def test_quoted_name_forms(self):
-        assert run("{} {{1}} $m defmacro", "{} {{2}} {m} defmacro", "m") == [2]
+        assert run("{} {{1}} :m defmacro", "{} {{2}} {m} defmacro", "m") == [2]
 
     def test_redefinition_inside_loop_takes_effect_next_call(self):
         expression = "0 s = 1 3 i {s m + s = {} {{2}} m defmacro} do s"
@@ -251,7 +251,7 @@ class TestDefinitionValidationOfArguments:
         with pytest.raises(StackerSyntaxError):
             run("{x} {{x}} {a b} defmacro")
 
-    @pytest.mark.parametrize("name", ["$m", "{m}", "m"], ids=["dollar", "block", "bare"])
+    @pytest.mark.parametrize("name", [":m", "{m}", "m"], ids=["dollar", "block", "bare"])
     def test_every_name_form_defines_the_same_macro(self, name):
         assert [str(b) for b in run(f"{{x}} {{{{x x}}}} {name} defmacro", "{7} {m} macroexpand")] == [
             "{{7} {7}}"
