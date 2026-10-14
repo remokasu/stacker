@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Callable
 
 from stacker.engine.core import StackerCore
 from stacker.engine.scope import ScopedVariables
+from stacker.error import BreakException, StackerSyntaxError
 from stacker.slib import load_prelude
 from stacker.syntax.parser import parse_expression
 
@@ -52,12 +53,32 @@ class Stacker(StackerCore):
 
     def process_expression(self, expression: str) -> None:
         tokens = parse_expression(expression)
-        self.evaluate(tokens, stack=self.stack)
+        self._evaluate_outside_loops(tokens, self.stack)
+
+    def _evaluate_outside_loops(
+        self, tokens: list[object], stack: stack_data[object] | None
+    ) -> stack_data[object]:
+        """Evaluates code that no loop is running, as the entry points do.
+
+        A ``break`` leaves the innermost running loop, wherever it is called
+        from; one that reaches this level had no loop to leave.
+
+        Raises:
+            StackerSyntaxError: If ``break`` is used outside a loop.
+        """
+        try:
+            return self.evaluate(tokens, stack=stack)
+        except BreakException:
+            raise StackerSyntaxError("`break` can only be used inside a loop") from None
 
     def evaluate(self, tokens: list[object], stack: stack_data[object] | None = None) -> stack_data[object]:
         """
         Evaluates a given RPN expression.
         Returns the result of the evaluation.
+
+        Not an entry point: a ``break`` with no loop around it escapes as
+        ``BreakException``. Run top-level code with ``eval`` or
+        ``process_expression``.
         """
         if stack is None:
             stack = stack_data()
@@ -228,4 +249,4 @@ class Stacker(StackerCore):
         ```
         """
         tokens = parse_expression(expression)
-        return self.evaluate(tokens, stack=stack)
+        return self._evaluate_outside_loops(tokens, stack)
