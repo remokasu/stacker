@@ -247,37 +247,37 @@ class BreakException(BaseException):
     pass
 
 
-class DropError(Exception):
+class DropError(StackerError):
     pass
 
 
-class DupError(Exception):
+class DupError(StackerError):
     pass
 
 
-class OverError(Exception):
+class OverError(StackerError):
     pass
 
 
-class SwapError(Exception):
+class SwapError(StackerError):
     pass
 
 
-class RollError(Exception):
+class RollError(StackerError):
     pass
 
 
-class RotError(Exception):
+class RotError(StackerError):
     pass
 
 
-class PickError(Exception):
+class PickError(StackerError):
     pass
 
 
-class NipError(Exception):
+class NipError(StackerError):
     pass
 
 
-class InsertError(Exception):
+class InsertError(StackerError):
     pass
