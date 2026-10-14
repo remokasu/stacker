@@ -133,7 +133,7 @@ class ExecutionMode:
 
             if state.complete:
                 candidate = expression.strip()
-                if candidate and self._is_complete_expression(candidate):
+                if candidate:
                     if candidate[-2:] in {";]", ";)"}:
                         closer = candidate[-1]
                         candidate = candidate[:-2] + closer
@@ -155,50 +155,3 @@ class ExecutionMode:
                     start = start + state.start_line - 1
                 self.rpn_calculator.current_line = start
                 raise UnterminatedTokenError(state.open_construct, start)
-
-    def _is_complete_expression(self, expression: str) -> bool:
-        """Check if the expression is complete and ready to execute.
-
-        Some commands like 'do', 'dolist', 'times' require arguments that may
-        span multiple lines. We need to check if all required arguments are present.
-        """
-        from stacker.syntax.parser import parse_expression, is_code_block
-
-        try:
-            tokens = parse_expression(expression.strip())
-            if not tokens:
-                return True
-
-            # Commands that require a code block and symbol/values before execution
-            block_consuming_commands = {"do", "dolist", "times"}
-
-            # Check if the last token is a block-consuming command
-            last_token = tokens[-1] if tokens else None
-            if last_token not in block_consuming_commands:
-                return True
-
-            # For 'do': expects start_value end_value symbol {body} do
-            if last_token == "do":
-                if len(tokens) < 5:
-                    return False
-                # Check if there's a code block before 'do'
-                return is_code_block(str(tokens[-2]))
-
-            # For 'dolist': expects list symbol {body} dolist
-            if last_token == "dolist":
-                if len(tokens) < 4:
-                    return False
-                # Check if there's a code block before 'dolist'
-                return is_code_block(str(tokens[-2]))
-
-            # For 'times': expects {body} n times
-            if last_token == "times":
-                if len(tokens) < 3:
-                    return False
-                # Check if there's a code block two positions before 'times'
-                return is_code_block(str(tokens[-3]))
-
-            return True
-        except Exception:
-            # If parsing fails, assume it's incomplete
-            return False
