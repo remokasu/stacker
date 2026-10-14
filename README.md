@@ -9,14 +9,17 @@ Stacker is a powerful Reverse Polish Notation (RPN) calculator built with Python
 
 - [Installation](#installation)
 - [Dependencies](#dependencies)
+- [Feedback and Contributions](#feedback-and-contributions)
 - [Usage](#usage)
 - [Running Scripts](#running-scripts)
 - [VSCode Syntax Highlighting](#vscode-syntax-highlighting)
-- [Error Formatting](#error-formatting)
 - [Command Line Execution](#command-line-execution)
+- [Settings](#settings)
 - [Configuration File](#configuration-file)
 - [Creating Plugins](#creating-plugins)
+- [Running on Python](#running-on-python)
 - [Supported Operations](#supported-operations)
+- [Constants](#constants)
 
 ## Installation
 
@@ -31,7 +34,8 @@ pip install .
 For syntax highlighting support in VSCode:
 
 ```bash
-cp -r .vscode-extension ~/.vscode/extensions/stacker-language
+mkdir -p ~/.vscode/extensions/stacker-language-0.1.0
+cp -r .vscode-extension/* ~/.vscode/extensions/stacker-language-0.1.0/
 ```
 
 Reload VSCode (Ctrl+Shift+P → "Developer: Reload Window") and `.stk` files will be highlighted. 
@@ -568,8 +572,6 @@ Then reload VSCode (Ctrl+Shift+P → "Developer: Reload Window").
 - Auto-closing brackets (`{`, `[`, `"`, `'`)
 - Code folding support
 
-For detailed installation instructions, see [VSCODE_SETUP.md](VSCODE_SETUP.md).
-
 
 ## Command Line Execution
 You can directly execute a specified RPN expression from the command line.
@@ -656,7 +658,6 @@ Create custom plugins for Stacker using Python:
     │   │
     │   ├── data/
     │   ├── stacker.py
-    │   ├── test.py
     │   └── ...
     │
     └── ...
@@ -674,27 +675,27 @@ Create custom plugins for Stacker using Python:
 
     Within the `setup` function, use the `register_plugin` method of `stacker` to register custom commands. Additionally, you can also register custom parameters using the `register_parameter` method. This allows for greater flexibility and customization in your plugin's behavior.
 
-    Here's an example where custom commands for matrix operations and a custom parameter are registered:
+    Here's an example that registers a custom command:
 
     Example:
     ```python
     from stacker.stacker import Stacker
 
     def function(a, b):
-        # Do something
+        return a + b
 
     def setup(stacker: Stacker):
-        stacker.register_plugin("command", function)
+        stacker.register_plugin("command", function, desc="Add two numbers")
     ```
 
     You can specify the command description for the help command using desc. This field is optional.
 
-    This example demonstrates how to register functions for matrix operations and how to set a custom parameter within a plugin. The register_parameter method is used to add a custom parameter to the Stacker environment, allowing for additional customization and control within your plugin.
+    The register_parameter method is used to add a custom parameter to the Stacker environment, allowing for additional customization and control within your plugin.
 
 5. **Reinstalling Stacker**:
    Run the following command to reinstall Stacker:
     ```
-    > python setup.py install
+    > pip install .
     ```
 
     **Note**: If you want to apply the plugin only temporarily, create a `plugins` directory in the directory where Stacker is executed and add your plugin there. The method for creating it is the same as described above. This method does not require reinstalling Stacker.
@@ -743,8 +744,8 @@ print(stacker.eval("3 4 +"))
 | band     | Bitwise and                                           | `3 2 band`                 |
 | bor      | Bitwise or                                            | `3 2 bor`                  |
 | bxor     | Bitwise xor                                           | `3 2 bxor`                 |
-| >>       | Right bit shit                                        | `8 2 >>`                   |
-| <<       | Left bit shit                                         | `2 2 <<`                   |
+| >>       | Right bit shift                                       | `8 2 >>`                   |
+| <<       | Left bit shift                                        | `2 2 <<`                   |
 | ~        | Bitwise not                                           | `5 ~`                      |
 | bin      | Binary representation (result is a string)            | `5 bin`                    |
 | oct      | Octal representation (result is a string)             | `10 oct`                   |
@@ -761,12 +762,12 @@ print(stacker.eval("3 4 +"))
 | log      | Natural logarithm                                     | `2 log`                    |
 | log10    | Common logarithm (base 10)                            | `4 log10`                  |
 | log2     | Logarithm base 2                                      | `4 log2`                   |
-| sin      | Sine                                                  | `30 sin`                   |
-| cos      | Cosine                                                | `45 cos`                   |
-| tan      | Tangent                                               | `60 tan`                   |
-| asin     | Arcsine                                               | `0.5 asin`                 |
-| acos     | Arccosine                                             | `0.5 acos`                 |
-| atan     | Arctangent                                            | `1 atan`                   |
+| sin      | Sine (argument in radians)                            | `pi 2 / sin`               |
+| cos      | Cosine (argument in radians)                          | `pi cos`                   |
+| tan      | Tangent (argument in radians)                         | `pi 4 / tan`               |
+| asin     | Arcsine (result in radians)                           | `0.5 asin`                 |
+| acos     | Arccosine (result in radians)                         | `0.5 acos`                 |
+| atan     | Arctangent (result in radians)                        | `1 atan`                   |
 | sinh     | Hyperbolic sine                                       | `1 sinh`                   |
 | cosh     | Hyperbolic cosine                                     | `1 cosh`                   |
 | tanh     | Hyperbolic tangent                                    | `1 tanh`                   |
@@ -778,8 +779,6 @@ print(stacker.eval("3 4 +"))
 | floor    | Floor                                                 | `3.8 floor`                |
 | round    | Round                                                 | `3.5 round`                |
 | roundn   | Round to specified decimal places                     | `3.51 1 roundn`            |
-| float    | Convert to floating-point number                      | `5 float`                  |
-| int      | Convert to integer                                    | `3.14 int`                 |
 | gcd      | Greatest common divisor                               | `4 2 gcd`                  |
 | !        | Factorial                                             | `4 !`                      |
 | radians  | Convert degrees to radians                            | `180 radians`              |
@@ -808,8 +807,8 @@ print(stacker.eval("3 4 +"))
 | pick     | Copies the nth element to the top of the stack.           | `2 pick`               |
 | nip      | Remove the second element from the top of the stack.      | `nip`                  |
 | depth    | Returns the depth of the stack.                           | `depth`                |
-| ins      | Insert the specified value at the specified position.     | `3 1 ins`              |
-| count    | Counts the number of occurrences of a value in the stack. | `count`                |
+| ins      | Insert a value below the top n elements: `n value ins` | `3 1 ins`              |
+| count    | Pop a value and count its occurrences in the rest of the stack. | `5 5 7 5 count` |
 | clear    | Clear the stack.                                          | `clear`                |
 | disp     | Display the stack.                                        | `disp`                 |
 
@@ -847,7 +846,7 @@ print(stacker.eval("3 4 +"))
 ### Array Operators
 | Operator | Description                                           | Example                    |
 |----------|-------------------------------------------------------|----------------------------|
-| map      | Apply a function to each element of an array          | `[1 2 3] {dup} map`        |
+| map      | Apply a function to each element of an array          | `[1 2 3] {2 *} map`        |
 | zip      | Combine two arrays into a single array                | `[1 2 3] [4 5 6] zip`      |
 | filter   | Filter an array based on a condition                  | `[1 2 3 4 5] {2 % 0 ==} filter` |
 | all      | Check if all elements of a list are true              | `[true true false] all`    |
@@ -886,12 +885,11 @@ Note: Blocks passed to `map`, `filter`, `reduce`, and `fold` must leave a value 
 ### Other Operators
 | Operator | Description                                           | Example                    |
 |----------|-------------------------------------------------------|----------------------------|
-| sub      | Substack the top element of the stack                 | `sub`                      |
-| subn     | Cluster elements between the top and the nth (make substacks) | `3 subn`           |
+| sub      | Wrap the top value in a one-token code block          | `:x sub`                   |
+| subn     | Wrap the top n values in one code block               | `1 2 2 subn`               |
 | include  | Include the specified file                            | `"file.stk" include`       |
 | eval     | Run a code block, a symbol or a lambda (text: `read-from-string` first) | `{3 5 +} eval`, `'3 5 +' read-from-string eval` |
 | echo     | Print the specified value to stdout without adding it to the stack | `3 4 + echo`  |
-| input    | Get input from the user                               | `input`                    |
 | read     | Reads a string from the console                       | `read`                     |
 | write-to-file | Write the top element of the stack to a file       | `3 "output.txt" write-to-file` |
 | append-to-file | Append the top element of the stack to a file      | `3 "output.txt" append-to-file` |
@@ -905,8 +903,9 @@ Note: Blocks passed to `map`, `filter`, `reduce`, and `fold` must leave a value 
 |-----------|------------------|
 | e         | Euler's number   |
 | pi        | Pi               |
+| phi       | Golden ratio     |
 | tau       | Tau              |
 | nan       | Not a number     |
 | inf       | Infinity         |
-| true      | Boolean true     |
-| false     | Boolean false    |
+
+`true`, `false` and `null` are literals rather than constants: they are values, never names, and cannot be redefined.
