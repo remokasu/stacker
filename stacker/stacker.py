@@ -61,15 +61,19 @@ class Stacker(StackerCore):
         """Evaluates code that no loop is running, as the entry points do.
 
         A ``break`` leaves the innermost running loop, wherever it is called
-        from; one that reaches this level had no loop to leave.
+        from; one that reaches this level had no loop to leave. The top of
+        the stack afterwards is the result ``ans`` pushes next time.
 
         Raises:
             StackerSyntaxError: If ``break`` is used outside a loop.
         """
         try:
-            return self.evaluate(tokens, stack=stack)
+            result = self.evaluate(tokens, stack=stack)
         except BreakException:
             raise StackerSyntaxError("`break` can only be used inside a loop") from None
+        if result:
+            self.last_result = result[-1]
+        return result
 
     def evaluate(self, tokens: list[object], stack: stack_data[object] | None = None) -> stack_data[object]:
         """

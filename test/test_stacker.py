@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from stacker.error import StackerSyntaxError, StackerTypeError
+from stacker.error import StackerRuntimeError, StackerSyntaxError, StackerTypeError
 from stacker.stacker import Stacker
 
 from stacker.syntax.lexer import lex_string
@@ -418,3 +418,48 @@ def test_break_in_an_included_file_leaves_the_including_loop(tmp_path):
     (tmp_path / "stop.stk").write_text("break\n99\n")
     result = Stacker().eval(f'0 {{1 + "{tmp_path / "stop.stk"}" include}} loop')
     assert list(result) == [1]
+
+
+def _session(*expressions):
+    """Runs each expression as the REPL would, one entry at a time."""
+    stacker = Stacker()
+    for expression in expressions:
+        stacker.process_expression(expression)
+    return list(stacker.stack)
+
+
+@pytest.mark.parametrize(
+    "expressions, expected",
+    [
+        (["3 4 +", "drop", "ans"], [7]),
+        (["3 4 +", "ans 2 *"], [7, 14]),
+        # A value used up later is still the previous result
+        (["3 4 +", "1 +", "drop", "ans"], [8]),
+        # An expression that leaves nothing keeps the last result
+        (["7", "clear", "ans"], [7]),
+        # From inside a block or a function too
+        (["5", "{ans 1 +} eval"], [5, 6]),
+        (["{} {ans} :f defun", "9", "f"], [9, 9]),
+        # Within one input, ans is the result from before that input
+        (["5", "3 4 + ans"], [5, 7, 5]),
+    ],
+)
+def test_ans_pushes_the_result_of_the_previous_expression(expressions, expected):
+    assert _session(*expressions) == expected
+
+
+def test_ans_keeps_the_result_from_before_a_failing_expression():
+    stacker = Stacker()
+    stacker.process_expression("7")
+    with pytest.raises(ZeroDivisionError):
+        stacker.process_expression("1 0 /")
+    stacker.stack.clear()
+    stacker.process_expression("ans")
+    assert list(stacker.stack) == [7]
+
+
+@pytest.mark.parametrize("expression", ["ans", "3 4 + ans"])
+def test_ans_before_any_result_is_an_error(expression):
+    # Loading the prelude leaves no result either
+    with pytest.raises(StackerRuntimeError, match="`ans`"):
+        Stacker().eval(expression)
