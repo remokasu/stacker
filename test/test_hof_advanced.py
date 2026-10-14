@@ -90,7 +90,7 @@ class TestStacker(unittest.TestCase):
     def test_zip_basic(self):
         self.stacker.stack.clear()
         ans = self.stacker.eval("[1 2 3] ['a' 'b' 'c'] zip list")
-        self.assertEqual(ans[-1], [(1, "a"), (2, "b"), (3, "c")])
+        self.assertEqual(ans[-1], [[1, "a"], [2, "b"], [3, "c"]])
 
     def test_fold_alias(self):
         self.stacker.stack.clear()

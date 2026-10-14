@@ -1,6 +1,9 @@
 import unittest
 
+import pytest
+
 from stacker.stacker import Stacker
+from stacker.util.disp import disp_default
 
 
 class TestUnit(unittest.TestCase):
@@ -10,12 +13,12 @@ class TestUnit(unittest.TestCase):
     def test_enumerate_block(self):
         stacker = Stacker()
         ans = stacker.eval("{1 2 3} enumerate list")
-        self.assertEqual(ans[-1], [(0, 1), (1, 2), (2, 3)])
+        self.assertEqual(ans[-1], [[0, 1], [1, 2], [2, 3]])
 
     def test_enumerate_list(self):
         stacker = Stacker()
         ans = stacker.eval("[1 2 3] enumerate")
-        self.assertEqual(ans[-1], [(0, 1), (1, 2), (2, 3)])
+        self.assertEqual(ans[-1], [[0, 1], [1, 2], [2, 3]])
 
     # REMOVED: test_enumerate_tuple - () now creates code blocks, not tuples
 
@@ -87,8 +90,20 @@ class TestStringArgumentIsData(unittest.TestCase):
     def test_string_with_a_variable_of_the_same_name(self):
         for expression, expected in (
             ('5 ab set "ab" list', ["a", "b"]),
-            ('5 ab set "ab" enumerate', [(0, "a"), (1, "b")]),
+            ('5 ab set "ab" enumerate', [[0, "a"], [1, "b"]]),
         ):
             with self.subTest(expression=expression):
                 self.assertEqual(Stacker().eval(expression).pop(), expected)
 
+
+
+@pytest.mark.parametrize(
+    "expression, shown",
+    [
+        ("[1 2 3] [4 5 6] zip", "[[[1 4] [2 5] [3 6]]]"),
+        ("[10 20] enumerate", "[[[0 10] [1 20]]]"),
+    ],
+)
+def test_pairs_are_lists_not_python_tuples(expression, shown):
+    # Tuples are not a Stacker type; a pair used to display as `(1, 4)`.
+    assert disp_default(list(Stacker().eval(expression))) == shown

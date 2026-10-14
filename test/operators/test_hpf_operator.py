@@ -40,11 +40,11 @@ class TestUnit(unittest.TestCase):
     def test_zip_block(self):
         stacker = Stacker()
         ans = stacker.eval("{1 2 3} {4 5 6} zip list")
-        self.assertEqual(ans[-1], [(1, 4), (2, 5), (3, 6)])
+        self.assertEqual(ans[-1], [[1, 4], [2, 5], [3, 6]])
 
     def test_zip_list(self):
         stacker = Stacker()
         ans = stacker.eval("[1 2 3] [4 5 6] zip")
-        self.assertEqual(ans[-1], [(1, 4), (2, 5), (3, 6)])
+        self.assertEqual(ans[-1], [[1, 4], [2, 5], [3, 6]])
 
     # REMOVED: test_zip_tuple - () now creates code blocks, not tuples
