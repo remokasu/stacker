@@ -38,7 +38,7 @@ Note: This change is not backwards compatible with previous versions.
 
 ### Migration
 
-- `$name` everywhere: write `:name` (`sed -E 's/(^|[[:space:]\[{(])\$([A-Za-z_])/\1:\2/g'` on `.stk` files, then check strings that contained `$` by hand)
+- `$name` everywhere, operator names included (`$+`, `$>=`): write `:name`. On `.stk` files: `sed -E 's/(^|[[:space:][{(])\$([^][:space:]{}()]+)/\1:\2/g'`, then check by hand the strings that contained `$` after a space (`"cost $5"` would become `"cost :5"`)
 - `:x` used where its value was meant: write `x`. A lambda passed on with `:f`: write `f`
 - A string used as a name (`5 "x" set`, `"sqrt" map`, `"+" apply`, `"m" macroexpand`): write `:x` / `{x}`, or `"x" symbol` when the name is built from text
 - An undefined name used as data (`foo m`, `[a b]`, `{2 *} double alias`): write `{foo} m` or `:foo m`, `[:a :b]`, `{2 *} {double} alias`

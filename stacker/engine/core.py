@@ -1284,7 +1284,7 @@ class StackerCore:
         """Validates an argument list ``{a b ...}`` and returns the names.
 
         Shared by ``defun``, ``lambda`` and ``defmacro``: the list must be a
-        code block whose tokens are distinct bare names (no ``$a``, string,
+        code block whose tokens are distinct bare names (no ``:a``, string,
         literal or nested block).
 
         Args:

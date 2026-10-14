@@ -189,9 +189,16 @@ def is_symbol_name(name: object) -> bool:
 
 
 def not_a_symbol_message(token: str) -> str:
-    """The error message for a ``:`` or ``$`` token that is not a symbol."""
+    """The error message for a ``:`` or ``$`` token that is not a symbol.
+
+    For the old ``$`` spelling the message shows the new one when the rest
+    of the token is a name (``$x`` -> ``:x``).
+    """
+    name = token[1:]
     if token.startswith(OLD_SYMBOL_PREFIX):
-        return f"`{token}` is not a symbol: a symbol is written `:{token[1:]}` (`$` is no longer used)"
+        if is_symbol_name(name):
+            return f"`{token}` is not a symbol: a symbol is written `:{name}` (`$` is no longer used)"
+        return f"`{token}` is not a symbol: `$` is no longer used, and `:` must be followed by a name"
     return f"`{token}` is not a symbol: `:` must be followed by a name"
 
 

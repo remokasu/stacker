@@ -99,7 +99,7 @@ class UnexpectedTokenError(StackerError):
 
     def __init__(self, token: str, message: str | None = None) -> None:
         if message is None:
-            message = f"`{token}`. If `{token}` is intended as a variable or symbol, ensure it is defined or prepend it with '$'."
+            message = f"`{token}`. If `{token}` is intended as a variable or symbol, ensure it is defined or prepend it with ':'."
         super().__init__(message)
 
 

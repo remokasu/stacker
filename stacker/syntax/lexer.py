@@ -95,7 +95,9 @@ class TokenPattern:
             r"|'([^'\\]|\\.)*'"
             r"|\"([^\"\\]|\\.)*\")",
         ),
-        (TokenType.SYMBOL, r"[:$][^\s\[\]();,]*"),
+        # A symbol starts only after a separator, so `[x:y]` is an error instead
+        # of the two elements `x` and `:y` (`x:y` is one, undefined, name elsewhere).
+        (TokenType.SYMBOL, r"(?<![^\s\[(;,])[:$][^\s\[\]();,]*"),
         (TokenType.IDENTIFIER, r"[A-Za-z_][A-Za-z0-9_\-?!]*"),
         (TokenType.LBRACKET, r"\["),
         (TokenType.RBRACKET, r"\]"),
