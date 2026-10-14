@@ -23,10 +23,10 @@ hof_operators = {
         "desc": "Keeps the elements for which a block, lambda or symbol is true: [1 2 3] {2 >} filter",
     },
     "zip": {
-        "func": (lambda xs, ys: zip(xs, ys)),
+        "func": (lambda xs, ys: [[x, y] for x, y in zip(xs, ys)]),
         "arg_count": 2,
         "push_result_to_stack": True,
-        "desc": "Pairs the elements of two lists: [1 2] [3 4] zip -> [(1 3) (2 4)]",
+        "desc": "Pairs the elements of two lists: [1 2] [3 4] zip -> [[1 3] [2 4]]",
     },
     "reduce": {
         "func": (lambda func, init, xs: py_reduce(func, xs, init)),

@@ -3,10 +3,10 @@ from __future__ import annotations
 
 transform_operators = {
     "enumerate": {
-        "func": (lambda xs: enumerate(xs)),
+        "func": (lambda xs: [[i, x] for i, x in enumerate(xs)]),
         "arg_count": 1,
         "push_result_to_stack": True,
-        "desc": "Enumerates a list.",
+        "desc": "Pairs each element with its index: [10 20] enumerate -> [[0 10] [1 20]]",
     },
     "sorted": {
         "func": (lambda xs: sorted(xs)),

@@ -61,8 +61,8 @@ class TestTokensBecomeValues:
 
     def test_zip_blocks(self):
         (block,) = run("{x y} {1 2} zip")
-        assert tokens(block) == [(Symbol("x"), 1), (Symbol("y"), 2)]
-        assert run("[1 2] [3 4] zip") == [[(1, 3), (2, 4)]]
+        assert tokens(block) == [[Symbol("x"), 1], [Symbol("y"), 2]]
+        assert run("[1 2] [3 4] zip") == [[[1, 3], [2, 4]]]
 
     def test_list_of_a_block_gives_symbols(self):
         assert run("1 x set 2 y set {x y} list") == [[Symbol("x"), Symbol("y")]]
@@ -226,23 +226,23 @@ class TestBlocksReadAsDataKeepTokenKinds:
 class TestZipEnumerateReversed:
     def test_zip_two_blocks_of_names_and_values(self):
         (block,) = run('{x y} {"a" 1} zip')
-        assert tokens(block) == [(Symbol("x"), "a"), (Symbol("y"), 1)]
+        assert tokens(block) == [[Symbol("x"), "a"], [Symbol("y"), 1]]
 
     def test_zip_block_with_a_list(self):
         (block,) = run("{x y} [1 2] zip")
-        assert tokens(block) == [(Symbol("x"), 1), (Symbol("y"), 2)]
+        assert tokens(block) == [[Symbol("x"), 1], [Symbol("y"), 2]]
 
     def test_zip_list_of_symbols(self):
-        assert run("[:a :b] [1 2] zip") == [[(Symbol("a"), 1), (Symbol("b"), 2)]]
+        assert run("[:a :b] [1 2] zip") == [[[Symbol("a"), 1], [Symbol("b"), 2]]]
 
     def test_zip_with_a_string_splits_it_into_characters(self):
-        assert run('"ab" [1 2] zip') == [[("a", 1), ("b", 2)]]
+        assert run('"ab" [1 2] zip') == [[["a", 1], ["b", 2]]]
 
     def test_zip_with_a_string_holding_a_dollar_name_does_not_make_a_symbol(self):
-        assert run('"$x" [1 2] zip') == [[("$", 1), ("x", 2)]]
+        assert run('"$x" [1 2] zip') == [[["$", 1], ["x", 2]]]
 
     def test_zip_with_a_bound_string_does_not_look_the_name_up(self):
-        assert run('5 ab set "ab" [1 2] zip') == [[("a", 1), ("b", 2)]]
+        assert run('5 ab set "ab" [1 2] zip') == [[["a", 1], ["b", 2]]]
 
     @pytest.mark.parametrize("program", [":x [1 2] zip", "[1 2] :x zip"])
     def test_zip_with_a_symbol_argument_is_a_type_error(self, program):
@@ -252,27 +252,27 @@ class TestZipEnumerateReversed:
 
     def test_zip_does_not_look_up_bare_names_in_a_block(self):
         (block,) = run("1 x set {x} [9] zip")
-        assert tokens(block) == [(Symbol("x"), 9)]
+        assert tokens(block) == [[Symbol("x"), 9]]
 
     def test_zip_with_a_list_literal_resolves_bare_names(self):
-        assert run("1 x set [x] [9] zip") == [[(1, 9)]]
+        assert run("1 x set [x] [9] zip") == [[[1, 9]]]
 
     def test_enumerate_a_block_pairs_indices_with_symbols(self):
         (block,) = run("{x y} enumerate")
-        assert tokens(block) == [(0, Symbol("x")), (1, Symbol("y"))]
+        assert tokens(block) == [[0, Symbol("x")], [1, Symbol("y")]]
 
     def test_enumerate_a_block_keeps_string_literals_and_numbers(self):
         (block,) = run('{x "a" 1} enumerate')
-        assert tokens(block) == [(0, Symbol("x")), (1, "a"), (2, 1)]
+        assert tokens(block) == [[0, Symbol("x")], [1, "a"], [2, 1]]
 
     def test_enumerate_a_list_of_symbols(self):
-        assert run("[:a :b] enumerate") == [[(0, Symbol("a")), (1, Symbol("b"))]]
+        assert run("[:a :b] enumerate") == [[[0, Symbol("a")], [1, Symbol("b")]]]
 
     def test_enumerate_a_list_of_numbers(self):
-        assert run("[5 6] enumerate") == [[(0, 5), (1, 6)]]
+        assert run("[5 6] enumerate") == [[[0, 5], [1, 6]]]
 
     def test_enumerate_a_string(self):
-        assert run('"ab" enumerate') == [[(0, "a"), (1, "b")]]
+        assert run('"ab" enumerate') == [[[0, "a"], [1, "b"]]]
 
     def test_enumerate_a_list_literal_with_an_undefined_name_raises(self):
         with pytest.raises(UndefinedSymbolError):
