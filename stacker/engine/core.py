@@ -62,6 +62,20 @@ _BLOCK_BINDING_WORDS = _DO_DOLIST | _REDUCE_FOLD
 _MISSING = object()
 
 
+def _empty_stack_messages() -> frozenset[str]:
+    """Returns what the stack type says when popped or indexed while empty."""
+    messages = set()
+    for touch in (lambda stack: stack.pop(), lambda stack: stack[-1]):
+        try:
+            touch(stack_data())
+        except IndexError as error:
+            messages.add(str(error))
+    return frozenset(messages)
+
+
+_EMPTY_STACK_MESSAGES = _empty_stack_messages()
+
+
 def _symbol_in(args: object) -> str | None:
     """Returns the name of the first ``Symbol`` among ``args``.
 
@@ -575,8 +589,11 @@ class StackerCore:
         try:
             self._execute_impl(token, stack)
         except IndexError as e:
-            # Convert IndexError to StackUnderflowError with operator info
-            # Get operator info if available
+            # Only a pop or peek past the bottom of a stack means the operator
+            # ran out of arguments. A list, string or format index out of
+            # range is the operator's own error and stays as is.
+            if str(e) not in _EMPTY_STACK_MESSAGES:
+                raise
             arg_count = self._get_operator_arg_count(token)
             raise StackUnderflowError(token, arg_count) from e
         except TypeError as e:
@@ -1104,14 +1121,14 @@ class StackerCore:
                 # Create child scope for this reduction step
                 original_parent_vars = self.variables
                 original_parent_stack = self.stack
-                result_stack: list[object] = []
+                result_stack: stack_data[object] = stack_data()
                 try:
                     self.variables = self.variables.create_child_scope()
                     # Bind accumulator and element to their variable names
                     self.variables[name_acc] = acc
                     self.variables[name_x] = x
                     # Evaluate the body using a temporary stack
-                    self.stack = result_stack  # type: ignore[assignment]
+                    self.stack = result_stack
                     self._evaluate(body.tokens, stack=result_stack)  # type: ignore[union-attr]
                 finally:
                     # Restore parent scope and stack even if the body raised
@@ -1495,13 +1512,13 @@ class StackerCore:
         The element is pushed as a value, never spliced into the token
         list, so a string element stays a string and a symbol a symbol.
         """
-        lstack: list[object] = [arg]
+        lstack: stack_data[object] = stack_data([arg])
         body._evaluate(body.tokens, stack=lstack)
         if len(lstack) == 1:
             return lstack[0]
         elif len(lstack) == 0:
             raise NoValueProducedError(operator)
-        return lstack
+        return list(lstack)
 
     def copy(self) -> StackerCore:
         return copy.deepcopy(self)

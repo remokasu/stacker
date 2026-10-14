@@ -5,6 +5,9 @@ This test suite verifies that error messages are informative and helpful.
 """
 
 import unittest
+
+import pytest
+
 from stacker.stacker import Stacker
 from stacker.error import StackUnderflowError
 
@@ -204,3 +207,27 @@ class TestFatalErrorPropagation(unittest.TestCase):
         stacker = Stacker()
         ans = stacker.eval("42 :x set x")
         self.assertEqual(ans[-1], 42)
+
+
+@pytest.mark.parametrize(
+    "expression",
+    ["[1 2] 5 nth", '"{} {}" 3 format', "[] 0 nth", '"" 0 nth', "{} 0 nth"],
+)
+def test_an_index_error_inside_an_operator_is_not_a_stack_underflow(expression):
+    # The arguments are all there; the index is what is out of range.
+    with pytest.raises(IndexError):
+        Stacker().eval(expression)
+
+
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "1 +", "set", "1 nth", "format", "{1} if", "dolist", "sub", "1 subn", "cond", "defun",
+        # A block body runs on a stack of its own
+        "[1 2 3] 0 acc x {+} reduce", "[1 2 3] 0 acc x {+} fold", "[1 2 3] {+} map",
+        "[1 2 3] {+} filter", "{+} 1 times",
+    ],
+)
+def test_an_empty_stack_is_still_a_stack_underflow(expression):
+    with pytest.raises(StackUnderflowError):
+        Stacker().eval(expression)
