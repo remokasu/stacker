@@ -45,6 +45,21 @@ from stacker.util.disp import disp_stack
 #     return format_recursive(arr)
 
 
+#: The REPL's display settings, which ~/.stackerrc may hold.
+REPL_SETTINGS = frozenset(
+    {
+        "enable_disp_stack",
+        "disable_disp_stack",
+        "enable_disp_logo",
+        "disable_disp_logo",
+        "enable_disp_ans",
+        "disable_disp_ans",
+    }
+)
+#: Every command the REPL handles itself (ReplMode._handle_repl_command).
+REPL_COMMANDS = REPL_SETTINGS | {"help", "about", "delete_history"}
+
+
 class ExecutionMode:
     def __init__(self, rpn_calculator: Stacker):
         self.rpn_calculator = rpn_calculator
@@ -91,8 +106,14 @@ class ExecutionMode:
             return
         print(f"{_stack[-1]}")
 
-    def execute_stacker_dotfile(self, filename: str | Path) -> None:
-        """Import a stacker script and return the stacker object."""
+    def execute_stacker_dotfile(self, filename: str | Path, stackerrc: bool = False) -> None:
+        """Import a stacker script and return the stacker object.
+
+        Args:
+            filename: Script to run.
+            stackerrc: True for ~/.stackerrc, whose REPL commands go to
+                ``_run_stackerrc_command`` instead of the interpreter.
+        """
         path = Path(remove_start_end_quotes(str(filename)))
         code = readtxt(path)
         expression = ""
@@ -139,7 +160,8 @@ class ExecutionMode:
                         candidate = candidate[:-2] + closer
                     # Set current line before processing expression
                     self.rpn_calculator.current_line = expression_start_line
-                    self.rpn_calculator.process_expression(candidate)
+                    if not (stackerrc and self._run_stackerrc_command(candidate)):
+                        self.rpn_calculator.process_expression(candidate)
                     expression = ""
                     expression_start_line = None
                     scanner = TerminalScanner()
@@ -155,3 +177,14 @@ class ExecutionMode:
                     start = start + state.start_line - 1
                 self.rpn_calculator.current_line = start
                 raise UnterminatedTokenError(state.open_construct, start)
+
+    def _run_stackerrc_command(self, expression: str) -> bool:
+        """Handles a REPL command found in ~/.stackerrc.
+
+        Outside the REPL there is nothing for it to act on, so it is skipped.
+        The REPL applies the display settings (see ReplMode).
+
+        Returns:
+            True if ``expression`` was a REPL command, False to evaluate it.
+        """
+        return expression.lower() in REPL_COMMANDS

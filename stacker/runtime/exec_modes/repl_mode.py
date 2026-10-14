@@ -13,7 +13,7 @@ from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import FileHistory
 from importlib.metadata import version
 from stacker.runtime.exec_modes.error import create_error_message
-from stacker.runtime.exec_modes.execution_mode import ExecutionMode
+from stacker.runtime.exec_modes.execution_mode import REPL_SETTINGS, ExecutionMode
 from stacker.lib import delete_history, disp_about, disp_help
 from stacker.lib.config import history_file_path
 from stacker.error_formatter import ErrorFormatter
@@ -167,10 +167,21 @@ class ReplMode(ExecutionMode):
 
         return None
 
+    def _run_stackerrc_command(self, expression: str) -> bool:
+        """Applies a display setting from ~/.stackerrc as if it were typed.
+
+        help, about and delete_history are skipped: they are not settings,
+        and would otherwise run on every start.
+        """
+        if expression.lower() in REPL_SETTINGS:
+            return self._handle_repl_command(expression)
+        return super()._run_stackerrc_command(expression)
+
     def _handle_repl_command(self, expression: str) -> bool:  # type: ignore[override]
         """
         Handle REPL-specific commands.
         Returns True if command was handled, False otherwise.
+        A new command also goes into REPL_COMMANDS (execution_mode.py).
         """
         expr_lower = expression.lower()
 

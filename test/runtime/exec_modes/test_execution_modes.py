@@ -3,13 +3,17 @@
 import unittest
 import tempfile
 import os
+import subprocess
+import sys
+from pathlib import Path
 from io import StringIO
 from unittest.mock import patch
 
 import pytest
 
 from stacker.stacker import Stacker
-from stacker.runtime.exec_modes import ExecutionMode, ScriptMode, CommandLineMode
+from stacker.runtime.exec_modes import ExecutionMode, ReplMode, ScriptMode, CommandLineMode
+from stacker.runtime.exec_modes.execution_mode import REPL_COMMANDS
 
 
 class TestExecutionMode(unittest.TestCase):
@@ -256,6 +260,73 @@ def test_script_runs_a_loop_on_its_last_line(tmp_path, script, expected):
     stacker = Stacker()
     ScriptMode(stacker).run(str(path))
     assert list(stacker.stack) == expected
+
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+STACKERRC = "disable_disp_logo\nenable_disp_ans\n{x} {x x *} :sq defun\n"
+
+
+def _run_with_stackerrc(tmp_path, *args):
+    """Runs the CLI with ``STACKERRC`` as ~/.stackerrc."""
+    (tmp_path / ".stackerrc").write_text(STACKERRC)
+    # A new home would hide the user site-packages, so pass this sys.path on
+    paths = [str(REPO_ROOT), *(path for path in sys.path if path)]
+    env = dict(
+        os.environ, HOME=str(tmp_path), USERPROFILE=str(tmp_path), PYTHONPATH=os.pathsep.join(paths)
+    )
+    return subprocess.run(
+        [sys.executable, "-m", "stacker", *args],
+        capture_output=True, text=True, timeout=60, cwd=tmp_path, env=env, check=False,
+    )
+
+
+@pytest.mark.parametrize("mode", ["-e", "script"])
+def test_stackerrc_may_hold_repl_settings(tmp_path, mode):
+    # They configure the REPL; with -e or a script they do nothing
+    (tmp_path / "s.stk").write_text("7 sq echo\n")
+    args = ["-e", "7 sq echo"] if mode == "-e" else ["s.stk"]
+    result = _run_with_stackerrc(tmp_path, *args)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "49"
+
+
+def test_stackerrc_applies_repl_settings_to_the_repl(tmp_path):
+    rc = tmp_path / ".stackerrc"
+    rc.write_text(STACKERRC)
+    repl = ReplMode(Stacker())
+    repl.execute_stacker_dotfile(rc, stackerrc=True)
+    assert repl.disp_logo_mode is False
+    assert repl.disp_ans_mode is True
+    assert "sq" in repl.rpn_calculator.sfunctions
+
+
+def test_stackerrc_does_not_run_the_other_repl_commands(tmp_path, monkeypatch):
+    # help, about and delete_history would otherwise run on every start
+    rc = tmp_path / ".stackerrc"
+    rc.write_text("help\nabout\ndelete_history\n")
+    repl = ReplMode(Stacker())
+    handled = []
+    monkeypatch.setattr(repl, "_handle_repl_command", handled.append)
+    repl.execute_stacker_dotfile(rc, stackerrc=True)
+    assert handled == []
+
+
+@pytest.mark.parametrize("command", sorted(REPL_COMMANDS))
+def test_repl_commands_list_what_the_repl_handles(command, monkeypatch):
+    repl = ReplMode(Stacker())
+    for action in ("_cmd_help", "_cmd_about", "_cmd_delete_history"):
+        monkeypatch.setattr(repl, action, lambda: None)
+    assert repl._handle_repl_command(command) is True
+
+
+def test_a_script_still_rejects_repl_commands(tmp_path):
+    # Only ~/.stackerrc may hold them; in a script `help` is an undefined name
+    path = tmp_path / "s.stk"
+    path.write_text("help\n")
+    with pytest.raises(SystemExit):
+        ScriptMode(Stacker()).run(str(path))
 
 
 if __name__ == "__main__":
