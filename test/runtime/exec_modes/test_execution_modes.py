@@ -329,5 +329,23 @@ def test_a_script_still_rejects_repl_commands(tmp_path):
         ScriptMode(Stacker()).run(str(path))
 
 
+@pytest.mark.parametrize(
+    "expression, shown",
+    [
+        ("[[1 2] [3 4]]", "[[1 2] [3 4]]"),
+        ('"hello"', "'hello'"),
+        (":x", "x"),
+        ("true", "true"),
+        ("1 2", "2"),
+    ],
+)
+def test_disp_ans_shows_the_value_like_the_stack_display(expression, shown, capsys):
+    # It used to print Python's str(): `[[1, 2], [3, 4]]`, `hello`
+    stacker = Stacker()
+    stacker.process_expression(expression)
+    ExecutionMode(stacker).disp_ans()
+    assert capsys.readouterr().out == shown + "\n"
+
+
 if __name__ == "__main__":
     unittest.main()

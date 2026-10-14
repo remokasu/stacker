@@ -10,7 +10,7 @@ from stacker.syntax.lexer import TerminalScanner
 from stacker.syntax.parser import remove_start_end_quotes
 
 # from stacker.syntax.parser import is_string
-from stacker.util.disp import disp_stack
+from stacker.util.disp import disp_stack, plain_text
 
 # def simple_format(arr):
 #     """
@@ -101,10 +101,11 @@ class ExecutionMode:
             print(f"{key} = {variables[key]}")
 
     def disp_ans(self) -> None:
+        """Prints the top of the stack as the stack display shows it, without colors."""
         _stack = self.rpn_calculator.get_stack_copy_as_list()
         if len(_stack) == 0:
             return
-        print(f"{_stack[-1]}")
+        print(plain_text(_stack[-1]))
 
     def execute_stacker_dotfile(self, filename: str | Path, stackerrc: bool = False) -> None:
         """Import a stacker script and return the stacker object.
