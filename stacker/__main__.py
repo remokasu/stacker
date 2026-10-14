@@ -149,7 +149,7 @@ def main() -> None:
         # Execute the given command
         commandline_mode = CommandLineMode(rpn_calculator)
         if stacker_dotfile_path.exists():
-            commandline_mode.execute_stacker_dotfile(stacker_dotfile_path)
+            commandline_mode.execute_stacker_dotfile(stacker_dotfile_path, stackerrc=True)
         commandline_mode.run(argv.e)
         return
 
@@ -157,7 +157,7 @@ def main() -> None:
         # Script Mode
         script_mode = ScriptMode(rpn_calculator)
         if stacker_dotfile_path.exists():
-            script_mode.execute_stacker_dotfile(stacker_dotfile_path)
+            script_mode.execute_stacker_dotfile(stacker_dotfile_path, stackerrc=True)
         if argv.debug:
             script_mode.debug_mode()
         rpn_calculator.clear_trace()
@@ -167,7 +167,7 @@ def main() -> None:
         repl_mode = ReplMode(rpn_calculator)
         # execute the dotfile
         if stacker_dotfile_path.exists():
-            repl_mode.execute_stacker_dotfile(stacker_dotfile_path)
+            repl_mode.execute_stacker_dotfile(stacker_dotfile_path, stackerrc=True)
         if argv.debug:
             repl_mode.debug_mode()
         if repl_mode.disp_logo_mode:
