@@ -887,6 +887,7 @@ Note: Blocks passed to `map`, `filter`, `reduce`, and `fold` must leave a value 
 |----------|-------------------------------------------------------|----------------------------|
 | sub      | Wrap the top value in a one-token code block          | `:x sub`                   |
 | subn     | Wrap the top n values in one code block               | `1 2 2 subn`               |
+| ans      | Push the result of the previous input again           | `ans`                      |
 | include  | Include the specified file                            | `"file.stk" include`       |
 | eval     | Run a code block, a symbol or a lambda (text: `read-from-string` first) | `{3 5 +} eval`, `'3 5 +' read-from-string eval` |
 | echo     | Print the specified value to stdout without adding it to the stack | `3 4 + echo`  |

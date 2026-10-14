@@ -1,5 +1,6 @@
 Enter an RPN expression. Values are pushed onto the stack; words take their
 arguments from it. Type 'exit' to quit, 'clear' to empty the stack.
+'ans' pushes the result of the previous input again (3 4 + then ans -> 7).
 
 Values:
   integer 3, float 3.14, scientific 1.23e-4, hex 0x1a, binary 0b1010,

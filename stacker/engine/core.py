@@ -10,6 +10,7 @@ from stacker.error import (
     NoValueProducedError,
     StackUnderflowError,
     StackerError,
+    StackerRuntimeError,
     StackerSyntaxError,
     StackerTypeError,
     UndefinedSymbolError,
@@ -300,6 +301,9 @@ class StackerCore:
         self.current_file: str | None = None
         self.current_line: int | None = None
         self.source_lines: dict[int, str] = {}  # Map line number to source code
+        # Top of the stack after the latest top-level expression, for `ans`.
+        # Only the root core (the one the entry points run on) records it.
+        self.last_result: object = _MISSING
 
         # Macro expansion state: set only on the throwaway core that runs a
         # macro body. `_interp_scope` is the expansion scope whose own
@@ -816,6 +820,14 @@ class StackerCore:
     def _prio_gensym(self, op, stack) -> None:
         stack.append(gensym())
 
+    def _prio_ans(self, op, stack) -> None:
+        root = self
+        while root.parent is not None:
+            root = root.parent
+        if root.last_result is _MISSING:
+            raise StackerRuntimeError("`ans` has no result yet: no expression has left a value")
+        stack.append(root.last_result)
+
     def _prio_symbol(self, op, stack) -> None:
         """``x symbol`` -- a symbol from a string, a quoted name or a symbol (identity)."""
         value = stack.pop()
@@ -1020,6 +1032,7 @@ class StackerCore:
         "defmacro": _prio_defmacro,
         "macroexpand": _prio_macroexpand,
         "gensym": _prio_gensym,
+        "ans": _prio_ans,
         "symbol": _prio_symbol,
         "concat-block": _prio_concat_block,
         "lambda": _prio_lambda,
