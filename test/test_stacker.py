@@ -2,7 +2,9 @@ import cmath
 import math
 import unittest
 
-from stacker.error import StackerTypeError
+import pytest
+
+from stacker.error import StackerSyntaxError, StackerTypeError
 from stacker.stacker import Stacker
 
 from stacker.syntax.lexer import lex_string
@@ -385,3 +387,34 @@ class TestBlockHashContract(unittest.TestCase):
         a = list(Stacker().eval("{1 2 3}"))[0]
         b = list(Stacker().eval("(1 2 3)"))[0]
         self.assertIn(b, {a: "x"})
+
+
+@pytest.mark.parametrize(
+    "expression",
+    # iferror does not catch a break: it is meant for the loop around it
+    ["break", "1 2 break", "{break} eval", "{} {break} :f defun f", "{break} {1} iferror"],
+)
+def test_break_outside_a_loop_is_an_error(expression):
+    # It used to escape as a BaseException and take the REPL down with it.
+    with pytest.raises(StackerSyntaxError, match="`break` can only be used inside a loop"):
+        Stacker().eval(expression)
+    with pytest.raises(StackerSyntaxError):
+        Stacker().process_expression(expression)
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        ("0 {1 + dup 3 > {break} if} loop", [4]),
+        ("{} {break} :f defun 0 {1 + dup 2 > {f} if} loop", [3]),
+        ("0 {1 + {break} {99} iferror} loop", [1]),
+    ],
+)
+def test_break_inside_a_loop_still_leaves_it(expression, expected):
+    assert list(Stacker().eval(expression)) == expected
+
+
+def test_break_in_an_included_file_leaves_the_including_loop(tmp_path):
+    (tmp_path / "stop.stk").write_text("break\n99\n")
+    result = Stacker().eval(f'0 {{1 + "{tmp_path / "stop.stk"}" include}} loop')
+    assert list(result) == [1]

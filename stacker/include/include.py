@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from stacker.error import IncludeError
 from stacker.include.stk_file_read import readtxt
-from stacker.syntax.parser import remove_start_end_quotes
+from stacker.syntax.parser import parse_expression, remove_start_end_quotes
 
 if TYPE_CHECKING:
     from stacker.stacker import Stacker
@@ -58,6 +58,9 @@ def include_stacker_script(
 ) -> Stacker:
     """Import a stacker script and return the stacker object.
 
+    A ``break`` in the file leaves the loop that runs the include, so called
+    outside a loop it escapes as ``BreakException``.
+
     Args:
         filename: Include target as written in the script.
         base_dir: Directory of the including file for relative
@@ -88,7 +91,9 @@ def include_stacker_script(
         # The included file becomes the child's file context, so its own
         # includes resolve relative to its directory (nested includes)
         stacker.current_file = str(resolved)
-        stacker.process_expression(script_content)
+        # Not process_expression: a `break` in the file must still reach a
+        # loop that is running the include
+        stacker.evaluate(parse_expression(script_content), stack=stacker.stack)
     finally:
         _including.discard(resolved)
     return stacker
