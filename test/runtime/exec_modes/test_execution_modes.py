@@ -6,6 +6,8 @@ import os
 from io import StringIO
 from unittest.mock import patch
 
+import pytest
+
 from stacker.stacker import Stacker
 from stacker.runtime.exec_modes import ExecutionMode, ScriptMode, CommandLineMode
 
@@ -233,6 +235,27 @@ class TestCommandLineMode(unittest.TestCase):
             self.cmd_mode.run("vars")
             output = fake_out.getvalue()
             self.assertIn("x = 5", output)
+
+
+@pytest.mark.parametrize(
+    "script, expected",
+    [
+        # The loop's arguments were pushed by the line before
+        ("0 1 3 :i\n{i +} do\n", [6]),
+        ("{1}\n3 times\n", [1, 1, 1]),
+        # The body is a variable, not a {...} literal, on a single line
+        ("{i +} :body set\n0 1 3 :i body do\n", [6]),
+        ("{x +} :body set\n0 [1 2 3] :x body dolist\n", [6]),
+        ("{1} :body set\nbody 3 times\n", [1, 1, 1]),
+    ],
+)
+def test_script_runs_a_loop_on_its_last_line(tmp_path, script, expected):
+    """A do / dolist / times on the last line runs instead of being dropped."""
+    path = tmp_path / "last_line.stk"
+    path.write_text(script)
+    stacker = Stacker()
+    ScriptMode(stacker).run(str(path))
+    assert list(stacker.stack) == expected
 
 
 if __name__ == "__main__":
