@@ -1,87 +1,87 @@
-"""Tests for the new syntax without $ prefix for variable names."""
+"""Names at name positions: a bare name and `:name` both mean the name being bound."""
 
 import unittest
 from stacker import Stacker
 
 
 class TestNoDollarSyntax(unittest.TestCase):
-    """Test cases for variable/function definitions without $ prefix."""
+    """Variable, function and macro definitions with bare names and with `:name`."""
 
     def setUp(self):
         """Set up a fresh Stacker instance for each test."""
         self.stacker = Stacker()
 
     def test_set_without_dollar(self):
-        """Test variable assignment without $ prefix."""
+        """Test variable assignment with a bare name."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("3 x set x")
         self.assertEqual(result[-1], 3)
 
     def test_set_multiple_variables_without_dollar(self):
-        """Test multiple variable assignments without $ prefix."""
+        """Test multiple variable assignments with a bare name."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("5 x set 10 y set x y +")
         self.assertEqual(result[-1], 15)
 
-    def test_set_with_dollar_backward_compatibility(self):
-        """Test that $ prefix still works (backward compatibility)."""
+    def test_set_with_symbol(self):
+        """`:name` before `set` binds the name, like a bare name."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("100 :legacy set legacy")
         self.assertEqual(result[-1], 100)
 
     def test_set_mixed_syntax(self):
-        """Test mixing $ and non-$ syntax."""
+        """`:name` and bare names can be mixed."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("10 :x set 20 y set x y +")
         self.assertEqual(result[-1], 30)
 
     def test_defun_without_dollar(self):
-        """Test function definition without $ prefix."""
+        """Test function definition with a bare name."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("{a b} {a b +} add defun 5 10 add")
         self.assertEqual(result[-1], 15)
 
-    def test_defun_with_dollar_backward_compatibility(self):
-        """Test that defun with $ prefix still works."""
+    def test_defun_with_symbol(self):
+        """`:name` before `defun` names the function."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("{a b} {a b *} :multiply defun 3 4 multiply")
         self.assertEqual(result[-1], 12)
 
     def test_defmacro_without_dollar(self):
-        """Test macro definition without $ prefix."""
+        """Test macro definition with a bare name."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("{} {{2 *}} double defmacro 5 double")
         self.assertEqual(result[-1], 10)
 
-    def test_defmacro_with_dollar_backward_compatibility(self):
-        """Test that defmacro with $ prefix still works."""
+    def test_defmacro_with_symbol(self):
+        """`:name` before `defmacro` names the macro."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("{} {{3 +}} :addThree defmacro 10 addThree")
         self.assertEqual(result[-1], 13)
 
     def test_do_loop_without_dollar(self):
-        """Test do loop without $ prefix (variable name in do)."""
+        """Test do loop with a bare name (variable name in do)."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("0 :sum set 1 5 i {sum i + :sum set} do sum")
         # Sum of 1 to 5 = 15
         self.assertEqual(result[-1], 15)
 
-    def test_do_loop_with_dollar_backward_compatibility(self):
-        """Test that do loop with $ prefix still works."""
+    def test_do_loop_with_symbol(self):
+        """`:name` as the loop variable of `do`."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("0 :total set 1 3 :i {total i + total set} do total")
         # Sum of 1 to 3 = 6
         self.assertEqual(result[-1], 6)
 
     def test_dolist_without_dollar(self):
-        """Test dolist without $ prefix (variable name in dolist)."""
+        """Test dolist with a bare name (variable name in dolist)."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("0 :sum set [10 20 30] x {sum x + :sum set} dolist sum")
         # Sum of 10, 20, 30 = 60
         self.assertEqual(result[-1], 60)
 
-    def test_dolist_with_dollar_backward_compatibility(self):
-        """Test that dolist with $ prefix still works."""
+    def test_dolist_with_symbol(self):
+        """`:name` as the loop variable of `dolist`."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval(
             "0 :total set [5 15 25] :x {total x + total set} dolist total"
@@ -98,10 +98,11 @@ class TestNoDollarSyntax(unittest.TestCase):
             stacker.eval("undefined_var")
 
     def test_undefined_symbol_raises_error_when_used(self):
-        """Test that UndefinedSymbol raises error when used in operations."""
+        """An undefined name inside arithmetic is reported where it is written."""
+        from stacker.error import UndefinedSymbolError
+
         stacker = Stacker()  # Fresh instance
-        # Using an undefined variable in arithmetic should raise an error
-        with self.assertRaises(Exception):
+        with self.assertRaises(UndefinedSymbolError):
             stacker.eval("5 undefined_var +")
 
     def test_string_is_not_a_variable_name(self):
@@ -115,25 +116,25 @@ class TestNoDollarSyntax(unittest.TestCase):
         self.assertEqual(result[-1], 5)
 
     def test_equal_operator_without_dollar(self):
-        """Test = operator without $ prefix."""
+        """Test = operator with a bare name."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("42 x = x")
         self.assertEqual(result[-1], 42)
 
     def test_equal_operator_multiple_variables(self):
-        """Test multiple variable assignments with = operator without $ prefix."""
+        """Test multiple variable assignments with = operator with a bare name."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("7 a = 8 b = a b *")
         self.assertEqual(result[-1], 56)
 
-    def test_equal_operator_with_dollar_backward_compatibility(self):
-        """Test that = operator with $ prefix still works."""
+    def test_equal_operator_with_symbol(self):
+        """`:name` before `=` binds the name."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("99 :value = value")
         self.assertEqual(result[-1], 99)
 
     def test_equal_operator_mixed_syntax(self):
-        """Test mixing $ and non-$ syntax with = operator."""
+        """`:name` and bare names can be mixed with `=`."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("15 :x = 25 y = x y +")
         self.assertEqual(result[-1], 40)
@@ -148,14 +149,14 @@ class TestNoDollarSyntax(unittest.TestCase):
         self.assertEqual(result1[-1], 200)
 
     def test_equal_operator_in_function(self):
-        """Test = operator inside function without $ prefix."""
+        """Test = operator inside function with a bare name."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("{n} {0 a = 1 b = 2 n i {a b + temp = b a = temp b =} do b} fib defun 10 fib")
         # Fibonacci(10) = 55
         self.assertEqual(result[-1], 55)
 
     def test_equal_operator_in_loop(self):
-        """Test = operator in do loop without $ prefix."""
+        """Test = operator in do loop with a bare name."""
         stacker = Stacker()  # Fresh instance
         result = stacker.eval("0 total = 1 5 i {total i + total =} do total")
         # Sum of 1 to 5 = 15

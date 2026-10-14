@@ -1075,3 +1075,33 @@ class TestOldDollarSpelling:
         with pytest.raises(StackerSyntaxError):
             run(f'"{text}" symbol')
 
+
+class TestPrefixPlacement:
+    """`:` starts a symbol only at the start of a token, inside a list too."""
+
+    def test_colon_inside_a_list_element_is_an_error(self):
+        with pytest.raises(StackerSyntaxError):
+            run("5 x set [x:y]")
+
+    def test_symbol_after_a_separator_in_a_list(self):
+        assert run("5 x set [x :y]") == [[5, Symbol("y")]]
+        assert run("[1 2; :a :b]") == [[[1, 2], [Symbol("a"), Symbol("b")]]]
+
+    def test_colon_inside_a_name_at_top_level_is_one_undefined_name(self):
+        with pytest.raises(UndefinedSymbolError) as info:
+            run("x:y")
+        assert "`x:y` is not defined" in str(info.value)
+
+
+class TestOldDollarMessages:
+    @pytest.mark.parametrize("token", ["$", "$1", "$[1]"])
+    def test_dollar_without_a_name_does_not_suggest_an_invalid_spelling(self, token):
+        with pytest.raises(StackerSyntaxError) as info:
+            run(token)
+        assert "`$` is no longer used, and `:` must be followed by a name" in str(info.value)
+
+    def test_dollar_with_a_name_suggests_the_colon_spelling(self):
+        with pytest.raises(StackerSyntaxError) as info:
+            run("$total")
+        assert "a symbol is written `:total`" in str(info.value)
+

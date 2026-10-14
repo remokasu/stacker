@@ -46,7 +46,7 @@ def token_to_value(token: object) -> object:
     A name token, ``:name`` or bare, becomes a ``Symbol``: the name itself,
     not the value of a variable. A ``String`` literal, a nested block and
     any other object are kept as they are. A raw token that is not a name
-    (a list literal that stayed text, an invalid ``$`` token) is also kept.
+    (a list literal that stayed text, an invalid ``:`` or ``$`` token) is also kept.
 
     Args:
         token: A token taken from a code block.

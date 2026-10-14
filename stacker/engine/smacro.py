@@ -14,7 +14,7 @@ _gensym_counter = itertools.count(1)
 
 
 def gensym() -> Symbol:
-    """Returns a fresh, unique symbol (the same kind of value as ``$name`` pushes)."""
+    """Returns a fresh, unique symbol (the same kind of value as ``:name`` pushes)."""
     return Symbol(f"{GENSYM_PREFIX}{next(_gensym_counter)}")
 
 

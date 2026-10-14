@@ -133,7 +133,7 @@ class String(str):
 class Symbol:
     """A name as a value.
 
-    ``$x``, a bare name at a name position, ``gensym`` and ``symbol`` push
+    ``:x``, a bare name at a name position, ``gensym`` and ``symbol`` push
     one. A symbol is not a ``str``: it never compares equal to a string and
     is never looked up by its text. Two symbols are equal when their names
     are. Instances are immutable and may be shared freely.
