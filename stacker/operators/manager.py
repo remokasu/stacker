@@ -41,7 +41,7 @@ special_operators = {
         "func": None,
         "arg_count": 0,
         "push_result_to_stack": True,
-        "desc": "Pushes the result of the previous expression again: 3 4 + then ans -> 7",
+        "desc": "Pushes again the result of the last input that left one: 3 4 +, then ans -> 7",
     },
     "set": {
         "func": None,

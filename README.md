@@ -807,7 +807,7 @@ print(stacker.eval("3 4 +"))
 | pick     | Copies the nth element to the top of the stack.           | `2 pick`               |
 | nip      | Remove the second element from the top of the stack.      | `nip`                  |
 | depth    | Returns the depth of the stack.                           | `depth`                |
-| ins      | Insert a value below the top n elements: `n value ins` | `3 1 ins`              |
+| ins      | Insert a value below the top n elements: `n value ins` | `1 2 3 2 99 ins`       |
 | count    | Pop a value and count its occurrences in the rest of the stack. | `5 5 7 5 count` |
 | clear    | Clear the stack.                                          | `clear`                |
 | disp     | Display the stack.                                        | `disp`                 |
@@ -887,7 +887,7 @@ Note: Blocks passed to `map`, `filter`, `reduce`, and `fold` must leave a value 
 |----------|-------------------------------------------------------|----------------------------|
 | sub      | Wrap the top value in a one-token code block          | `:x sub`                   |
 | subn     | Wrap the top n values in one code block               | `1 2 2 subn`               |
-| ans      | Push the result of the previous input again           | `ans`                      |
+| ans      | Push again the result of the last input that left one | `ans`                      |
 | include  | Include the specified file                            | `"file.stk" include`       |
 | eval     | Run a code block, a symbol or a lambda (text: `read-from-string` first) | `{3 5 +} eval`, `'3 5 +' read-from-string eval` |
 | echo     | Print the specified value to stdout without adding it to the stack | `3 4 + echo`  |

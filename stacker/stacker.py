@@ -73,6 +73,7 @@ class Stacker(StackerCore):
             raise StackerSyntaxError("`break` can only be used inside a loop") from None
         if result:
             self.last_result = result[-1]
+            self.has_result = True
         return result
 
     def evaluate(self, tokens: list[object], stack: stack_data[object] | None = None) -> stack_data[object]:

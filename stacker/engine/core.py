@@ -301,9 +301,12 @@ class StackerCore:
         self.current_file: str | None = None
         self.current_line: int | None = None
         self.source_lines: dict[int, str] = {}  # Map line number to source code
-        # Top of the stack after the latest top-level expression, for `ans`.
-        # Only the root core (the one the entry points run on) records it.
-        self.last_result: object = _MISSING
+        # Top of the stack after the latest top-level expression that left
+        # one, for `ans`. Only the root core (the one the entry points run
+        # on) records it. A flag rather than a sentinel: copy() deep-copies
+        # the core, and a copied sentinel is no longer `is` the original.
+        self.has_result = False
+        self.last_result: object = None
 
         # Macro expansion state: set only on the throwaway core that runs a
         # macro body. `_interp_scope` is the expansion scope whose own
@@ -824,7 +827,7 @@ class StackerCore:
         root = self
         while root.parent is not None:
             root = root.parent
-        if root.last_result is _MISSING:
+        if not root.has_result:
             raise StackerRuntimeError("`ans` has no result yet: no expression has left a value")
         stack.append(root.last_result)
 
