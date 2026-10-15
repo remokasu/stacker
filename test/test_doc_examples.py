@@ -39,7 +39,7 @@ from stacker.util.disp import disp_default
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
 DOCS = ROOT / "docs"
-# Japanese is the original; English is a translation with the same pages.
+# Both languages have the same pages.
 LANGUAGES = ("ja", "en")
 
 # Examples that cannot run inside the test process, with the reason.

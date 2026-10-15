@@ -463,3 +463,9 @@ def test_ans_before_any_result_is_an_error(expression):
     # Loading the prelude leaves no result either
     with pytest.raises(StackerRuntimeError, match="`ans`"):
         Stacker().eval(expression)
+
+
+def test_ans_before_any_result_is_an_error_after_copy():
+    # copy() deep-copies the interpreter; "no result yet" must survive that
+    with pytest.raises(StackerRuntimeError, match="`ans`"):
+        Stacker().copy().eval("ans")
