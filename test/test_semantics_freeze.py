@@ -41,10 +41,10 @@ class TestDynamicNameResolution(unittest.TestCase):
         )
         self.assertEqual(list(self.stacker.stack), [92])
 
-    def test_bare_kernel_word_before_set_executes_as_operator(self):
-        # Shadowing rule (1.15.0): only kernel words are protected. A bare
-        # `dup` right before `set` is not a name but the `dup` operator, so
-        # `set` then fails to find a name. `:dup` / `{dup}` shadow explicitly.
+    def test_bare_built_in_word_before_set_executes_as_operator(self):
+        # A bare name is a reference wherever it stands, a built-in word's
+        # included: `dup` runs, so `set` then fails to find a name.
+        # `:dup` / `{dup}` shadow explicitly.
         with self.assertRaises(StackerSyntaxError):
             self.stacker.process_expression("3 dup set")
         self.stacker.stack.clear()
@@ -186,16 +186,19 @@ class TestStringTokenQuirks(unittest.TestCase):
 
 
 class TestUndefinedSymbolBehavior(unittest.TestCase):
-    """Lookahead classification and references to undefined names."""
+    """References to undefined names."""
 
     def setUp(self):
         self.stacker = Stacker()
 
-    def test_undefined_symbol_lookahead_set(self):
-        # An undefined name directly before `set` is treated as a symbol.
-        self.stacker.process_expression("42 undefined_name set undefined_name")
+    def test_undefined_name_before_set_is_an_error(self):
+        # No lookahead: an undefined name is an error even right before `set`;
+        # the name is written `:name`.
+        with self.assertRaises(UndefinedSymbolError):
+            self.stacker.process_expression("42 undefined_name set")
+        self.stacker.stack.clear()
+        self.stacker.process_expression("42 :undefined_name set undefined_name")
         self.assertEqual(list(self.stacker.stack), [42])
-        self.assertIsInstance(self.stacker.stack[-1], int)
 
     def test_undefined_symbol_in_arithmetic_raises(self):
         with self.assertRaises(UndefinedSymbolError):

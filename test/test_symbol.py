@@ -634,7 +634,7 @@ class TestSymbolsInControlFlow:
         with pytest.raises(StackerSyntaxError):
             run(program)
 
-    @pytest.mark.parametrize("variable", ["i", ":i", "{i}"])
+    @pytest.mark.parametrize("variable", [":i", "{i}"])
     def test_do_loop_variable_spellings_are_equivalent(self, variable):
         assert run(f"1 3 {variable} {{i 2 *}} do") == [2, 4, 6]
 
@@ -653,7 +653,7 @@ class TestSymbolsInControlFlow:
             run("2 :n set 1 :n :i {i} do")
 
     def test_reduce_with_all_name_spellings(self):
-        for names in ("acc x", ":acc :x", "{acc} {x}"):
+        for names in (":acc :x", "{acc} {x}"):
             assert run(f"[1 2 3] 0 {names} {{acc x +}} reduce") == [6]
 
     def test_fold_with_symbol_names(self):
@@ -675,8 +675,8 @@ class TestSymbolsInControlFlow:
     def test_reduce_over_a_block_of_strings_concatenates(self):
         assert run('{"a" "b"} "" :acc :x {acc x +} reduce') == ["ab"]
 
-    def test_macroexpand_accepts_the_three_spellings(self):
-        for spelling in (":dbl", "{dbl}", "dbl"):
+    def test_macroexpand_accepts_both_name_spellings(self):
+        for spelling in (":dbl", "{dbl}"):
             (block,) = run("{a} {{a a +}} :dbl defmacro", f"{{3}} {spelling} macroexpand")
             assert str(block) == "{{3} {3} +}"
 

@@ -103,11 +103,9 @@ class TestDefinitionValidation:
 
 
 class TestRedefinition:
-    def test_bare_name_redefinition(self):
-        assert run("{} {{1}} :m defmacro", "{} {{2}} :m defmacro", "m") == [2]
-
-    def test_quoted_name_forms(self):
-        assert run("{} {{1}} :m defmacro", "{} {{2}} {m} defmacro", "m") == [2]
+    @pytest.mark.parametrize("name", [":m", "{m}"], ids=["symbol", "block"])
+    def test_redefinition_through_either_name_form(self, name):
+        assert run("{} {{1}} :m defmacro", f"{{}} {{{{2}}}} {name} defmacro", "m") == [2]
 
     def test_redefinition_inside_loop_takes_effect_next_call(self):
         expression = "0 :s = 1 3 :i {s m + :s = {} {{2}} :m defmacro} do s"
@@ -251,7 +249,7 @@ class TestDefinitionValidationOfArguments:
         with pytest.raises(StackerSyntaxError):
             run("{x} {{x}} {a b} defmacro")
 
-    @pytest.mark.parametrize("name", [":m", "{m}", "m"], ids=["dollar", "block", "bare"])
+    @pytest.mark.parametrize("name", [":m", "{m}"], ids=["symbol", "block"])
     def test_every_name_form_defines_the_same_macro(self, name):
         assert [str(b) for b in run(f"{{x}} {{{{x x}}}} {name} defmacro", "{7} {m} macroexpand")] == [
             "{{7} {7}}"
