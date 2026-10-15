@@ -27,6 +27,6 @@ defun_operators = {
         ),
         "arg_count": 3,
         "push_result_to_stack": False,
-        "desc": "Defines a function called by its name: {args} {body} name defun",
+        "desc": "Defines a function called by its name: {args} {body} :name defun",
     },
 }

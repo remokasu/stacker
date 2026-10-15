@@ -32,12 +32,12 @@ hof_operators = {
         "func": (lambda func, init, xs: py_reduce(func, xs, init)),
         "arg_count": 3,
         "push_result_to_stack": True,
-        "desc": "Folds a list into one value with two bound names: [1 2 3] 0 acc x {acc x +} reduce",
+        "desc": "Folds a list into one value with two bound names: [1 2 3] 0 :acc :x {acc x +} reduce",
     },
     "fold": {
         "func": (lambda func, init, xs: py_reduce(func, xs, init)),
         "arg_count": 3,
         "push_result_to_stack": True,
-        "desc": "Same as reduce: [1 2 3] 0 acc x {acc x +} fold",
+        "desc": "Same as reduce: [1 2 3] 0 :acc :x {acc x +} fold",
     },
 }

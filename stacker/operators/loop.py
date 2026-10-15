@@ -165,7 +165,7 @@ loop_operators = {
         ),
         "arg_count": 4,
         "push_result_to_stack": False,
-        "desc": "Runs a block for each integer of a range, bound to a name: 1 10 i {i echo} do",
+        "desc": "Runs a block for each integer of a range, bound to a name: 1 10 :i {i echo} do",
     },
     "dolist": {
         "func": (
@@ -175,6 +175,6 @@ loop_operators = {
         ),
         "arg_count": 4,
         "push_result_to_stack": False,
-        "desc": "Runs a block for each element of a list, bound to a name: [1 2 3] x {x echo} dolist",
+        "desc": "Runs a block for each element of a list, bound to a name: [1 2 3] :x {x echo} dolist",
     },
 }

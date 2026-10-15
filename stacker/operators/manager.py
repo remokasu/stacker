@@ -47,13 +47,13 @@ special_operators = {
         "func": None,
         "arg_count": 2,
         "push_result_to_stack": False,
-        "desc": "Binds a value to a name (a block is stored unevaluated): 3 x set",
+        "desc": "Binds a value to a name (a block is stored unevaluated): 3 :x set",
     },
     "=": {
         "func": None,
         "arg_count": 2,
         "push_result_to_stack": False,
-        "desc": "Same as set: 3 x =",
+        "desc": "Same as set: 3 :x =",
     },
     "global": {
         "func": None,
