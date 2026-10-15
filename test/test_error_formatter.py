@@ -28,10 +28,10 @@ class TestErrorFormatter(unittest.TestCase):
             column=3,
             error_type="SyntaxError",
             message="Invalid syntax",
-            source_line="0 a ="
+            source_line="0 :a ="
         )
         self.assertIn("test.stk:5:3", result)
-        self.assertIn("0 a =", result)
+        self.assertIn("0 :a =", result)
         self.assertIn("^", result)  # Caret indicator
 
     def test_error_with_hint(self):
@@ -42,7 +42,7 @@ class TestErrorFormatter(unittest.TestCase):
             column=1,
             error_type="SyntaxError",
             message="Expected a symbol",
-            source_line="123 variable set",
+            source_line="123 :variable set",
             hint="Use ':variable' or 'variable' (without quotes)"
         )
         self.assertIn("hint:", result)
@@ -123,14 +123,14 @@ class TestErrorFormatter(unittest.TestCase):
             column=12,
             error_type="StackUnderflowError",
             message="Operator `+` requires 2 arguments",
-            source_line="    a b + temp =",
+            source_line="    a b + :temp =",
             hint="Ensure both 'a' and 'b' are defined"
         )
 
         # Check all components are present
         self.assertIn("fibonacci.stk:15:12", result)
         self.assertIn("error:", result)
-        self.assertIn("a b + temp =", result)
+        self.assertIn("a b + :temp =", result)
         self.assertIn("^", result)
         self.assertIn("hint:", result)
         self.assertIn("StackUnderflowError", result)

@@ -16,7 +16,7 @@ class TestOperatorNamesAsVariables(unittest.TestCase):
     def test_sum_in_block_reassignment(self):
         """Test reassigning 'sum' variable inside a block."""
         stacker = Stacker()
-        result = stacker.eval("0 :sum set 1 3 i {sum i + :sum set} do sum")
+        result = stacker.eval("0 :sum set 1 3 :i {sum i + :sum set} do sum")
         self.assertEqual(result[-1], 6)  # 0 + 1 + 2 + 3 = 6
 
     def test_max_as_variable(self):
@@ -35,7 +35,7 @@ class TestOperatorNamesAsVariables(unittest.TestCase):
         """Test using operator name as accumulator in dolist."""
         stacker = Stacker()
         result = stacker.eval(
-            "1 product set [2 3 4] x {product x * product set} dolist product"
+            "1 :product set [2 3 4] :x {product x * :product set} dolist product"
         )
         self.assertEqual(result[-1], 24)  # 1 * 2 * 3 * 4 = 24
 

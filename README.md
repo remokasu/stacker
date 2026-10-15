@@ -126,18 +126,18 @@ Stacker allows for straightforward RPN input. For example:
 - ### Variables:
   - syntax:
     ``` bash
-    value name set
+    value :name set
     # or
-    value name =
+    value :name =
     ```
   - example:
     ```bash
-    stacker:0> 3 x set
+    stacker:0> 3 :x set
     stacker:1> x
     [3]
 
     # Using = operator (equivalent to set)
-    stacker:0> 5 y =
+    stacker:0> 5 :y =
     stacker:1> y
     [5]
     ```
@@ -216,7 +216,7 @@ Stacker allows for straightforward RPN input. For example:
   [3]
 
   # Use in function definitions
-  stacker:2> {x y} {x y *} multiply defun
+  stacker:2> {x y} {x y *} :multiply defun
   ```
 
   **Note**: Code blocks are stored but not executed until explicitly triggered. This allows for flexible program control, lazy evaluation, and higher-order programming patterns.
@@ -246,7 +246,7 @@ Stacker allows for straightforward RPN input. For example:
 
     Example:
     ```bash
-    stacker:0> 0 x set
+    stacker:0> 0 :x set
     stacker:1> x 0 == {3 4 +} if
     [7]
     ```
@@ -264,7 +264,7 @@ Stacker allows for straightforward RPN input. For example:
 
     Example:
     ```bash
-    stacker:0> 0 x set
+    stacker:0> 0 :x set
     stacker:1> x 0 == {3 4 +} {3 4 -} ifelse
     [7]
     ```
@@ -301,12 +301,12 @@ Stacker allows for straightforward RPN input. For example:
 
     Syntax:
     ```bash
-    start_value end_value name {body} do
+    start_value end_value :name {body} do
     ```
 
     Example:
     ```bash
-    stacker:0> 1 10 i {i echo} do
+    stacker:0> 1 10 :i {i echo} do
     1
     2
     3
@@ -327,12 +327,12 @@ Stacker allows for straightforward RPN input. For example:
 
       Syntax:
       ```bash
-      [value1 value2 ... valueN] name {body} dolist
+      [value1 value2 ... valueN] :name {body} dolist
       ```
 
       Example:
       ```bash
-      stacker:0> [1 2 3 4 5] i {i echo} dolist
+      stacker:0> [1 2 3 4 5] :i {i echo} dolist
       1
       2
       3
@@ -419,11 +419,11 @@ Stacker allows for straightforward RPN input. For example:
 - ### Define a function:
   - syntax:
     ```bash
-    {arg1 arg2 ... argN} {body} name defun
+    {arg1 arg2 ... argN} {body} :name defun
     ```
   - example:
     ```bash
-    stacker:0> {x y} {x y *} multiply defun
+    stacker:0> {x y} {x y *} :multiply defun
     stacker:1> 10 20 multiply
     [200]
     ```
@@ -447,7 +447,7 @@ Stacker allows for straightforward RPN input. For example:
 - ### Define a macro:
   - syntax:
     ```bash
-    {args} {body} name defmacro
+    {args} {body} :name defmacro
     ```
   - example:
     ```bash
@@ -475,7 +475,7 @@ Stacker allows for straightforward RPN input. For example:
     - `gensym` returns a fresh unique name (prefixed `__g`; do not use that prefix yourself) for temporaries
       in generated code:
       ```bash
-      stacker:0> {x} { gensym t = { x eval t set t t + } } {double!} defmacro
+      stacker:0> {x} { gensym :t = { x eval :t set t t + } } {double!} defmacro
       stacker:1> {3 4 +} double!
       [14]
       ```
@@ -496,7 +496,7 @@ Stacker allows for straightforward RPN input. For example:
 
   - example:
     ```bash
-    stacker:0> {x y} {x y *} lambda multiply set
+    stacker:0> {x y} {x y *} lambda :multiply set
     stacker:1> 3 4 multiply
     [3 4 λxλy.{x y *}]
     stacker:3> eval
@@ -525,11 +525,11 @@ Stacker scripts can be created in `.stk` files. To run a script, simply execute 
 
 - my_script.stk:
   ```bash
-  0 p set
-  0 100000 k {
-      -1 k ^ 2 k * 1 + / p + p set
+  0 :p set
+  0 100000 :k {
+      -1 k ^ 2 k * 1 + / p + :p set
   } do
-  4 p * p set
+  4 p * :p set
   p echo
   ```
 
@@ -819,9 +819,9 @@ print(stacker.eval("3 4 +"))
 | if       | Conditional statement                                 | `true {...} if`            |
 | ifelse   | Conditional statement with an else block              | `true {"yes"} {"no"} ifelse`  |
 | iferror  | Conditional statement for error handling              | `{1 0 /} {"caught"} iferror` |
-| cond     | Multi-branch conditional (first matching pair wins)   | `5 x set {x 0 >} {"pos"} {true} {"other"} 2 cond` |
-| do       | Loop                                                  | `0 10 i {i echo} do`      |
-| dolist   | Loop over the elements of a list                      | `[1 2 3] x {x echo} dolist` |
+| cond     | Multi-branch conditional (first matching pair wins)   | `5 :x set {x 0 >} {"pos"} {true} {"other"} 2 cond` |
+| do       | Loop                                                  | `0 10 :i {i echo} do`      |
+| dolist   | Loop over the elements of a list                      | `[1 2 3] :x {x echo} dolist` |
 | times    | Loop a specified number of times                      | `{dup ++} 10 times`        |
 | while    | Loop while a condition is true                        | `0 :i set {i 10 <} {i ++ :i set} while` |
 | loop     | Repeat a block until `break`                          | `0 {1 + dup 10 > {break} if} loop` |
@@ -831,15 +831,15 @@ print(stacker.eval("3 4 +"))
 ### Function, Macro, Lambda, and Variable Operators
 | Operator | Description                                           | Example                    |
 |----------|-------------------------------------------------------|----------------------------|
-| defun    | Define a function                                     | `{x y} {x y *} multiply defun` |
+| defun    | Define a function                                     | `{x y} {x y *} :multiply defun` |
 | alias    | Name a code snippet (prelude)                         | `{2 ^ 3 * 5 +} {calculatePowerAndAdd} alias` |
 | defmacro | Define a macro                                        | `{c b} {{c eval not {b eval} if}} {unless} defmacro` |
 | macroexpand | Push a macro's expansion without running it        | `{0 >} {"neg" echo} {unless} macroexpand` |
-| gensym   | Push a fresh unique name for macro temporaries        | `gensym t =`               |
+| gensym   | Push a fresh unique name for macro temporaries        | `gensym :t =`               |
 | symbol   | Make a symbol from a string or a quoted name          | `"x" symbol`               |
 | lambda   | Create a lambda function                              | `{x y} {x y *} lambda`    |
-| set      | Assign a value to a variable                          | `3 x set`                |
-| =        | Assign a value to a variable (alias for `set`)        | `3 x =`                  |
+| set      | Assign a value to a variable                          | `3 :x set`                |
+| =        | Assign a value to a variable (alias for `set`)        | `3 :x =`                  |
 | global   | Assign a value to a global variable                   | `42 :answer global`      |
 
 

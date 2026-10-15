@@ -21,8 +21,8 @@ class TestInlineComments(unittest.TestCase):
     def test_inline_comment_in_script(self):
         """Test inline comments in script files"""
         script_content = """
-0 counter set  # Initialize counter
-counter 1 + counter set  # Increment
+0 :counter set  # Initialize counter
+counter 1 + :counter set  # Increment
 counter  # Push to stack
 """
         with tempfile.NamedTemporaryFile(mode='w', suffix='.stk', delete=False) as f:
@@ -40,7 +40,7 @@ counter  # Push to stack
         script_content = """
 {x y}  # Parameters
 {x y *}  # Function body
-multiply defun  # Define function
+:multiply defun  # Define function
 
 10 20 multiply  # Call function
 """
@@ -59,7 +59,7 @@ multiply defun  # Define function
         script_content = """
 {x} {
     x 2 *  # Double the value
-} double defun
+} :double defun
 
 5 double
 """
@@ -107,7 +107,7 @@ multiply defun  # Define function
 {  # Start of body
     x y +  # Add them
 }  # End of body
-add defun
+:add defun
 
 3 4 add
 """

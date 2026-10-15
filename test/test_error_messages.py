@@ -199,7 +199,7 @@ class TestFatalErrorPropagation(unittest.TestCase):
         stacker = Stacker()
         with self.assertRaises(UndefinedSymbolError):
             stacker.eval("1st")
-        self.assertEqual(stacker.eval("5 1st set 1st")[-1], 5)
+        self.assertEqual(stacker.eval("5 :1st set 1st")[-1], 5)
 
     def test_variable_lookup_unaffected_by_narrowed_except(self):
         # Plain variable resolution (no literal parsing involved) keeps
@@ -224,7 +224,7 @@ def test_an_index_error_inside_an_operator_is_not_a_stack_underflow(expression):
     [
         "1 +", "set", "1 nth", "format", "{1} if", "dolist", "sub", "1 subn", "cond", "defun",
         # A block body runs on a stack of its own
-        "[1 2 3] 0 acc x {+} reduce", "[1 2 3] 0 acc x {+} fold", "[1 2 3] {+} map",
+        "[1 2 3] 0 :acc :x {+} reduce", "[1 2 3] 0 :acc :x {+} fold", "[1 2 3] {+} map",
         "[1 2 3] {+} filter", "{+} 1 times",
     ],
 )

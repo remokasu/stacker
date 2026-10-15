@@ -32,7 +32,7 @@ class TestAttribution:
         assert not isinstance(info.value, StackerTypeError)
 
     def test_symbol_element_that_is_dropped_causes_no_error(self):
-        assert run("5 x set [:x] {drop x 1 +} map") == [[6]]
+        assert run("5 :x set [:x] {drop x 1 +} map") == [[6]]
 
     @pytest.mark.parametrize(
         "program",

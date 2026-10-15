@@ -53,23 +53,23 @@ class TestStacker(unittest.TestCase):
         # TypeError (`None 2 +`) on the next fold step
         self.stacker.stack.clear()
         with self.assertRaises(NoValueProducedError) as ctx:
-            self.stacker.eval("[1 2 3] 0 acc x {acc x + drop} reduce")
+            self.stacker.eval("[1 2 3] 0 :acc :x {acc x + drop} reduce")
         self.assertIn("reduce", str(ctx.exception))
 
     def test_fold_block_with_no_result_raises_clear_error(self):
         self.stacker.stack.clear()
         with self.assertRaises(NoValueProducedError) as ctx:
-            self.stacker.eval("[1 2 3] 0 acc x {acc x + drop} fold")
+            self.stacker.eval("[1 2 3] 0 :acc :x {acc x + drop} fold")
         self.assertIn("fold", str(ctx.exception))
 
     def test_reduce_sum(self):
         self.stacker.stack.clear()
-        ans = self.stacker.eval("[1 2 3 4 5] 0 acc x {acc x +} reduce")
+        ans = self.stacker.eval("[1 2 3 4 5] 0 :acc :x {acc x +} reduce")
         self.assertEqual(ans[-1], 15)
 
     def test_reduce_product(self):
         self.stacker.stack.clear()
-        ans = self.stacker.eval("[1 2 3 4 5] 1 acc x {acc x *} reduce")
+        ans = self.stacker.eval("[1 2 3 4 5] 1 :acc :x {acc x *} reduce")
         self.assertEqual(ans[-1], 120)
 
     def test_map_empty_list(self):
@@ -94,5 +94,5 @@ class TestStacker(unittest.TestCase):
 
     def test_fold_alias(self):
         self.stacker.stack.clear()
-        ans = self.stacker.eval("[1 2 3 4 5] 0 acc x {acc x +} fold")
+        ans = self.stacker.eval("[1 2 3 4 5] 0 :acc :x {acc x +} fold")
         self.assertEqual(ans[-1], 15)

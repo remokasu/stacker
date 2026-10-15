@@ -29,7 +29,7 @@ class TestTokensBecomeValues:
     def test_nth_on_a_block_gives_a_symbol(self):
         # `nth` leaves the block on the stack and pushes the element.
         assert run("{x} 0 nth")[-1] == Symbol("x")
-        assert run("5 x set {x} 0 nth")[-1] == Symbol("x")
+        assert run("5 :x set {x} 0 nth")[-1] == Symbol("x")
         assert run("{1 2 +} 2 nth")[-1] == Symbol("+")
 
     def test_nth_on_a_block_keeps_literals(self):
@@ -39,14 +39,14 @@ class TestTokensBecomeValues:
 
     def test_symbol_from_a_block_is_not_a_value(self):
         with pytest.raises(TypeError):
-            run("5 x set {x} 0 nth 1 +")
+            run("5 :x set {x} 0 nth 1 +")
 
     def test_apply_pushes_block_arguments_as_values(self):
         assert run("{{x y}} {} apply") == [Symbol("x"), Symbol("y")]
         assert run("[3 4] {+} apply") == [7]
 
     def test_map_over_a_block_sees_symbols(self):
-        (block,) = run("1 x set 2 y set {x y} {} map")
+        (block,) = run("1 :x set 2 :y set {x y} {} map")
         assert tokens(block) == ["x", "y"]
         assert all(type(t) is str for t in tokens(block))
 
@@ -56,8 +56,8 @@ class TestTokensBecomeValues:
 
     def test_reduce_over_a_block_sees_symbols(self):
         with pytest.raises(TypeError):
-            run("1 a set 2 b set {a b} 0 acc x {acc x +} reduce")
-        assert run("{1 2 3} 0 acc x {acc x +} reduce") == [6]
+            run("1 :a set 2 :b set {a b} 0 :acc :x {acc x +} reduce")
+        assert run("{1 2 3} 0 :acc :x {acc x +} reduce") == [6]
 
     def test_zip_blocks(self):
         (block,) = run("{x y} {1 2} zip")
@@ -65,7 +65,7 @@ class TestTokensBecomeValues:
         assert run("[1 2] [3 4] zip") == [[[1, 3], [2, 4]]]
 
     def test_list_of_a_block_gives_symbols(self):
-        assert run("1 x set 2 y set {x y} list") == [[Symbol("x"), Symbol("y")]]
+        assert run("1 :x set 2 :y set {x y} list") == [[Symbol("x"), Symbol("y")]]
 
     def test_sorted_block_of_names(self):
         (block,) = run("{c a b} sorted")
@@ -73,12 +73,12 @@ class TestTokensBecomeValues:
 
     def test_string_elements_stay_strings_in_map(self):
         assert run('"ab" list {upper} map') == [["A", "B"]]
-        assert run('5 ab set "ab" list') == [["a", "b"]]
+        assert run('5 :ab set "ab" list') == [["a", "b"]]
 
 
 class TestAggregatesReferenceNames:
     def test_names_are_the_variables_values(self):
-        assert run("1 x set 2 y set {x y} sum") == [3]
+        assert run("1 :x set 2 :y set {x y} sum") == [3]
 
     def test_undefined_name_raises(self):
         with pytest.raises(UndefinedSymbolError):
@@ -97,7 +97,7 @@ class TestAggregatesReferenceNames:
         assert run("{true false true} any") == [True]
 
     def test_string_literal_is_a_value(self):
-        assert run("5 a set", '{"a"} max') == ["a"]
+        assert run("5 :a set", '{"a"} max') == ["a"]
 
 
 class TestFunctionSpecifiers:
@@ -110,18 +110,18 @@ class TestFunctionSpecifiers:
         assert run("[1 2] :dup map") == [[[1, 1], [2, 2]]]
 
     def test_symbol_names_a_function_or_macro(self):
-        assert run("{x} {x 1 +} f defun [1 2] :f map") == [[2, 3]]
-        assert run("{} {{2 *}} m defmacro [1 2] :m map") == [[2, 4]]
+        assert run("{x} {x 1 +} :f defun [1 2] :f map") == [[2, 3]]
+        assert run("{} {{2 *}} :m defmacro [1 2] :m map") == [[2, 4]]
 
     def test_symbol_shadowed_by_a_variable_is_not_shortcut(self):
         # `sqrt` is a variable here, so `:sqrt` means `{sqrt}`: push its value.
         assert run("7 :sqrt set [1 2] :sqrt map") == [[[1, 7], [2, 7]]]
 
     def test_lambda_value_as_function(self):
-        assert run("{a} {a 2 *} lambda f set [1 2] f map") == [[2, 4]]
+        assert run("{a} {a 2 *} lambda :f set [1 2] f map") == [[2, 4]]
 
     def test_quoted_lambda_variable_pushes_the_lambda(self):
-        (result,) = run("{a} {a 2 *} lambda f set [1 2] {f} map")
+        (result,) = run("{a} {a 2 *} lambda :f set [1 2] {f} map")
         assert [len(pair) for pair in result] == [2, 2]
         assert result[0][0] == 1 and type(result[0][1]).__name__ == "StackerLambda"
 
@@ -131,7 +131,7 @@ class TestFunctionSpecifiers:
             run(program)
 
     def test_reduce_symbol_function_means_the_quoted_name(self):
-        assert run("{x} {x 1 +} f defun {1 2} 0 acc x {acc x + f} reduce") == [5]
+        assert run("{x} {x 1 +} :f defun {1 2} 0 :acc :x {acc x + f} reduce") == [5]
 
     def test_block_element_is_evaluated_before_a_host_word(self):
         # The shortcut prepares the element exactly as `_execute` would.
@@ -190,7 +190,7 @@ class TestElementsHandedToABlockBody:
         assert type(tokens(block)[1]) is str
 
     def test_a_bound_name_in_the_block_is_not_looked_up(self):
-        (block,) = run("5 a set {a b} {} map")
+        (block,) = run("5 :a set {a b} {} map")
         assert tokens(block) == ["a", "b"]
 
 
@@ -242,7 +242,7 @@ class TestZipEnumerateReversed:
         assert run('"$x" [1 2] zip') == [[["$", 1], ["x", 2]]]
 
     def test_zip_with_a_bound_string_does_not_look_the_name_up(self):
-        assert run('5 ab set "ab" [1 2] zip') == [[["a", 1], ["b", 2]]]
+        assert run('5 :ab set "ab" [1 2] zip') == [[["a", 1], ["b", 2]]]
 
     @pytest.mark.parametrize("program", [":x [1 2] zip", "[1 2] :x zip"])
     def test_zip_with_a_symbol_argument_is_a_type_error(self, program):
@@ -251,11 +251,11 @@ class TestZipEnumerateReversed:
         assert "`zip` cannot use the symbol `x`" in str(info.value)
 
     def test_zip_does_not_look_up_bare_names_in_a_block(self):
-        (block,) = run("1 x set {x} [9] zip")
+        (block,) = run("1 :x set {x} [9] zip")
         assert tokens(block) == [[Symbol("x"), 9]]
 
     def test_zip_with_a_list_literal_resolves_bare_names(self):
-        assert run("1 x set [x] [9] zip") == [[[1, 9]]]
+        assert run("1 :x set [x] [9] zip") == [[[1, 9]]]
 
     def test_enumerate_a_block_pairs_indices_with_symbols(self):
         (block,) = run("{x y} enumerate")
@@ -290,7 +290,7 @@ class TestZipEnumerateReversed:
         assert type(reversed_tokens[2]) is str
 
     def test_reversed_block_does_not_look_up_names(self):
-        (block,) = run("5 x set {x y} reversed")
+        (block,) = run("5 :x set {x y} reversed")
         assert tokens(block) == ["y", "x"]
 
     def test_reversed_list_of_symbols(self):
@@ -303,7 +303,7 @@ class TestZipEnumerateReversed:
         assert run("[1 2 3] reversed") == [[3, 2, 1]]
 
     def test_list_of_a_string_is_not_resolved(self):
-        assert run('"$x" y set y list') == [["$", "x"]]
+        assert run('"$x" :y set y list') == [["$", "x"]]
 
     def test_sorted_block_with_a_number_and_a_name_is_a_type_error(self):
         with pytest.raises(StackerTypeError):
@@ -315,13 +315,13 @@ class TestZipEnumerateReversed:
 
 class TestFilterFunctionSpecifiers:
     def test_symbol_of_a_user_function(self):
-        assert run("{x} {x 2 % 0 ==} even2? defun [1 2 3 4] :even2? filter") == [[2, 4]]
+        assert run("{x} {x 2 % 0 ==} :even2? defun [1 2 3 4] :even2? filter") == [[2, 4]]
 
     def test_quoted_name_of_a_user_function_is_the_same(self):
-        assert run("{x} {x 2 % 0 ==} even2? defun [1 2 3 4] {even2?} filter") == [[2, 4]]
+        assert run("{x} {x 2 % 0 ==} :even2? defun [1 2 3 4] {even2?} filter") == [[2, 4]]
 
     def test_symbol_of_a_macro(self):
-        assert run("{} {{2 >}} gt2 defmacro [1 2 3 4] :gt2 filter") == [[3, 4]]
+        assert run("{} {{2 >}} :gt2 defmacro [1 2 3 4] :gt2 filter") == [[3, 4]]
 
     def test_symbol_of_an_operator_that_pushes_one_value(self):
         assert run("[0 1 0] :bool filter") == [[1]]
@@ -335,11 +335,11 @@ class TestFilterFunctionSpecifiers:
         assert run("[1 2 3 4] {a} {a 2 >} lambda filter") == [[3, 4]]
 
     def test_lambda_in_a_variable_by_bare_name(self):
-        assert run("{a} {a 2 >} lambda big set [1 2 3 4] big filter") == [[3, 4]]
+        assert run("{a} {a 2 >} lambda :big set [1 2 3 4] big filter") == [[3, 4]]
 
     def test_symbol_that_is_a_variable_pushes_its_value(self):
         # `:flag` means `{flag}`: the variable's value is pushed and the stack decides.
-        assert run("1 flag set [7 8] :flag filter") == [[7, 8]]
+        assert run("1 :flag set [7 8] :flag filter") == [[7, 8]]
 
     @pytest.mark.parametrize("specifier", ['"bool"', "5", "[1]", "1.5", "true"])
     def test_other_values_are_type_errors(self, specifier):
@@ -352,7 +352,7 @@ class TestFilterFunctionSpecifiers:
             run(f"[1 2] :nope {word}")
 
     def test_map_symbol_of_a_macro(self):
-        assert run("{} {{2 *}} twice defmacro [1 2] :twice map") == [[2, 4]]
+        assert run("{} {{2 *}} :twice defmacro [1 2] :twice map") == [[2, 4]]
 
     def test_symbol_made_from_a_string_works_as_a_specifier(self):
         assert run('[1 4] "sqrt" symbol filter') == [[1, 4]]
@@ -360,23 +360,23 @@ class TestFilterFunctionSpecifiers:
 
 class TestReduceFoldFunctionPosition:
     def test_fold_with_a_user_function_symbol_in_the_body(self):
-        assert run("{x} {x 1 +} f defun {1 2} 0 acc x {acc x + f} fold") == [5]
+        assert run("{x} {x 1 +} :f defun {1 2} 0 :acc :x {acc x + f} fold") == [5]
 
     def test_reduce_over_a_list_of_symbols_adding_is_a_type_error(self):
         with pytest.raises(StackerTypeError):
-            run("[:a :b] 0 acc x {acc x +} reduce")
+            run("[:a :b] 0 :acc :x {acc x +} reduce")
 
     def test_reduce_collecting_symbols_into_a_list(self):
-        assert run("{a b} [] acc x {acc x 1 listn +} reduce") == [[Symbol("a"), Symbol("b")]]
+        assert run("{a b} [] :acc :x {acc x 1 listn +} reduce") == [[Symbol("a"), Symbol("b")]]
 
     def test_reduce_over_a_block_binds_symbols_not_values(self):
-        assert run("1 a set 2 b set {a b} 0 acc x {x} reduce") == [Symbol("b")]
+        assert run("1 :a set 2 :b set {a b} 0 :acc :x {x} reduce") == [Symbol("b")]
 
     def test_reduce_over_a_list_of_strings(self):
-        assert run('["a" "b"] "" acc x {acc x +} reduce') == ["ab"]
+        assert run('["a" "b"] "" :acc :x {acc x +} reduce') == ["ab"]
 
     def test_reduce_init_symbol_is_kept(self):
-        assert run("[1 2] :z acc x {acc} reduce") == [Symbol("z")]
+        assert run("[1 2] :z :acc :x {acc} reduce") == [Symbol("z")]
 
 
 class TestInterpolatedValues:
@@ -391,13 +391,13 @@ class TestInterpolatedValues:
         ],
     )
     def test_value_spliced_into_a_template_comes_out_as_the_same_kind(self, argument, check):
-        (value,) = run("{v} {{v}} m defmacro", f"{argument} m")
+        (value,) = run("{v} {{v}} :m defmacro", f"{argument} m")
         assert check(value)
 
     def test_symbol_is_spliced_as_a_bare_name_that_is_then_a_reference(self):
-        assert run("1 z set", "{v} {{v}} m defmacro", ":z m") == [1]
-        assert run("1 z set", "{v} {v} m defmacro", ":z m") == [Symbol("z")]
+        assert run("1 :z set", "{v} {{v}} :m defmacro", ":z m") == [1]
+        assert run("1 :z set", "{v} {v} :m defmacro", ":z m") == [Symbol("z")]
 
     def test_lambda_value_is_spliced_as_a_value_token(self):
-        (value,) = run("{v} {{v}} m defmacro", "{a} {a} lambda m")
+        (value,) = run("{v} {{v}} :m defmacro", "{a} {a} lambda m")
         assert type(value).__name__ == "StackerLambda"

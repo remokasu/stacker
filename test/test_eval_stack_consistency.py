@@ -22,8 +22,8 @@ from stacker.stacker import Stacker
         ("{1 0 /} {99} iferror", [99]),
         ("5 {dup ++} 3 times", [5, 6, 7, 8]),
         ("3 {dup 0 >} {1 -} while", [0]),
-        ("0 1 3 i {i +} do", [6]),
-        ("0 [1 2 3] x {x +} dolist", [6]),
+        ("0 1 3 :i {i +} do", [6]),
+        ("0 [1 2 3] :x {x +} dolist", [6]),
         ("3 {dup 0 >} {1 -} 1 cond", [2]),
     ],
 )
@@ -48,6 +48,6 @@ def test_times_with_non_block_pushes_value_each_iteration():
 def test_do_restores_scope_when_body_raises():
     stacker = Stacker()
     with pytest.raises(ZeroDivisionError):
-        stacker.eval("1 3 i {i 0 /} do")
+        stacker.eval("1 3 :i {i 0 /} do")
     # The loop's child scope must not remain installed after the error.
     assert "i" not in stacker.variables

@@ -89,8 +89,8 @@ class TestStringArgumentIsData(unittest.TestCase):
 
     def test_string_with_a_variable_of_the_same_name(self):
         for expression, expected in (
-            ('5 ab set "ab" list', ["a", "b"]),
-            ('5 ab set "ab" enumerate', [[0, "a"], [1, "b"]]),
+            ('5 :ab set "ab" list', ["a", "b"]),
+            ('5 :ab set "ab" enumerate', [[0, "a"], [1, "b"]]),
         ):
             with self.subTest(expression=expression):
                 self.assertEqual(Stacker().eval(expression).pop(), expected)

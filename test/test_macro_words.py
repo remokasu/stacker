@@ -30,7 +30,7 @@ class TestGensym:
         assert a.name.startswith("__g") and b.name.startswith("__g")
 
     def test_usable_as_a_name(self):
-        assert run("gensym t =", "5 t set", "t eval") == [5]
+        assert run("gensym :t =", "5 :t set", "t eval") == [5]
 
     def test_unique_across_interpreters(self):
         first = Stacker().eval("gensym").pop()
@@ -40,11 +40,11 @@ class TestGensym:
 
 class TestMacroexpand:
     def test_returns_expansion_without_evaluating(self):
-        (block,) = run("{x} {{x x}} m defmacro", "3 {m} macroexpand")
+        (block,) = run("{x} {{x x}} :m defmacro", "3 {m} macroexpand")
         assert shape(block) == [3, 3]
 
     def test_accepts_dollar_name(self):
-        (block,) = run("{} {{1}} m defmacro", ":m macroexpand")
+        (block,) = run("{} {{1}} :m defmacro", ":m macroexpand")
         assert shape(block) == [1]
 
     def test_non_macro_is_a_syntax_error(self):

@@ -99,7 +99,7 @@
 {val func} {
     val func eval
     func eval
-} apply_twice defun
+} :apply_twice defun
 
 # Use it
 10 {x} {x 2 *} lambda apply_twice "10 * 2 * 2 =" swap echo
@@ -113,7 +113,7 @@
 # compose - Apply two functions in sequence
 {x f g} {
     x f eval g eval
-} compose defun
+} :compose defun
 
 10 {x} {x 2 *} lambda {x} {x 5 +} lambda compose
 "(10 * 2) + 5 =" swap echo
@@ -123,12 +123,12 @@
 "=== Simulating map with index ===" echo
 
 # enumerate-like behavior using global counter
-0 idx global
+0 :idx global
 
-[10 20 30] val {
+[10 20 30] :val {
     "Index" idx str + ":" + val str + echo
-    idx 1 + idx =
+    idx 1 + :idx =
 } dolist
 
 # Reset counter
-0 idx global
+0 :idx global

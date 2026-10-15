@@ -26,7 +26,7 @@ false {"This won't print" echo} if
 
 # Syntax: condition {true-block} {false-block} ifelse
 
-18 age =
+18 :age =
 age 18 >= {
     "You are an adult" echo
 } {
@@ -37,7 +37,7 @@ age 18 >= {
 "" echo
 "=== Nested Conditionals ===" echo
 
-85 score =
+85 :score =
 
 score 90 >= {
     "Grade: A" echo
@@ -74,8 +74,8 @@ false not {"Not false = true" echo} if
 "" echo
 "=== Complex Conditions ===" echo
 
-15 x =
-10 y =
+15 :x =
+10 :y =
 
 # Check if x is between 10 and 20
 x 10 >= x 20 <= and {
@@ -91,14 +91,14 @@ x 12 > y 12 > or {
 "" echo
 "=== Conditional Assignment ===" echo
 
--5 num =
+-5 :num =
 
 # Get absolute value
 num 0 < {
     num -1 *
 } {
     num
-} ifelse abs_value =
+} ifelse :abs_value =
 
 "Absolute value of -5:" abs_value str + echo
 
@@ -124,7 +124,7 @@ num 0 < {
             0
         } ifelse
     } ifelse
-} sign defun
+} :sign defun
 
 -7 sign "Sign of -7:" swap echo
 0 sign "Sign of 0:" swap echo
@@ -140,7 +140,7 @@ num 0 < {
     } {
         "odd"
     } ifelse
-} even_or_odd defun
+} :even_or_odd defun
 
 7 even_or_odd "7 is" swap + echo
 12 even_or_odd "12 is" swap + echo

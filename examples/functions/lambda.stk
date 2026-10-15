@@ -16,7 +16,7 @@
 "=== Storing Lambda in Variable ===" echo
 
 # A lambda held in a variable is a value: the name pushes it, eval calls it
-{x} {x 2 *} lambda double =
+{x} {x 2 *} lambda :double =
 
 10 double eval "10 * 2 =" swap echo
 7 double eval "7 * 2 =" swap echo
@@ -25,11 +25,11 @@
 "" echo
 "=== Multiple Parameters ===" echo
 
-{x y} {x y +} lambda add =
+{x y} {x y +} lambda :add =
 
 5 3 add eval "5 + 3 =" swap echo
 
-{a b c} {a b * c +} lambda calc =
+{a b c} {a b * c +} lambda :calc =
 
 2 3 4 calc eval "2 * 3 + 4 =" swap echo
 
@@ -38,11 +38,11 @@
 "=== Lambda vs defun ===" echo
 
 # Using defun (named function)
-{x} {x x *} square defun
+{x} {x x *} :square defun
 5 square "5^2 (defun) =" swap echo
 
 # Using lambda (anonymous function)
-{x} {x x *} lambda square_lambda =
+{x} {x x *} lambda :square_lambda =
 5 square_lambda eval "5^2 (lambda) =" swap echo
 
 # ===== Lambda in Higher-Order Functions =====
@@ -73,9 +73,9 @@
 # Lambda that returns another lambda
 {x} {
     {y} {x y +} lambda
-} lambda make_adder =
+} lambda :make_adder =
 
-5 make_adder eval add5 =
+5 make_adder eval :add5 =
 
 10 add5 eval "10 + 5 =" swap echo
 7 add5 eval "7 + 5 =" swap echo
@@ -87,9 +87,9 @@
 # Counter using closure
 {start} {
     {x} {start x +} lambda
-} lambda make_counter =
+} lambda :make_counter =
 
-100 make_counter eval counter =
+100 make_counter eval :counter =
 
 5 counter eval "100 + 5 =" swap echo
 10 counter eval "100 + 10 =" swap echo
@@ -99,7 +99,7 @@
 "=== Practical Examples ===" echo
 
 # Example 1: Temperature converter
-{celsius} {celsius 9 * 5 / 32 +} lambda celsius_to_fahrenheit =
+{celsius} {celsius 9 * 5 / 32 +} lambda :celsius_to_fahrenheit =
 
 0 celsius_to_fahrenheit eval "0°C =" swap echo "°F" echo
 100 celsius_to_fahrenheit eval "100°C =" swap echo "°F" echo
@@ -107,16 +107,16 @@
 # Example 2: Discount calculator
 {price discount_pct} {
     price discount_pct 100 / * price swap -
-} lambda apply_discount =
+} lambda :apply_discount =
 
 100 20 apply_discount eval "$100 with 20% discount: $" swap str + echo
 
 # Example 3: Custom comparator
 {threshold} {
     {x} {x threshold >} lambda
-} lambda make_threshold_check =
+} lambda :make_threshold_check =
 
-10 make_threshold_check eval above_10 =
+10 make_threshold_check eval :above_10 =
 
 5 above_10 eval "Is 5 > 10?" swap echo
 15 above_10 eval "Is 15 > 10?" swap echo

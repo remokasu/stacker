@@ -27,14 +27,14 @@ QUOTES = pytest.mark.parametrize(
 
 @QUOTES
 def test_variable_with_the_same_name_does_not_capture_the_literal(literal):
-    result = run("5 foo set", f"{{{literal}}} eval")
+    result = run("5 :foo set", f"{{{literal}}} eval")
     assert isinstance(result[0], String)
     assert result == ["foo"]
 
 
 @QUOTES
 def test_macro_with_the_same_name_does_not_capture_the_literal(literal):
-    result = run("{} {{1}} foo defmacro", f"{{{literal}}} eval")
+    result = run("{} {{1}} :foo defmacro", f"{{{literal}}} eval")
     assert isinstance(result[0], String)
     assert result == ["foo"]
 
@@ -46,7 +46,7 @@ def test_operator_with_the_same_name_is_not_executed():
 
 
 def test_top_level_literal_is_not_captured_by_a_macro_either():
-    result = run("{} {{1}} foo defmacro", '"foo"')
+    result = run("{} {{1}} :foo defmacro", '"foo"')
     assert isinstance(result[0], String)
 
 
@@ -56,7 +56,7 @@ def test_top_level_literal_is_not_captured_by_a_macro_either():
     ids=["symbol-like", "dollar", "list-like", "block-like"],
 )
 def test_literal_text_that_looks_like_other_syntax_stays_a_string(literal, expected):
-    result = run("7 x set", f"{{{literal}}} eval")
+    result = run("7 :x set", f"{{{literal}}} eval")
     assert isinstance(result[0], String)
     assert result == [expected]
 
@@ -69,7 +69,7 @@ def test_literal_right_before_set_is_not_a_name():
 
 
 def test_literal_passed_to_a_macro_stays_a_literal_in_generated_code():
-    assert run("5 hi set", "{v} {{v}} m defmacro", '"hi" m') == ["hi"]
+    assert run("5 :hi set", "{v} {{v}} :m defmacro", '"hi" m') == ["hi"]
 
 
 class TestBlocksReadAsData:
@@ -85,14 +85,14 @@ class TestBlocksReadAsData:
         assert run('{"a" "b"} list') == [["a", "b"]]
 
     def test_fold(self):
-        assert run('{"a" "b"} "" acc x {acc x +} fold') == ["ab"]
+        assert run('{"a" "b"} "" :acc :x {acc x +} fold') == ["ab"]
 
     def test_map(self):
         assert run('{"a" "b"} {"!" +} map') == [["a!", "b!"]]
 
     def test_aggregates_do_not_reread_literals_as_code(self):
         # `{"a"} max` used to look up the variable `a`; `{"1" "2"} sum` used to add 3.
-        assert run("5 a set", '{"a"} max') == ["a"]
+        assert run("5 :a set", '{"a"} max') == ["a"]
         with pytest.raises(TypeError):
             run('{"1" "2"} sum')
 

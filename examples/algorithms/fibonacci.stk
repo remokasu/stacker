@@ -3,17 +3,17 @@
 {n} {
     n 0 == {0} {
         n 1 == {1} {
-            0 a =
-            1 b =
-            2 n i {
-                a b + temp =
-                b a =
-                temp b =
+            0 :a =
+            1 :b =
+            2 n :i {
+                a b + :temp =
+                b :a =
+                temp :b =
             } do
             b
         } ifelse
     } ifelse
-} fib defun
+} :fib defun
 
 # Calculate 10th Fibonacci number
 10 fib echo  # Output: 55

@@ -1,7 +1,7 @@
 # Functions, aliases and macros
 
 # Function: runs on its own stack with named arguments, returns one value
-{x y} {x y +} add defun
+{x y} {x y +} :add defun
 10 20 add echo  # Output: 30
 
 # Alias: a named code snippet, run in place on the caller's stack

@@ -10,16 +10,16 @@
         n 2 == {
             true
         } {
-            true is_prime =
-            2 n sqrt int 1 + i {
+            true :is_prime =
+            2 n sqrt int 1 + :i {
                 n i % 0 == {
-                    false is_prime =
+                    false :is_prime =
                 } if
             } do
             is_prime
         } ifelse
     } ifelse
-} is_prime defun
+} :is_prime defun
 
 "Is 2 prime?" echo
 2 is_prime echo
@@ -44,19 +44,19 @@
             n 2 % 0 == n 3 % 0 == or {
                 false
             } {
-                true is_prime =
-                5 i =
+                true :is_prime =
+                5 :i =
                 {i i * n <= is_prime and} {
                     n i % 0 == n i 2 + % 0 == or {
-                        false is_prime =
+                        false :is_prime =
                     } if
-                    i 6 + i =
+                    i 6 + :i =
                 } while
                 is_prime
             } ifelse
         } ifelse
     } ifelse
-} is_prime_fast defun
+} :is_prime_fast defun
 
 "Is 97 prime (fast)?" echo
 97 is_prime_fast echo
@@ -68,14 +68,14 @@
 "=== Count Primes up to N ===" echo
 
 {n} {
-    0 n_primes =
-    2 n i {
+    0 :n_primes =
+    2 n :i {
         i is_prime {
-            n_primes 1 + n_primes =
+            n_primes 1 + :n_primes =
         } if
     } do
     n_primes
-} count_primes defun
+} :count_primes defun
 
 "Number of primes up to 100:" echo
 100 count_primes echo
@@ -85,17 +85,17 @@
 "=== Next Prime ===" echo
 
 {n} {
-    n 1 + candidate =
-    true searching =
+    n 1 + :candidate =
+    true :searching =
     {searching} {
         candidate is_prime {
-            false searching =
+            false :searching =
         } {
-            candidate 1 + candidate =
+            candidate 1 + :candidate =
         } ifelse
     } while
     candidate
-} next_prime defun
+} :next_prime defun
 
 "Next prime after 10:" echo
 10 next_prime echo
