@@ -155,8 +155,8 @@ Stacker allows for straightforward RPN input. For example:
     - `:x` pushes the symbol `x` itself as a value, whatever a variable `x` holds. A symbol is a type of its
       own: `:x "x" ==` is false, `symbol?` tells it from a string, `str` gives its text and `symbol` makes one
       from text (`"x" symbol`). `:` must be followed by a name (`:1` and `:{x}` are errors). Symbols are how a
-      name is handed to a word that does not read it from the position right before itself, such as a macro,
-      and `[:a :b]` is a list of names.
+      name is handed to any word that takes one (`set`, `defun`, `alias`, a macro, ...), and `[:a :b]` is a
+      list of names.
     - `{x}` (a block holding only the name) means "this name" everywhere a name is read, and as code it means
       the same as `:x`: `:x eval` and `{x} eval` both do what writing `x` does.
     - Tokens are read one at a time, left to right, and nothing looks ahead: a bare name is a reference
@@ -466,8 +466,10 @@ Stacker allows for straightforward RPN input. For example:
     - Every name bound in that scope (the arguments, and variables assigned with `=` / `set` inside the body)
       is substituted into the body's block literals at the moment each literal is pushed: a symbol (`:name`,
       a `gensym` name) becomes a bare name in the generated code, a string becomes a string literal, a block
-      stays a block and any other value is spliced as a value. The substituted values are not scanned again,
-      and `:name`, string literals and list literals written in the body are left untouched.
+      stays a block and any other value is spliced as a value. A `:name` written in the body is replaced by
+      the symbol of the name that `name` holds (`:t` for a `gensym` name held in `t`, `:double` for the quoted
+      name `{double}`), which is how a generated temporary is bound: `{ x eval :t set t t + }`. The substituted
+      values are not scanned again; string literals, list literals and unbound `:name`s are left untouched.
     - Assignments inside the body are local to the macro; they never change the caller's variables.
     - Argument names may be anything, including built-in names; every occurrence in the block literals is
       replaced, so choose them with care.

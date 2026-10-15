@@ -141,14 +141,10 @@ StackerSyntaxError: `set` expects a name, got 5. A bare name pushes what it refe
 ただし、`x` が名前（Symbol や `{y}`）を持っているときは、その名前が `set` に渡り、**その名前に束縛されます**（間接束縛）。名前を変数で受け渡すときの書き方です。
 
 ```
-stacker:0> 1 :y :x set
-[1]
-stacker:1> 7 x set
-[1]
-stacker:1> y
-[1 7]
-stacker:2> x
-[1 7 y]
+stacker:0> :y :x set 7 x set y
+[7]
+stacker:1> x
+[7 y]
 ```
 
 ```

@@ -55,7 +55,7 @@ Note: This change is not backwards compatible with previous versions.
   ```bash
   grep -nE '(^|[[:space:]])[A-Za-z_][^[:space:]{}]*[[:space:]]+[{(]' -r . --include='*.stk'
   ```
-  and add `:` to those followed by `do`, `dolist`, `reduce` or `fold`
+  and add `:` to those followed by `do` or `dolist`, and to both names before the block of `reduce` / `fold`
 - `$name` everywhere, operator names included (`$+`, `$>=`): write `:name`. On `.stk` files: `sed -E 's/(^|[[:space:][{(])\$([^][:space:]{}()]+)/\1:\2/g'`, then check by hand the strings that contained `$` after a space (`"cost $5"` would become `"cost :5"`)
 - `:x` used where its value was meant: write `x`. A lambda passed on with `:f`: write `f`
 - A string used as a name (`5 "x" set`, `"sqrt" map`, `"+" apply`, `"m" macroexpand`): write `:x` / `{x}`, or `"x" symbol` when the name is built from text
@@ -74,7 +74,7 @@ Note: This change is not backwards compatible with previous versions.
     | grep -vE ':[^[:space:]]+[[:space:]]+(set|=|global|defun|defmacro|macroexpand|alias)([[:space:]]|$)' \
     | grep -vE ':[^[:space:]]+[[:space:]]+\{'
   ```
-  (the accumulator name of `reduce` / `fold` still shows up; check those by eye). Note that with the rule below, a `:name` right before a binding word is now the only way to write it
+  (the accumulator name of `reduce` / `fold` still shows up; check those by eye)
 
 ### Added
 
