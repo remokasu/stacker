@@ -17,8 +17,8 @@ Names (three ways to write one):
          pushed, a function or operator is run. Undefined: an error.
   :x     the name itself, as a value (a symbol)
   {x}    the name itself, as a code block
-  Right before set / = / global / defun / defmacro / macroexpand, and as the
-  loop variable of do / dolist, a bare name is the name being bound.
+  Nothing looks ahead: a bare name is a reference even right before set,
+  so the name a word binds is written :x (or {x}): 3 :x set, 1 5 :i {i} do.
   A string is never a name: "x" symbol turns text into a name.
 
 Variables:

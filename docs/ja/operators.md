@@ -206,7 +206,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 |---|---|---|
 | `map` | `list f map` は各要素に f（ブロック・ラムダ・シンボル）を適用した結果のリスト | `[1 2 3] {2 *} map`, `[1 2 3] :sqrt map` |
 | `filter` | `list f filter` は f の結果が真になる要素だけのリスト | `[1 2 3 4] {2 >} filter` |
-| `reduce`, `fold` | `list init acc x {body} reduce` は init から始め、各要素を名前 x、累積値を名前 acc に束縛して body を実行し、1 つの値にまとめる | `[1 2 3] 0 :acc :x {acc x +} reduce`, `[1 2 3] 0 :acc :x {acc x +} fold` |
+| `reduce`, `fold` | `list init :acc :x {body} reduce` は init から始め、各要素を名前 x、累積値を名前 acc に束縛して body を実行し、1 つの値にまとめる | `[1 2 3] 0 :acc :x {acc x +} reduce`, `[1 2 3] 0 :acc :x {acc x +} fold` |
 | `zip` | 2 つのリストを要素ごとに組にする。`[1 2] [3 4] zip` は `[[1 3] [2 4]]`。長さが違うときは短いほうに合わせる | `[1 2] [3 4] zip` |
 | `apply` | `list f apply` はリストの要素をスタックに展開してから f を実行 | `[3 4] {+} apply`, `[3 4] :+ apply` |
 
@@ -263,8 +263,8 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `ifelse` | `cond {then} {else} ifelse` は cond に応じて then か else を実行 | `true {"yes"} {"no"} ifelse` |
 | `iferror` | `{try} {handler} iferror` は try がエラーを起こしたら handler を実行 | `{1 0 /} {"caught"} iferror` |
 | `cond` | `{c1} {r1} {c2} {r2} ... n cond` は n 組の条件と結果を順に調べ、最初に条件が真になった組の結果を実行 | `5 :x set {x 0 >} {"pos"} {true} {"other"} 2 cond` |
-| `do` | `start end name {body} do` は start から end まで（両端を含む）の整数を name に束縛して body を実行 | `1 5 :i {i echo} do` |
-| `dolist` | `list name {body} dolist` は各要素を name に束縛して body を実行 | `[1 2 3] :x {x echo} dolist` |
+| `do` | `start end :name {body} do` は start から end まで（両端を含む）の整数を name に束縛して body を実行 | `1 5 :i {i echo} do` |
+| `dolist` | `list :name {body} dolist` は各要素を name に束縛して body を実行 | `[1 2 3] :x {x echo} dolist` |
 | `times` | `{body} n times` は body を n 回実行 | `{dup ++} 3 times` |
 | `while` | `{cond} {body} while` は cond が真の間 body を繰り返す | `0 :i set {i 3 <} {i ++ :i set} while` |
 | `loop` | `{body} loop` は `break` が実行されるまで body を繰り返す | `0 {1 + dup 10 > {break} if} loop` |
@@ -276,10 +276,10 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 
 | 演算子 | 説明 | 例 |
 |---|---|---|
-| `set`, `=` | `value name set` は value を name に束縛する。ブロックは評価されずに保存される | `3 :x set`, `3 :x =` |
-| `global` | `value name global` はグローバルスコープに束縛 | `42 :answer global` |
-| `defun` | `{args} {body} name defun` は関数を定義 | `{x y} {x y *} :multiply defun` |
-| `defmacro` | `{args} {body} name defmacro` はマクロを定義。body は展開時に実行され、展開結果のコードを 1 つ残す | `{c b} {{c eval not {b eval} if}} {unless} defmacro` |
+| `set`, `=` | `value :name set` は value を name に束縛する。ブロックは評価されずに保存される | `3 :x set`, `3 :x =` |
+| `global` | `value :name global` はグローバルスコープに束縛 | `42 :answer global` |
+| `defun` | `{args} {body} :name defun` は関数を定義 | `{x y} {x y *} :multiply defun` |
+| `defmacro` | `{args} {body} :name defmacro` はマクロを定義。body は展開時に実行され、展開結果のコードを 1 つ残す | `{c b} {{c eval not {b eval} if}} {unless} defmacro` |
 | `lambda` | `{args} {body} lambda` は無名関数の値を作る。`eval` で呼ぶ | `{x y} {x y *} lambda` |
 
 ## 評価とコード操作
@@ -365,7 +365,7 @@ prelude は Stacker 自身で書かれた標準の定義で、起動時に読み
 
 | 演算子 | 説明 | 例 |
 |---|---|---|
-| `alias` | `{body} {name} alias` は body に name という名前を付け、name を書くとその場に body を書いたのと同じに動く | `{2 ^ 3 * 5 +} {calc} alias` |
+| `alias` | `{body} :name alias` は body に name という名前を付け、name を書くとその場に body を書いたのと同じに動く | `{2 ^ 3 * 5 +} {calc} alias` |
 | `mean` | `list mean` はリストの平均 | `[1 2 3] mean` |
 
 ## 定数とリテラル

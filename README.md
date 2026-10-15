@@ -159,16 +159,15 @@ Stacker allows for straightforward RPN input. For example:
       and `[:a :b]` is a list of names.
     - `{x}` (a block holding only the name) means "this name" everywhere a name is read, and as code it means
       the same as `:x`: `:x eval` and `{x} eval` both do what writing `x` does.
-    - Right before `set`, `=`, `global`, `defun`, `defmacro` or `macroexpand`, as the loop variable of
-      `do` / `dolist`, and as the two names before the block of `reduce` / `fold`, a bare name is read as the
-      name being bound (shorthand for `:name`), so `3 x set`, `0 10 i {i echo} do` and
-      `[1 2 3] 0 acc x {acc x +} reduce` need no `:`. The one exception is a built-in operator name right
-      before `set`, `=`, `global`, `defun`, `defmacro` or `macroexpand`: `3 dup set` runs `dup` (and `set`
-      then fails). To bind a built-in name on purpose, write `3 :dup set` or `3 {dup} set`. (A loop or
-      accumulator variable may have any name.) Your own variables, functions and macros can be redefined by
-      their bare name; redefining a prelude word such as `alias` logs a warning. A literal is never a name
-      (`5 3 set` and `5 true set` are errors) and neither is a string (`5 "x" set` is an error too).
-    - Words you define yourself (macros, `alias`) take their names in the `{x}` or `:x` form.
+    - Tokens are read one at a time, left to right, and nothing looks ahead: a bare name is a reference
+      wherever it stands, even right before `set`. So the name a word binds is always written `:name` or
+      `{name}`: `3 :x set`, `0 10 :i {i echo} do`, `{a b} {a b +} :add defun`,
+      `[1 2 3] 0 :acc :x {acc x +} reduce`. Written bare, `3 x set` looks `x` up and stops with "`x` is not
+      defined", and `3 dup set` runs `dup` and then `set` complains that it got `3` instead of a name. The
+      same spelling rebinds any name, a built-in word's included (`3 :dup set`), and redefining a prelude
+      word such as `alias` logs a warning. A bare name that holds a name binds that name: after `:y :x set`,
+      `7 x set` binds `y`. A literal is never a name (`5 3 set` and `5 true set` are errors) and neither is
+      a string (`5 "x" set` is an error too).
 
 - Arrays:
   - Single-line array:
