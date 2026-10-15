@@ -21,6 +21,13 @@ class TestAutomaticLoad:
     def test_alias_is_available_on_a_fresh_interpreter(self):
         assert run(Stacker(), "{2 *} {double} alias", "5 double") == [10]
 
+    def test_alias_takes_the_name_as_a_symbol_too(self):
+        assert run(Stacker(), "{2 *} :double alias", "5 double") == [10]
+
+    def test_alias_can_name_a_built_in_word(self):
+        # The symbol is handed through as a name, so even `dup` can be aliased
+        assert run(Stacker(), "{2 *} :dup alias", "5 dup") == [10]
+
     def test_alias_body_runs_on_the_caller_stack(self):
         # Like the pre-1.15 `defmacro`: the body may consume and leave several values.
         assert run(Stacker(), "{dup dup} {triple} alias", "7 triple") == [7, 7, 7]
@@ -69,7 +76,7 @@ class TestInclude:
         self, tmp_path: Path
     ):
         script = tmp_path / "lib.stk"
-        script.write_text("[2 4] mean r =\n", encoding="utf-8")
+        script.write_text("[2 4] mean :r =\n", encoding="utf-8")
         with pytest.raises(UndefinedSymbolError, match="mean"):
             Stacker(prelude=False).eval(f'"{script}" include', stack=None)
 
@@ -77,7 +84,7 @@ class TestInclude:
         self, tmp_path: Path
     ):
         script = tmp_path / "lib.stk"
-        script.write_text("[2 4] mean r =\n", encoding="utf-8")
+        script.write_text("[2 4] mean :r =\n", encoding="utf-8")
         stacker = Stacker()
         assert run(stacker, f'"{script}" include', "r") == [3.0]
 
@@ -114,8 +121,8 @@ class TestLoader:
         assert stacker._prelude["names"] == {"one", "two"}
 
     def test_unlisted_file_is_skipped_with_a_warning(self, tmp_path: Path, caplog):
-        (tmp_path / "a.stk").write_text("1 x =\n", encoding="utf-8")
-        (tmp_path / "zz.stk").write_text("2 y =\n", encoding="utf-8")
+        (tmp_path / "a.stk").write_text("1 :x =\n", encoding="utf-8")
+        (tmp_path / "zz.stk").write_text("2 :y =\n", encoding="utf-8")
         stacker = Stacker(prelude=False)
         with caplog.at_level(logging.WARNING, logger="stacker"):
             load_prelude(stacker, directory=tmp_path, files=("a.stk",))
@@ -144,13 +151,13 @@ class TestRedefinitionWarning:
     def test_redefining_a_prelude_macro_warns(self, caplog):
         stacker = Stacker()
         with caplog.at_level(logging.WARNING, logger="stacker"):
-            run(stacker, "{} {{1}} alias defmacro")
+            run(stacker, "{} {{1}} :alias defmacro")
         assert "redefining prelude word 'alias'" in caplog.text
 
     def test_redefining_a_prelude_function_warns(self, caplog):
         stacker = Stacker()
         with caplog.at_level(logging.WARNING, logger="stacker"):
-            run(stacker, "{xs} {0} mean defun")
+            run(stacker, "{xs} {0} :mean defun")
         assert "redefining prelude word 'mean'" in caplog.text
 
     def test_set_over_a_prelude_word_warns_every_time(self, caplog):
@@ -162,7 +169,7 @@ class TestRedefinitionWarning:
     def test_defining_a_new_word_does_not_warn(self, caplog):
         stacker = Stacker()
         with caplog.at_level(logging.WARNING, logger="stacker"):
-            run(stacker, "{} {{1}} fresh defmacro 5 x =")
+            run(stacker, "{} {{1}} :fresh defmacro 5 :x =")
         assert "redefining" not in caplog.text
 
     def test_loading_the_prelude_itself_does_not_warn(self, caplog):

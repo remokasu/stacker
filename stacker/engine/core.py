@@ -77,6 +77,25 @@ def _empty_stack_messages() -> frozenset[str]:
 _EMPTY_STACK_MESSAGES = _empty_stack_messages()
 
 
+def _name_in(value: object) -> str | None:
+    """Returns the name ``value`` stands for, or None if it is not a name.
+
+    A ``Symbol`` stands for its name; a one-token block ``{name}`` or
+    ``{:name}`` (a quoted name) for the name inside. Shared by the words
+    that take a name (``_name_of``) and by macro templates (``_interpolate``),
+    so what counts as a name is decided in one place.
+    """
+    if isinstance(value, Symbol):
+        return value.name
+    if isinstance(value, StackerCore) and len(value.tokens) == 1:
+        token = value.tokens[0]
+        if is_symbol(token):
+            return token[1:]  # type: ignore[index]
+        if is_bare_name(token):
+            return token  # type: ignore[return-value]
+    return None
+
+
 def _symbol_in(args: object) -> str | None:
     """Returns the name of the first ``Symbol`` among ``args``.
 
@@ -1296,14 +1315,11 @@ class StackerCore:
         Raises:
             StackerSyntaxError: If ``symbol`` cannot denote a name.
         """
-        if isinstance(symbol, Symbol):
-            return symbol.name
+        name = _name_in(symbol)
+        if name is not None:
+            return name
         if isinstance(symbol, StackerCore) and len(symbol.tokens) == 1:
             token = symbol.tokens[0]
-            if is_symbol(token):
-                return token[1:]  # type: ignore[index]
-            if is_bare_name(token):
-                return token  # type: ignore[return-value]
             if isinstance(token, String):
                 symbol = token  # `{"x"}` is a string literal, not a name
         if isinstance(symbol, str):
@@ -1426,8 +1442,14 @@ class StackerCore:
 
         Only the template tree is walked: values spliced in are never
         re-scanned, so caller-supplied code is left exactly as written.
-        Bare-name tokens bound in ``scope`` are replaced by their values;
-        ``:name``, string literals and list literals are untouched.
+        Bare-name tokens bound in ``scope`` are replaced by their values and
+        ``:name`` tokens by the symbol of the name the binding holds, so a
+        template can bind the name an argument or ``gensym`` stands for
+        (``{ x eval :t set t t + }``). String and list literals and unbound
+        names are untouched.
+
+        Raises:
+            StackerSyntaxError: A ``:name`` whose binding is not a name.
 
         Args:
             block: Block literal from the macro body.
@@ -1441,8 +1463,15 @@ class StackerCore:
         def substitute(token: object) -> object:
             if isinstance(token, StackerCore):
                 return build(token)
-            if type(token) is not str or token.startswith(SYMBOL_PREFIX) or token not in bindings:
-                return token  # literals, `:name` and unbound names stay as written
+            if type(token) is not str:
+                return token  # literals stay as written
+            if token.startswith(SYMBOL_PREFIX):
+                name = token[1:]
+                if name not in bindings:
+                    return token  # an unbound `:name` (or a stray `:`) stays as written
+                return SYMBOL_PREFIX + self._template_name(name, bindings[name])
+            if token not in bindings:
+                return token
             # A symbol becomes a bare name, a string a string literal,
             # anything else is spliced as a value (see engine/boundary.py).
             return value_to_token(bindings[token])
@@ -1455,6 +1484,27 @@ class StackerCore:
             return copy_core
 
         return build(block)
+
+    @staticmethod
+    def _template_name(name: str, value: object) -> str:
+        """Returns the name ``value`` stands for, for a ``:name`` in a template.
+
+        Raises:
+            StackerSyntaxError: If ``value`` is not a name that can be written
+                back as ``:name`` (a number, a string, a longer block, ...).
+        """
+        held = _name_in(value)
+        if held is not None and is_symbol_name(held):
+            return held
+        if held is not None:  # a Symbol built from Python with text no `:name` can spell
+            shown = f"the invalid name {held!r}"
+        elif isinstance(value, str):  # a String literal or a plain str value
+            shown = f"the string {str(value)!r}"
+        else:
+            shown = str(value)
+        raise StackerSyntaxError(
+            f"`:{name}` in a macro template needs a name, but `{name}` holds {shown}"
+        )
 
     def _expand_macro(self, name: str, stack: stack_data[object], *, evaluate: bool = True) -> None:
         """Expands a macro call and (by default) evaluates the expansion.
