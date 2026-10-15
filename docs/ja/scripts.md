@@ -55,7 +55,7 @@ stacker fact.stk
 - `"` ... `"` や `"""` ... `"""`（文字列。改行は文字列の一部になります）
 - `#|` ... `|#`（ブロックコメント）
 
-上の `fact.stk` では、`{n} {` から `} fact defun` までが 1 つの式、`[1 2 3` から `4 5] sum echo` までがもう 1 つの式です。
+上の `fact.stk` では、`{n} {` から `} :fact defun` までが 1 つの式、`[1 2 3` から `4 5] sum echo` までがもう 1 つの式です。
 
 `do`・`dolist`・`times` の本体も、ブロックが閉じるまで次の行へ続けて書けます。
 
@@ -186,7 +186,7 @@ stacker --recursion-limit 1800 deep.stk
 
 数えているのは、実行中の関数呼び出し（入れ子の深さ）です。呼び出しが終わった関数は数えません。上限が 1500 のとき、深さ 1500 までは動き、1501 段目の呼び出しで止まります。
 
-止まったときの表示です（`{n} {n f} f defun` のあとに `3 f` を実行した場合）。
+止まったときの表示です（`{n} {n f} :f defun` のあとに `3 f` を実行した場合）。
 
 ```text
 /home/user/project/loop.stk:2: error: Maximum recursion depth (1500) exceeded in function `f`
