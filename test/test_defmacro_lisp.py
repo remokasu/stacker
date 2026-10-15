@@ -61,7 +61,7 @@ class TestArguments:
         with pytest.raises(StackUnderflowError, match="m"):
             run("{a b} {{a b}} :m defmacro", "1 m")
 
-    def test_kernel_word_argument_names_are_allowed(self):
+    def test_built_in_word_argument_names_are_allowed(self):
         assert [str(b) for b in run("{dup} { {dup dup} } :m defmacro", "{7} m")] == [
             "{7}",
             "{7}",

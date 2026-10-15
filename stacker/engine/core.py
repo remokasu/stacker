@@ -1273,10 +1273,12 @@ class StackerCore:
         name = _name_in(symbol)
         if name is not None:
             return name
+        # A one-token block that is not a name: pull a string literal out of
+        # it (`{"x"}`) so the message below says it is a string, not a block.
         if isinstance(symbol, StackerCore) and len(symbol.tokens) == 1:
             token = symbol.tokens[0]
             if isinstance(token, String):
-                symbol = token  # `{"x"}` is a string literal, not a name
+                symbol = token
         if isinstance(symbol, str):
             raise StackerSyntaxError(
                 f"`{word}` expects a name, got the string {str(symbol)!r}. "
@@ -1406,15 +1408,15 @@ class StackerCore:
         (``{ x eval :t set t t + }``). String and list literals and unbound
         names are untouched.
 
-        Raises:
-            StackerSyntaxError: A ``:name`` whose binding is not a name.
-
         Args:
             block: Block literal from the macro body.
             scope: Expansion scope; only its own bindings are consulted.
 
         Returns:
             A fresh block whose scope is the caller's.
+
+        Raises:
+            StackerSyntaxError: A ``:name`` whose binding is not a name.
         """
         bindings = scope.own_bindings()
 

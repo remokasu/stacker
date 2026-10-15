@@ -89,6 +89,29 @@ class TestANameIsWrittenAsASymbol:
         assert run(f"[1 2 3] 0 {name} :y {{x y +}} fold") == [6]
 
 
+class TestAssignIsSet:
+    """`=` reads its name like `set` and the two are interchangeable."""
+
+    def test_several_assignments_in_a_row(self):
+        assert run("7 :a = 8 :b = a b *") == [56]
+
+    def test_assign_and_set_are_equivalent(self):
+        assert run("10 :x set 20 :y set x y *") == run("10 :x = 20 :y = x y *") == [200]
+
+    def test_assign_inside_a_function(self):
+        fib = "{n} {0 :a = 1 :b = 2 n :i {a b + :temp = b :a = temp :b =} do b} :fib defun 10 fib"
+        assert run(fib) == [55]
+
+    def test_assign_inside_a_loop(self):
+        assert run("0 :total = 1 5 :i {total i + :total =} do total") == [15]
+
+
+def test_a_string_is_not_a_name_but_symbol_makes_one():
+    with pytest.raises(StackerSyntaxError):
+        run('5 "stringvar" set')
+    assert run('5 "stringvar" symbol set stringvar') == [5]
+
+
 def test_a_bound_bare_name_before_a_binding_word_is_its_value():
     # `x` holds 5, so `x` pushes 5 and `set` is handed a number, not a name
     with pytest.raises(StackerSyntaxError, match="`set` expects a name, got 5"):
