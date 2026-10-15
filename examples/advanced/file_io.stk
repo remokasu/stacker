@@ -57,15 +57,15 @@ Line 5" "multiline.txt" write-to-file
 "" echo
 "=== Reading Lines ===" echo
 
-"multiline.txt" read-lines lines =
+"multiline.txt" read-lines :lines =
 
 "Number of lines:" echo
 lines len echo
 
 # Print each line with line number
-0 idx =
-lines line {
-    idx 1 + idx =
+0 :idx =
+lines :line {
+    idx 1 + :idx =
     idx str ":" + line + echo
 } dolist
 
@@ -86,9 +86,9 @@ Charlie,35,Kyoto" "data.csv" write-to-file
 "=== Writing Numbers to File ===" echo
 
 # Generate and save numbers
-"" content =
-1 10 i {
-    content i str + "\n" + content =
+"" :content =
+1 10 :i {
+    content i str + "\n" + :content =
 } do
 
 content "numbers.txt" write-to-file
@@ -100,7 +100,7 @@ content "numbers.txt" write-to-file
 
 {message} {
     "[LOG] " message + "\n" + "app.log" append-to-file
-} write-log defun
+} :write-log defun
 
 "Application started" write-log
 "Processing data" write-log
@@ -122,7 +122,7 @@ debug=true" "config.txt" write-to-file
 "Configuration written" echo
 
 "config.txt" read-lines
-line {
+:line {
     line len 0 >
     line 0 nth "#" != and {
         line echo
@@ -136,7 +136,7 @@ line {
 "The quick brown fox jumps over the lazy dog.
 The dog was not amused." "sample.txt" write-to-file
 
-"sample.txt" read-from-file text =
+"sample.txt" read-from-file :text =
 
 "Text length:" echo
 text len echo

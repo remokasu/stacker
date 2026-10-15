@@ -25,14 +25,14 @@ class TestTextIsReadFirst:
         assert "read-from-string" in str(info.value)
 
     def test_assignment_inside_the_text_rebinds_an_existing_variable(self):
-        assert run("5 x set", '"6 x set x" read-from-string eval') == [6]
+        assert run("5 :x set", '"6 :x set x" read-from-string eval') == [6]
 
     def test_variables_are_resolved_when_the_block_runs(self):
-        assert run("5 x set", '"x x +" read-from-string eval') == [10]
+        assert run("5 :x set", '"x x +" read-from-string eval') == [10]
 
     def test_lambda_held_in_a_variable_is_a_value_inside_the_text(self):
         # The same as writing the name in a block: `f` pushes the lambda, `eval` calls it.
-        assert run("{a} {a 1 +} lambda f set", '"5 f eval" read-from-string eval') == [6]
+        assert run("{a} {a 1 +} lambda :f set", '"5 f eval" read-from-string eval') == [6]
 
 
 class TestEvalOnValues:

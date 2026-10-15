@@ -53,7 +53,7 @@ class TestReferences:
         with pytest.raises(UndefinedSymbolError):
             run("[a b]")
         with pytest.raises(UndefinedSymbolError):
-            run("{v} {{v}} m defmacro", "foo m")
+            run("{v} {{v}} :m defmacro", "foo m")
 
     def test_alias_needs_a_quoted_name(self):
         with pytest.raises(UndefinedSymbolError):
@@ -68,9 +68,9 @@ class TestNamesThemselves:
         assert str(run("{foo}")[0]) == "{foo}"
 
     def test_name_positions_are_not_references(self):
-        assert run("5 foo set foo") == [5]
-        assert run("0 1 3 i {i +} do") == [6]
-        assert run("{a} {a} f defun") == []
+        assert run("5 :foo set foo") == [5]
+        assert run("0 1 3 :i {i +} do") == [6]
+        assert run("{a} {a} :f defun") == []
 
 
 class TestHints:

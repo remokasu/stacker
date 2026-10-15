@@ -5,7 +5,7 @@
     {1}
     {n n 1 - fact *}
     ifelse
-} fact defun
+} :fact defun
 
 # Calculate 5!
 5 fact echo  # Output: 120

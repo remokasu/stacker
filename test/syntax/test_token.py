@@ -43,7 +43,7 @@ class TestUnit(unittest.TestCase):
         # undefined one is an error, a defined one is the variable's value.
         with self.assertRaises(error.UndefinedSymbolError):
             stacker.eval("[x]")
-        self.assertEqual(stacker.eval("5 x set [x]")[-1], [5])
+        self.assertEqual(stacker.eval("5 :x set [x]")[-1], [5])
 
     def test_invalid_list_2(self):
         stacker = Stacker()

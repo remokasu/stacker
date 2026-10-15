@@ -327,7 +327,7 @@ counter
 {x} {
     counter 1 + :counter global
     x counter *
-} multiply_with_count defun
+} :multiply_with_count defun
 
 10 multiply_with_count
 counter
@@ -350,7 +350,7 @@ counter
 {} {
     counter 1 + :counter global
     counter
-} increment defun
+} :increment defun
 
 increment drop
 increment drop
@@ -376,11 +376,11 @@ counter
     {x} {
         x :value global
         value
-    } set_value defun
+    } :set_value defun
 
     42 set_value drop
     value
-} outer defun
+} :outer defun
 
 outer
 value
@@ -404,14 +404,14 @@ class TestSetVsGlobal(unittest.TestCase):
         self.script_mode = ScriptMode(self.stacker)
 
     def test_set_updates_existing_global(self):
-        """Test that set updates an :existing global variable."""
+        """Test that set updates an existing global variable."""
         script_content = """
-10 x set
+10 :x set
 
 {} {
-    20 x set
+    20 :x set
     x
-} update defun
+} :update defun
 
 update
 x
@@ -431,9 +431,9 @@ x
         """Test that set creates local variable if it doesn't exist."""
         script_content = """
 {} {
-    42 newvar set
+    42 :newvar set
     newvar
-} create_local defun
+} :create_local defun
 
 create_local
 """
@@ -449,16 +449,16 @@ create_local
             os.unlink(temp_file)
 
     def test_set_vs_global_difference(self):
-        """Test the difference between set :and global operators."""
+        """Test the difference between set and global operators."""
         script_content = """
-0 a set
-0 b set
+0 :a set
+0 :b set
 
 {} {
-    10 a set
+    10 :a set
     20 :b global
     b
-} modify defun
+} :modify defun
 
 modify
 a
@@ -488,7 +488,7 @@ class TestLoopVariableScope(unittest.TestCase):
     def test_do_loop_variable_is_local(self):
         """Test that do loop variables are local to the loop."""
         script_content = """
-999 i set
+999 :i set
 
 0 5 :i {
     i
@@ -515,7 +515,7 @@ i
     def test_dolist_loop_variable_is_local(self):
         """Test that dolist loop variables are local to the loop."""
         script_content = """
-999 item set
+999 :item set
 
 [10 20 30] :item {
     item
@@ -589,10 +589,10 @@ sum
     def test_loop_updating_existing_variable_with_set(self):
         """Test that loop can update existing variables with set operator."""
         script_content = """
-0 total set
+0 :total set
 
 1 5 :i {
-    total i + total set
+    total i + :total set
 } do
 
 total
@@ -628,7 +628,7 @@ class TestRecursiveWithGlobal(unittest.TestCase):
     } {
         n n 1 - factorial *
     } ifelse
-} factorial defun
+} :factorial defun
 
 5 factorial
 count
@@ -658,7 +658,7 @@ count
         acc n + :acc global
         n 1 - sum_recursive
     } ifelse
-} sum_recursive defun
+} :sum_recursive defun
 
 10 sum_recursive
 """
@@ -675,24 +675,24 @@ count
 
 
 class TestComplexGlobalScenarios(unittest.TestCase):
-    """Tests for complex scenarios :mixing global, local, and set."""
+    """Tests for complex scenarios mixing global, local, and set."""
 
     def setUp(self):
         self.stacker = Stacker()
         self.script_mode = ScriptMode(self.stacker)
 
     def test_mixed_global_local_set(self):
-        """Test :mixing global, local, and set in complex scenario."""
+        """Test mixing global, local, and set in complex scenario."""
         script_content = """
 0 :a global
-0 b set
+0 :b set
 
 {} {
     10 :a global
-    20 b set
-    30 c set
+    20 :b set
+    30 :c set
     0
-} modify defun
+} :modify defun
 
 modify drop
 a
@@ -724,7 +724,7 @@ b
         0
     } do
     total
-} accumulate defun
+} :accumulate defun
 
 10 accumulate drop
 total
@@ -748,7 +748,7 @@ total
 {x} {
     total x + :total global
     total
-} add_to_total defun
+} :add_to_total defun
 
 1 5 :i {
     i add_to_total drop
@@ -775,12 +775,12 @@ total
 {x} {
     shared x + :shared global
     shared
-} add_to_shared defun
+} :add_to_shared defun
 
 {x} {
     shared x * :shared global
     shared
-} multiply_shared defun
+} :multiply_shared defun
 
 5 add_to_shared drop
 2 multiply_shared drop
@@ -812,7 +812,7 @@ class TestScopeEdgeCases(unittest.TestCase):
 
 {x} {
     x 2 *
-} double defun
+} :double defun
 
 5 double
 x
@@ -893,7 +893,7 @@ class TestGlobalWithDefinedName(unittest.TestCase):
 
     def test_global_reassigns_existing_variable(self):
         stacker = Stacker()
-        stacker.process_expression("5 counter =")
-        stacker.process_expression("10 counter global")
+        stacker.process_expression("5 :counter =")
+        stacker.process_expression("10 :counter global")
         stacker.process_expression("counter")
         self.assertEqual(stacker.stack[-1], 10)

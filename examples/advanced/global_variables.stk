@@ -1,11 +1,11 @@
 # Global variables example
 
-0 counter global
+0 :counter global
 
 {x} {
-    counter 1 + counter =  # Increment global counter
+    counter 1 + :counter =  # Increment global counter
     x counter *
-} multiply_by_counter defun
+} :multiply_by_counter defun
 
 # Each call increments the counter
 5 multiply_by_counter echo   # Output: 5  (5 * 1)

@@ -30,10 +30,10 @@ class TestDollarIsAlwaysASymbol:
         assert run(":x") == [Symbol("x")]
 
     def test_does_not_resolve_to_a_bound_value(self):
-        assert run("5 x set :x") == [Symbol("x")]
+        assert run("5 :x set :x") == [Symbol("x")]
 
     def test_bound_symbol_stays_a_symbol(self):
-        assert run("5 x set :x y set y") == [Symbol("x")]
+        assert run("5 :x set :x :y set y") == [Symbol("x")]
 
     def test_symbol_equality(self):
         assert run(":x :x ==") == [True]
@@ -45,13 +45,13 @@ class TestDollarIsAlwaysASymbol:
 
     def test_symbol_is_not_a_quoted_name_block(self):
         # `==` evaluates a block argument, so `x` must be bound for the comparison to happen.
-        assert run("5 x set :x {x} ==") == [False]
+        assert run("5 :x set :x {x} ==") == [False]
         (block,) = run("{x}")
         assert (Symbol("x") == block) is False
         assert (block == Symbol("x")) is False
 
     def test_str_gives_the_name(self):
-        assert run("5 x set :x str") == ["x"]
+        assert run("5 :x set :x str") == ["x"]
 
     def test_gensym_is_a_symbol(self):
         (sym,) = run("gensym")
@@ -71,50 +71,50 @@ class TestSymbolEval:
         assert run("3 4 :+ eval") == run("3 4 {+} eval")
 
     def test_symbol_eval_of_a_variable_pushes_its_value(self):
-        assert run("5 x set :x eval") == [5]
+        assert run("5 :x set :x eval") == [5]
 
     def test_symbol_eval_of_a_block_variable_pushes_the_block(self):
-        (block,) = run("{1 2 +} b set :b eval")
+        (block,) = run("{1 2 +} :b set :b eval")
         assert isinstance(block, StackerCore)
 
     def test_bare_name_eval_of_a_block_variable_runs_it(self):
-        assert run("{1 2 +} b set b eval") == [3]
+        assert run("{1 2 +} :b set b eval") == [3]
 
     def test_string_is_text_not_code(self):
         with pytest.raises(StackerTypeError) as info:
-            run('{1 2 +} b set "b" eval')
+            run('{1 2 +} :b set "b" eval')
         assert "read-from-string" in str(info.value)
-        (block,) = run('{1 2 +} b set "b" read-from-string eval')
+        (block,) = run('{1 2 +} :b set "b" read-from-string eval')
         assert isinstance(block, StackerCore)
 
     def test_symbol_eval_of_a_macro_expands_it(self):
-        assert run("{} {{2}} m defmacro :m eval") == [2]
+        assert run("{} {{2}} :m defmacro :m eval") == [2]
 
 
 class TestLambdaIsAValue:
     def test_bare_reference_pushes_the_lambda(self):
-        result = run("{a} {a 2 *} lambda f set 5 f")
+        result = run("{a} {a 2 *} lambda :f set 5 f")
         assert result[0] == 5
         assert type(result[1]).__name__ == "StackerLambda"
 
     def test_eval_calls_it(self):
-        assert run("{a} {a 2 *} lambda f set 5 f eval") == [10]
+        assert run("{a} {a 2 *} lambda :f set 5 f eval") == [10]
 
     def test_symbol_eval_pushes_it(self):
-        result = run("{a} {a 2 *} lambda f set 5 :f eval")
+        result = run("{a} {a 2 *} lambda :f set 5 :f eval")
         assert result[0] == 5
         assert type(result[1]).__name__ == "StackerLambda"
-        assert run("{a} {a 2 *} lambda f set 5 :f eval eval") == [10]
+        assert run("{a} {a 2 *} lambda :f set 5 :f eval eval") == [10]
 
     def test_void_result_is_not_pushed(self):
-        assert run("{} {} lambda z set z eval") == []
+        assert run("{} {} lambda :z set z eval") == []
 
     def test_missing_arguments_raise_stack_underflow(self):
         with pytest.raises(StackUnderflowError):
-            run("{a} {a 2 *} lambda f set f eval")
+            run("{a} {a 2 *} lambda :f set f eval")
 
     def test_block_argument_binds_raw(self):
-        (block,) = run("{x} {x} lambda idf set {2 *} idf eval")
+        (block,) = run("{x} {x} lambda :idf set {2 *} idf eval")
         assert isinstance(block, StackerCore)
 
     def test_lambda_passed_to_a_function_as_a_value(self):
@@ -124,22 +124,22 @@ class TestLambdaIsAValue:
         ) == [[2, 4, 6]]
 
     def test_defun_functions_are_still_called_by_name(self):
-        assert run("{x y} {x y *} multiply defun 3 4 multiply") == [12]
+        assert run("{x y} {x y *} :multiply defun 3 4 multiply") == [12]
 
 
 class TestConditions:
     def test_symbol_is_true(self):
-        assert run("0 x = :x {1} if") == [1]
+        assert run("0 :x = :x {1} if") == [1]
 
     def test_bare_name_tests_the_value(self):
-        assert run("0 x = x {1} if") == []
+        assert run("0 :x = x {1} if") == []
 
     def test_string_is_not_looked_up(self):
-        assert run('0 flag = "flag" {1} if') == [1]
+        assert run('0 :flag = "flag" {1} if') == [1]
         assert run('"" {1} if') == []
 
     def test_cond_agrees_with_if(self):
-        assert run("0 x = :x {1} 1 cond") == [1]
+        assert run("0 :x = :x {1} 1 cond") == [1]
 
 
 class TestArgumentLists:
@@ -147,12 +147,12 @@ class TestArgumentLists:
         "program",
         [
             "{:a} {a} lambda",
-            '{"a"} {a} f defun',
-            ":a {a 2 *} f defun",
-            "[1 2] {a b +} f defun",
-            "{a a} {a} f defun",
-            "{5} {5} f defun",
-            "{{a}} {a} f defun",
+            '{"a"} {a} :f defun',
+            ":a {a 2 *} :f defun",
+            "[1 2] {a b +} :f defun",
+            "{a a} {a} :f defun",
+            "{5} {5} :f defun",
+            "{{a}} {a} :f defun",
         ],
     )
     def test_non_bare_names_are_rejected(self, program):
@@ -160,42 +160,42 @@ class TestArgumentLists:
             run(program)
 
     def test_empty_argument_list(self):
-        assert run("{} {42} f defun f") == [42]
+        assert run("{} {42} :f defun f") == [42]
 
 
 class TestValuesSplicedIntoBlocks:
     def test_sub_of_a_symbol_is_a_quoted_name(self):
         (block,) = run(":x sub")
         assert type(block.tokens[0]) is str and block.tokens[0] == "x"
-        assert run("5 x set :x sub eval") == [5]
+        assert run("5 :x set :x sub eval") == [5]
 
     def test_sub_of_a_string_is_a_string_literal(self):
         (block,) = run('"x" sub')
         assert isinstance(block.tokens[0], String)
-        assert run('5 x set "x" sub eval') == ["x"]
+        assert run('5 :x set "x" sub eval') == ["x"]
 
     def test_sub_of_a_computed_string_is_a_string_literal(self):
         assert run('"a" "b" + sub eval') == ["ab"]
 
     def test_bound_string_keeps_its_type(self):
-        (value,) = run('"x" y set y')
+        (value,) = run('"x" :y set y')
         assert isinstance(value, String)
 
 
 class TestMacroArguments:
     def test_symbol_argument_is_spliced_as_a_bare_name(self):
-        assert run("3 foo =", "{v} {{v}} m defmacro", ":foo m") == [3]
+        assert run("3 :foo =", "{v} {{v}} :m defmacro", ":foo m") == [3]
 
     def test_symbol_argument_used_directly_is_a_symbol(self):
-        assert run("{v} {v} m defmacro", ":foo m") == [Symbol("foo")]
+        assert run("{v} {v} :m defmacro", ":foo m") == [Symbol("foo")]
 
     def test_string_bound_in_the_body_is_spliced_as_a_literal(self):
-        (block,) = run('{} { "s" t = {t} } m defmacro', ":m macroexpand")
+        (block,) = run('{} { "s" :t = {t} } :m defmacro', ":m macroexpand")
         assert isinstance(block.tokens[0], String)
 
     def test_gensym_name_is_spliced_as_a_bare_name(self):
         assert run(
-            "{x} { gensym t = { x eval t set t t + } } {double!} defmacro",
+            "{x} { gensym :t = { x eval :t set t t + } } {double!} defmacro",
             "{3 4 +} double!",
         ) == [14]
 
@@ -209,7 +209,7 @@ class TestSymbolInComputation:
 
     def test_binding_does_not_help(self):
         with pytest.raises(StackerTypeError):
-            run("5 x set :x 1 +")
+            run("5 :x set :x 1 +")
 
     def test_inside_a_block(self):
         with pytest.raises(StackerTypeError):
@@ -217,7 +217,7 @@ class TestSymbolInComputation:
 
     @pytest.mark.parametrize(
         "program",
-        ["2 n set 0 :n i {i} do", "{1} :n times", ":x {} map", ":xs x {x} dolist", ":n cond"],
+        ["2 :n set 0 :n :i {i} do", "{1} :n times", ":x {} map", ":xs :x {x} dolist", ":n cond"],
     )
     def test_symbol_where_a_value_is_needed(self, program):
         with pytest.raises(StackerTypeError):
@@ -251,12 +251,12 @@ class TestDisplay:
         from stacker.util.disp import disp_default
 
         assert disp_default(run('"a" "b" +')) == "['ab']"
-        assert disp_default(run('"hello" s = s')) == "['hello']"
+        assert disp_default(run('"hello" :s = s')) == "['hello']"
 
     def test_block_tokens_are_shown_as_written(self):
         (block,) = run("{foo}")
         assert str(block) == "{foo}"
-        (block,) = run("5 foo set {foo}")
+        (block,) = run("5 :foo set {foo}")
         assert str(block) == "{foo}"
         (block,) = run("{:x}")
         assert str(block) == "{:x}"
@@ -302,8 +302,8 @@ class TestKeywordLiterals:
             run(program)
 
     def test_other_constants_are_still_variables(self):
-        assert run("5 pi set pi") == [5]
-        assert run("1 3 e {e} do") == [1, 2, 3]
+        assert run("5 :pi set pi") == [5]
+        assert run("1 3 :e {e} do") == [1, 2, 3]
 
     def test_not_listed_by_vars(self, capsys):
         run("vars")
@@ -322,12 +322,12 @@ class TestListLiterals:
             run(program)
 
     def test_bare_names_are_references(self):
-        assert run("5 x set [x]") == [[5]]
+        assert run("5 :x set [x]") == [[5]]
         with pytest.raises(UndefinedSymbolError):
             run("[x]")
 
     def test_nested_names_are_references_too(self):
-        assert run("5 x set [[x 1] [2 3]]") == [[[5, 1], [2, 3]]]
+        assert run("5 :x set [[x 1] [2 3]]") == [[[5, 1], [2, 3]]]
         with pytest.raises(UndefinedSymbolError):
             run("[[x]]")
 
@@ -342,7 +342,7 @@ class TestListLiterals:
         assert capsys.readouterr().out.strip() == "1"
 
     def test_lists_are_fresh_on_every_evaluation(self):
-        assert run("[] lst set 1 3 :i {lst [i i] + lst set} do lst") == [[1, 1, 2, 2, 3, 3]]
+        assert run("[] :lst set 1 3 :i {lst [i i] + :lst set} do lst") == [[1, 1, 2, 2, 3, 3]]
 
 
 class TestStringsAreNotNames:
@@ -446,18 +446,18 @@ class TestEdgeCasesNotCoveredElsewhere:
         assert run('3 4 "+" read-from-string eval') == [7]
 
     def test_symbol_equality_with_a_bound_variable_of_the_same_name(self):
-        assert run("5 x set :x :x ==") == [True]
+        assert run("5 :x set :x :x ==") == [True]
 
     def test_quoted_name_passes_through_a_macro_unchanged(self):
-        (block,) = run("{v} {{v}} m defmacro", "{foo} m")
+        (block,) = run("{v} {{v}} :m defmacro", "{foo} m")
         assert str(block) == "{foo}"
 
     def test_macro_given_an_unbound_symbol_fails_where_the_expansion_references_it(self):
         with pytest.raises(UndefinedSymbolError):
-            run("{v} {{v}} m defmacro", ":foo m")
+            run("{v} {{v}} :m defmacro", ":foo m")
 
     def test_macro_given_a_bound_symbol_does_not_turn_it_into_the_value_early(self):
-        assert run("3 foo =", "{v} {v} m defmacro", ":foo m") == [Symbol("foo")]
+        assert run("3 :foo =", "{v} {v} :m defmacro", ":foo m") == [Symbol("foo")]
 
     def test_literals_in_a_list_literal(self):
         assert run("[true None]") == [[True, None]]
@@ -481,10 +481,10 @@ class TestEdgeCasesNotCoveredElsewhere:
         assert run(":a-b :a? :1a :>=") == [Symbol("a-b"), Symbol("a?"), Symbol("1a"), Symbol(">=")]
 
     def test_string_holding_a_dollar_name_listed_char_by_char(self):
-        assert run('"$x" y set y list') == [["$", "x"]]
+        assert run('"$x" :y set y list') == [["$", "x"]]
 
     def test_symbol_bound_through_a_name_keeps_its_type(self):
-        assert run(":x y set y type") == [Symbol]
+        assert run(":x :y set y type") == [Symbol]
 
     def test_listn_of_symbols(self):
         assert run(":x 1 listn") == [[Symbol("x")]]
@@ -492,7 +492,7 @@ class TestEdgeCasesNotCoveredElsewhere:
 
     def test_nth_symbol_is_not_a_value_in_arithmetic(self):
         with pytest.raises(StackerTypeError):
-            run("5 x set {x} 0 nth 1 +")
+            run("5 :x set {x} 0 nth 1 +")
 
     def test_symbols_survive_stack_words(self):
         assert run(":x :y swap") == [Symbol("y"), Symbol("x")]
@@ -523,11 +523,11 @@ class TestSymbolRoundTripsThroughBlocks:
         assert run('":x" read-from-string 0 nth')[-1] == Symbol("x")
 
     def test_read_from_string_does_not_look_up_the_name(self):
-        (block,) = run("5 x set :x read-from-string")
+        (block,) = run("5 :x set :x read-from-string")
         assert str(block) == "{x}"
 
     def test_read_from_string_then_eval_references_the_name(self):
-        assert run("5 x set :x read-from-string eval") == [5]
+        assert run("5 :x set :x read-from-string eval") == [5]
         with pytest.raises(UndefinedSymbolError):
             run(":x read-from-string eval")
 
@@ -561,7 +561,7 @@ class TestSymbolRoundTripsThroughBlocks:
         assert block.tokens[2] == 5
 
     def test_subn_evaluates_back_to_the_values(self):
-        assert run("5 a set", ':a "b" 2 subn eval') == [5, "b"]
+        assert run("5 :a set", ':a "b" 2 subn eval') == [5, "b"]
 
     def test_sub_of_other_values_is_a_value_token(self):
         assert str(run("5 sub")[0]) == "{5}"
@@ -595,13 +595,13 @@ class TestSymbolsInControlFlow:
         assert run(f"{condition} {{1}} 1 cond") == expected
 
     def test_cond_with_a_string_is_not_looked_up(self):
-        assert run('0 flag = "flag" {1} 1 cond') == [1]
+        assert run('0 :flag = "flag" {1} 1 cond') == [1]
 
     def test_second_clause_of_cond_sees_a_symbol_as_true(self):
         assert run("0 {1} :x {2} 2 cond") == [2]
 
     def test_ifelse_with_a_symbol_takes_the_true_branch(self):
-        assert run("0 x = :x {1} {2} ifelse") == [1]
+        assert run("0 :x = :x {1} {2} ifelse") == [1]
 
     def test_ifelse_with_an_empty_string_takes_the_false_branch(self):
         assert run('"" {1} {2} ifelse') == [2]
@@ -611,11 +611,11 @@ class TestSymbolsInControlFlow:
             run("{1} :n times")
 
     def test_times_with_a_bound_name_uses_the_value(self):
-        assert run("3 n set {1} n times") == [1, 1, 1]
+        assert run("3 :n set {1} n times") == [1, 1, 1]
 
     def test_dolist_with_a_symbol_list_is_a_type_error(self):
         with pytest.raises(StackerTypeError):
-            run(":xs x {x} dolist")
+            run(":xs :x {x} dolist")
 
     def test_dolist_with_a_symbol_variable_and_symbol_elements(self):
         assert run("[:a :b] :x {x} dolist") == [Symbol("a"), Symbol("b")]
@@ -624,11 +624,11 @@ class TestSymbolsInControlFlow:
         assert run("[1 2] {x} {x 10 *} dolist") == [10, 20]
 
     def test_dolist_over_a_string_yields_characters(self):
-        assert run('"ab" x {x} dolist') == ["a", "b"]
+        assert run('"ab" :x {x} dolist') == ["a", "b"]
 
     @pytest.mark.parametrize(
         "program",
-        ['1 3 "i" {i} do', '1 3 {i j} {i} do', '[1] "x" {x} dolist', '[1 2] 0 "acc" x {acc} reduce'],
+        ['1 3 "i" {i} do', '1 3 {i j} {i} do', '[1] "x" {x} dolist', '[1 2] 0 "acc" :x {acc} reduce'],
     )
     def test_loop_variable_must_be_a_name(self, program):
         with pytest.raises(StackerSyntaxError):
@@ -643,14 +643,14 @@ class TestSymbolsInControlFlow:
             run("1 3 :i {i} do i")
 
     def test_do_loop_variable_shadows_an_outer_binding_only_inside(self):
-        assert run("5 i set 1 2 :i {i} do i") == [1, 2, 5]
+        assert run("5 :i set 1 2 :i {i} do i") == [1, 2, 5]
 
     def test_loop_variable_symbol_value_is_the_number_not_the_name(self):
         assert run("1 3 :i {i} do") == [1, 2, 3]
 
     def test_do_with_a_symbol_bound_to_a_number_is_still_a_symbol(self):
         with pytest.raises(StackerTypeError):
-            run("2 n set 1 :n i {i} do")
+            run("2 :n set 1 :n :i {i} do")
 
     def test_reduce_with_all_name_spellings(self):
         for names in ("acc x", ":acc :x", "{acc} {x}"):
@@ -660,24 +660,24 @@ class TestSymbolsInControlFlow:
         assert run("[1 2 3] 0 :acc :x {acc x +} fold") == [6]
 
     def test_fold_with_a_function_defined_by_defun(self):
-        assert run("{x} {x 1 +} f defun {1 2} 0 acc x {acc x + f} fold") == [5]
+        assert run("{x} {x 1 +} :f defun {1 2} 0 :acc :x {acc x + f} fold") == [5]
 
     def test_fold_over_a_list_of_symbols_yields_the_last_symbol(self):
-        assert run("[:a :b] 0 acc x {x} fold") == [Symbol("b")]
+        assert run("[:a :b] 0 :acc :x {x} fold") == [Symbol("b")]
 
     def test_reduce_adding_symbols_is_a_type_error(self):
         with pytest.raises(StackerTypeError):
-            run("[:a :b] 0 acc x {acc x +} reduce")
+            run("[:a :b] 0 :acc :x {acc x +} reduce")
 
     def test_reduce_over_a_block_binds_symbols(self):
-        assert run("{a b} 0 acc x {x} reduce") == [Symbol("b")]
+        assert run("{a b} 0 :acc :x {x} reduce") == [Symbol("b")]
 
     def test_reduce_over_a_block_of_strings_concatenates(self):
-        assert run('{"a" "b"} "" acc x {acc x +} reduce') == ["ab"]
+        assert run('{"a" "b"} "" :acc :x {acc x +} reduce') == ["ab"]
 
     def test_macroexpand_accepts_the_three_spellings(self):
         for spelling in (":dbl", "{dbl}", "dbl"):
-            (block,) = run("{a} {{a a +}} dbl defmacro", f"{{3}} {spelling} macroexpand")
+            (block,) = run("{a} {{a a +}} :dbl defmacro", f"{{3}} {spelling} macroexpand")
             assert str(block) == "{{3} {3} +}"
 
     def test_macroexpand_of_an_unknown_name(self):
@@ -721,16 +721,16 @@ class TestGensymHygiene:
         (probe,) = run("gensym")
         clash = f"__g{int(probe.name[3:]) + 1}"
         stacker = Stacker()
-        stacker.process_expression(f"99 {clash} set")
-        stacker.process_expression("{x} { gensym t = { x eval t set t t + } } {double!} defmacro")
+        stacker.process_expression(f"99 :{clash} set")
+        stacker.process_expression("{x} { gensym :t = { x eval :t set t t + } } {double!} defmacro")
         stacker.process_expression("{3 4 +} double!")
         assert list(stacker.stack) == [14]
 
     def test_symbol_made_by_gensym_is_a_symbol_after_binding(self):
-        assert run("gensym t = t symbol?") == [True]
+        assert run("gensym :t = t symbol?") == [True]
 
     def test_gensym_symbol_works_as_a_variable_name(self):
-        assert run("gensym n = 7 n set 3") == [3]
+        assert run("gensym :n = 7 :n set 3") == [3]
 
 
 class TestPythonApi:
@@ -742,7 +742,7 @@ class TestPythonApi:
 
     def test_eval_does_not_resolve_a_bound_name(self):
         stacker = Stacker()
-        stacker.eval("5 x set")
+        stacker.eval("5 :x set")
         assert list(stacker.eval(":x")) == [Symbol("x")]
 
     def test_eval_returns_strings_as_str(self):
@@ -762,7 +762,7 @@ class TestPythonApi:
 
     def test_pop_and_eval_does_not_turn_a_symbol_into_a_value(self):
         stacker = Stacker()
-        stacker.eval("5 x set")
+        stacker.eval("5 :x set")
         stacker.stack.append(Symbol("x"))
         assert stacker.pop_and_eval(stacker.stack) == Symbol("x")
 
@@ -774,7 +774,7 @@ class TestPythonApi:
 
     def test_variables_are_keyed_by_plain_str(self):
         stacker = Stacker()
-        stacker.eval("5 x set 6 :y set 7 {z} set")
+        stacker.eval("5 :x set 6 :y set 7 {z} set")
         keys = [k for k, _ in stacker.variables.items() if k in {"x", "y", "z"}]
         assert sorted(keys) == ["x", "y", "z"]
         assert all(type(k) is str for k in keys)
@@ -794,7 +794,7 @@ class TestPluginArguments:
 
     def test_a_symbol_reaches_the_plugin_as_a_symbol(self):
         stacker, received = self.plugin_stacker()
-        stacker.process_expression("5 x set :x grab")
+        stacker.process_expression("5 :x set :x grab")
         assert received == [Symbol("x")]
 
     def test_a_string_reaches_the_plugin_as_a_string(self):
@@ -804,7 +804,7 @@ class TestPluginArguments:
 
     def test_a_bare_name_reaches_the_plugin_as_its_value(self):
         stacker, received = self.plugin_stacker()
-        stacker.process_expression("5 x set x grab")
+        stacker.process_expression("5 :x set x grab")
         assert received == [5]
 
     def test_a_type_error_caused_by_a_symbol_becomes_a_stacker_type_error(self):
@@ -833,17 +833,17 @@ class TestWithoutPrelude:
         "program, expected",
         [
             (":x", [Symbol("x")]),
-            ("5 x set :x", [Symbol("x")]),
+            ("5 :x set :x", [Symbol("x")]),
             (':x "x" ==', [False]),
             ("3 4 :+ eval", [7]),
             ("[1 4 9] :sqrt map", [[1.0, 2.0, 3.0]]),
             ("[1 2] :dup map", [[[1, 1], [2, 2]]]),
             ('"x" symbol', [Symbol("x")]),
             (":x symbol?", [True]),
-            ("0 x = :x {1} if", [1]),
+            ("0 :x = :x {1} if", [1]),
             ("true false null", [True, False, None]),
             ("0 1 3 :i {i +} do", [6]),
-            ("{x} {x 2 *} f defun [1 2] :f map", [[2, 4]]),
+            ("{x} {x 2 *} :f defun [1 2] :f map", [[2, 4]]),
         ],
     )
     def test_same_result_as_with_the_prelude(self, program, expected):
@@ -904,7 +904,7 @@ class TestErrorMessages:
             ('"m" macroexpand', "macroexpand"),
             ('1 3 "i" {i} do', "do"),
             ('[1] "x" {x} dolist', "dolist"),
-            ('[1] 0 "a" x {a} reduce', "reduce"),
+            ('[1] 0 "a" :x {a} reduce', "reduce"),
         ],
     )
     def test_every_name_position_names_itself_in_the_message(self, program, word):
@@ -948,8 +948,8 @@ class TestErrorMessages:
 
     @pytest.mark.parametrize(
         "program, got",
-        [("{a a} {a} f defun", "unique"), ("{:a} {a} lambda", "bare names"), ("{1} {a} f defun", "bare names"),
-         ("{[b]} {a} f defun", "bare names"), ("{true} {1} lambda", "bare names")],
+        [("{a a} {a} :f defun", "unique"), ("{:a} {a} lambda", "bare names"), ("{1} {a} :f defun", "bare names"),
+         ("{[b]} {a} :f defun", "bare names"), ("{true} {1} lambda", "bare names")],
     )
     def test_argument_list_messages(self, program, got):
         with pytest.raises(StackerSyntaxError) as info:
@@ -958,7 +958,7 @@ class TestErrorMessages:
 
     def test_argument_list_message_shows_the_offending_argument(self):
         with pytest.raises(StackerSyntaxError) as info:
-            run("{:a} {a 2 *} f defun")
+            run("{:a} {a 2 *} :f defun")
         assert str(info.value) == "`defun` argument names must be bare names, got :a"
 
     def test_lambda_argument_list_must_be_a_block(self):
@@ -1005,7 +1005,7 @@ class TestIncludedWordsAndSymbols:
     @pytest.fixture
     def library(self, tmp_path):
         path = tmp_path / "lib.stk"
-        path.write_text("{x} {x 2 *} dbl defun\n{} {{3}} three defmacro\n10 base set\n")
+        path.write_text("{x} {x 2 *} :dbl defun\n{} {{3}} :three defmacro\n10 :base set\n")
         return path
 
     def test_symbol_of_an_included_function_maps(self, library):
@@ -1081,10 +1081,10 @@ class TestPrefixPlacement:
 
     def test_colon_inside_a_list_element_is_an_error(self):
         with pytest.raises(StackerSyntaxError):
-            run("5 x set [x:y]")
+            run("5 :x set [x:y]")
 
     def test_symbol_after_a_separator_in_a_list(self):
-        assert run("5 x set [x :y]") == [[5, Symbol("y")]]
+        assert run("5 :x set [x :y]") == [[5, Symbol("y")]]
         assert run("[1 2; :a :b]") == [[[1, 2], [Symbol("a"), Symbol("b")]]]
 
     def test_colon_inside_a_name_at_top_level_is_one_undefined_name(self):

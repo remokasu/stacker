@@ -35,8 +35,8 @@ class TestDynamicNameResolution(unittest.TestCase):
         # r = 0 + f(1)=2, then +20, +30, +40 = 92
         self.stacker.process_expression(
             "{x} {x 1 +} :f defun "
-            "0 r set "
-            "1 4 :i { i 2 == { {x} {x 10 *} :f defun } if r i f + r set } do "
+            "0 :r set "
+            "1 4 :i { i 2 == { {x} {x 10 *} :f defun } if r i f + :r set } do "
             "r"
         )
         self.assertEqual(list(self.stacker.stack), [92])
@@ -67,7 +67,7 @@ class TestDynamicNameResolution(unittest.TestCase):
         # the addition operator, so `s i +` pushes s, i and 99 and `s set`
         # consumes only the 99 — leaving s, i behind on the stack.
         self.stacker.process_expression(
-            "0 s set 1 3 :i { i 2 == { 99 :+ set } if s i + s set } do s"
+            "0 :s set 1 3 :i { i 2 == { 99 :+ set } if s i + :s set } do s"
         )
         self.assertEqual(list(self.stacker.stack), [1, 2, 99, 3, 99])
 
@@ -75,8 +75,8 @@ class TestDynamicNameResolution(unittest.TestCase):
         # m is redefined on iteration 2; r = 0 + 1*2 + 2*3 + 3*3 + 4*3 = 29
         self.stacker.process_expression(
             "{} {{2 *}} :m defmacro "
-            "0 r set "
-            "1 4 :i { i 2 == { {} {{3 *}} :m defmacro } if r i m + r set } do "
+            "0 :r set "
+            "1 4 :i { i 2 == { {} {{3 *}} :m defmacro } if r i m + :r set } do "
             "r"
         )
         self.assertEqual(list(self.stacker.stack), [29])
@@ -95,7 +95,7 @@ class TestDynamicNameResolution(unittest.TestCase):
         # block unevaluated; `eval` executes it. This test previously froze
         # the opposite (eager) behavior, which contradicted the README and
         # was reclassified as a bug.
-        self.stacker.process_expression("{1 2 +} b set b")
+        self.stacker.process_expression("{1 2 +} :b set b")
         self.assertIsInstance(self.stacker.stack[-1], StackerCore)
         self.stacker.process_expression("eval")
         self.assertEqual(list(self.stacker.stack), [3])
@@ -110,7 +110,7 @@ class TestSymbolValues(unittest.TestCase):
     def test_symbol_does_not_resolve_to_a_bound_value(self):
         from stacker.engine.data_type import Symbol
 
-        self.stacker.process_expression("5 x set :x")
+        self.stacker.process_expression("5 :x set :x")
         self.assertEqual(list(self.stacker.stack), [Symbol("x")])
 
     def test_symbol_eval_equals_quoted_name_eval(self):
@@ -123,7 +123,7 @@ class TestSymbolValues(unittest.TestCase):
     def test_lambda_in_a_variable_is_pushed_by_its_bare_name(self):
         from stacker.engine.slambda import StackerLambda
 
-        self.stacker.process_expression("{a} {a 2 *} lambda f set 5 f")
+        self.stacker.process_expression("{a} {a 2 *} lambda :f set 5 f")
         self.assertIsInstance(self.stacker.stack[-1], StackerLambda)
         self.stacker.process_expression("eval")
         self.assertEqual(list(self.stacker.stack), [10])
@@ -138,7 +138,7 @@ class TestListLiteralFreshness(unittest.TestCase):
     def test_multi_var_list_literal_in_loop(self):
         # [i i] must re-resolve i on each iteration.
         self.stacker.process_expression(
-            "[] lst set 1 3 :i { lst [i i] + lst set } do lst"
+            "[] :lst set 1 3 :i { lst [i i] + :lst set } do lst"
         )
         self.assertEqual(list(self.stacker.stack), [[1, 1, 2, 2, 3, 3]])
 
@@ -171,7 +171,7 @@ class TestStringTokenQuirks(unittest.TestCase):
     def test_string_token_toplevel_with_same_named_variable(self):
         # At top level, "foo" stays a String literal even if a variable
         # named foo exists (quote check precedes variable lookup).
-        self.stacker.process_expression('5 foo set "foo"')
+        self.stacker.process_expression('5 :foo set "foo"')
         top = self.stacker.stack[-1]
         self.assertIsInstance(top, String)
         self.assertEqual(top, "foo")
@@ -179,7 +179,7 @@ class TestStringTokenQuirks(unittest.TestCase):
     def test_string_token_in_block_with_same_named_variable(self):
         # Inside a block, "foo" stays a String literal even if a variable
         # named foo exists, exactly as at top level.
-        self.stacker.process_expression('5 foo set {"foo"} 1 times')
+        self.stacker.process_expression('5 :foo set {"foo"} 1 times')
         top = self.stacker.stack[-1]
         self.assertIsInstance(top, String)
         self.assertEqual(list(self.stacker.stack), ["foo"])

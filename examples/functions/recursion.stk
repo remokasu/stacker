@@ -9,7 +9,7 @@
         n 1 - countdown drop
     } if
     0  # Always return something (dummy value)
-} countdown defun
+} :countdown defun
 
 5 countdown drop
 
@@ -23,7 +23,7 @@
     } {
         n n 1 - factorial *
     } ifelse
-} factorial defun
+} :factorial defun
 
 5 factorial "5! =" swap echo
 10 factorial "10! =" swap echo
@@ -40,7 +40,7 @@
         n 2 - fib_rec
         +
     } ifelse
-} fib_rec defun
+} :fib_rec defun
 
 0 fib_rec "fib(0) =" swap echo
 1 fib_rec "fib(1) =" swap echo
@@ -54,7 +54,7 @@
 "=== Sum of List (Recursive) ===" echo
 
 # Use reduce instead since we don't have tail/rest operations
-[1 2 3 4 5] 0 acc x {acc x +} reduce "Sum of [1,2,3,4,5] =" swap echo
+[1 2 3 4 5] 0 :acc :x {acc x +} reduce "Sum of [1,2,3,4,5] =" swap echo
 
 # ===== Power Function =====
 "" echo
@@ -66,7 +66,7 @@
     } {
         base base exp 1 - power_rec *
     } ifelse
-} power_rec defun
+} :power_rec defun
 
 2 5 power_rec "2^5 =" swap echo
 3 4 power_rec "3^4 =" swap echo
@@ -81,7 +81,7 @@
     } {
         b a b % gcd_rec
     } ifelse
-} gcd_rec defun
+} :gcd_rec defun
 
 48 18 gcd_rec "GCD(48, 18) =" swap echo
 100 35 gcd_rec "GCD(100, 35) =" swap echo
@@ -95,8 +95,8 @@
     low high > {
         -1  # Not found
     } {
-        low high + 2 / int mid =
-        lst mid nth mid_val =
+        low high + 2 / int :mid =
+        lst mid nth :mid_val =
 
         mid_val target == {
             mid
@@ -108,12 +108,12 @@
             } ifelse
         } ifelse
     } ifelse
-} binary_search_helper defun
+} :binary_search_helper defun
 
 # Main binary search function
 {lst target} {
     lst target 0 lst len 1 - binary_search_helper
-} binary_search defun
+} :binary_search defun
 
 [1 3 5 7 9 11 13 15] 7 binary_search "Index of 7:" swap echo
 [1 3 5 7 9 11 13 15] 13 binary_search "Index of 13:" swap echo
@@ -132,7 +132,7 @@
         n 1 - aux to from hanoi drop
     } ifelse
     0  # Return dummy value
-} hanoi defun
+} :hanoi defun
 
 "Solving Tower of Hanoi with 3 disks:" echo
 3 "A" "C" "B" hanoi drop
@@ -151,10 +151,10 @@
     } {
         n 1 - n acc * factorial_tail
     } ifelse
-} factorial_tail defun
+} :factorial_tail defun
 
 {n} {
     n 1 factorial_tail
-} factorial_tr defun
+} :factorial_tr defun
 
 5 factorial_tr "5! (tail recursive) =" swap echo

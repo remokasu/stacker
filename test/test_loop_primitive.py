@@ -20,15 +20,15 @@ def test_loop_body_sees_values_pushed_before_loop():
 
 def test_loop_does_not_consume_recursion_depth():
     # 100,000 iterations would exceed any recursion limit if iterations recursed.
-    assert run("0 i = {i 100000 >= {break} if i 1 + i =} loop i") == [100000]
+    assert run("0 :i = {i 100000 >= {break} if i 1 + :i =} loop i") == [100000]
 
 
 def test_nested_loop_break_exits_innermost_only():
     expression = (
-        "0 outer = "
+        "0 :outer = "
         "{ outer 3 >= {break} if "
-        "  0 inner = { inner 2 >= {break} if inner 1 + inner = } loop "
-        "  outer 1 + outer = } loop "
+        "  0 :inner = { inner 2 >= {break} if inner 1 + :inner = } loop "
+        "  outer 1 + :outer = } loop "
         "outer inner"
     )
     assert run(expression) == [3, 2]
@@ -52,8 +52,8 @@ def test_loop_appears_in_operator_listing():
 
 def test_break_inside_times_inside_loop_exits_only_the_times():
     expression = (
-        "0 n = 0 k = "
-        "{ k 2 >= {break} if  { n 1 + n = break } 3 times  k 1 + k = } loop "
+        "0 :n = 0 :k = "
+        "{ k 2 >= {break} if  { n 1 + :n = break } 3 times  k 1 + :k = } loop "
         "n k"
     )
     # `times` is left on its first pass each round (n += 1), `loop` runs twice.

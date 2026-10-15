@@ -73,8 +73,8 @@ drop drop
 "=== Practical Examples ===" echo
 
 # Example 1: Compute (a+b) and (a-b) without losing a and b
-5 a =
-3 b =
+5 :a =
+3 :b =
 
 a b      # Stack: 5 3
 2 dupn   # Stack: 5 3 5 3

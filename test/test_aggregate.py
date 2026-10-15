@@ -134,7 +134,7 @@ class TestUndefinedNameArgument(unittest.TestCase):
 
     def test_defined_name_still_works(self):
         stacker = Stacker()
-        self.assertEqual(stacker.eval("[1 2 3] q set q len").pop(), 3)
+        self.assertEqual(stacker.eval("[1 2 3] :q set q len").pop(), 3)
 
 
 class TestStringArgumentIsData(unittest.TestCase):
@@ -142,7 +142,7 @@ class TestStringArgumentIsData(unittest.TestCase):
     variable name when one existed (`5 abc set "abc" len` failed)."""
 
     def test_len_of_a_string_with_a_variable_of_the_same_name(self):
-        self.assertEqual(Stacker().eval('5 abc set "abc" len').pop(), 3)
+        self.assertEqual(Stacker().eval('5 :abc set "abc" len').pop(), 3)
 
     def test_len_of_a_string_without_such_a_variable(self):
         self.assertEqual(Stacker().eval('"abc" len').pop(), 3)
