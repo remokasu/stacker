@@ -22,7 +22,7 @@ class TestVariableScope(unittest.TestCase):
         self.assertEqual(result[-1], 15)
 
     def test_local_variable_shadows_global(self):
-        """Test that local variables :shadow global variables."""
+        """Test that local variables shadow global variables."""
         self.stacker.stack.clear()
         self.stacker.eval("100 :x set")
         self.stacker.eval("{x} {x 2 *} :double defun")
@@ -150,7 +150,7 @@ class TestLambdaScope(unittest.TestCase):
         self.assertEqual(result[-1], [11, 12, 13])
 
     def test_lambda_parameter_shadows_global(self):
-        """Test that lambda parameters :shadow global variables."""
+        """Test that lambda parameters shadow global variables."""
         self.stacker.stack.clear()
         self.stacker.eval("100 :x set")
         result = self.stacker.eval("[1 2 3] {x} {x 2 *} lambda map")
@@ -472,7 +472,7 @@ b
             self.script_mode.run(temp_file)
             # a was updated with set (updates existing)
             self.assertEqual(self.stacker.stack[-2], 10)
-            # b was updated :with global
+            # b was updated with global
             self.assertEqual(self.stacker.stack[-1], 20)
         finally:
             os.unlink(temp_file)
@@ -714,7 +714,7 @@ b
             os.unlink(temp_file)
 
     def test_loop_inside_function_with_global(self):
-        """Test loop variables inside function scope :with global accumulation."""
+        """Test loop variables inside function scope with global accumulation."""
         script_content = """
 0 :total global
 
@@ -806,7 +806,7 @@ class TestScopeEdgeCases(unittest.TestCase):
         self.script_mode = ScriptMode(self.stacker)
 
     def test_parameter_shadowing_global(self):
-        """Test function parameter :shadowing global variable."""
+        """Test function parameter shadowing global variable."""
         script_content = """
 999 :x global
 
@@ -831,7 +831,7 @@ x
             os.unlink(temp_file)
 
     def test_loop_variable_shadowing_global(self):
-        """Test loop variable :shadowing global variable."""
+        """Test loop variable shadowing global variable."""
         script_content = """
 999 :i global
 
