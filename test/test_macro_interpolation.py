@@ -3,7 +3,7 @@ into the body's block literals at the moment each literal is pushed."""
 
 import pytest
 
-from stacker.error import UndefinedSymbolError
+from stacker.error import StackerSyntaxError, UndefinedSymbolError
 from stacker.stacker import Stacker
 
 
@@ -35,14 +35,20 @@ def expansion(*expressions: str) -> object:
         ("{c} { {{{c}}} } m defmacro", "{9} {m} macroexpand", [[[[9]]]]),
         # Values already substituted are not walked again.
         ("{a b} { {a b} } m defmacro", "{b} {9} {m} macroexpand", [["b"], [9]]),
-        # `:name`, string literals and list literals are left alone.
-        ("{c} { {:c \"c\" [c]} } m defmacro", "5 {m} macroexpand", [":c", "c", "[c]"]),
+        # `:name` becomes the name the argument holds; string and list
+        # literals are left alone.
+        ("{c} { {:c \"c\" [c]} } m defmacro", ":foo {m} macroexpand", [":foo", "c", "[c]"]),
         # A variable bound during expansion is interpolated too.
         ("{} { 5 k = {k k +} } m defmacro", "{m} macroexpand", [5, 5, "+"]),
         # Only names bound at push time are substituted.
         ("{} { {k} 5 k = } m defmacro", "{m} macroexpand", ["k"]),
-        # `:x` stays as the symbol while the bare `x` next to it is replaced.
-        ("{x} { {:x x} } m defmacro", "5 {m} macroexpand", [":x", 5]),
+        # The symbol token and the bare name of the same argument.
+        ("{x} { {:x x} } m defmacro", ":foo {m} macroexpand", [":foo", "foo"]),
+        # `:name` from a one-name block, a quoted symbol and a generated name.
+        ("{x} { {:x} } m defmacro", "{foo} {m} macroexpand", [":foo"]),
+        ("{x} { {:x} } m defmacro", "{:foo} {m} macroexpand", [":foo"]),
+        # An unbound `:name` and a list holding one are left as written.
+        ("{x} { {:z [:x]} } m defmacro", ":foo {m} macroexpand", [":z", "[:x]"]),
         # Only the bound name is replaced at every depth; `z` is unbound.
         ("{a} { {{{a z}}} } m defmacro", "9 {m} macroexpand", [[[9, "z"]]]),
         # An empty block argument is inserted as an empty block.
@@ -119,3 +125,33 @@ def test_expansion_scope_is_discarded_so_later_calls_start_fresh():
     # The first call binds `q`; the second sees no leftover binding and
     # interpolates its own value.
     assert run("{v} { v q = {q} } m defmacro", "1 m 2 m") == [1, 2]
+
+
+@pytest.mark.parametrize(
+    ("call", "holds"),
+    [
+        ("5 {m} macroexpand", "holds 5"),
+        ('"x" {m} macroexpand', "holds the string 'x'"),
+        ("{a b} {m} macroexpand", "holds {a b}"),
+        ("[1] {m} macroexpand", "holds [1]"),
+    ],
+)
+def test_symbol_token_in_a_template_needs_a_name(call, holds):
+    stacker = Stacker()
+    stacker.eval("{t} { {:t} } m defmacro")
+    with pytest.raises(StackerSyntaxError) as info:
+        stacker.eval(call)
+    assert "`:t` in a macro template needs a name" in str(info.value)
+    assert holds in str(info.value)
+    assert "while expanding macro 'm'" in str(info.value)
+
+
+def test_generated_name_is_spliced_as_a_symbol_token():
+    # gensym numbers run on across the process, so compare the two forms
+    symbol, bare = expansion("{} { gensym t = {:t t} } m defmacro", "{m} macroexpand")
+    assert symbol == ":" + bare and bare.startswith("__g")
+
+
+def test_gensym_idiom_can_bind_the_generated_name_as_a_symbol():
+    # The classic hygienic macro: bind the argument's value to a fresh name.
+    assert run("{x} { gensym t = { x eval :t set t t + } } {dbl} defmacro", "{3 4 +} dbl") == [14]
