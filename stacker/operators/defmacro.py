@@ -26,6 +26,6 @@ macro_operators = {
         "func": (lambda stacker, name, args, body: define_macro(stacker, name, args, body)),
         "arg_count": 3,
         "push_result_to_stack": False,
-        "desc": "Defines a macro: {args} {body} name defmacro",
+        "desc": "Defines a macro: {args} {body} :name defmacro",
     },
 }

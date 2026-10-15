@@ -22,7 +22,7 @@ Names (three ways to write one):
   A string is never a name: "x" symbol turns text into a name.
 
 Variables:
-  3 x set        3 x =        42 answer global
+  3 :x set       3 :x =       42 :answer global
 
 Conditionals:
   cond {true-branch} if
@@ -31,17 +31,17 @@ Conditionals:
   {try} {catch} iferror
 
 Loops:
-  1 10 i {i echo} do          [1 2 3] x {x echo} dolist
+  1 10 :i {i echo} do         [1 2 3] :x {x echo} dolist
   {body} 3 times              {cond} {body} while
   {body} loop                 (repeat until break)
 
 Functions:
-  {a b} {a b +} add defun     then: 3 4 add
+  {a b} {a b +} :add defun    then: 3 4 add
   {a b} {a b +} lambda        an anonymous function value; call it with eval:
-  {a} {a 2 *} lambda f set    5 f eval
+  {a} {a 2 *} lambda :f set   5 f eval
 
 Macros:
-  {args} {body} name defmacro   the body runs at expansion time and returns code
+  {args} {body} :name defmacro  the body runs at expansion time and returns code
   {2 *} {double} alias          names a code snippet
   gensym, macroexpand, concat-block, expand, sub, read-from-string
 

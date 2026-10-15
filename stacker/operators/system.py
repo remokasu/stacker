@@ -10,8 +10,8 @@ def _vars(core: StackerCore) -> None:
     """
     Display all defined variables.
     Example:
-        stacker> 5 x set
-        stacker> 10 y set
+        stacker> 5 :x set
+        stacker> 10 :y set
         stacker> vars
         x = 5
         y = 10
@@ -28,7 +28,7 @@ def _funcs(core: StackerCore) -> None:
     """
     Display all defined functions.
     Example:
-        stacker> {x} {x x *} square defun
+        stacker> {x} {x x *} :square defun
         stacker> funcs
         square: {x} {x x *}
     """
@@ -47,7 +47,7 @@ def _macros(core: StackerCore) -> None:
     """
     Display all defined macros.
     Example:
-        stacker> {x} {{x x *}} square defmacro
+        stacker> {x} {{x x *}} :square defmacro
         stacker> macros
         square: {x} {{x x *}}
     """

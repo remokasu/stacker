@@ -47,7 +47,7 @@ from stacker.operators.manager import OperatorManager
 _LOGGER = logging.getLogger("stacker")
 
 _DEFMACRO_USAGE = (
-    "`defmacro` takes three arguments: {args} {body} name defmacro. "
+    "`defmacro` takes three arguments: {args} {body} :name defmacro. "
     "For a plain named code snippet use `alias`: {body} {name} alias."
 )
 
@@ -805,7 +805,7 @@ class StackerCore:
             _LOGGER.warning("redefining prelude word '%s'", name)
 
     def _prio_defun(self, op, stack) -> None:
-        """``{args} {body} name defun`` -- the argument list is validated like ``defmacro``'s."""
+        """``{args} {body} :name defun`` -- the argument list is validated like ``defmacro``'s."""
         symbol = stack.pop()
         name = self._name_of(symbol, "defun")
         if name in self._prelude["names"]:
@@ -815,7 +815,7 @@ class StackerCore:
         op["func"](self, name, fargs, body)
 
     def _prio_defmacro(self, op, stack) -> None:
-        """``{args} {body} name defmacro`` -- validates the three parts at definition time."""
+        """``{args} {body} :name defmacro`` -- validates the three parts at definition time."""
         symbol = stack.pop()
         body = stack.pop()
         try:

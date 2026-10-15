@@ -19,7 +19,7 @@ def gensym() -> Symbol:
 
 
 class StackerMacro:
-    """A Lisp-style macro: ``{args} {body} name defmacro``.
+    """A Lisp-style macro: ``{args} {body} :name defmacro``.
 
     The body runs at expansion time (on its own stack, in a child scope of the
     caller where the arguments are bound) and must leave exactly one value,
