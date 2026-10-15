@@ -1,4 +1,4 @@
-"""Tests for using operator names as variables (kernel words need an explicit `:name`)."""
+"""Tests for using operator names as variables (bound through `:name`, like any name)."""
 
 import unittest
 from stacker import Stacker

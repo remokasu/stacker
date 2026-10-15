@@ -52,13 +52,6 @@ _DEFMACRO_USAGE = (
 )
 
 
-# Commands that expect a symbol name as the preceding argument
-_SYMBOL_CONSUMING_COMMANDS = frozenset({"set", "=", "defun", "defmacro", "global", "macroexpand"})
-# Words of the form `... name {block} WORD`: the name before the block is bound
-_DO_DOLIST = frozenset({"do", "dolist"})
-# Words of the form `... name name {block} WORD`: both names are bound
-_REDUCE_FOLD = frozenset({"reduce", "fold"})
-_BLOCK_BINDING_WORDS = _DO_DOLIST | _REDUCE_FOLD
 # Sentinel for single-lookup scope reads (None is a valid variable value)
 _MISSING = object()
 
@@ -148,82 +141,64 @@ K_STRING = 1  # quoted string literal: payload is the prebuilt String
 K_LIST = 2  # list literal: payload is the parsed template (or None)
 K_SYMBOL = 3  # :name: payload is the Symbol
 K_BLOCK = 4  # code-block source: substack is created at evaluation time
-K_LOOKAHEAD_SYMBOL = 5  # bare name right before a binding form (set/defun/...): payload is the Symbol
 K_DYNAMIC = 6  # name resolved against runtime state on every evaluation
-K_LOOP_VAR = 7  # bare name bound by do / dolist / reduce / fold (before their block): payload is the Symbol
+# 5 and 7 were the bare names a lookahead read as the name being bound; gone
 K_INVALID = 8  # a `:` or `$` token that is not a symbol: payload is the error message, raised when executed
 
 
-def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
-    """Classify tokens by the purely syntactic part of the evaluation chain.
+def _classify_token(token: object) -> tuple[int, object, object]:
+    """Classifies one token; the result depends on this token alone.
 
     Mirrors the branch order of ``StackerCore._evaluate`` exactly, minus the
     macro check (macros are runtime state, so that check stays in the
     evaluation loop). A ``String`` object is always a string literal
     (``K_STRING``): blocks store their literals that way, and a literal must
     never be looked up as a name, whatever text it holds. Quote checks on raw
-    source tokens go through ``is_string_token``.
+    source tokens go through ``is_string_token``. A bare name is ``K_DYNAMIC``
+    wherever it stands: it is read as a reference, never as the name being
+    bound, so the tokens around it are not consulted.
 
     Args:
-        tokens: Token list as produced by the parser / block formatter.
+        token: One token as produced by the parser / block formatter.
 
     Returns:
-        One ``(kind, token, payload)`` entry per token.
+        A ``(kind, token, payload)`` entry.
     """
-    entries: list[tuple[int, object, object]] = []
-    n = len(tokens)
-    for i, token in enumerate(tokens):
-        if not isinstance(token, str):
-            entries.append((K_VALUE, token, None))
-        elif isinstance(token, String):
-            entries.append((K_STRING, token, token))
-        elif is_string_token(token):
-            entries.append((K_STRING, token, String(strip_string_delimiters(token))))
-        elif is_list(token):
-            try:
-                template = _compile_list_template(token)
-            except Exception:
-                # Malformed list token: leave the payload empty so the
-                # evaluation loop re-parses (and raises) at the token's
-                # execution position, exactly as before.
-                template = None
-            entries.append((K_LIST, token, template))
-        elif token.startswith((SYMBOL_PREFIX, OLD_SYMBOL_PREFIX)):
-            if is_symbol(token):
-                entries.append((K_SYMBOL, token, Symbol(token[1:])))
-            else:
-                entries.append((K_INVALID, token, not_a_symbol_message(token)))
-        elif is_code_block(token):
-            entries.append((K_BLOCK, token, None))
-        elif token in KEYWORD_LITERALS:
-            entries.append((K_VALUE, KEYWORD_LITERALS[token], None))  # true / false / null are values
-        else:
-            next_token = tokens[i + 1] if i + 1 < n else None
-            next_next_token = tokens[i + 2] if i + 2 < n else None
-            third_token = tokens[i + 3] if i + 3 < n else None
-            # Only raw source tokens are words; a String literal that reads
-            # "set" or a list value must never be mistaken for one.
-            word1 = next_token if type(next_token) is str else None
-            word2 = next_next_token if type(next_next_token) is str else None
-            word3 = third_token if type(third_token) is str else None
-            if word1 in _SYMBOL_CONSUMING_COMMANDS:
-                kind = K_LOOKAHEAD_SYMBOL
-            elif word2 in _BLOCK_BINDING_WORDS and _is_block_token(next_token):
-                # `name {block} do`, and the second name of `acc x {block} reduce`
-                kind = K_LOOP_VAR
-            elif (
-                word3 in _REDUCE_FOLD
-                and _is_block_token(next_next_token)
-                and (is_bare_name(next_token) or is_symbol(next_token))
-            ):
-                # the first name of `acc x {block} reduce`
-                kind = K_LOOP_VAR
-            else:
-                kind = K_DYNAMIC
-            if kind != K_DYNAMIC and not is_bare_name(token):
-                kind = K_DYNAMIC  # a literal (number, True, None, ...) is never a name
-            entries.append((kind, token, None if kind == K_DYNAMIC else Symbol(token)))
-    return entries
+    if not isinstance(token, str):
+        return (K_VALUE, token, None)
+    if isinstance(token, String):
+        return (K_STRING, token, token)
+    if is_string_token(token):
+        return (K_STRING, token, String(strip_string_delimiters(token)))
+    if is_list(token):
+        try:
+            template = _compile_list_template(token)
+        except Exception:
+            # Malformed list token: leave the payload empty so the
+            # evaluation loop re-parses (and raises) at the token's
+            # execution position, exactly as before.
+            template = None
+        return (K_LIST, token, template)
+    if token.startswith((SYMBOL_PREFIX, OLD_SYMBOL_PREFIX)):
+        if is_symbol(token):
+            return (K_SYMBOL, token, Symbol(token[1:]))
+        return (K_INVALID, token, not_a_symbol_message(token))
+    if is_code_block(token):
+        return (K_BLOCK, token, None)
+    if token in KEYWORD_LITERALS:
+        return (K_VALUE, KEYWORD_LITERALS[token], None)  # true / false / null are values
+    return (K_DYNAMIC, token, None)
+
+
+def _classify_tokens(tokens: list[object]) -> list[tuple[int, object, object]]:
+    """Classifies every token of ``tokens``, each on its own.
+
+    Every entry is a pure function of its token (see ``_classify_token``),
+    so a classification can be computed once per token list and reused
+    across evaluations, and ``_classify_tokens(T)[i]`` is always
+    ``_classify_token(T[i])``.
+    """
+    return [_classify_token(token) for token in tokens]
 
 
 def _compile_list_template(token: str) -> list[object]:
@@ -270,11 +245,6 @@ def _compile_list_elements(elements: list[object]) -> list[object]:
         else:
             compiled.append(element)
     return compiled
-
-
-def _is_block_token(token: object) -> bool:
-    """True if ``token`` is a code block, as source text or already built."""
-    return isinstance(token, StackerCore) or (type(token) is str and is_code_block(token))
 
 
 class TokenList(list):
@@ -532,8 +502,6 @@ class StackerCore:
         # interpolated copy, a caller-supplied block, a runtime-built block --
         # is left untouched.
         interp = self._interp_scope if tokens is self.tokens else None
-        kernel_words = self.operator_manager.built_in_operators
-        plugins = self.plugins
 
         for kind, token, payload in entries:
             if kind == K_VALUE:
@@ -545,22 +513,10 @@ class StackerCore:
             if kind == K_STRING:
                 stack.append(payload)  # a string literal is never a name
                 continue
-            if kind == K_LOOKAHEAD_SYMBOL:
-                # Shadowing rule: only kernel words are protected. Any other
-                # bare name before a binding form is the name being bound, so
-                # user definitions can be rebound by their bare name.
-                if token not in kernel_words and token not in plugins:
-                    stack.append(payload)  # the Symbol
-                    continue
-            elif kind == K_LOOP_VAR:
-                stack.append(payload)  # the Symbol
-                continue
-            # Macros take precedence over variables and operators. (At the
-            # lookahead position only kernel-word names get this far; any
-            # other name was just pushed as the name being bound.)
+            # Macros take precedence over variables and operators.
             if token in macros:
                 self._expand_macro(token, stack)
-            elif kind == K_DYNAMIC or kind == K_LOOKAHEAD_SYMBOL:
+            elif kind == K_DYNAMIC:
                 if (value := self.variables.get(token, _MISSING)) is not _MISSING:
                     # A variable reference pushes the value, whatever it is:
                     # a lambda is a value too and is called with `eval`.
@@ -1298,15 +1254,14 @@ class StackerCore:
     def _name_of(self, symbol: object, word: str) -> str:
         """Normalizes the forms a name can be written in to the bare name.
 
-        - a ``Symbol`` (``:name``, ``gensym``, a bare name read at a name
-          position) -> its name
+        - a ``Symbol`` (``:name``, ``gensym``, ``symbol``) -> its name
         - ``{name}`` / ``{:name}`` (quoted name: a one-token block) -> ``name``
         - a string is data, never a name -> ``StackerSyntaxError`` (the
           message shows ``:name``, ``{name}`` and ``symbol``)
         - anything else (a multi-token block, a number, ...) -> ``StackerSyntaxError``
 
         Args:
-            symbol: Value popped from the stack at a name position.
+            symbol: Value popped from the stack where a name is expected.
             word: The word reading the name (for the error message).
 
         Returns:
@@ -1327,7 +1282,10 @@ class StackerCore:
                 f"`{word}` expects a name, got the string {str(symbol)!r}. "
                 f"Write :{symbol} or {{{symbol}}}, or convert a string with `symbol`."
             )
-        raise StackerSyntaxError(f"`{word}` expects a name, got {symbol}")
+        raise StackerSyntaxError(
+            f"`{word}` expects a name, got {symbol}. A bare name pushes what it "
+            "refers to; write the name itself as `:name` or `{name}`."
+        )
 
     def _parse_arg_names(self, fargs: object, word: str) -> list[str]:
         """Validates an argument list ``{a b ...}`` and returns the names.

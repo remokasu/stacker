@@ -19,8 +19,6 @@ from stacker.engine.core import (
     K_DYNAMIC,
     K_INVALID,
     K_LIST,
-    K_LOOKAHEAD_SYMBOL,
-    K_LOOP_VAR,
     K_STRING,
     K_SYMBOL,
     TokenList,
@@ -87,15 +85,17 @@ class TestSymbolClassification(unittest.TestCase):
         self.assertEqual([e[0] for e in entries], [K_STRING, K_STRING])
         self.assertEqual([e[2] for e in entries], [":x", "$x"])
 
-    def test_names_before_binding_words_are_lookahead_symbols(self):
+    def test_a_bare_name_before_a_binding_word_is_dynamic_like_any_other(self):
+        # No lookahead: `x` is a reference whatever follows it
         entries = TokenList(["x", "set"]).classification()
-        self.assertEqual(entries[0][0], K_LOOKAHEAD_SYMBOL)
-        self.assertEqual(entries[0][2], Symbol("x"))
+        self.assertEqual(entries[0][0], K_DYNAMIC)
+        self.assertIsNone(entries[0][2])
 
-    def test_loop_variable_is_classified_with_its_symbol(self):
-        entries = TokenList(["1", "3", "i", "{i}", "do"]).classification()
-        self.assertEqual(entries[2][0], K_LOOP_VAR)
+    def test_a_loop_variable_is_a_symbol_only_when_written_as_one(self):
+        entries = TokenList(["1", "3", ":i", "{i}", "do"]).classification()
+        self.assertEqual(entries[2][0], K_SYMBOL)
         self.assertEqual(entries[2][2], Symbol("i"))
+        self.assertEqual(TokenList(["1", "3", "i", "{i}", "do"]).classification()[2][0], K_DYNAMIC)
 
     def test_bound_or_not_a_bare_name_stays_dynamic(self):
         self.assertEqual(_kinds(["foo", "+"])[0], K_DYNAMIC)
