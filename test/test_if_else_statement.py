@@ -1,5 +1,8 @@
 import unittest
 
+import pytest
+
+from stacker.error import DropError, NoValueProducedError, StackerSyntaxError
 from stacker.stacker import Stacker
 
 
@@ -107,3 +110,45 @@ class TestUnit(unittest.TestCase):
         )
         stacker.process_expression(expr)
         self.assertEqual(stacker.stack[-1], 3)
+
+
+
+@pytest.mark.parametrize(
+    "expression",
+    ["{} {1} if", "{} {1} {2} ifelse", "{} {1} 1 cond", "{} {1} while"],
+    ids=["if", "ifelse", "cond", "while"],
+)
+def test_a_condition_block_that_leaves_no_value_is_reported_as_such(expression):
+    # It used to be reported as the word itself lacking arguments
+    with pytest.raises(NoValueProducedError, match="condition block"):
+        Stacker().eval(expression)
+
+
+def test_an_error_inside_a_condition_block_is_reported_as_it_is():
+    with pytest.raises(DropError):
+        Stacker().eval("{drop} {1} if")
+
+
+@pytest.mark.parametrize(
+    ("expression", "expected"),
+    [("7 {} {1} if", [1]), ("0 {} {1} if", []), ("7 {0 >} {1} if", [1])],
+    ids=["empty-block-truthy-below", "empty-block-falsy-below", "block-consumes-below"],
+)
+def test_a_condition_block_runs_on_the_current_stack(expression, expected):
+    # The block is a function from the stack to the stack, and `{}` is the
+    # identity: what is on top after it has run is the condition
+    assert list(Stacker().eval(expression)) == expected
+
+
+def test_while_takes_a_condition_block_only():
+    # A plain value would test the same every time
+    with pytest.raises(StackerSyntaxError, match="`while` expects a condition block"):
+        Stacker().eval("3 {1} while")
+
+
+def test_cond_skips_false_pairs_and_runs_the_first_true_one():
+    assert list(Stacker().eval("0 {} {5} {1} {9} 2 cond")) == [9]
+
+
+def test_while_runs_its_body_until_the_condition_block_is_false():
+    assert list(Stacker().eval("3 {dup 0 >} {1 -} while")) == [0]

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from stacker.error import BreakException, StackerSyntaxError
-from stacker.operators.block_exec import run_block
+from stacker.operators.block_exec import resolve_condition, run_block
 
 if TYPE_CHECKING:
     from stacker.engine.scope import ScopedVariables
@@ -97,10 +97,16 @@ def _while(
     parent: Stacker,
     stack: stack_data[object],
 ) -> None:
-    """Executes a block of code while a condition is true."""
+    """Executes a block of code while a condition block is true.
+
+    Raises:
+        StackerSyntaxError: If ``condition`` is not a code block (a plain
+            value would test the same every time, looping for ever or never).
+    """
+    if not isinstance(condition, type(parent)):
+        raise StackerSyntaxError(f"`while` expects a condition block, got {condition}")
     while True:
-        parent.evaluate(condition.tokens, stack=stack)
-        if not stack.pop():
+        if not resolve_condition(condition, parent, stack, "while"):
             break
         try:
             parent.evaluate(body.tokens, stack=stack)
