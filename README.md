@@ -566,16 +566,12 @@ Then reload VSCode (Ctrl+Shift+P → "Developer: Reload Window").
 
 ### Features
 
-- **Comment highlighting** (`#`) - Green, italic
-- **String literals** (`"..."`, `'...'`) - Brown
-- **Number literals** (`42`, `3.14`, `0xFF`, `0b1010`) - Light green
-- **Operators** (`+`, `-`, `and`, `or`, etc.) - Blue
-- **Control flow** (`if`, `do`, `times`) - Purple
-- **Function definitions** (`defun`, `defmacro`, `lambda`) - Teal, bold
-- **Variables and symbols** (`a`, `:x`) - Light blue
-- **Assignment** (`set`, `=`, `global`) - White, bold
-- Auto-closing brackets (`{`, `[`, `"`, `'`)
-- Code folding support
+- Comments (`#` and `#| ... |#`), strings (`"..."`, `'...'`, triple quotes), numbers (`42`, `3.14`, `1.5e3`, `0xFF`, `0b1010`, `2+3j`)
+- Symbols (`:x`)
+- Every word of the language, by kind: control flow (`if`, `do`, `while`, ...), definitions (`defun`, `defmacro`, `lambda`, `alias`), assignment (`set`, `=`, `global`), code words (`eval`, `parse`, `macroexpand`, ...), arithmetic, comparison, logic, bit operations, math, stack words, list words, string words, type words, I/O and files, system words, prelude words and constants
+- Auto-closing brackets (`{`, `[`, `(`, `"`, `'`) and code folding
+
+The grammar is generated from the interpreter's own word lists by `scripts/generate_vscode_grammar.py`, so it lists exactly the words the interpreter knows. The colors come from your VSCode theme.
 
 
 ## Command Line Execution
