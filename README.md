@@ -695,6 +695,8 @@ Create custom plugins for Stacker using Python:
 
     You can specify the command description for the help command using desc. This field is optional.
 
+    A plugin word takes precedence over a built-in word of the same name: registering `+` replaces the built-in `+`. This is how a plugin can give an operator a new meaning, for example for matrices.
+
     The register_parameter method is used to add a custom parameter to the Stacker environment, allowing for additional customization and control within your plugin.
 
 5. **Reinstalling Stacker**:
