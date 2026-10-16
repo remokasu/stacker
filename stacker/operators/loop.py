@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from stacker.engine.data_type import Symbol
 from stacker.error import BreakException, StackerSyntaxError
 from stacker.operators.block_exec import resolve_condition, run_block
 
@@ -53,7 +54,19 @@ def _times(
     parent: Stacker,
     stack: stack_data[object],
 ) -> None:
-    """Executes a block of code a specified number of times."""
+    """Executes a block of code a specified number of times.
+
+    Raises:
+        StackerSyntaxError: If ``n_times`` is not a number, which is what
+            the block and the count written the wrong way round gives.
+    """
+    # A symbol here is reported by the caller as a type error, like any
+    # symbol where a value is needed; anything else that is not a number is
+    # the block and the count written the wrong way round
+    if isinstance(n_times, bool) or not isinstance(n_times, (int, float, Symbol)):
+        raise StackerSyntaxError(
+            f"`times` expects a number of repetitions on top, got {n_times}: write `{{body}} n times`"
+        )
     count = 0
     while count < n_times:  # a comparison, not range(): non-integer counts keep working
         try:
