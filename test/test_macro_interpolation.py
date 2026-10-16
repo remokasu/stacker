@@ -71,7 +71,7 @@ def test_body_level_names_are_variable_references_not_interpolation():
 
 
 def test_runtime_generated_blocks_are_not_interpolated():
-    built = expansion('{c} { "c 1 +" read-from-string } :m defmacro', "5 {m} macroexpand")
+    built = expansion('{c} { "c 1 +" parse } :m defmacro', "5 {m} macroexpand")
     assert built == ["c", 1, "+"]
 
 

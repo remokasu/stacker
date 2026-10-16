@@ -269,7 +269,7 @@ stacker> {3 4 +} {double!} macroexpand
 | `expand` | ブロックを、トークンごとの 1 トークンのブロックに分ける。リストなら要素をスタックに積む |
 | `sub` | 一番上の値を、それ 1 つだけを含むブロックに包む |
 | `subn` | 一番上の n 個の値を、1 つのブロックに包む |
-| `read-from-string` | 文字列をコードのブロックに変換する |
+| `parse` | 文字列をコードのブロックに変換する |
 | `eval` | ブロックやラムダを実行する |
 
 ```
@@ -304,20 +304,20 @@ stacker:1> 3 times2
 
 `3 times2` は `{3 2 *}` に展開されます。
 
-`read-from-string` は文字列をコードに変えます。文字列に `eval` を直接使うことはできません。
+`parse` は文字列をコードに変えます。文字列に `eval` を直接使うことはできません。
 
 ```
-stacker:0> "3 4 +" read-from-string
+stacker:0> "3 4 +" parse
 [{3 4 +}]
 stacker:1> eval
 [7]
-stacker:2> "3 " "4 +" + read-from-string eval
+stacker:2> "3 " "4 +" + parse eval
 [7 7]
 ```
 
 ```text
 $ "hi" eval
-StackerTypeError: `eval` expects a code block, a symbol or a lambda, got the string 'hi'. A string is text, not code: parse it first with `read-from-string`, e.g. "3 4 +" read-from-string eval
+StackerTypeError: `eval` expects a code block, a symbol or a lambda, got the string 'hi'. A string is text, not code: parse it first with `parse`, e.g. "3 4 +" parse eval
 ```
 
 `eval` は、ブロックの中のコードを現在のスタックの上で実行します。ブロック以外の値（数など）に使うと、その値がそのまま残ります。

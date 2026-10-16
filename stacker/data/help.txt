@@ -43,7 +43,7 @@ Functions:
 Macros:
   {args} {body} :name defmacro  the body runs at expansion time and returns code
   {2 *} {double} alias          names a code snippet
-  gensym, macroexpand, concat-block, expand, sub, read-from-string
+  gensym, macroexpand, concat-block, expand, sub, parse
 
 Constants:
   pi  e  phi  tau  inf  nan

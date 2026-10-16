@@ -65,7 +65,7 @@ special_operators = {
         "func": None,
         "arg_count": 1,
         "push_result_to_stack": True,
-        "desc": "Runs a code block, a symbol or a lambda (text: read-from-string first).",
+        "desc": "Runs a code block, a symbol or a lambda (text: parse first).",
     },
     "break": {
         "func": None,
@@ -85,11 +85,11 @@ special_operators = {
         "push_result_to_stack": True,
         "desc": "Wraps the top n values in one code block: 1 2 2 subn -> {1 2}",
     },
-    "read-from-string": {
+    "parse": {
         "func": None,
         "arg_count": 1,
         "push_result_to_stack": True,
-        "desc": "Parses text into a code block: \"3 4 +\" read-from-string -> {3 4 +}",
+        "desc": "Parses text into a code block: \"3 4 +\" parse -> {3 4 +}",
     },
     "read": {
         "func": None,
