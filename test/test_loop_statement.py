@@ -1,5 +1,8 @@
 import unittest
 
+import pytest
+
+from stacker.error import StackerSyntaxError
 from stacker.stacker import Stacker
 
 
@@ -19,10 +22,6 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(ans[-1], 338350)
 
 
-import pytest
-
-from stacker.error import StackerSyntaxError
-
 
 @pytest.mark.parametrize("expression", ['0 {"x" echo} times', '{1} "3" times', "{1} [3] times"])
 def test_times_reports_a_count_that_is_not_a_number(expression):
@@ -34,6 +33,9 @@ def test_times_reports_a_count_that_is_not_a_number(expression):
         Stacker().eval(expression)
 
 
-@pytest.mark.parametrize(("expression", "expected"), [("{1} 2.5 times", [1, 1, 1]), ("{1} {3} times", [1, 1, 1]), ("{1} 0 times", [])])
+@pytest.mark.parametrize(
+    ("expression", "expected"),
+    [("{1} 2.5 times", [1, 1, 1]), ("{1} {3} times", [1, 1, 1]), ("{1} 0 times", []), ("{1} true times", [1])],
+)
 def test_times_still_takes_any_number_as_the_count(expression, expected):
     assert list(Stacker().eval(expression)) == expected
