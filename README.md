@@ -243,6 +243,10 @@ Stacker allows for straightforward RPN input. For example:
     condition <true-expr> if
     ```
 
+    The condition is a value, or a block that runs on the current stack and leaves the value to test on top (so
+    `7 {0 >} {...} if` tests `7 0 >`, and an empty block leaves the top as it is). A block that leaves nothing is
+    an error.
+
     Example:
     ```bash
     stacker:0> 0 :x set

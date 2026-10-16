@@ -2,24 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from stacker.operators.block_exec import run_block
+from stacker.operators.block_exec import resolve_condition, run_block
 
 if TYPE_CHECKING:
     from stacker.stacker import Stacker
     from stacker.util.stack_data import stack_data
-
-
-def _resolve_condition(condition: object, parent: Stacker, stack: stack_data[object]) -> object:
-    """Evaluate a condition block on ``stack``; any other value is the condition itself.
-
-    A symbol or a string is never looked up as a variable here: a symbol is
-    truthy, a string is truthy when non-empty. Write the bare name to test a
-    variable's value.
-    """
-    if isinstance(condition, type(parent)):
-        parent.evaluate(condition.tokens, stack=stack)
-        return stack.pop()
-    return condition
 
 
 def _if(
@@ -33,7 +20,7 @@ def _if(
     {block}
     if
     """
-    if _resolve_condition(condition, parent, stack):
+    if resolve_condition(condition, parent, stack, "if"):
         run_block(blockstack, parent, stack)
 
 
@@ -50,7 +37,7 @@ def _if_else(
     {false block}
     ifelse
     """
-    if _resolve_condition(condition, parent, stack):
+    if resolve_condition(condition, parent, stack, "ifelse"):
         run_block(true_block, parent, stack)
     else:
         run_block(false_block, parent, stack)
@@ -61,12 +48,7 @@ def _cond(pairs: list[tuple[object, object]], parent: Stacker, stack: stack_data
     {c1} {r1} {c2} {r2} ... n cond
     """
     for condition, result in pairs:
-        if isinstance(condition, type(parent)):
-            parent.evaluate(condition.tokens, stack=stack)
-            cond_val = stack.pop()
-        else:
-            cond_val = condition
-        if cond_val:
+        if resolve_condition(condition, parent, stack, "cond"):
             run_block(result, parent, stack)
             return
 
