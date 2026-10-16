@@ -61,3 +61,24 @@ class TestDispDefault(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestValuesSplicedIntoBlocks(unittest.TestCase):
+    """A value put into a block by sub / subn / enumerate is shown like the stack shows it."""
+
+    def shown(self, expression: str) -> str:
+        return str(list(Stacker().eval(expression))[-1])
+
+    def test_a_list_in_a_block_has_no_commas(self):
+        self.assertEqual(self.shown("[1 2] sub"), "{[1 2]}")
+        self.assertEqual(self.shown("[[1 2] 3] sub"), "{[[1 2] 3]}")
+        self.assertEqual(self.shown("{1 2} enumerate"), "{[0 1] [1 2]}")
+
+    def test_a_bool_in_a_block_is_lowercase(self):
+        self.assertEqual(self.shown("true sub"), "{true}")
+
+    def test_a_string_value_in_a_block_is_quoted(self):
+        self.assertEqual(self.shown('"a b" sub'), '{"a b"}')
+
+    def test_a_block_written_in_source_is_unchanged(self):
+        self.assertEqual(self.shown('{[1 2] "a" 1.5 x}'), '{[1 2] "a" 1.5 x}')

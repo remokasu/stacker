@@ -23,6 +23,7 @@ from stacker.syntax.parser import (
 )
 from stacker.error import BreakException
 from stacker.engine.boundary import token_to_value, value_to_token
+from stacker.util.disp import plain_text
 from stacker.engine.data_type import String, Symbol, stack_data, VOID
 from stacker.syntax.token_rules import (
     KEYWORD_LITERALS,
@@ -1580,7 +1581,9 @@ class StackerCore:
                 # A raw token is a name, an operator or `:name`: shown as written,
                 # whether or not the name is bound right now.
                 return item
-            return str(item)
+            # A value spliced in by sub / subn / a block-returning word: shown
+            # as the stack display shows it (`[1 2]`, `true`), not as Python does
+            return plain_text(item)
 
         formatted_items = " ".join(map(format_item, self.tokens))
         # Use the bracket type that was used to create this code block
