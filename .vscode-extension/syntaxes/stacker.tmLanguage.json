@@ -97,7 +97,7 @@
       "patterns": [
         {
           "name": "constant.language.stacker",
-          "match": "\\b(true|false|pi|e|tau|inf|nan)\\b"
+          "match": "\\b(true|false|null|pi|e|phi|tau|inf|nan)\\b"
         }
       ]
     },
@@ -149,7 +149,7 @@
         },
         {
           "name": "keyword.operator.eval.stacker",
-          "match": "\\b(eval|include|sub|subn|expand|read-from-string)\\b"
+          "match": "\\b(eval|include|sub|subn|expand|parse|concat-block|gensym|macroexpand)\\b"
         }
       ]
     },
@@ -157,7 +157,7 @@
       "patterns": [
         {
           "name": "keyword.control.stacker",
-          "match": "\\b(if|ifelse|iferror|do|dolist|times|break)\\b"
+          "match": "\\b(if|ifelse|iferror|cond|do|dolist|times|while|loop|break)\\b"
         }
       ]
     },
@@ -165,15 +165,15 @@
       "patterns": [
         {
           "name": "keyword.control.definition.stacker",
-          "match": "\\b(defun|defmacro|lambda)\\b"
+          "match": "\\b(defun|defmacro|lambda|alias)\\b"
         }
       ]
     },
     "variables": {
       "patterns": [
         {
-          "name": "variable.other.dollar.stacker",
-          "match": "\\$[a-zA-Z_][a-zA-Z0-9_]*"
+          "name": "constant.other.symbol.stacker",
+          "match": "(^|(?<=[\\s\\[{(]))(:[^\\s\\[\\]{}()\"'#;:$]+)"
         },
         {
           "name": "keyword.operator.assignment.stacker",
