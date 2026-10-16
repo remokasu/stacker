@@ -95,7 +95,7 @@ special_operators = {
         "func": None,
         "arg_count": 0,
         "push_result_to_stack": True,
-        "desc": "Reads a string from the console.",
+        "desc": "Reads one line from the console and pushes it as a code block: read eval runs it",
     },
     "split": {
         "func": None,

@@ -898,7 +898,7 @@ Note: Blocks passed to `map`, `filter`, `reduce`, and `fold` must leave a value 
 | include  | Include the specified file                            | `"file.stk" include`       |
 | eval     | Run a code block, a symbol or a lambda (text: `read-from-string` first) | `{3 5 +} eval`, `'3 5 +' read-from-string eval` |
 | echo     | Print the specified value to stdout without adding it to the stack | `3 4 + echo`  |
-| read     | Reads a string from the console                       | `read`                     |
+| read     | Read one line from the console and push it as a code block | `read`                |
 | write-to-file | Write the top element of the stack to a file       | `3 "output.txt" write-to-file` |
 | append-to-file | Append the top element of the stack to a file      | `3 "output.txt" append-to-file` |
 | read-from-file | Read the contents of a file and push it to the stack | `"input.txt" read-from-file` |
