@@ -38,7 +38,9 @@ Note: This change is not backwards compatible with previous versions.
   - Example: `3 4 :+ eval` is `7`; `{+} 0 nth eval` runs `+` (this undoes the 1.15.0 note on names taken out of a block)
   - A block held in `b` is pushed by `:b eval` and run by `b eval`
 - **`eval` Takes Code, Not Text**:
-  - `eval` runs a block, a symbol or a lambda. `"3 4 +" eval` is a type error; turn text into code with `read-from-string` first: `"3 4 +" read-from-string eval`
+  - `eval` runs a block, a symbol or a lambda. `"3 4 +" eval` is a type error; turn text into code with `parse` first: `"3 4 +" parse eval`
+- **`read-from-string` Is Now `parse`**:
+  - The word that turns text into a code block is `parse`: `"3 4 +" parse` is `{3 4 +}`. `read-from-string` is gone
 - **Blocks Read As Data Give Symbols**:
   - `nth`, `list`, `sorted`, `reversed`, `enumerate`, `zip` and the block argument of `map` / `filter` / `reduce` / `fold` give a symbol for every name written in the block, whatever the name holds
   - Example: `{x} 0 nth` is the symbol `x`; `{x y} {} map` is `{x y}`. Write a list literal `[x y]` when the values are wanted
@@ -53,6 +55,7 @@ Note: This change is not backwards compatible with previous versions.
   - `defun` and `lambda` take their parameters as a block of distinct bare names, like `defmacro`: `{:a}`, `{"a"}`, a bare `:a` or a list is an error
 - **Display**:
   - Every string is shown quoted, computed ones included (`"a" "b" +` shows `'ab'`); a symbol is shown bare
+  - `null` is shown as `null`, like `true` and `false` (it used to show as `None`)
   - A code block shows its names as written, whether or not they are bound
 - **Python API**:
   - A name comes back as a `Symbol` object (`from stacker import Symbol`; `.name` is the text), not as a `str`
@@ -78,7 +81,8 @@ Note: This change is not backwards compatible with previous versions.
 - An undefined name used as data (`foo m`, `[a b]`, `{2 *} double alias`): write `{foo} m` or `:foo m`, `[:a :b]`, `{2 *} :double alias`
 - `:x` or `"x"` written as a condition to test the variable `x`: write `x`
 - `:b eval` to run a block held in `b`: write `b eval`
-- `"..." eval` to run text: write `"..." read-from-string eval`
+- `"..." eval` to run text: write `"..." parse eval`
+- `read-from-string`: write `parse`
 - A lambda called by its bare name (`{x y} {x y *} lambda :multiply set 3 4 multiply`): write `3 4 multiply eval`, or define it with `defun`. `[1 2] {f} map` with a lambda in `f`: write `[1 2] f map`
 - `:x "x" ==`: write `:x str "x" ==`
 - `{:a} {a} lambda` or `:a {a 2 *} :f defun`: write `{a}`
@@ -123,7 +127,7 @@ Note: This change is not backwards compatible with previous versions.
 - `5 true set` silently replaced the constant `true`
 - A bare name inside a nested list literal (`[[x 1]]`) was kept as text instead of being the variable's value
 - README: the operator table named a `random` word that never existed (the word is `rand`) and described `all` / `any` with a two-argument form they never had
-- `help` and `operators` did not list `map`, `filter`, `reduce`, `fold`, `zip`, the aggregates or the transforms. The help text still described tuples, `$` on loop variables and the two-argument `defmacro`; it and the descriptions of `do`, `dolist`, `times`, `while`, `lambda`, `defun`, `set`, `sub`, `subn`, `listn`, `nth`, `read-from-string` and the higher-order words now match the language
+- `help` and `operators` did not list `map`, `filter`, `reduce`, `fold`, `zip`, the aggregates or the transforms. The help text still described tuples, `$` on loop variables and the two-argument `defmacro`; it and the descriptions of `do`, `dolist`, `times`, `while`, `lambda`, `defun`, `set`, `sub`, `subn`, `listn`, `nth`, `parse`, `read` (it reads a line and pushes it as a code block) and the higher-order words now match the language
 - The `do` loop benchmark (`0 :s set 1 100000 :i {s i + :s set} do`) runs about 20% faster: the argument helpers no longer look every value up in the variable scopes
 
 ## [1.15.0] - 2026-10-10

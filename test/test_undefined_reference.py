@@ -44,7 +44,7 @@ class TestReferences:
         with pytest.raises(UndefinedSymbolError):
             run("{foo} eval")
 
-    @pytest.mark.parametrize("program", [":foo eval", '"foo" read-from-string eval', "{foo} 0 nth eval"])
+    @pytest.mark.parametrize("program", [":foo eval", '"foo" parse eval', "{foo} 0 nth eval"])
     def test_evaluating_an_undefined_name(self, program):
         with pytest.raises(UndefinedSymbolError):
             run(program)

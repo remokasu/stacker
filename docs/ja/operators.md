@@ -286,8 +286,8 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 
 | 演算子 | 説明 | 例 |
 |---|---|---|
-| `eval` | コードブロック・シンボル・ラムダを実行する。文字列は先に `read-from-string` でブロックにする | `{3 5 +} eval`, `"3 5 +" read-from-string eval` |
-| `read-from-string` | 文字列をコードブロックに変換 | `"3 4 +" read-from-string` |
+| `eval` | コードブロック・シンボル・ラムダを実行する。文字列は先に `parse` でブロックにする | `{3 5 +} eval`, `"3 5 +" parse eval` |
+| `parse` | 文字列をコードブロックに変換 | `"3 4 +" parse` |
 | `sub` | 一番上の値を、1 トークンのコードブロックで包む | `:x sub` |
 | `subn` | 上から n 個の値を 1 つのコードブロックで包む | `1 2 2 subn` |
 | `concat-block` | 2 つのコードブロックを連結 | `{a b} {c} concat-block` |
@@ -303,7 +303,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `echo`, `print` | 値を出力して改行する（スタックには積まない） | `3 4 + echo`, `"hello" print` |
 | `printc` | 値を改行なしで出力 | `"hello" printc` |
 | `newline` | 改行を出力 | `newline` |
-| `read` | 標準入力から 1 行読み、コードブロックとして積む（`read-from-string` と同じ解析） | `read` |
+| `read` | 標準入力から 1 行読み、コードブロックとして積む（`parse` と同じ解析） | `read` |
 
 ## ファイル
 

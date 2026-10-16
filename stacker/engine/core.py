@@ -854,7 +854,7 @@ class StackerCore:
           had been written here (macro, variable, function or operator)
         - a lambda is called with arguments taken from this stack
         - a string is data, not code: ``StackerTypeError`` (parse text with
-          ``read-from-string`` first)
+          ``parse`` first)
         - anything else is pushed back
         """
         expression = stack.pop()
@@ -863,8 +863,8 @@ class StackerCore:
         elif isinstance(expression, str):
             raise StackerTypeError(
                 f"`eval` expects a code block, a symbol or a lambda, got the string {str(expression)!r}. "
-                "A string is text, not code: parse it first with `read-from-string`, "
-                'e.g. "3 4 +" read-from-string eval'
+                "A string is text, not code: turn it into a block with `parse` first, "
+                'e.g. "3 4 +" parse eval'
             )
         elif isinstance(expression, StackerCore):
             self._eval_block(expression, stack=stack)
@@ -1019,7 +1019,7 @@ class StackerCore:
         "sub": _prio_sub,
         "subn": _prio_subn,
         "listn": _prio_listn,
-        "read-from-string": _prio_read_from_string,
+        "parse": _prio_read_from_string,
         "read": _prio_read,
         "split": _prio_split,
         "nth": _prio_nth,
