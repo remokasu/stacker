@@ -6,46 +6,62 @@
 
 Note: This change is not backwards compatible with previous versions.
 
-- **A Bare Name Is Always A Reference**:
-  - Tokens are read one at a time, left to right, and nothing looks ahead: a bare name means the same thing wherever it is written. It is looked up (a macro is expanded, a variable's value is pushed, a function or an operator is run), and an undefined name is an error, whatever word comes after it. Until now a bare name right before `set`, `=`, `global`, `defun`, `defmacro` or `macroexpand`, the loop variable of `do` / `dolist` and the two names before the block of `reduce` / `fold` were read as the name being bound. Those names are written `:name` (or `{name}`): `4 :x set`, `{a b} {a b +} :add defun`, `1 10 :i {i echo} do`, `[1 2 3] 0 :acc :x {acc x +} reduce`
-  - Every word that takes a name takes it the same way, built in or not: `set` and `alias` alike, so `{2 *} :double alias` and `{2 *} :dup alias` both work
-  - A program means the same however it is split: `{4 :x} {set} concat-block eval` and `{4 :x} eval {set} eval` both bind `x`
-  - The 1.15.0 rule that protected built-in names from rebinding is gone, because nothing is read as a name by position any more. A built-in word behaves like any other name: bare, `dup` runs (so `3 dup set` runs `dup` on the 3 and `set` then fails for want of a name), and `3 :dup set` makes `dup` a variable holding 3 that shadows the built-in word (a variable comes before a built-in word of the same name), as it did in 1.15.0
-  - A bare name that holds a name binds that name: when `x` holds the symbol `y` (or the block `{y}`), `7 x set` binds `y`. A computed name can be given too: `1 10 "i" symbol {i echo} do`
-  - In a macro template, `:name` is replaced by the name that `name` holds, so a generated temporary is bound as `:t set`: `{x} { gensym :t = { x eval :t set t t + } } {double!} defmacro`
-- **A Symbol Is Written `:name`**:
-  - The symbol prefix is `:`, not `$`: `:x` is the name `x` as a value. `$` is gone from the language; a token starting with `$` is a syntax error that points at the new spelling, so old code fails loudly instead of binding a name that happens to start with `$`. Strings are unaffected (`"$100"` is still a string)
-- **Symbols Are A Type Of Their Own**:
-  - `:name` always pushes the symbol `name`, whatever a variable `name` holds: `5 :x set :x` is the symbol `x`, and a symbol never turns into a value later. The rule is now three lines long: a bare name is a reference (the value of the variable, or the word being run), `:name` and the quoted name `{name}` are the name itself, and a string is text
-  - A symbol is not a string: `:x "x" ==` is false, `:x str?` is false (`symbol?` is true), and `:x 1 +` is a type error whose message shows how to write the value (`x`) or the text (`:x str`). `str` turns a symbol into its text and `symbol` turns text back into a symbol
+- **Names Are Written `:name`**:
+  - Tokens are read one at a time, left to right, and nothing looks ahead: a bare name is always a reference, wherever it stands. The name a word binds is written `:name` (or `{name}`)
+  - Until now the name right before `set` / `=` / `global` / `defun` / `defmacro` / `macroexpand`, the loop variable of `do` / `dolist` and the two names before a `reduce` / `fold` block could be written bare
+  - Example: `4 :x set`, `{a b} {a b +} :add defun`, `1 10 :i {i echo} do`, `[1 2 3] 0 :acc :x {acc x +} reduce`
+  - Example: `4 x set` now fails with `` `x` is not defined `` (and a hint to write `:x`); if `x` is defined, `set` is handed its value and fails with `` `set` expects a name, got 5 ``
+  - Every word that takes a name takes it this way, built in or not: `{2 *} :double alias` and `{2 *} :dup alias` both work
+  - Code means the same however it is split: `{4 :x} {set} concat-block eval` and `{4 :x} eval {set} eval` both bind `x`
+  - The 1.15.0 protection of built-in names is gone. A bare `dup` runs, so `3 dup set` runs `dup` and `set` then fails; `3 :dup set` makes `dup` a variable holding 3 that shadows the built-in word, as before
+  - A bare name that holds a name binds that name: after `:y :x set` (or `{y} :x set`), `7 x set` binds `y`. A computed name works too: `1 10 "i" symbol {i echo} do`
+  - In a macro body, `:t` is replaced by the name `t` holds, so a generated name is bound as `:t set`: `{x} { gensym :t = { x eval :t set t t + } } {double!} defmacro`
+- **Symbol Prefix `:`**:
+  - `:x` is the name `x` as a value. `$` is gone: a token starting with `$` is a syntax error that points at the new spelling. Strings are unaffected (`"$100"` is still a string)
+- **Symbols Are A Type**:
+  - `:name` always pushes the symbol `name`, whatever a variable `name` holds, and a symbol never turns into a value later
+  - Example: `5 :x set :x` is the symbol `x`
+  - A symbol is not a string: `:x "x" ==` is false, `:x str?` is false, `symbol?` is true, and `:x 1 +` is a type error whose message shows how to write the value (`x`) or the text (`:x str`). `str` gives a symbol's text; `symbol` turns text into a symbol
   - `:` must be followed by a name: `:1`, `:{x}`, `:"x"`, `:[1 2]`, `::x` and a lone `:` are syntax errors. A name holds no `:`, `$`, quote, bracket, `#` or `;`, so every symbol can be written back as `:name`
-- **A String Is Never A Name**:
-  - `5 "x" set`, `5 {"x"} set`, `"m" macroexpand`, `[1 4 9] "sqrt" map` and `[3 4] "+" apply` are errors. Write `:x` / `{x}`, or convert text with `symbol` (`"x" symbol`)
-- **An Undefined Name Is An Error Where It Is Referenced**:
-  - A bare name that is neither a macro, a variable, a function nor an operator used to be pushed as an undefined-symbol value that only failed when consumed. It now raises `UndefinedSymbolError` at its own position, so a typo stops where it is written. This includes a name inside a list literal (`[a b]`) and a macro argument written bare (`foo m`); write `[:a :b]` and `{foo} m` for the names themselves
-- **A Lambda Held In A Variable Is A Value**:
-  - Writing the name of a variable that holds a lambda pushes the lambda, like any other variable; it no longer calls it. Call it with `eval` (`3 4 multiply eval`) or `apply`, or hand it to `map` / `filter` by name (`[1 2] f map`). Functions defined with `defun` are still called by their bare name. A lambda's arguments bind code blocks raw, like a function's
+- **Strings Are Not Names**:
+  - `5 "x" set`, `5 {"x"} set`, `"m" macroexpand`, `[1 4 9] "sqrt" map` and `[3 4] "+" apply` are errors
+  - Write `:x` / `{x}`, or convert text with `symbol` (`"x" symbol`)
+- **Undefined Names Fail Where They Are Written**:
+  - A bare name that is neither a macro, a variable, a function nor an operator raises `UndefinedSymbolError` at its own position; it used to be pushed as an undefined-symbol value that failed only when consumed
+  - This includes a name inside a list literal (`[a b]`) and a macro argument written bare (`foo m`); write `[:a :b]` and `{foo} m` for the names themselves
+- **A Lambda In A Variable Is A Value**:
+  - Writing the variable's name pushes the lambda; it no longer calls it. Call it with `eval` (`3 4 multiply eval`) or `apply`, or hand it to `map` / `filter` by name (`[1 2] f map`)
+  - Functions defined with `defun` are still called by their bare name
+  - A lambda's arguments bind code blocks raw, like a function's
 - **`eval` On A Symbol Runs The Name**:
-  - `:x eval` does what writing `x` does: a macro is expanded, a variable's value is pushed, a function or an operator is run. `3 4 :+ eval` is `7`, and `{+} 0 nth eval` runs `+` again (this undoes the 1.15.0 note on names taken out of a block). A block held in `b` is pushed by `:b eval`; `b eval` runs it
+  - `:x eval` does what writing `x` does: a macro is expanded, a variable's value is pushed, a function or an operator is run
+  - Example: `3 4 :+ eval` is `7`; `{+} 0 nth eval` runs `+` (this undoes the 1.15.0 note on names taken out of a block)
+  - A block held in `b` is pushed by `:b eval` and run by `b eval`
 - **`eval` Takes Code, Not Text**:
-  - `eval` runs a code value: a block, a symbol or a lambda. A string is data, so `"3 4 +" eval` is now a type error; text is turned into code with `read-from-string` first (`"3 4 +" read-from-string eval`). Reading and evaluating are separate steps
-- **Blocks Read As Data Hand Out Symbols**:
-  - `nth`, `list`, `sorted`, `reversed`, `enumerate`, `zip` and the block argument of `map` / `filter` / `reduce` / `fold` give a symbol for every name written in the block: `{x} 0 nth` is the symbol `x` and `{x y} {} map` is `{x y}`, whatever `x` and `y` hold. Write a list literal `[x y]` when the values are wanted. The aggregates (`sum`, `max`, `all`, ...) still reference the names; `len` counts tokens. `apply` evaluates its argument first, as before, and reads only a block that this evaluation leaves behind as data
-  - Conversely, a value spliced into a block by `sub`, `subn`, parameter interpolation or a block-returning word becomes a token of its own kind: a symbol becomes a bare name, a string, literal or computed, becomes a string literal
+  - `eval` runs a block, a symbol or a lambda. `"3 4 +" eval` is a type error; turn text into code with `read-from-string` first: `"3 4 +" read-from-string eval`
+- **Blocks Read As Data Give Symbols**:
+  - `nth`, `list`, `sorted`, `reversed`, `enumerate`, `zip` and the block argument of `map` / `filter` / `reduce` / `fold` give a symbol for every name written in the block, whatever the name holds
+  - Example: `{x} 0 nth` is the symbol `x`; `{x y} {} map` is `{x y}`. Write a list literal `[x y]` when the values are wanted
+  - The aggregates (`sum`, `max`, `all`, ...) still reference the names; `len` counts tokens; `apply` evaluates its argument first, as before, and reads only a block left behind as data
+  - A value spliced into a block by `sub`, `subn`, parameter interpolation or a block-returning word becomes a token of its own kind: a symbol becomes a bare name; a string, literal or computed, becomes a string literal
 - **Conditions Are Values**:
-  - `if` / `ifelse` no longer look a string or symbol condition up as a variable: a symbol is true, a string is true unless empty. `0 :x = :x {1} if` now runs the block; write `x {1} if` to test the variable
+  - `if` / `ifelse` no longer look a string or symbol condition up as a variable: a symbol is true, a string is true unless empty
+  - Example: `0 :x = :x {1} if` runs the block; write `x {1} if` to test the variable
 - **`true`, `false` And `null` Are Literals**:
-  - Like `True` / `False` / `None`, they can no longer be rebound (`5 true set` is an error) and are not listed by `vars`. `pi`, `e` and the other constants are still variables
+  - Like `True` / `False` / `None`, they cannot be rebound (`5 true set` is an error) and are not listed by `vars`. `pi`, `e` and the other constants are still variables
 - **Argument Lists Are Checked**:
   - `defun` and `lambda` take their parameters as a block of distinct bare names, like `defmacro`: `{:a}`, `{"a"}`, a bare `:a` or a list is an error
 - **Display**:
-  - Every string is shown quoted, computed ones included (`"a" "b" +` shows `'ab'`); a symbol is shown bare. A code block shows its names as written, whether or not they are bound at the time
+  - Every string is shown quoted, computed ones included (`"a" "b" +` shows `'ab'`); a symbol is shown bare
+  - A code block shows its names as written, whether or not they are bound
 - **Python API**:
-  - A name comes back as a `Symbol` object (`from stacker import Symbol`; `.name` is the text), not as a `str`. `UndefinedSymbol` is removed: catch `UndefinedSymbolError` instead of testing for the value. Plugins receive a `Symbol` for a symbol argument
+  - A name comes back as a `Symbol` object (`from stacker import Symbol`; `.name` is the text), not as a `str`
+  - `UndefinedSymbol` is removed; catch `UndefinedSymbolError` instead of testing for the value
+  - Plugins receive a `Symbol` for a symbol argument
 
 ### Migration
 
-- Put `:` before every name that is bound, defined or looped over: `4 x set` → `4 :x set`, `5 y =` → `5 :y =`, `42 answer global` → `42 :answer global`, `{...} {...} f defun` → `{...} {...} :f defun`, `{...} {...} m defmacro` → `{...} {...} :m defmacro`, `m macroexpand` → `:m macroexpand`, `1 10 i {...} do` → `1 10 :i {...} do`, `[...] x {...} dolist` → `[...] :x {...} dolist`, `[...] 0 acc x {...} reduce` → `[...] 0 :acc :x {...} reduce`. Your own variables, functions and macros are redefined the same way (`6 :x set`), and a `gensym` name bound in a macro template with `t set` is written `:t set`
+- Put `:` before every name that is bound, defined or looped over: `4 x set` → `4 :x set`, `5 y =` → `5 :y =`, `42 answer global` → `42 :answer global`, `{...} {...} f defun` → `{...} {...} :f defun`, `{...} {...} m defmacro` → `{...} {...} :m defmacro`, `m macroexpand` → `:m macroexpand`, `1 10 i {...} do` → `1 10 :i {...} do`, `[...] x {...} dolist` → `[...] :x {...} dolist`, `[...] 0 acc x {...} reduce` → `[...] 0 :acc :x {...} reduce`. Your own variables, functions and macros are redefined the same way (`6 :x set`), and a `gensym` name bound in a macro body with `t set` is written `:t set`
 - Old code stops right where such a name is written (`` `x` is not defined ``, with a hint to write `:x`), or at the binding word when the name was already defined (`` `set` expects a name, got 5 ``). The one silent change: rebinding by its bare name a variable that holds a symbol or a one-name block now binds that name instead
 - On `.stk` files, the names before `set`, `=`, `global`, `defun`, `defmacro` and `macroexpand` can be rewritten with (run it on code lines only; it skips what follows `#` on a line but not the inside of strings, so check lines holding strings by hand):
   ```bash
@@ -78,7 +94,7 @@ Note: This change is not backwards compatible with previous versions.
 
 ### Added
 
-- **`symbol`**: `"x" symbol` makes the symbol `x` from a string; `{x} symbol` from a quoted name; a symbol is returned as it is. Text that could not be written as `:name` (`"1"`, `"a b"`, `""`) is a syntax error
+- **`symbol`**: `"x" symbol` makes the symbol `x` from a string; `{x} symbol` from a quoted name; a symbol is returned as it is. Text that cannot be written as `:name` (`"1"`, `"a b"`, `""`) is a syntax error
 - **`symbol?`**: true for a symbol
 - **Symbols in list literals**: `[:a :b]` is a list of two symbols
 - **`StackerTypeError`**: raised (it is a `TypeError` too) when a symbol reaches a word that needs a value; the message names the symbol and the two ways to write what was probably meant
@@ -86,7 +102,7 @@ Note: This change is not backwards compatible with previous versions.
 
 ### Fixed
 
-- A loop on the last line of a script was silently dropped: `1 3 :i` on one line and `{i echo} do` on the next, or a body held in a variable (`1 3 :i body do`), ran nothing and exited 0 when it ended the file (and the same in `~/.stackerrc`). The script reader held such a line back guessing that its arguments would follow; it now runs each expression once its brackets and strings are closed, and an error on the line after a loop is reported at its own line
+- A loop on the last line of a script was silently dropped: `1 3 :i` on one line and `{i echo} do` on the next, or a body held in a variable (`1 3 :i body do`), ran nothing and exited 0 when it ended the file (and the same in `~/.stackerrc`): the script reader held such a line back, guessing that its arguments would follow. Each expression now runs once its brackets and strings are closed, and an error on the line after a loop is reported at its own line
 - `~/.stackerrc` could not hold the display settings the README shows (`disable_disp_logo`, `disable_disp_stack`, `enable_disp_ans`): since 1.9.0 every mode stopped at start-up with "`disable_disp_logo` is not defined". The REPL applies them again; the command line and scripts skip them. `help`, `about` and `delete_history` are skipped everywhere rather than run on every start
 - `break` outside a loop took the REPL down with a traceback and leaked a `BaseException` to Python callers; it is a `StackerSyntaxError` ("`break` can only be used inside a loop") and the REPL carries on. A `break` in an included file still leaves the loop that runs the `include`
 - `ans` was registered but did nothing since 1.5.0. It pushes again the result of the last input that left a value (a REPL line, an expression of a script, `-e`), stays available after the stack is used up, and is an error when there is no result yet
@@ -114,20 +130,26 @@ Note: This change is not backwards compatible with previous versions.
 
 Note: This change is not backwards compatible with previous versions.
 
-- **`defmacro` Defines Real Macros**:
-  - `defmacro` now takes three arguments, `{args} {body} name defmacro`, like `defun`. The body runs when the macro is called, on its own stack and in its own scope, and must leave exactly one value: a code block is evaluated on the caller's stack, any other value is pushed. Argument names (and variables assigned inside the body) are substituted into the body's block literals, so control structures can be written in Stacker: `{c b} {{{c eval not {break} if b eval} loop}} {while} defmacro`
-  - The old two-argument form `{body} name defmacro` is gone. It was a named code snippet, which is now spelled `{body} {name} alias`
-  - Assignments inside a macro body are local to the macro and never change the caller's variables
-- **Built-in Names Are Protected From Accidental Rebinding** (superseded in 1.16.0, where no bare name is read as a name by position):
-  - A bare built-in operator name written right before `set` / `=` / `global` / `defun` / `defmacro` now runs as that operator instead of being taken as the name to bind. `{} {{2 *}} expand defmacro` used to silently define a macro named `expand`; it now runs `expand`
-  - Rebinding a built-in name still works with an explicit quote: `3 $dup set` or `3 {dup} set`. Your own variables, functions and macros can be redefined by their bare name as before
+- **`defmacro` Takes Arguments And Generates Code**:
+  - `defmacro` takes three arguments, `{args} {body} name defmacro`, like `defun`
+  - The body runs when the macro is called, on its own stack and in its own scope, and must leave exactly one value: a code block is evaluated on the caller's stack, any other value is pushed
+  - Argument names, and variables assigned inside the body, are substituted into the body's block literals
+  - Assignments inside the body are local to the macro
+  - Example: `{c b} {{{c eval not {break} if b eval} loop}} {while} defmacro`
+  - The two-argument form `{body} name defmacro` is gone; a named code snippet is now `{body} {name} alias`
+- **Built-in Names Are Protected Before A Binding Word** (superseded in 1.16.0, where no bare name is read as a name by position):
+  - A bare built-in operator name right before `set` / `=` / `global` / `defun` / `defmacro` runs as that operator instead of being taken as the name to bind
+  - Example: `{} {{2 *}} expand defmacro` used to define a macro named `expand`; it now runs `expand`
+  - To rebind a built-in name, quote it: `3 $dup set` or `3 {dup} set`. Your own variables, functions and macros can still be redefined by their bare name
 - **`expand` On Code Blocks**:
-  - `{1 2 +} expand` now pushes one-token code blocks `{1} {2} {+}` instead of the raw token representation (which left the operator as a string and made `{1 2 +} expand +` fail). `expand` on lists is unchanged
-- **Name Positions Are Always Names** (superseded in 1.16.0: every name is written `:name`):
-  - A bare name right before `macroexpand`, and the two names before the block of `reduce` / `fold`, are now read as names, like the name before `set` or the loop variable of `do`. A variable that happened to hold a name can no longer be used there by its bare name (`$m which set which macroexpand` used to expand `m`); write the name itself: `m macroexpand`, `{m} macroexpand`
-- **Prelude Is Loaded By `Stacker()`**:
-  - The Stacker-written standard words (`alias`, `mean`) are loaded by every new interpreter, not only by the command line, so embedding code and scripts see the same words. `Stacker(prelude=False)` gives a bare interpreter
-  - On the command line the prelude is now loaded before plugins (previously after), so the prelude cannot refer to plugin words
+  - `{1 2 +} expand` pushes the one-token blocks `{1} {2} {+}`; it used to push the raw tokens, which left `+` as a string and made `{1 2 +} expand +` fail
+  - `expand` on lists is unchanged
+- **The Names Before `macroexpand`, `reduce` And `fold` Are Names** (superseded in 1.16.0: every name is written `:name`):
+  - A bare name right before `macroexpand`, and the two names before the block of `reduce` / `fold`, are read as names, like the name before `set` or the loop variable of `do`
+  - A variable holding a name can no longer be used there by its bare name: `$m which set which macroexpand` used to expand `m`; write `m macroexpand` or `{m} macroexpand`
+- **The Prelude Is Loaded By `Stacker()`**:
+  - The standard words written in Stacker (`alias`, `mean`) are loaded by every new interpreter, not only by the command line, so embedding code and scripts see the same words; `Stacker(prelude=False)` gives a bare interpreter
+  - On the command line the prelude is loaded before plugins (previously after), so the prelude cannot refer to plugin words
 
 ### Migration
 
@@ -141,19 +163,19 @@ Note: This change is not backwards compatible with previous versions.
 
 ### Added
 
-- **`loop`**: `{body} loop` repeats a block on the current stack until `break`. It is the primitive all other loops can be written with
+- **`loop`**: `{body} loop` repeats a block on the current stack until `break`; every other loop can be written with it
 - **`alias`** (prelude): `{body} {name} alias` names a code snippet that runs in place on the caller's stack
 - **`gensym`**: pushes a fresh unique name (prefixed `__g`) for temporaries in macro-generated code
 - **`macroexpand`**: `<args> {name} macroexpand` pushes a macro's expansion without running it
 - **`concat-block`**: `{a b} {c} concat-block` joins two code blocks
-- **Quoted names**: `{name}` is the documented way to pass a name as a value; every word that takes a name accepts it
+- **Quoted names**: `{name}` passes a name as a value; every word that takes a name accepts it
 - **`Stacker(prelude=...)`**: Python API flag to skip loading the prelude
 - Redefining a prelude word logs a warning (`redefining prelude word 'alias'`) through the standard `logging` module
 
 ### Fixed
 
 - **Control Flow In `-e` And `Stacker.eval()`**:
-  - `if`, `ifelse`, `iferror`, `times`, `while`, `do` and `dolist` evaluated their blocks on the interpreter's own stack instead of the stack they were called on, so `stacker -e "5 {dup ++} 3 times"` failed and `Stacker().eval("true {3} if")` returned an empty result. They now use the calling stack, like `cond` already did
+  - `if`, `ifelse`, `iferror`, `times`, `while`, `do` and `dolist` evaluated their blocks on the interpreter's own stack instead of the stack they were called on: `stacker -e "5 {dup ++} 3 times"` failed and `Stacker().eval("true {3} if")` returned an empty result. They now use the calling stack, like `cond` already did
   - `do` and `dolist` restore the enclosing scope even when the body raises
 - A defined macro can be redefined by its bare name (`{} {{2}} m defmacro` used to fail with `Expected a symbol, got 1`)
 - Macro recursion is stopped by the recursion guard with a `StackerRecursionError` naming the macro, instead of Python's `RecursionError`
@@ -161,10 +183,10 @@ Note: This change is not backwards compatible with previous versions.
 - Prelude files load in a fixed order (a manifest in the `slib` package) instead of directory-listing order
 - `disp` (and the non-colored stack display) no longer deletes commas inside strings: `"Hello, World!" disp` shows `['Hello, World!']`, and booleans print as `true` / `false` like the colored display
 - **String Literals Inside Code Blocks Are Literals**:
-  - A string literal inside a block used to be looked up as a name when the block ran: `5 foo set {"foo"} eval` gave `5`, `3 4 {"+"} eval` added the numbers, and a macro named `foo` captured `"foo"` even at top level. A string literal now always evaluates to itself, wherever it is written
-  - As a consequence, literals whose text looks like other syntax stay strings inside blocks too: `{"$x"}`, `{"[1 2]"}` and `{"{x}"}` push the strings `$x`, `[1 2]` and `{x}` (they used to be read as a symbol, a list and a block)
+  - A string literal inside a block used to be looked up as a name when the block ran: `5 foo set {"foo"} eval` gave `5`, `3 4 {"+"} eval` added the numbers, and a macro named `foo` captured `"foo"` even at top level. A string literal now always evaluates to itself
+  - Literals whose text looks like other syntax stay strings inside blocks too: `{"$x"}`, `{"[1 2]"}` and `{"{x}"}` push the strings `$x`, `[1 2]` and `{x}` (they used to be read as a symbol, a list and a block)
   - A block displays its string literals with their quotes: `{"a b" echo}` shows as `{"a b" echo}`
-- `"..." eval` no longer substitutes variable values while tokenizing, so `5 x set "6 x set x" eval` rebinds `x` and gives `6`, the same as `read-from-string eval`. A lambda held in a variable is now called when its name appears in the evaluated string, as it is inside a block
+- `"..." eval` no longer substitutes variable values while tokenizing: `5 x set "6 x set x" eval` rebinds `x` and gives `6`, the same as `read-from-string eval`. A lambda held in a variable is called when its name appears in the evaluated string, as it is inside a block
 - A bare literal (`5 3 set`, `5 True set`) or a quoted literal (`3 {5} set`) is never taken as a name; these report a syntax error instead of binding a variable named `3`, `True` or `5`
 - `[1 2] eval` pushes the list back instead of raising a Python `TypeError`
 - An undefined name given to the aggregate operators (`len`, `sum`, ...), the transforms (`list`, `sorted`, `reversed`, `enumerate`) or `zip` raises `UndefinedSymbolError` instead of being treated as the text of the name (`foo len` gave 3)
