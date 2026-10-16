@@ -317,7 +317,7 @@ stacker:2> "3 " "4 +" + parse eval
 
 ```text
 $ "hi" eval
-StackerTypeError: `eval` expects a code block, a symbol or a lambda, got the string 'hi'. A string is text, not code: parse it first with `parse`, e.g. "3 4 +" parse eval
+StackerTypeError: `eval` expects a code block, a symbol or a lambda, got the string 'hi'. A string is text, not code: turn it into a block with `parse` first, e.g. "3 4 +" parse eval
 ```
 
 `eval` は、ブロックの中のコードを現在のスタックの上で実行します。ブロック以外の値（数など）に使うと、その値がそのまま残ります。

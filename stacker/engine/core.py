@@ -920,7 +920,7 @@ class StackerCore:
         elms.reverse()
         stack.append(elms)
 
-    def _prio_read_from_string(self, op, stack) -> None:
+    def _prio_parse(self, op, stack) -> None:
         self._substack_with_expression(stack.pop(), stack)  # type: ignore[arg-type]
 
     def _prio_read(self, op, stack) -> None:
@@ -1019,7 +1019,7 @@ class StackerCore:
         "sub": _prio_sub,
         "subn": _prio_subn,
         "listn": _prio_listn,
-        "parse": _prio_read_from_string,
+        "parse": _prio_parse,
         "read": _prio_read,
         "split": _prio_split,
         "nth": _prio_nth,
