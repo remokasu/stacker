@@ -80,10 +80,6 @@ class TestValuesSplicedIntoBlocks(unittest.TestCase):
         self.assertEqual(self.shown('{[1 2] "a" 1.5 x}'), '{[1 2] "a" 1.5 x}')
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class TestNullDisplay(unittest.TestCase):
     """`null` is shown as written, like `true` and `false`, not as Python's None."""
 
@@ -96,3 +92,7 @@ class TestNullDisplay(unittest.TestCase):
     def test_colored_display_agrees(self):
         items = list(Stacker().eval("null"))
         self.assertEqual(ANSI.sub("", disp_colored(items)), disp_default(items))
+
+
+if __name__ == "__main__":
+    unittest.main()

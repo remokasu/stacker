@@ -309,7 +309,7 @@ class TestStacker(unittest.TestCase):
         self.stacker.process_expression("{3 5} {*} eval")
         self.assertEqual(self.stacker.stack[-1], 15)
 
-    def test_eval_list_via_read_from_string(self):
+    def test_eval_list_via_parse(self):
         self.stacker.stack.clear()
         self.stacker.process_expression("'[3 5 6]' parse eval")
         self.assertEqual(self.stacker.stack[-1], [3, 5, 6])

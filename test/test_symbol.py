@@ -511,22 +511,22 @@ class TestEdgeCasesNotCoveredElsewhere:
 
 
 class TestSymbolRoundTripsThroughBlocks:
-    def test_read_from_string_of_a_symbol_is_a_quoted_name(self):
+    def test_parse_of_a_symbol_is_a_quoted_name(self):
         (block,) = run(":x parse")
         assert isinstance(block, StackerCore)
         assert str(block) == "{x}"
 
-    def test_read_from_string_then_nth_gives_the_symbol_back(self):
+    def test_parse_then_nth_gives_the_symbol_back(self):
         assert run(":x parse 0 nth")[-1] == Symbol("x")
 
-    def test_read_from_string_of_text_with_a_colon_gives_a_symbol_token(self):
+    def test_parse_of_text_with_a_colon_gives_a_symbol_token(self):
         assert run('":x" parse 0 nth')[-1] == Symbol("x")
 
-    def test_read_from_string_does_not_look_up_the_name(self):
+    def test_parse_does_not_look_up_the_name(self):
         (block,) = run("5 :x set :x parse")
         assert str(block) == "{x}"
 
-    def test_read_from_string_then_eval_references_the_name(self):
+    def test_parse_then_eval_references_the_name(self):
         assert run("5 :x set :x parse eval") == [5]
         with pytest.raises(UndefinedSymbolError):
             run(":x parse eval")

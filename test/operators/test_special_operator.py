@@ -70,7 +70,7 @@ class TestUnit(unittest.TestCase):
         stacker.process_expression(expr)
         self.assertEqual(list(stacker.stack), ["abc", "b"])
 
-    def test_read_from_string(self):
+    def test_parse(self):
         stacker = Stacker()
         expr = "'3 4 +' parse"
         stacker.process_expression(expr)
