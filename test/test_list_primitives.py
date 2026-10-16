@@ -81,7 +81,7 @@ class TestListPrimitives(unittest.TestCase):
 
 
 class TestIdentifierNaming(unittest.TestCase):
-    """Test Scheme-style identifier names with ?, !, -"""
+    """Test identifier names with ?, !, -"""
 
     def setUp(self):
         self.stacker = Stacker()

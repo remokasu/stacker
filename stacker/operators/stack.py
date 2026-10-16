@@ -170,7 +170,7 @@ def _roll(n: int, stack: deque | list) -> None:
     if len(stack) == 0:
         raise RollError("Stack is empty")
     if n == 0:
-        return  # Forth ROLL semantics: rolling zero elements is a no-op
+        return  # rolling zero elements is a no-op
     if n < 0 or n > len(stack):
         raise RollError("Index out of range")
     item = stack[-n]

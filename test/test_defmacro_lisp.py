@@ -1,4 +1,4 @@
-"""`defmacro` defines a Lisp-style macro: `{args} {body} :name defmacro`.
+"""`defmacro` defines a macro whose body runs at expansion time: `{args} {body} :name defmacro`.
 
 The body runs at expansion time on its own stack and must leave exactly one
 value; a code block is then evaluated on the caller's stack, anything else is

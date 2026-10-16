@@ -14,7 +14,7 @@ Note: This change is not backwards compatible with previous versions.
   - A bare name that holds a name binds that name: when `x` holds the symbol `y` (or the block `{y}`), `7 x set` binds `y`. A computed name can be given too: `1 10 "i" symbol {i echo} do`
   - In a macro template, `:name` is replaced by the name that `name` holds, so a generated temporary is bound as `:t set`: `{x} { gensym :t = { x eval :t set t t + } } {double!} defmacro`
 - **A Symbol Is Written `:name`**:
-  - The symbol prefix is `:` (as in Ruby and Clojure), not `$`: `:x` is the name `x` as a value. `$` is gone from the language; a token starting with `$` is a syntax error that points at the new spelling, so old code fails loudly instead of binding a name that happens to start with `$`. Strings are unaffected (`"$100"` is still a string)
+  - The symbol prefix is `:`, not `$`: `:x` is the name `x` as a value. `$` is gone from the language; a token starting with `$` is a syntax error that points at the new spelling, so old code fails loudly instead of binding a name that happens to start with `$`. Strings are unaffected (`"$100"` is still a string)
 - **Symbols Are A Type Of Their Own**:
   - `:name` always pushes the symbol `name`, whatever a variable `name` holds: `5 :x set :x` is the symbol `x`, and a symbol never turns into a value later. The rule is now three lines long: a bare name is a reference (the value of the variable, or the word being run), `:name` and the quoted name `{name}` are the name itself, and a string is text
   - A symbol is not a string: `:x "x" ==` is false, `:x str?` is false (`symbol?` is true), and `:x 1 +` is a type error whose message shows how to write the value (`x`) or the text (`:x str`). `str` turns a symbol into its text and `symbol` turns text back into a symbol
@@ -28,7 +28,7 @@ Note: This change is not backwards compatible with previous versions.
 - **`eval` On A Symbol Runs The Name**:
   - `:x eval` does what writing `x` does: a macro is expanded, a variable's value is pushed, a function or an operator is run. `3 4 :+ eval` is `7`, and `{+} 0 nth eval` runs `+` again (this undoes the 1.15.0 note on names taken out of a block). A block held in `b` is pushed by `:b eval`; `b eval` runs it
 - **`eval` Takes Code, Not Text**:
-  - `eval` runs a code value: a block, a symbol or a lambda. A string is data, so `"3 4 +" eval` is now a type error; text is turned into code with `read-from-string` first (`"3 4 +" read-from-string eval`). Reading and evaluating are separate steps, as in Lisp
+  - `eval` runs a code value: a block, a symbol or a lambda. A string is data, so `"3 4 +" eval` is now a type error; text is turned into code with `read-from-string` first (`"3 4 +" read-from-string eval`). Reading and evaluating are separate steps
 - **Blocks Read As Data Hand Out Symbols**:
   - `nth`, `list`, `sorted`, `reversed`, `enumerate`, `zip` and the block argument of `map` / `filter` / `reduce` / `fold` give a symbol for every name written in the block: `{x} 0 nth` is the symbol `x` and `{x y} {} map` is `{x y}`, whatever `x` and `y` hold. Write a list literal `[x y]` when the values are wanted. The aggregates (`sum`, `max`, `all`, ...) still reference the names; `len` counts tokens. `apply` evaluates its argument first, as before, and reads only a block that this evaluation leaves behind as data
   - Conversely, a value spliced into a block by `sub`, `subn`, parameter interpolation or a block-returning word becomes a token of its own kind: a symbol becomes a bare name, a string, literal or computed, becomes a string literal
@@ -215,7 +215,7 @@ Note: This change is not backwards compatible with previous versions.
   - `nip` removes the positional element instead of the first equal value (duplicates are safe now)
   - `ins` rejects out-of-range indices instead of silently wrapping around to a bogus position
   - `pick` can reach the bottom element (`4 pick` on a 4-deep stack) and large negative indices raise `PickError` instead of a misleading stack-underflow message
-  - `0 roll` is a no-op (Forth ROLL semantics); negative counts raise `RollError`
+  - `0 roll` is a no-op; negative counts raise `RollError`
 - **Lambda Local Stack Leak**:
   - A lambda's internal stack no longer accumulates leftover values across calls
 - **`global` with Defined Names**:
