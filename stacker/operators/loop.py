@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from stacker.engine.data_type import Symbol
 from stacker.error import BreakException, StackerSyntaxError
 from stacker.operators.block_exec import resolve_condition, run_block
+from stacker.util.disp import plain_text
 
 if TYPE_CHECKING:
     from stacker.engine.scope import ScopedVariables
@@ -63,9 +64,10 @@ def _times(
     # A symbol here is reported by the caller as a type error, like any
     # symbol where a value is needed; anything else that is not a number is
     # the block and the count written the wrong way round
-    if isinstance(n_times, bool) or not isinstance(n_times, (int, float, Symbol)):
+    if not isinstance(n_times, (int, float, Symbol)):
         raise StackerSyntaxError(
-            f"`times` expects a number of repetitions on top, got {n_times}: write `{{body}} n times`"
+            f"`times` expects a number of repetitions on top, got {plain_text(n_times)}: "
+            "write `{body} n times`"
         )
     count = 0
     while count < n_times:  # a comparison, not range(): non-integer counts keep working

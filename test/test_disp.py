@@ -59,10 +59,6 @@ class TestDispDefault(unittest.TestCase):
         self.assertEqual(ANSI.sub("", disp_colored(items)), disp_default(items))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class TestValuesSplicedIntoBlocks(unittest.TestCase):
     """A value put into a block by sub / subn / enumerate is shown like the stack shows it."""
 
@@ -82,3 +78,7 @@ class TestValuesSplicedIntoBlocks(unittest.TestCase):
 
     def test_a_block_written_in_source_is_unchanged(self):
         self.assertEqual(self.shown('{[1 2] "a" 1.5 x}'), '{[1 2] "a" 1.5 x}')
+
+
+if __name__ == "__main__":
+    unittest.main()

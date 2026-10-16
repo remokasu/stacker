@@ -23,7 +23,7 @@ from stacker.syntax.parser import (
 )
 from stacker.error import BreakException
 from stacker.engine.boundary import token_to_value, value_to_token
-from stacker.util.disp import plain_text
+from stacker.util.disp import plain_text  # disp.py must not import core.py
 from stacker.engine.data_type import String, Symbol, stack_data, VOID
 from stacker.syntax.token_rules import (
     KEYWORD_LITERALS,
