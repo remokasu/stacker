@@ -60,6 +60,18 @@ class CustomBoolPrinter(CustomPrinter):
         return str(self.value).lower()
 
 
+class CustomNullPrinter(CustomPrinter):
+    def __init__(self, value: None, color: str) -> None:
+        self.value = value
+        self.color = color
+
+    def __str__(self) -> str:
+        return colored("null", self.color)
+
+    def __repr__(self) -> str:
+        return "null"
+
+
 class CustomListPrinter(CustomPrinter):
     def __init__(self, value: list[object], color: str) -> None:
         # self.value = [custom_print(item) for item in value]
@@ -149,6 +161,8 @@ def custom_print(value: object) -> CustomPrinter | object:
 
     if isinstance(value, bool):
         return CustomBoolPrinter(value, color_map["bool"])
+    if value is None:
+        return CustomNullPrinter(value, color_map["bool"])
     if isinstance(value, int):
         return CustomIntPrinter(value, color_map["int"])
     if isinstance(value, float):

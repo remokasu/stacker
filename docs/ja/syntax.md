@@ -200,10 +200,10 @@ stacker:0> true
 stacker:1> false
 [true false]
 stacker:2> null
-[true false None]
+[true false null]
 ```
 
-`null` は Python の `None` で、スタック上では `None` と表示されます。
+`null` は「値がない」ことを表す値です。
 
 リテラルなので名前としては使えず、再定義もできません。`set` の名前の位置に書くとエラーです。
 
