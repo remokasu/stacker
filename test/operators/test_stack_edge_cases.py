@@ -85,7 +85,7 @@ class TestPickBounds(unittest.TestCase):
 
 class TestRollBounds(unittest.TestCase):
     def test_zero_roll_is_a_no_op(self):
-        # Forth ROLL semantics; used to rotate the bottom element
+        # rolling zero elements is a no-op; used to rotate the bottom element
         # because stack[-0] aliases stack[0]
         stack = deque([1, 2, 3, 4])
         _roll(0, stack)

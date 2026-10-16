@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 def define_macro(stacker: Stacker, name: str, args: list[str], body: Stacker) -> None:
-    """Registers a Lisp-style macro on ``stacker``.
+    """Registers a macro on ``stacker``: its body runs at expansion time and returns code.
 
     Args:
         stacker: Interpreter the macro is defined in.
