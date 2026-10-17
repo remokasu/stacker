@@ -15,6 +15,7 @@ from stacker.error import (
     StackerTypeError,
     UndefinedSymbolError,
     attach_macro_context,
+    symbol_as_value_message,
     # UnexpectedTokenError,
 )
 from stacker.syntax.parser import (
@@ -128,10 +129,7 @@ def _reraise_type_error(word: str, args: object, error: Exception) -> NoReturn:
         name = _symbol_in(args)
     if name is None:
         raise error
-    raise StackerTypeError(
-        f"`{word}` cannot use the symbol `{name}` as a value. "
-        f"Write `{name}` for the variable's value, or `:{name} str` for its name as text."
-    ) from error
+    raise StackerTypeError(symbol_as_value_message(word, name)) from error
 
 
 # Token classification kinds. Every decision below is a pure function of
@@ -946,23 +944,42 @@ class StackerCore:
     def _prio_sub(self, op, stack) -> None:
         self._substack_with_tokens([value_to_token(stack.pop())], stack)
 
-    def _prio_subn(self, op, stack) -> None:
+    def _pop_count(self, stack: stack_data[object], word: str) -> int:
+        """Pops the count of an n-ary word, checking the stack holds that many values.
+
+        Args:
+            stack: The stack; the count is on top.
+            word: The word (for the error).
+
+        Returns:
+            The count.
+
+        Raises:
+            StackUnderflowError: Fewer values below the count than it asks
+                for; the stack is left as it was.
+        """
         n = stack.pop()
         try:
-            count = range(n)  # type: ignore[arg-type]
+            range(n)  # type: ignore[arg-type]
         except (TypeError, AttributeError) as error:
-            _reraise_type_error("subn", [n], error)
-        elms = [value_to_token(stack.pop()) for _ in count]
+            _reraise_type_error(word, [n], error)
+        if len(stack) < n:  # type: ignore[operator]
+            have = len(stack)
+            stack.append(n)
+            raise StackUnderflowError(
+                word, n, f"`{word}` needs {n} values below the count, but the stack has {have}."  # type: ignore[arg-type]
+            )
+        return n  # type: ignore[return-value]
+
+    def _prio_subn(self, op, stack) -> None:
+        n = self._pop_count(stack, "subn")
+        elms = [value_to_token(stack.pop()) for _ in range(n)]
         elms.reverse()
         self._substack_with_tokens(elms, stack)
 
     def _prio_listn(self, op, stack) -> None:
-        n = stack.pop()
-        try:
-            count = range(n)  # type: ignore[arg-type]
-        except (TypeError, AttributeError) as error:
-            _reraise_type_error("listn", [n], error)
-        elms = [stack.pop() for _ in count]
+        n = self._pop_count(stack, "listn")
+        elms = [stack.pop() for _ in range(n)]
         elms.reverse()
         stack.append(elms)
 
@@ -979,11 +996,18 @@ class StackerCore:
             parts = word.split(sep)  # type: ignore[union-attr]
         except (TypeError, AttributeError) as error:
             _reraise_type_error("split", [word, sep], error)
-        stack.extend(parts)
+        stack.append(parts)  # one list; `split expand` gives the parts one by one
 
     def _prio_nth(self, op, stack) -> None:
         n = stack.pop()
         lst = stack[-1]
+        # A symbol passes here and is reported as a symbol by the handler below
+        if not isinstance(lst, (str, StackerCore, list, tuple, Symbol)):
+            raise StackerTypeError(
+                f"`nth` expects a list, a string or a code block, got {plain_text(lst)}"
+            )
+        if isinstance(n, bool) or not isinstance(n, (int, Symbol)):
+            raise StackerTypeError(f"`nth` expects an integer index, got {plain_text(n)}")
         try:
             if isinstance(lst, String):
                 stack.append(String(lst[n]))  # type: ignore[index]

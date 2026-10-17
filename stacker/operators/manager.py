@@ -101,7 +101,7 @@ special_operators = {
         "func": None,
         "arg_count": 2,
         "push_result_to_stack": True,
-        "desc": "Splits the first string by the second string.",
+        "desc": "Splits the first string by the second string into a list: \"a,b\" \",\" split",
     },
     "nth": {
         "func": None,
