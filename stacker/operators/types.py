@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from stacker.engine.data_type import Symbol
+from stacker.util.disp import display_text
 
 
 type_operators = {
@@ -17,7 +18,7 @@ type_operators = {
         "desc": "Convert to float",
     },
     "str": {
-        "func": (lambda x: str(x)),
+        "func": (lambda x: display_text(x)),
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Convert to str",

@@ -55,7 +55,7 @@ class TestUnit(unittest.TestCase):
     def test_str_from_bool(self):
         self.stacker.stack.clear()
         ans = self.stacker.eval("true str")
-        self.assertEqual(ans[-1], "True")
+        self.assertEqual(ans[-1], "true")
 
     def test_bool_from_int(self):
         self.stacker.stack.clear()
