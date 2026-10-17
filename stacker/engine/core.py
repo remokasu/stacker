@@ -594,11 +594,35 @@ class StackerCore:
         state is shared between evaluations.
         """
         return [
-            self._lookup_name(element)
+            self._list_element(element)
             if type(element) is str
             else (self._build_list(element) if isinstance(element, list) else element)
             for element in template
         ]
+
+    def _list_element(self, name: str) -> object:
+        """Returns the value of ``name`` written inside a list literal.
+
+        Raises:
+            StackerSyntaxError: ``name`` is a word, not a variable: a list
+                literal holds values only, and the message says how to build
+                the list on the stack instead.
+            UndefinedSymbolError: ``name`` is nothing at all.
+        """
+        value = self.variables.get(name, _MISSING)
+        if value is not _MISSING:
+            return value
+        if (
+            name in self.macros
+            or name in self.sfunctions
+            or name in self.plugins
+            or name in self.operator_manager.built_in_operators
+        ):
+            raise StackerSyntaxError(
+                f"`{name}` is a word, and a list literal holds values only. "
+                f"Build the list on the stack and collect it with `listn`: ... {name} ... n listn"
+            )
+        raise UndefinedSymbolError(name)
 
     def _execute(self, token: str, stack: stack_data[object]) -> None:
         """
