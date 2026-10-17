@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Callable
 
 from stacker.engine.core import StackerCore
 from stacker.engine.scope import ScopedVariables
-from stacker.error import BreakException, StackerSyntaxError
+from stacker.error import BreakException, StackerSyntaxError, copy_include_location
 from stacker.slib import load_prelude
 from stacker.syntax.parser import parse_expression
 
@@ -12,6 +12,16 @@ if TYPE_CHECKING:
     from stacker.engine.sfunction import StackerFunction
 
 from stacker.engine.data_type import stack_data
+
+
+def _break_outside_a_loop(error: BreakException) -> StackerSyntaxError:
+    """The error for a `break` that reached an entry point with no loop around it.
+
+    A `break` raised inside an included file keeps the file's position.
+    """
+    replacement = StackerSyntaxError("`break` can only be used inside a loop")
+    copy_include_location(error, replacement)
+    return replacement
 
 
 class Stacker(StackerCore):
@@ -38,9 +48,34 @@ class Stacker(StackerCore):
                 load_prelude(self)
 
     def include(self, filename: str) -> None:
-        return self.operator_manager.operators["priority"]["include"]["func"](
-            self, filename
-        )
+        """Runs a script here, in the root scope, as the `include` word does.
+
+        Args:
+            filename: Path of the script.
+
+        Raises:
+            StackerSyntaxError: The file has a `break` outside a loop.
+        """
+        self._include(filename, once=False)
+
+    def require(self, filename: str) -> None:
+        """Runs a script once per interpreter, as the `require` word does.
+
+        Args:
+            filename: Path of the script.
+
+        Raises:
+            StackerSyntaxError: The file has a `break` outside a loop.
+        """
+        self._include(filename, once=True)
+
+    def _include(self, filename: str, once: bool) -> None:
+        from stacker.include.include import include_file
+
+        try:
+            include_file(self, filename, once=once)
+        except BreakException as error:
+            raise _break_outside_a_loop(error) from None
 
     def push(self, value: object) -> None:  # TODO: remove
         self.stack.append(value)
@@ -69,8 +104,8 @@ class Stacker(StackerCore):
         """
         try:
             result = self.evaluate(tokens, stack=stack)
-        except BreakException:
-            raise StackerSyntaxError("`break` can only be used inside a loop") from None
+        except BreakException as error:
+            raise _break_outside_a_loop(error) from None
         if result:
             self.last_result = result[-1]
             self.has_result = True

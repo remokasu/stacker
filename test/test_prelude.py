@@ -62,17 +62,17 @@ class TestInclude:
         stacker = Stacker()
         assert run(stacker, f'"{script}" include', "2 thrice") == [6]
 
-    def test_include_child_inherits_disabled_prelude(self, tmp_path: Path):
+    def test_an_included_file_runs_without_the_prelude_when_the_interpreter_has_none(self, tmp_path: Path):
         script = tmp_path / "lib.stk"
         script.write_text("{3 *} {thrice} alias\n", encoding="utf-8")
         stacker = Stacker(prelude=False)
-        # Without the prelude `alias` is an undefined word: the reference fails
-        # (1.16.0; it used to be pushed silently) and nothing is defined.
+        # The file runs in this interpreter, which has no `alias`: the
+        # reference fails (1.16.0; it used to be pushed silently)
         with pytest.raises(UndefinedSymbolError, match="alias"):
             run(stacker, f'"{script}" include')
         assert "thrice" not in stacker.macros
 
-    def test_include_child_of_a_disabled_prelude_cannot_call_prelude_functions(
+    def test_an_included_file_cannot_call_prelude_functions_the_interpreter_lacks(
         self, tmp_path: Path
     ):
         script = tmp_path / "lib.stk"
@@ -80,24 +80,22 @@ class TestInclude:
         with pytest.raises(UndefinedSymbolError, match="mean"):
             Stacker(prelude=False).eval(f'"{script}" include', stack=None)
 
-    def test_include_child_of_an_enabled_prelude_can_call_prelude_functions(
-        self, tmp_path: Path
-    ):
+    def test_an_included_file_can_call_prelude_functions(self, tmp_path: Path):
         script = tmp_path / "lib.stk"
         script.write_text("[2 4] mean :r =\n", encoding="utf-8")
         stacker = Stacker()
         assert run(stacker, f'"{script}" include', "r") == [3.0]
 
-    def test_include_does_not_undo_a_user_redefinition_of_a_prelude_word(self, tmp_path: Path):
-        # The child interpreter loads its own prelude; merging it back must not
-        # overwrite the parent's redefined `alias` (and must not warn).
+    def test_a_redefinition_made_before_the_include_holds_inside_the_file(self, tmp_path: Path):
+        # The file runs in the same interpreter, so the redefined `alias` is
+        # the one it uses (it used to run in a child with its own prelude)
         script = tmp_path / "lib.stk"
-        script.write_text("{a} {a 1 +} {inc} defun\n", encoding="utf-8")
+        script.write_text("{a} {a 1 +} {inc} defun\n{5} {z} alias :zz set\n", encoding="utf-8")
         stacker = Stacker()
         run(stacker, "{body name} {{9}} {alias} defmacro")  # same arity, always 9
-        assert run(stacker, f'"{script}" include', "{5} {z} alias", "1 inc") == [9, 2]
+        assert run(stacker, f'"{script}" include', "zz 1 inc") == [9, 2]
 
-    def test_include_merges_a_prelude_word_the_file_redefines(self, tmp_path: Path):
+    def test_a_prelude_word_the_file_redefines_is_redefined_for_the_includer(self, tmp_path: Path):
         script = tmp_path / "lib.stk"
         script.write_text("{xs} {0} {mean} defun\n", encoding="utf-8")
         stacker = Stacker()

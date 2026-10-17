@@ -209,7 +209,7 @@ UndefinedSymbolError `mean` is not defined.
 deque([2.0])
 ```
 
-`prelude=False` のインスタンスから `include` したファイルも、prelude なしで読み込まれます。
+`include` / `require` したファイルは、そのインスタンスの中で評価されます。`prelude=False` のインスタンスなら、取り込んだファイルも prelude の語を使えません。Python からは `Stacker.include(path)` と `Stacker.require(path)` で同じことができます。
 
 ### プラグインを Python から登録する
 
@@ -250,7 +250,7 @@ Stacker が意図して出すエラーは、すべて `stacker.error.StackerErro
 | `StackerTypeError` | 語に渡した値の型が違う。Python の `TypeError` も継承する |
 | `ResultCountError` | `map` / `filter` の関数や `reduce` / `fold` の本体が、要素ごとに 2 つ以上の値を残した |
 | `StackerRecursionError` | 再帰の上限を超えた。`name`・`limit`・`kind` 属性を持つ |
-| `IncludeError` | `include` に失敗した |
+| `IncludeError` | `include` / `require` に失敗した（見つからない、`.stk` でない、循環） |
 
 ```python
 from stacker.error import StackerError, UndefinedSymbolError

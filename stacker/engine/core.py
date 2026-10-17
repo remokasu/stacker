@@ -47,6 +47,7 @@ from stacker.engine.scope import ScopedVariables
 from stacker.engine import recursion
 from stacker.engine.smacro import StackerMacro, gensym
 from stacker.operators.manager import OperatorManager
+from stacker.include.include import IncludeState
 
 _LOGGER = logging.getLogger("stacker")
 
@@ -319,6 +320,7 @@ class StackerCore:
             self.sfunctions = self.parent.sfunctions
             self.labels = self.parent.labels
             self._prelude = self.parent._prelude
+            self._includes = self.parent._includes
             # Share source location tracking with parent
             self.current_file = self.parent.current_file
             self.current_line = self.parent.current_line
@@ -351,6 +353,9 @@ class StackerCore:
             "loading": False,
             "enabled": True,
         }
+        # The files being and already included, shared by reference with
+        # every child core (see stacker.include.include)
+        self._includes = IncludeState()
 
     def _block_token_format(self, token: str) -> object:
         """Converts one source token of a block into its stored form.
@@ -645,7 +650,7 @@ class StackerCore:
             # Provide more helpful type error messages
             error_msg = str(e)
             if "unsupported operand type" in error_msg:
-                raise TypeError(
+                raise TypeError(  # the include position, if any, stays readable through __cause__
                     f"Operator `{token}` received incompatible types. {error_msg}"
                 ) from e
             raise
@@ -874,6 +879,8 @@ class StackerCore:
         root = self
         while root.parent is not None:
             root = root.parent
+        if self._includes.is_including():
+            raise StackerRuntimeError("`ans` cannot be used in a file read by `include` or `require`")
         if not root.has_result:
             raise StackerRuntimeError("`ans` has no result yet: no expression has left a value")
         stack.append(root.last_result)
@@ -1077,13 +1084,16 @@ class StackerCore:
         else:
             raise StackerTypeError(self._function_spec_message("apply", func))
 
-    def _prio_include(self, op, stack) -> None:
+    def _prio_include(self, op, stack, word: str = "include") -> None:
         filename = stack.pop()
         if not isinstance(filename, str):
             raise StackerTypeError(
-                f'`include` expects the file path as a string, e.g. "lib.stk" include; got {filename}'
+                f'`{word}` expects the file path as a string, e.g. "lib.stk" {word}; got {plain_text(filename)}'
             )
         op["func"](self, filename)
+
+    def _prio_require(self, op, stack) -> None:
+        self._prio_include(op, stack, word="require")
 
     def _prio_exit(self, op, stack) -> None:
         op["func"]()
@@ -1103,6 +1113,7 @@ class StackerCore:
     _PRIORITY_HANDLERS = {
         "abort": _prio_abort,
         "exit-code": _prio_exit_code,
+        "require": _prio_require,
         "do": _prio_do,
         "dolist": _prio_dolist,
         "times": _prio_times,

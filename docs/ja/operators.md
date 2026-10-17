@@ -294,7 +294,8 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `symbol` | 文字列または引用された名前からシンボルを作る | `"x" symbol` |
 | `gensym` | 重複しない新しいシンボルを積む（マクロが生成するコードの一時変数用） | `gensym` |
 | `macroexpand` | マクロを実行せず、展開結果を積む。`args... {name} macroexpand` | `{0 >} {"neg" echo} {unless} macroexpand` |
-| `include` | 別の Stacker スクリプトを読み込んで実行（[スクリプトとファイルの取り込み](scripts.md)） | `"file.stk" include` |
+| `include` | 別の Stacker スクリプトを、その場のスコープで実行する（毎回。[スクリプトとファイルの取り込み](scripts.md)） | `"file.stk" include` |
+| `require` | 同じファイルをインタプリタごとに 1 回だけ実行する。2 回目以降は何もしない | `"file.stk" require` |
 
 ## 入出力
 
@@ -355,7 +356,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `funcs` | 定義済みの関数を出力 | `funcs` |
 | `macros` | 定義済みのマクロを出力 | `macros` |
 | `operators` | 使える演算子の説明を一覧で出力 | `operators` |
-| `ans` | 値を残した最後の入力（REPL の 1 行、スクリプトの 1 式）の結果を、もう一度積む。値を残さない入力（`clear` など）では変わらない。1 つの入力の中では、その入力より前の結果を指す。まだ結果がなければエラー。`include` したファイルの中では使えない | `ans` |
+| `ans` | 値を残した最後の入力（REPL の 1 行、スクリプトの 1 式）の結果を、もう一度積む。値を残さない入力（`clear` など）では変わらない。1 つの入力の中では、その入力より前の結果を指す。まだ結果がなければエラー。`include` / `require` したファイルの中では使えない | `ans` |
 
 REPL の `enable_disp_ans` / `disable_disp_ans` は、スタックの一番上を毎回表示するかどうかの設定です（[REPL とコマンドライン](repl-and-cli.md)）。
 

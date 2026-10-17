@@ -59,6 +59,73 @@ def attach_macro_context(error: StackerError, context: str) -> None:
         error.args = (f"({context})",)
 
 
+def attach_include_location(
+    error: BaseException,
+    file: str,
+    line: int | None,
+    source_line: str | None,
+    frames: list[tuple[str, int | None]],
+) -> None:
+    """Records where inside an included file ``error`` was raised, once.
+
+    Nested includes each try to attach their own position; only the
+    innermost (first) one sticks. The message is left alone: the position
+    travels as attributes for the error display to use.
+
+    Args:
+        error: The exception raised while an included file was running.
+        file: Absolute path of the file that was running.
+        line: First line of the expression that was running, if known.
+        source_line: Text of that line, if known.
+        frames: The files that included it, innermost first, each with the
+            line of the expression that did the including (``None`` when
+            the includer has no line, as the REPL and ``-e`` have none).
+    """
+    if include_location_of(error) is not None:
+        return
+    error.include_location = (file, line, source_line)  # type: ignore[attr-defined]
+    error.include_frames = frames  # type: ignore[attr-defined]
+
+
+def include_location_of(
+    error: BaseException,
+) -> tuple[tuple[str, int | None, str | None], list[tuple[str, int | None]]] | None:
+    """The include position ``error`` carries, looking through the exceptions it was raised from.
+
+    A word that re-raises an error ``from`` the original (a type error
+    attributed to the word, an index error turned into a stack underflow)
+    keeps the position on the original; only the ``__cause__`` chain is
+    followed, never ``__context__``, so an error raised while handling
+    another (a `iferror` catch block) is not placed in the file the first
+    one came from.
+
+    Args:
+        error: The exception being reported.
+
+    Returns:
+        ``((file, line, source_line), frames)`` or None.
+    """
+    current: BaseException | None = error
+    while current is not None:
+        location = getattr(current, "include_location", None)
+        if location is not None:
+            return location, getattr(current, "include_frames", [])
+        current = current.__cause__
+    return None
+
+
+def copy_include_location(source: BaseException, target: BaseException) -> None:
+    """Moves the include position of ``source`` onto ``target``, if it has one.
+
+    Args:
+        source: The exception that was raised inside an included file.
+        target: The exception that replaces it.
+    """
+    found = include_location_of(source)
+    if found is not None:
+        target.include_location, target.include_frames = found  # type: ignore[attr-defined]
+
+
 class StackUnderflowError(StackerError):
     """Stack underflow error"""
 

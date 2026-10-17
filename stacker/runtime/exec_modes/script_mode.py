@@ -34,10 +34,16 @@ class ScriptMode(ExecutionMode):
             message = str(e)
 
             # Get line number and source line from tracked information
+            filename = str(Path(file_path).resolve())
             line_number = self.rpn_calculator.current_line
             source_line = None
             if line_number is not None and line_number in self.rpn_calculator.source_lines:
                 source_line = self.rpn_calculator.source_lines[line_number]
+            frames: list[str] = []
+            # An error inside an included file is reported at its own line
+            location = self._error_location(e)
+            if location is not None:
+                filename, line_number, source_line, frames = location  # type: ignore[assignment]
 
             column = None  # We don't track column yet
 
@@ -46,13 +52,14 @@ class ScriptMode(ExecutionMode):
 
             # Format the error
             formatted_error = ErrorFormatter.format_error(
-                filename=str(Path(file_path).resolve()),
+                filename=filename,
                 line_number=line_number,
                 column=column,
                 error_type=error_type,
                 message=message,
                 source_line=source_line,
-                hint=hint
+                hint=hint,
+                frames=frames,
             )
 
             print(formatted_error, file=sys.stderr)

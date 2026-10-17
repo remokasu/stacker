@@ -181,7 +181,7 @@
       "patterns": [
         {
           "name": "keyword.operator.code.stacker",
-          "match": "(?<![\\w?!-])(concat\\-block|macroexpand|include|expand|gensym|symbol|apply|parse|eval|subn|sub)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(concat\\-block|macroexpand|include|require|expand|gensym|symbol|apply|parse|eval|subn|sub)(?![\\w?!-])"
         }
       ]
     },

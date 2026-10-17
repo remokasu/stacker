@@ -520,12 +520,19 @@ Stacker allows for straightforward RPN input. For example:
 
 
 - ### Include Scripts
-  Stacker scripts can be included in other scripts using the `include` command. For example:
+  `"file.stk" include` runs another script right here, in the interpreter and the scope it is written in, as if
+  its text stood in place: the variables, functions and macros it defines are the ones you see afterwards, and
+  its functions can call yours. It runs every time it is included. What the file leaves on its stack is dropped.
 
   ``` bash
   stacker:0>  "my_script.stk" include
   ```
-  All functions, macros and variables defined in "my_script.stk" are added to the current stack.
+
+  `"file.stk" require` does the same the first time, and nothing when the same file is required again. Read a
+  library that keeps state with `require`, so that reading it from a second file does not set it up again.
+
+  Relative paths are looked up next to the including file first, then in the current directory. An error inside
+  an included file is reported at its own line, followed by the lines that included it (`included from ...`).
 
 - ### The prelude
   Some words are written in Stacker itself and loaded into every interpreter at start-up (`alias` and `mean`
@@ -898,7 +905,8 @@ Note: Blocks, lambdas and functions passed to `map` and `filter` must leave exac
 | sub      | Wrap the top value in a one-token code block          | `:x sub`                   |
 | subn     | Wrap the top n values in one code block               | `1 2 2 subn`               |
 | ans      | Push again the result of the last input that left one | `ans`                      |
-| include  | Include the specified file                            | `"file.stk" include`       |
+| include  | Run another script here, in this scope, every time    | `"file.stk" include`       |
+| require  | Run another script once per interpreter               | `"file.stk" require`       |
 | eval     | Run a code block, a symbol or a lambda (text: `parse` first) | `{3 5 +} eval`, `'3 5 +' parse eval` |
 | echo     | Print the specified value to stdout without adding it to the stack | `3 4 + echo`  |
 | read     | Read one line from the console and push it as a code block | `read`                |

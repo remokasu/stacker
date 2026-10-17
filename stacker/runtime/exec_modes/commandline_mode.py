@@ -17,14 +17,19 @@ class CommandLineMode(ExecutionMode):
             # Reported like the REPL does: the message, its type and a hint
             # on stderr. The expression is not quoted back, and no caret is
             # drawn: the interpreter does not record which word failed.
+            filename, line_number, source_line, frames = None, None, None, []
+            location = self._error_location(e)
+            if location is not None:
+                filename, line_number, source_line, frames = location  # type: ignore[assignment]
             formatted_error = ErrorFormatter.format_error(
-                filename=None,
-                line_number=None,
+                filename=filename,
+                line_number=line_number,
                 column=None,
                 error_type=type(e).__name__,
                 message=str(e),
-                source_line=None,
+                source_line=source_line,
                 hint=self._get_error_hint(e),
+                frames=frames,
             )
             print(formatted_error, file=sys.stderr)
             if self.debug:
