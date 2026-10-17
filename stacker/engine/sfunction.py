@@ -19,18 +19,25 @@ class StackerFunction:
         self.args: list[str] = args
         self.blockstack: StackerCore = blockstack
         self.arg_count: int = len(args)
-        self.stack: stack_data[object] = stack_data()
         self.name: str = name
 
-    def __call__(self, *values: object) -> object:
+    def __call__(self, *values: object) -> list[object]:
+        """Calls the function.
+
+        Args:
+            *values: The arguments, in parameter order.
+
+        Returns:
+            Every value the body left on its stack, bottom first (an empty
+            list when it left nothing).
+        """
         recursion.enter(self.name)
         try:
             return self._call_impl(*values)
         finally:
             recursion.leave()
 
-    def _call_impl(self, *values: object) -> object:
-        self.stack.clear()
+    def _call_impl(self, *values: object) -> list[object]:
         values_list = list(values)
         if len(values_list) != len(self.args):
             raise ValueError(f"Expected {len(self.args)} arguments, got {len(values_list)}")
@@ -47,7 +54,5 @@ class StackerFunction:
         for arg, value in zip(self.args, values_list):
             new_blockstack.variables[arg] = value
 
-        self.stack.append(new_blockstack)
-        result = new_blockstack._pop_and_eval(self.stack)
-
-        return result
+        new_blockstack._evaluate(new_blockstack.tokens, stack=new_blockstack.stack)
+        return list(new_blockstack.stack)

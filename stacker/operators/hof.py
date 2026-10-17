@@ -14,13 +14,13 @@ hof_operators = {
         "func": (lambda func, xs: map(func, xs)),
         "arg_count": 2,
         "push_result_to_stack": True,
-        "desc": "Applies a block, lambda or symbol to each element: [1 2 3] {2 *} map",
+        "desc": "Applies a block, lambda or symbol to each element, which must leave one value: [1 2 3] {2 *} map",
     },
     "filter": {
         "func": (lambda func, xs: filter(func, xs)),
         "arg_count": 2,
         "push_result_to_stack": True,
-        "desc": "Keeps the elements for which a block, lambda or symbol is true: [1 2 3] {2 >} filter",
+        "desc": "Keeps the elements for which a block, lambda or symbol leaves true (one value): [1 2 3] {2 >} filter",
     },
     "zip": {
         "func": (lambda xs, ys: [[x, y] for x, y in zip(xs, ys)]),

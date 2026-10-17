@@ -248,6 +248,7 @@ Stacker が意図して出すエラーは、すべて `stacker.error.StackerErro
 | `StackerSyntaxError` | 構文が不正（名前の位置に文字列を書いたなど） |
 | `UnterminatedTokenError` | 閉じていない文字列・リスト・ブロック・ブロックコメント。`StackerSyntaxError` の子クラス |
 | `StackerTypeError` | 語に渡した値の型が違う。Python の `TypeError` も継承する |
+| `ResultCountError` | `map` / `filter` の関数や `reduce` / `fold` の本体が、要素ごとに 2 つ以上の値を残した |
 | `StackerRecursionError` | 再帰の上限を超えた。`name`・`limit`・`kind` 属性を持つ |
 | `IncludeError` | `include` に失敗した |
 

@@ -837,7 +837,7 @@ class TestWithoutPrelude:
             (':x "x" ==', [False]),
             ("3 4 :+ eval", [7]),
             ("[1 4 9] :sqrt map", [[1.0, 2.0, 3.0]]),
-            ("[1 2] :dup map", [[[1, 1], [2, 2]]]),
+            ("[1 2] {dup 2 listn} map", [[[1, 1], [2, 2]]]),
             ('"x" symbol', [Symbol("x")]),
             (":x symbol?", [True]),
             ("0 :x = :x {1} if", [1]),

@@ -87,6 +87,10 @@ class ExecutionMode:
                 return "Make the block leave a value on the stack"
             return "Make the block leave a value on the stack, or use `dolist` for side-effect-only iteration"
 
+        # A function left more values than its context takes
+        elif "ResultCount" in error_type:
+            return "To keep several values for each element, collect them into one inside the function (e.g. 2 listn)"
+
         # Stack underflow errors
         elif "StackUnderflow" in error_type:
             # Message already contains operator and arg count info

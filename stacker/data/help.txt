@@ -37,6 +37,7 @@ Loops:
 
 Functions:
   {a b} {a b +} :add defun    then: 3 4 add
+  {a b} {b a} :swap2 defun    1 2 swap2 -> 2 1 (every value the body leaves)
   {a b} {a b +} lambda        an anonymous function value; call it with eval:
   {a} {a 2 *} lambda :f set   5 f eval
 

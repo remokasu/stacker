@@ -37,16 +37,13 @@ class TestStacker(unittest.TestCase):
 
 
 class TestLambdaStackAccumulation(unittest.TestCase):
-    """Regression: a lambda's local stack must not
-    accumulate leftover values across calls (StackerFunction clears its
-    stack per call; StackerLambda used to skip that)."""
+    """Regression: a lambda's results must not accumulate across calls
+    (each call evaluates the body on a stack of its own)."""
 
-    def test_lambda_stack_does_not_grow_across_calls(self):
+    def test_lambda_results_do_not_grow_across_calls(self):
         stacker = Stacker()
-        stacker.eval("{x} {x x} lambda :dupfn set")
-        fn = stacker.variables["dupfn"]
-        stacker.eval("5 dupfn eval")
-        first_len = len(fn.stack)
-        stacker.eval("3 dupfn eval")
-        stacker.eval("9 dupfn eval")
-        self.assertEqual(len(fn.stack), first_len)
+        stacker.process_expression("{x} {x x} lambda :dupfn set")
+        stacker.process_expression("5 dupfn eval")
+        self.assertEqual(list(stacker.stack), [5, 5])
+        stacker.process_expression("3 dupfn eval")
+        self.assertEqual(list(stacker.stack), [5, 5, 3, 3])
