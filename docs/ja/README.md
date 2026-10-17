@@ -10,10 +10,11 @@ Stacker は、逆ポーランド記法（RPN）で計算する電卓であり、
 3. [名前とシンボル](names-and-symbols.md) — 名前の 3 つの書き方、シンボル、変数の束縛
 4. [制御構文](control.md) — 条件分岐とループ
 5. [関数・ラムダ・マクロ](functions-and-macros.md) — defun、lambda、alias、defmacro
-6. [スクリプトとファイルの取り込み](scripts.md) — .stk ファイル、include と require、prelude、エラー表示
-7. [演算子リファレンス](operators.md) — すべての組み込み語の一覧
-8. [REPL とコマンドライン](repl-and-cli.md) — REPL のコマンド、コマンドラインのオプション、~/.stackerrc
-9. [プラグインと Python からの利用](plugins-and-python-api.md) — プラグインの作り方、Python への埋め込み
+6. [配列と辞書](arrays-and-dicts.md) — 書き換えられる配列と辞書、`!` の語、実体の共有
+7. [スクリプトとファイルの取り込み](scripts.md) — .stk ファイル、include と require、prelude、エラー表示
+8. [演算子リファレンス](operators.md) — すべての組み込み語の一覧
+9. [REPL とコマンドライン](repl-and-cli.md) — REPL のコマンド、コマンドラインのオプション、~/.stackerrc
+10. [プラグインと Python からの利用](plugins-and-python-api.md) — プラグインの作り方、Python への埋め込み
 
 ## そのほかの資料
 

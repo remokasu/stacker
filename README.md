@@ -169,14 +169,14 @@ Stacker allows for straightforward RPN input. For example:
       `7 x set` binds `y`. A literal is never a name (`5 3 set` and `5 true set` are errors) and neither is
       a string (`5 "x" set` is an error too).
 
-- Arrays:
-  - Single-line array:
+- Lists:
+  - Single-line list:
     ```bash
     stacker:0> [1 2 3; 4 5 6]
     [[[1 2 3] [4 5 6]]]
     ```
 
-  - Multi-line array:
+  - Multi-line list:
     ```bash
     stacker:0> [1 2 3;
     ... > 4 5 6]
@@ -225,6 +225,31 @@ Stacker allows for straightforward RPN input. For example:
   `:name`. Macros that define things take their names in this form. This is also how a *variable name* is passed to
   a macro: `{n} incr!` and `:n incr!` both hand over the name `n`, whereas `n incr!` hands over the variable's
   current value.
+
+- ### Arrays and Dictionaries:
+  A list never changes. When you need to change elements in place, make an array or a dictionary.
+  Words that change them end in `!`.
+  ```bash
+  stacker:0> [1 2 3] array :a set
+  []
+  stacker:1> 9 a 0 at!
+  []
+  stacker:2> 4 a append!
+  []
+  stacker:3> a
+  [[9 2 3 4]]
+  stacker:4> dict :d set
+  [[9 2 3 4]]
+  stacker:5> 1 d "x" put!
+  [[9 2 3 4]]
+  stacker:6> d "x" get
+  [[9 2 3 4] 1]
+  ```
+  An array is shown like a list (the REPL gives it a color of its own; `array?` tells for sure) and a
+  dictionary as `{'x' 1}`. An array or a dictionary is one thing wherever it goes: `dup`, a variable, a
+  function argument or a list element refers to the same one, so a change made through one is seen through all. `a b same?` tells
+  whether two are the same one; `==` compares contents. Words that only read take an array as they take
+  a list, and the ones that make a new sequence (`map`, `sorted`, `cdr`, ...) make a list.
 
 - ### Control Structures in Stacker
 
@@ -860,12 +885,13 @@ print(stacker.eval("3 4 +"))
 | global   | Assign a value to a global variable                   | `42 :answer global`      |
 
 
-### Array Operators
+### List Operators
 | Operator | Description                                           | Example                    |
 |----------|-------------------------------------------------------|----------------------------|
-| map      | Apply a function to each element of an array          | `[1 2 3] {2 *} map`        |
-| zip      | Pair up the elements of two arrays: `[[1 4] [2 5] [3 6]]` | `[1 2 3] [4 5 6] zip` |
-| filter   | Filter an array based on a condition                  | `[1 2 3 4 5] {2 % 0 ==} filter` |
+| map      | Apply a function to each element of a list            | `[1 2 3] {2 *} map`        |
+| zip      | Pair up the elements of two lists: `[[1 4] [2 5] [3 6]]` | `[1 2 3] [4 5 6] zip` |
+| filter   | Filter a list based on a condition                    | `[1 2 3 4 5] {2 % 0 ==} filter` |
+| at       | Push element i, taking the container off (`nth` leaves it) | `[10 20 30] 1 at`     |
 | all      | Check if all elements of a list are true              | `[true true false] all`    |
 | any      | Check if any element of a list is true                | `[true false false] any`   |
 | car      | Return the first element of a list                    | `[1 2 3] car`              |
@@ -875,6 +901,23 @@ print(stacker.eval("3 4 +"))
 | apply    | Expand list elements onto the stack and apply a function | `[3 4] {+} apply`       |
 | expand   | Push the elements of a list, or each token of a code block as a one-token block | `[1 2 3] expand`, `{a b} expand` |
 | concat-block | Join two code blocks                              | `{a b} {c} concat-block`   |
+
+### Array and Dictionary Operators
+| Operator | Description                                           | Example                    |
+|----------|-------------------------------------------------------|----------------------------|
+| array    | Make an array (changeable in place) from a list, a string or a block | `[1 2 3] array` |
+| array-of | Make an array of n slots that all hold x              | `5 0 array-of`             |
+| at!      | Store v at index i of an array: `v a i at!`           | `9 [1 2 3] array 0 at!`    |
+| append!  | Add v at the end of an array: `v a append!`           | `4 [1 2 3] array append!`  |
+| pop!     | Take the last element off an array and push it        | `[1 2 3] array pop!`       |
+| dict     | Make an empty dictionary                              | `dict`                     |
+| get      | Value of key k, or null when k is not there: `d k get` | `dict "k" get`            |
+| put!     | Store v under key k: `v d k put!`                     | `1 dict "k" put!`          |
+| has?     | True if the dictionary has key k                      | `dict "k" has?`            |
+| del!     | Remove key k (an error when it is not there)          | `dict :d set 1 d "k" put! d "k" del!` |
+| keys     | The keys as a list, in the order they were added      | `dict keys`                |
+| values   | The values as a list                                  | `dict values`              |
+| same?    | True if two arrays or dictionaries are the same one   | `dict dup same?`           |
 
 Note: Blocks, lambdas and functions passed to `map` and `filter` must leave exactly one value for each element, and the block of `reduce` / `fold` exactly one value per step (collect several with `listn`). For side-effect-only iteration (e.g. printing each element), use `dolist` instead.
 
@@ -894,8 +937,10 @@ Note: Blocks, lambdas and functions passed to `map` and `filter` must leave exac
 | symbol?  | Returns true if the value is a symbol                 | `:x symbol?`               |
 | bool?    | Returns true if the value is a bool                   | `true bool?`               |
 | complex? | Returns true if the value is a complex number         | `1+2j complex?`            |
-| list?    | Returns true if the value is a list                   | `[1 2 3] list?`            |
-| null?    | Returns true if the value is null or an empty list    | `null null?`               |
+| list?    | Returns true if the value is a list (an array is not) | `[1 2 3] list?`            |
+| array?   | Returns true if the value is an array                 | `[1 2 3] array array?`     |
+| dict?    | Returns true if the value is a dictionary             | `dict dict?`               |
+| null?    | Returns true if the value is null, an empty list or an empty array | `null null?`  |
 | number?  | Returns true if the value is a number (int, float, or complex) | `42 number?`    |
 
 
