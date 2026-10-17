@@ -1,13 +1,14 @@
 from __future__ import annotations
 import copy
 import logging
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from typing import NoReturn
 import ast
 from stacker.constant import constants
 from stacker.error import (
     MacroExpansionError,
     NoValueProducedError,
+    ResultCountError,
     StackUnderflowError,
     StackerError,
     StackerRuntimeError,
@@ -40,6 +41,7 @@ from stacker.syntax.token_rules import (
     not_a_symbol_message,
     strip_string_delimiters,
 )
+from stacker.engine.sfunction import StackerFunction
 from stacker.engine.slambda import StackerLambda
 from stacker.engine.scope import ScopedVariables
 from stacker.engine import recursion
@@ -681,12 +683,13 @@ class StackerCore:
                 # Parameters are binding forms: block arguments bind
                 # raw (code is data)
                 args.insert(0, self._pop_and_resolve(stack))
-            if sfunc["push_result_to_stack"]:  # type: ignore[index]
-                result = sfunc["func"](*args)  # type: ignore[index]
-                if result is not VOID:
-                    stack.append(result)
-            else:
-                sfunc["func"](*args)  # type: ignore[index]
+            result = sfunc["func"](*args)  # type: ignore[index]
+            if not sfunc["push_result_to_stack"]:  # type: ignore[index]
+                pass
+            elif isinstance(sfunc["func"], StackerFunction):
+                stack.extend(result)  # every value the body left, in order
+            elif result is not VOID:
+                stack.append(result)  # a host function registered as a word: one value
         elif token in self.plugins:
             args = []
             op = self.plugins[token]
@@ -945,8 +948,8 @@ class StackerCore:
         """Calls a lambda value with arguments popped from ``stack``.
 
         Parameters are binding forms, so a code-block argument is bound raw
-        (code is data), like a function parameter. A ``VOID`` result is not
-        pushed.
+        (code is data), like a function parameter. Every value the body
+        leaves is pushed, in order.
 
         Args:
             fn: The lambda to call.
@@ -961,9 +964,7 @@ class StackerCore:
                 args.insert(0, self._pop_and_resolve(stack))
         except IndexError:
             raise StackUnderflowError("lambda", fn.arg_count) from None
-        result = fn(*args)
-        if result is not VOID:
-            stack.append(result)
+        stack.extend(fn(*args))  # every value the body left, in order
 
     def _prio_sub(self, op, stack) -> None:
         self._substack_with_tokens([value_to_token(stack.pop())], stack)
@@ -1235,12 +1236,7 @@ class StackerCore:
                     # Restore parent scope and stack even if the body raised
                     self.stack = original_parent_stack
                     self.variables = original_parent_vars
-                # Return the result
-                if len(result_stack) == 1:
-                    return result_stack[0]
-                elif len(result_stack) == 0:
-                    raise NoValueProducedError(token)
-                return result_stack[0]
+                return self._one_result(result_stack, token, "the block")
 
             items = self._data_items(fold_args)
             try:
@@ -1459,13 +1455,16 @@ class StackerCore:
             # caller's): what it assigns stays assigned, and nothing is copied
             return lambda element: self._stacker_lambda(element, spec, word)
         if isinstance(spec, StackerLambda):
-            return spec
+            return lambda element: self._one_result(spec(element), word, "the lambda")
         if isinstance(spec, Symbol):
             name = spec.name
             if name not in self.macros and self.variables.get(name, _MISSING) is _MISSING:
                 sfunc = self.sfunctions.get(name)
                 if sfunc is not None and sfunc["arg_count"] == 1 and sfunc["push_result_to_stack"]:  # type: ignore[index]
-                    return sfunc["func"]  # type: ignore[index, return-value]
+                    func = sfunc["func"]  # type: ignore[index]
+                    if isinstance(func, StackerFunction):
+                        return lambda element: self._one_result(func(element), word, f"`{name}`")
+                    return func  # type: ignore[return-value]
                 host = self.plugins.get(name)
                 if host is None:
                     entry = self.operator_manager.dispatch_table.get(name)
@@ -1652,11 +1651,35 @@ class StackerCore:
         """
         lstack: stack_data[object] = stack_data([arg])
         body._evaluate(body.tokens, stack=lstack)
-        if len(lstack) == 1:
-            return lstack[0]
-        elif len(lstack) == 0:
-            raise NoValueProducedError(operator)
-        return list(lstack)
+        return self._one_result(lstack, operator, "the block")
+
+    @staticmethod
+    def _one_result(values: Sequence[object], word: str, who: str) -> object:
+        """Returns the one value a function left for an element of ``word``.
+
+        Args:
+            values: What the function, lambda or block left on its stack.
+            word: The word reading the value (`map`, `filter`, `reduce`, `fold`).
+            who: How to name the function in the error (``"`f`"``, ``"the lambda"``, ``"the block"``).
+
+        Returns:
+            The single value.
+
+        Raises:
+            NoValueProducedError: It left nothing.
+            ResultCountError: It left more than one value.
+        """
+        if len(values) == 1:
+            return values[0]
+        if not values:
+            raise NoValueProducedError(
+                word,
+                f"{who[0].upper()}{who[1:]} passed to `{word}` must leave a value on the stack. "
+                "Use `dolist` for side-effect-only iteration.",
+            )
+        raise ResultCountError(
+            f"`{word}` needs one value from {who} for each element, but it left {len(values)}"
+        )
 
     def copy(self) -> StackerCore:
         return copy.deepcopy(self)

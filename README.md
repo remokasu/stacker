@@ -431,6 +431,12 @@ Stacker allows for straightforward RPN input. For example:
     [200]
     ```
     This defines a function named `multiply` that takes two arguments `x` and `y` and multiplies them together.
+    The function pushes every value its body leaves, in order; a body that leaves nothing pushes nothing:
+    ```bash
+    stacker:0> {a b} {b a} :swap2 defun
+    stacker:1> 1 2 swap2
+    [2 1]
+    ```
 
 - ### Define an alias:
   - syntax:
@@ -510,6 +516,7 @@ Stacker allows for straightforward RPN input. For example:
     This example defines a lambda function that multiplies two numbers and assigns it to the variable `multiply`.
     A lambda held in a variable is a value: writing `multiply` pushes it, and `eval` calls it with the arguments
     `3` and `4` (`3 4 multiply eval`). To call a function by its bare name, define it with `defun` instead.
+    Like a function, a lambda pushes every value its body leaves when it is called.
 
 
 - ### Include Scripts
@@ -862,7 +869,7 @@ print(stacker.eval("3 4 +"))
 | expand   | Push the elements of a list, or each token of a code block as a one-token block | `[1 2 3] expand`, `{a b} expand` |
 | concat-block | Join two code blocks                              | `{a b} {c} concat-block`   |
 
-Note: Blocks passed to `map`, `filter`, `reduce`, and `fold` must leave a value on the stack. For side-effect-only iteration (e.g. printing each element), use `dolist` instead.
+Note: Blocks, lambdas and functions passed to `map` and `filter` must leave exactly one value for each element, and the block of `reduce` / `fold` exactly one value per step (collect several with `listn`). For side-effect-only iteration (e.g. printing each element), use `dolist` instead.
 
 
 ### Type Operators

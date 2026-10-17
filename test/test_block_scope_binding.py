@@ -83,10 +83,10 @@ class TestClosures:
 
 class TestMapAndFilterBlocks:
     def test_a_map_block_runs_in_the_callers_scope(self):
-        assert run("0 :c set [1 2 3] {c 1 + :c set 0} map drop c") == [3]
+        assert run("0 :c set [1 2 3] {drop c 1 + :c set 0} map drop c") == [3]
 
     def test_a_filter_block_runs_in_the_callers_scope(self):
-        assert run("0 :c set [1 2 3] {c 1 + :c set true} filter drop c") == [3]
+        assert run("0 :c set [1 2 3] {drop c 1 + :c set true} filter drop c") == [3]
 
     def test_a_map_block_is_not_deep_copied(self, monkeypatch):
         def fail(self):

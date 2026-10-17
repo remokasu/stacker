@@ -204,8 +204,8 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 
 | 演算子 | 説明 | 例 |
 |---|---|---|
-| `map` | `list f map` は各要素に f（ブロック・ラムダ・シンボル）を適用した結果のリスト | `[1 2 3] {2 *} map`, `[1 2 3] :sqrt map` |
-| `filter` | `list f filter` は f の結果が真になる要素だけのリスト | `[1 2 3 4] {2 >} filter` |
+| `map` | `list f map` は各要素に f（ブロック・ラムダ・シンボル）を適用した結果のリスト。f は要素ごとに値を 1 つ残す | `[1 2 3] {2 *} map`, `[1 2 3] :sqrt map` |
+| `filter` | `list f filter` は f の結果（要素ごとに値 1 つ）が真になる要素だけのリスト | `[1 2 3 4] {2 >} filter` |
 | `reduce`, `fold` | `list init :acc :x {body} reduce` は init から始め、各要素を名前 x、累積値を名前 acc に束縛して body を実行し、1 つの値にまとめる | `[1 2 3] 0 :acc :x {acc x +} reduce`, `[1 2 3] 0 :acc :x {acc x +} fold` |
 | `zip` | 2 つのリストを要素ごとに組にする。`[1 2] [3 4] zip` は `[[1 3] [2 4]]`。長さが違うときは短いほうに合わせる | `[1 2] [3 4] zip` |
 | `apply` | `list f apply` はリストの要素をスタックに展開してから f を実行 | `[3 4] {+} apply`, `[3 4] :+ apply` |
@@ -278,9 +278,9 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 |---|---|---|
 | `set`, `=` | `value :name set` は value を name に束縛する。ブロックは評価されずに保存される | `3 :x set`, `3 :x =` |
 | `global` | `value :name global` はグローバルスコープに束縛 | `42 :answer global` |
-| `defun` | `{args} {body} :name defun` は関数を定義 | `{x y} {x y *} :multiply defun` |
+| `defun` | `{args} {body} :name defun` は関数を定義。呼ぶと本体が残した値を全部積む | `{x y} {x y *} :multiply defun` |
 | `defmacro` | `{args} {body} :name defmacro` はマクロを定義。body は展開時に実行され、展開結果のコードを 1 つ残す | `{c b} {{c eval not {b eval} if}} {unless} defmacro` |
-| `lambda` | `{args} {body} lambda` は無名関数の値を作る。`eval` で呼ぶ | `{x y} {x y *} lambda` |
+| `lambda` | `{args} {body} lambda` は無名関数の値を作る。`eval` で呼ぶと本体が残した値を全部積む | `{x y} {x y *} lambda` |
 
 ## 評価とコード操作
 

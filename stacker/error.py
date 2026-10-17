@@ -196,6 +196,15 @@ class NoValueProducedError(StackerError):
         super().__init__(message)
 
 
+class ResultCountError(StackerError):
+    """Raised when a function, lambda or block leaves more values than its context takes.
+
+    `map` / `filter` read one value per element and `reduce` / `fold` one
+    value per step; a body that leaves several is this error (leaving none
+    is ``NoValueProducedError``).
+    """
+
+
 class SemanticError(StackerError):
     """Semantic error"""
 

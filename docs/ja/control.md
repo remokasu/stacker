@@ -263,7 +263,7 @@ stacker: error: `break` can only be used inside a loop
 
 ## map・filter・reduce とループの使い分け
 
-`map`、`filter`、`reduce`（`fold` も同じ）に渡すブロックは、スタックに値を残さなければなりません。`map` と `filter` はブロックの実行前にスタックへ要素を積み、ブロックが残した値を結果に使います。ブロックは呼び出し側の変数をそのまま使うので、ブロックの中の `set` はループのあとも残ります。
+`map`、`filter`、`reduce`（`fold` も同じ）に渡すブロックは、スタックに値をちょうど 1 つ残さなければなりません。`map` と `filter` はブロックの実行前にスタックへ要素を積み、ブロックが残した値を結果に使います。ブロックは呼び出し側の変数をそのまま使うので、ブロックの中の `set` はループのあとも残ります。
 
 ```
 stacker:0> [1 2 3] {2 *} map
@@ -284,6 +284,18 @@ stacker:0> [1 2 3] 0 :acc :x {acc x +} reduce
 ```text
 $ [1 2 3] {echo} map
 NoValueProducedError: The block passed to `map` must leave a value on the stack. Use `dolist` for side-effect-only iteration.
+```
+
+2 つ以上残してもエラーになります。要素ごとに複数の値がほしいときは、`listn` で 1 つにまとめます。
+
+```text
+$ [1 2 3] {dup} map
+ResultCountError: `map` needs one value from the block for each element, but it left 2
+```
+
+```
+stacker:0> [1 2 3] {dup 2 listn} map
+[[[1 1] [2 2] [3 3]]]
 ```
 
 ```

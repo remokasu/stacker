@@ -20,19 +20,24 @@ class StackerLambda:
         self.args: list[str] = args
         self.blockstack: StackerCore = blockstack
         self.arg_count: int = len(args)
-        self.stack: stack_data[object] = stack_data()
 
-    def __call__(self, *values: object) -> object:
+    def __call__(self, *values: object) -> list[object]:
+        """Calls the lambda.
+
+        Args:
+            *values: The arguments, in parameter order.
+
+        Returns:
+            Every value the body left on its stack, bottom first (an empty
+            list when it left nothing).
+        """
         recursion.enter(LAMBDA_NAME)
         try:
             return self._call_impl(*values)
         finally:
             recursion.leave()
 
-    def _call_impl(self, *values: object) -> object:
-        # Parity with StackerFunction: clear the local stack per call so
-        # leftover multi-value results cannot accumulate across calls
-        self.stack.clear()
+    def _call_impl(self, *values: object) -> list[object]:
         values_list = list(values)
         if len(values_list) != len(self.args):
             raise ValueError(f"Expected {len(self.args)} arguments, got {len(values_list)}")
@@ -45,9 +50,8 @@ class StackerLambda:
 
         for arg, value in zip(self.args, values_list):
             blockstack.variables[arg] = value
-        self.stack.append(blockstack)
-        result = blockstack._pop_and_eval(self.stack)
-        return result
+        blockstack._evaluate(blockstack.tokens, stack=blockstack.stack)
+        return list(blockstack.stack)
 
     def __str__(self) -> str:
         if len(self.args) == 0:

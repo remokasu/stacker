@@ -10,7 +10,7 @@ import pytest
 from stacker import Stacker
 from stacker.engine.core import StackerCore
 from stacker.engine.data_type import String, Symbol
-from stacker.error import StackerTypeError, UndefinedSymbolError
+from stacker.error import ResultCountError, StackerTypeError, UndefinedSymbolError
 
 
 def run(*lines: str) -> list[object]:
@@ -106,24 +106,35 @@ class TestFunctionSpecifiers:
         assert run("[3 4] :+ apply") == [7]
 
     def test_symbol_names_a_stack_operator(self):
-        # `:dup` is not a one-argument host word, so it runs like `{dup}`.
-        assert run("[1 2] :dup map") == [[[1, 1], [2, 2]]]
+        # `:dup` is not a one-argument host word, so it runs like `{dup}`:
+        # two values per element, which `map` rejects either way.
+        for program in ("[1 2] :dup map", "[1 2] {dup} map"):
+            with pytest.raises(ResultCountError):
+                run(program)
+        assert run("[1 2] {dup 2 listn} map") == [[[1, 1], [2, 2]]]
 
     def test_symbol_names_a_function_or_macro(self):
         assert run("{x} {x 1 +} :f defun [1 2] :f map") == [[2, 3]]
         assert run("{} {{2 *}} :m defmacro [1 2] :m map") == [[2, 4]]
 
     def test_symbol_shadowed_by_a_variable_is_not_shortcut(self):
-        # `sqrt` is a variable here, so `:sqrt` means `{sqrt}`: push its value.
-        assert run("7 :sqrt set [1 2] :sqrt map") == [[[1, 7], [2, 7]]]
+        # `sqrt` is a variable here, so `:sqrt` means `{sqrt}`: push its value
+        # next to the element (two values, so `map` rejects it as it rejects
+        # `{sqrt}`), not the host's square root.
+        with pytest.raises(ResultCountError):
+            run("7 :sqrt set [1 2] :sqrt map")
+        with pytest.raises(ResultCountError):
+            run("7 :sqrt set [1 2] {sqrt} map")
 
     def test_lambda_value_as_function(self):
         assert run("{a} {a 2 *} lambda :f set [1 2] f map") == [[2, 4]]
 
     def test_quoted_lambda_variable_pushes_the_lambda(self):
-        (result,) = run("{a} {a 2 *} lambda :f set [1 2] {f} map")
-        assert [len(pair) for pair in result] == [2, 2]
-        assert result[0][0] == 1 and type(result[0][1]).__name__ == "StackerLambda"
+        # `{f}` pushes the lambda next to the element instead of calling it,
+        # so the block leaves two values and `map` rejects it; `f map` calls it.
+        with pytest.raises(ResultCountError):
+            run("{a} {a 2 *} lambda :f set [1 2] {f} map")
+        assert run("{a} {a 2 *} lambda :f set [1 2] {f eval} map") == [[2, 4]]
 
     @pytest.mark.parametrize("program", ['[1 4] "sqrt" map', '[3 4] "+" apply', "[3 4] 5 apply", "[1 2] 3 filter"])
     def test_other_values_are_rejected(self, program):
@@ -328,8 +339,11 @@ class TestFilterFunctionSpecifiers:
         assert run("[0 1 0] :not filter") == [[0, 0]]
 
     def test_symbol_of_a_stack_word_runs_like_the_quoted_name(self):
-        assert run("[1 2] :dup filter") == run("[1 2] {dup} filter")
-        assert run("[0 0] :dup filter") == run("[0 0] {dup} filter")
+        # `dup` leaves two values per element: rejected either way
+        for program in ("[1 2] :dup filter", "[1 2] {dup} filter"):
+            with pytest.raises(ResultCountError):
+                run(program)
+        assert run("[0 1] :bool filter") == run("[0 1] {bool} filter")
 
     def test_lambda_value(self):
         assert run("[1 2 3 4] {a} {a 2 >} lambda filter") == [[3, 4]]
@@ -338,8 +352,11 @@ class TestFilterFunctionSpecifiers:
         assert run("{a} {a 2 >} lambda :big set [1 2 3 4] big filter") == [[3, 4]]
 
     def test_symbol_that_is_a_variable_pushes_its_value(self):
-        # `:flag` means `{flag}`: the variable's value is pushed and the stack decides.
-        assert run("1 :flag set [7 8] :flag filter") == [[7, 8]]
+        # `:flag` means `{flag}`: the variable's value is pushed next to the
+        # element, two values, which `filter` rejects as it rejects `{flag}`.
+        with pytest.raises(ResultCountError):
+            run("1 :flag set [7 8] :flag filter")
+        assert run("1 :flag set [7 8] {drop flag} filter") == [[7, 8]]
 
     @pytest.mark.parametrize("specifier", ['"bool"', "5", "[1]", "1.5", "true"])
     def test_other_values_are_type_errors(self, specifier):
