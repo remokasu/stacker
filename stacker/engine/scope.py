@@ -44,6 +44,12 @@ class ScopedVariables:
         # further up, so assignments made under it never touch outer scopes.
         # Used by macro expansion scopes ("expansion is a pure computation").
         self._write_barrier: bool = False
+        # When True, a name first bound under this scope is created in the
+        # parent instead: the scope holds only what `bind` puts in it. Used
+        # by loop scopes, which exist for the loop variable alone, so a
+        # variable first set in the body outlives the loop (as it does in
+        # `while`, `times` and `loop`, which have no scope of their own).
+        self._transparent: bool = False
 
     def __getitem__(self, key: str) -> object:
         """
@@ -70,11 +76,40 @@ class ScopedVariables:
         """
         Set a variable in the current scope only.
 
+        A transparent scope passes the binding to its parent (see
+        ``_transparent``); ``bind`` puts a name in the scope itself.
+
+        Args:
+            key: Variable name
+            value: Variable value
+        """
+        if self._transparent and self._parent is not None:
+            self._parent[key] = value
+            return
+        self._local[key] = value
+
+    def bind(self, key: str, value: object) -> None:
+        """Binds ``key`` in this scope itself, transparent or not.
+
         Args:
             key: Variable name
             value: Variable value
         """
         self._local[key] = value
+
+    @classmethod
+    def loop_scope(cls, parent: ScopedVariables) -> ScopedVariables:
+        """Returns a transparent child of ``parent`` for a loop's own variables.
+
+        Args:
+            parent: The scope the loop runs in.
+
+        Returns:
+            A scope that holds only what ``bind`` puts in it.
+        """
+        scope = cls(parent=parent)
+        scope._transparent = True
+        return scope
 
     def own_bindings(self) -> dict[str, object]:
         """Returns this scope's own bindings (parents excluded), by reference.
@@ -217,6 +252,9 @@ class ScopedVariables:
     def update(self, other: dict[str, object]) -> None:
         """
         Update local scope with variables from a dict.
+
+        The names go into this scope itself, transparent or not (so what
+        ``include`` brings in under a loop scope is dropped with the loop).
 
         Args:
             other: Dictionary of variables to add

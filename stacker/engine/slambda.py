@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 from stacker.engine import recursion
 from stacker.engine.data_type import stack_data
-from stacker.engine.scope import ScopedVariables
 
 #: Name reported by the recursion guard for anonymous lambdas
 LAMBDA_NAME = "<lambda>"
@@ -37,29 +36,18 @@ class StackerLambda:
         values_list = list(values)
         if len(values_list) != len(self.args):
             raise ValueError(f"Expected {len(self.args)} arguments, got {len(values_list)}")
-        # Use shallow copy with child scope instead of deepcopy
-        # This preserves variable scope chain for nested code blocks
+        # The body keeps the scope it was made in; each call runs in a
+        # child of that scope, with its own stack. A block written inside
+        # the body is bound to the call's scope when the body pushes it.
         blockstack = copy.copy(self.blockstack)
         blockstack.variables = self.blockstack.variables.create_child_scope()
         blockstack.stack = stack_data()
-
-        # Update nested StackerCore instances to use the new variable scope
-        self._update_nested_variables(blockstack.tokens, blockstack.variables)
 
         for arg, value in zip(self.args, values_list):
             blockstack.variables[arg] = value
         self.stack.append(blockstack)
         result = blockstack._pop_and_eval(self.stack)
         return result
-
-    def _update_nested_variables(self, tokens: list[object], new_variables: ScopedVariables) -> None:
-        """Recursively update variable references in nested StackerCore instances."""
-        from stacker.engine.core import StackerCore
-        for token in tokens:
-            if isinstance(token, StackerCore):
-                token.variables = new_variables
-                # Recursively update nested code blocks
-                self._update_nested_variables(token.tokens, new_variables)
 
     def __str__(self) -> str:
         if len(self.args) == 0:

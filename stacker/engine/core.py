@@ -142,8 +142,9 @@ K_STRING = 1  # quoted string literal: payload is the prebuilt String
 K_LIST = 2  # list literal: payload is the parsed template (or None)
 K_SYMBOL = 3  # :name: payload is the Symbol
 K_BLOCK = 4  # code-block source: substack is created at evaluation time
+K_BLOCK_VALUE = 5  # prebuilt code block (nested in a block): bound to the current scope when pushed
 K_DYNAMIC = 6  # name resolved against runtime state on every evaluation
-# 5 and 7 were the bare names a lookahead read as the name being bound; gone
+# 7 was a bare name a lookahead read as the name being bound; gone
 K_INVALID = 8  # a `:` or `$` token that is not a symbol: payload is the error message, raised when executed
 
 
@@ -165,6 +166,8 @@ def _classify_token(token: object) -> tuple[int, object, object]:
     Returns:
         A ``(kind, token, payload)`` entry.
     """
+    if isinstance(token, StackerCore):
+        return (K_BLOCK_VALUE, token, None)
     if not isinstance(token, str):
         return (K_VALUE, token, None)
     if isinstance(token, String):
@@ -285,6 +288,9 @@ class StackerCore:
         self.trace: list[object] = []  # for error trace
         self.stack: stack_data[object] = stack_data()
         self.tokens: list[object] = TokenList()
+        # The latest (scope, copy) made by _bound_to, reused for that scope.
+        # It keeps that scope alive until the block is pushed from another one
+        self._bound_cache: tuple[ScopedVariables, StackerCore] | None = None
         self.bracket_type: str = "{"  # Default bracket type for display ({} or ())
 
         # Source location tracking for error reporting
@@ -506,10 +512,17 @@ class StackerCore:
 
         for kind, token, payload in entries:
             if kind == K_VALUE:
-                if interp is not None and isinstance(token, StackerCore):
+                stack.append(token)  # Literal value
+                continue
+            if kind == K_BLOCK_VALUE:
+                if interp is not None:
                     stack.append(self._interpolate(token, interp))
                 else:
-                    stack.append(token)  # Literal value
+                    # The block object is shared by every evaluation of this
+                    # token list; what is pushed is the block bound to the
+                    # scope it is pushed from, so a lambda or a `map` body
+                    # made here keeps this scope (closure)
+                    stack.append(token._bound_to(self.variables))
                 continue
             if kind == K_STRING:
                 stack.append(payload)  # a string literal is never a name
@@ -1115,10 +1128,11 @@ class StackerCore:
                 original_parent_stack = self.stack
                 result_stack: stack_data[object] = stack_data()
                 try:
-                    self.variables = self.variables.create_child_scope()
-                    # Bind accumulator and element to their variable names
-                    self.variables[name_acc] = acc
-                    self.variables[name_x] = x
+                    # A loop scope: it holds the two names, and a name the
+                    # body is first to set goes to the caller's scope
+                    self.variables = ScopedVariables.loop_scope(self.variables)
+                    self.variables.bind(name_acc, acc)
+                    self.variables.bind(name_x, x)
                     # Evaluate the body using a temporary stack
                     self.stack = result_stack
                     self._evaluate(body.tokens, stack=result_stack)  # type: ignore[union-attr]
@@ -1346,7 +1360,9 @@ class StackerCore:
             StackerTypeError: ``spec`` is none of the above (a string, a number, ...).
         """
         if isinstance(spec, StackerCore):
-            return lambda element: self._stacker_lambda(element, spec.copy(), word)
+            # The block runs as it is, in the scope it is bound to (the
+            # caller's): what it assigns stays assigned, and nothing is copied
+            return lambda element: self._stacker_lambda(element, spec, word)
         if isinstance(spec, StackerLambda):
             return spec
         if isinstance(spec, Symbol):
@@ -1374,7 +1390,7 @@ class StackerCore:
 
                     return call
             block = self._block_of([name])
-            return lambda element: self._stacker_lambda(element, block.copy(), word)
+            return lambda element: self._stacker_lambda(element, block, word)
         raise StackerTypeError(self._function_spec_message(word, spec))
 
     def _lookup_name(self, name: str) -> object:
@@ -1549,6 +1565,34 @@ class StackerCore:
 
     def copy(self) -> StackerCore:
         return copy.deepcopy(self)
+
+    def _bound_to(self, scope: ScopedVariables) -> StackerCore:
+        """Returns this block bound to ``scope``: itself when already bound there.
+
+        The copy shares the tokens (and their classification cache) and gets
+        a stack of its own, so evaluating it never touches the original.
+
+        Args:
+            scope: The scope the block is being pushed from.
+
+        Returns:
+            A block whose names resolve in ``scope``.
+        """
+        if self.variables is scope:
+            return self
+        # A loop pushes the same block once per iteration in one scope: the
+        # bound copy is kept for as long as the scope asking for it is the
+        # same one, so the copy is made once per scope, not once per push
+        cached = self._bound_cache
+        if cached is not None and cached[0] is scope:
+            return cached[1]
+        bound = object.__new__(type(self))  # a shallow copy, without copy.copy's overhead
+        bound.__dict__.update(self.__dict__)
+        bound.variables = scope
+        bound.stack = stack_data()
+        bound._bound_cache = None
+        self._bound_cache = (scope, bound)
+        return bound
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, StackerCore):

@@ -8,7 +8,6 @@ if TYPE_CHECKING:
 
 from stacker.engine import recursion
 from stacker.engine.data_type import stack_data
-from stacker.engine.scope import ScopedVariables
 
 
 class StackerFunction:
@@ -36,15 +35,13 @@ class StackerFunction:
         if len(values_list) != len(self.args):
             raise ValueError(f"Expected {len(self.args)} arguments, got {len(values_list)}")
 
-        # Optimization: Use scope chain instead of deepcopy
-        # Create a shallow copy of blockstack with a new variable scope and stack
-        # This is ~100x faster than deepcopy and supports recursion correctly
+        # The body is shared by every call: a shallow copy carries this
+        # call's own scope and stack. A block written inside the body is
+        # bound to this scope when the body pushes it (StackerCore._evaluate),
+        # so a lambda made here keeps this call's variables.
         new_blockstack = copy.copy(self.blockstack)
         new_blockstack.variables = self.blockstack.variables.create_child_scope()
         new_blockstack.stack = stack_data()  # Each call needs its own stack
-
-        # Update nested StackerCore instances to use the new variable scope
-        self._update_nested_variables(new_blockstack.tokens, new_blockstack.variables)
 
         # Set function arguments in the new child scope
         for arg, value in zip(self.args, values_list):
@@ -54,12 +51,3 @@ class StackerFunction:
         result = new_blockstack._pop_and_eval(self.stack)
 
         return result
-
-    def _update_nested_variables(self, tokens: list[object], new_variables: ScopedVariables) -> None:
-        """Recursively update variable references in nested StackerCore instances."""
-        from stacker.engine.core import StackerCore
-        for token in tokens:
-            if isinstance(token, StackerCore):
-                token.variables = new_variables
-                # Recursively update nested code blocks
-                self._update_nested_variables(token.tokens, new_variables)
