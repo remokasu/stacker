@@ -48,13 +48,13 @@ class TestUnit(unittest.TestCase):
         stacker = Stacker()
         expr = """'a b c' ' ' split"""
         stacker.process_expression(expr)
-        self.assertEqual(list(stacker.stack), ["a", "b", "c"])
+        self.assertEqual(list(stacker.stack), [["a", "b", "c"]])
 
     def test_split_comma(self):
         stacker = Stacker()
         expr = """'a,b,c' ',' split"""
         stacker.process_expression(expr)
-        self.assertEqual(list(stacker.stack), ["a", "b", "c"])
+        self.assertEqual(list(stacker.stack), [["a", "b", "c"]])
 
     def test_nth_list(self):
         stacker = Stacker()

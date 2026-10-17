@@ -62,9 +62,26 @@ def attach_macro_context(error: StackerError, context: str) -> None:
 class StackUnderflowError(StackerError):
     """Stack underflow error"""
 
-    def __init__(self, operator: str, num_args: int) -> None:
-        message = f"Operator `{operator}` requires {num_args} arguments."
+    def __init__(self, operator: str, num_args: int, message: str | None = None) -> None:
+        if message is None:
+            message = f"Operator `{operator}` requires {num_args} arguments."
         super().__init__(message)
+
+
+def symbol_as_value_message(word: str, name: str) -> str:
+    """The message for a word that was handed a symbol where a value is needed.
+
+    Args:
+        word: The word that received the symbol.
+        name: The symbol's name.
+
+    Returns:
+        A message that shows how to write the value and how to write the text.
+    """
+    return (
+        f"`{word}` cannot use the symbol `{name}` as a value. "
+        f"Write `{name}` for the variable's value, or `:{name} str` for its name as text."
+    )
 
 
 class StackerSyntaxError(StackerError):
