@@ -136,7 +136,7 @@ class Parser:
     def _wrap_node(
         self, elements: list[object], node_class: type[ListNode | TupleNode]
     ) -> ListNode | TupleNode:
-        """Wrap elements into appropriate node type"""
+        """Wraps one `;`-separated row; a row that is one list is that list (`[[1 2; 3 4]; [5 6; 7 8]]`)."""
         if len(elements) == 1 and isinstance(elements[0], (ListNode, TupleNode)):
             return elements[0]
         return node_class(elements)
@@ -168,17 +168,8 @@ class Formatter:
 def convert_custom_array_to_proper_list(input_str: str) -> str:
     """Convert custom array notation to proper list notation"""
     parser = Parser(input_str)
-    parsed = parser.parse()
-
-    # Flatten singleton structures
-    while (
-        isinstance(parsed, (ListNode, TupleNode))
-        and len(parsed.elements) == 1
-        and isinstance(parsed.elements[0], (ListNode, TupleNode))
-    ):
-        parsed = parsed.elements[0]
-
-    return Formatter.format_structure(parsed)
+    # The nesting is kept as written: `[[1 2]]` is a list holding one list
+    return Formatter.format_structure(parser.parse())
 
 
 @lru_cache(maxsize=512)
