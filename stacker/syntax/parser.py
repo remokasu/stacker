@@ -107,7 +107,7 @@ class Parser:
             return ";"
         elif token.type == TokenType.COMMA:
             raise StackerSyntaxError(
-                "Commas are not used in Stacker arrays; "
+                "Commas are not used in Stacker lists; "
                 "separate elements with spaces: [1 2 3]"
             )
         else:

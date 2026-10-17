@@ -32,6 +32,7 @@ from stacker.operators.defun import defun_operators
 from stacker.operators.defmacro import macro_operators
 from stacker.operators.hof import hof_operators
 from stacker.operators.lmd import lambda_operators
+from stacker.operators.collection import collection_operators
 from stacker.operators.os import os_operators
 from stacker.operators.system import system_operators
 
@@ -166,6 +167,7 @@ _DISPATCH_ORDER = (
     "hof",
     "transform",
     "aggregate",
+    "collection",
     "file",
     "settings",
 )
@@ -201,6 +203,7 @@ class OperatorManager:
         self._priority_operators.update(lambda_operators)
         self._priority_operators.update(exit_operators)
 
+        self._collection_operators = collection_operators
         self._file_operators = file_operators
         self._hof_operators = hof_operators
         self._aggregate_operators = aggregate_operators
@@ -214,6 +217,7 @@ class OperatorManager:
             "regular": self._regular_operators,
             "hof": self._hof_operators,
             "aggregate": self._aggregate_operators,
+            "collection": self._collection_operators,
             "transform": self._transform_operators,
             "stack": self._stack_operators,
             "file": self._file_operators,
@@ -254,6 +258,7 @@ class OperatorManager:
                 + self.get_hof_keys()
                 + self.get_aggregate_keys()
                 + self.get_transform_keys()
+                + self.get_collection_keys()
                 + self.get_stack_keys()
                 + self.get_system_keys()
                 # + list(self.get_settings_keys())
@@ -355,6 +360,9 @@ class OperatorManager:
     def get_transform_keys(self) -> list[str]:
         return list(self._transform_operators.keys())
 
+    def get_collection_keys(self) -> list[str]:
+        return list(self._collection_operators.keys())
+
     ############################
     # Stack operators
     ############################
@@ -428,6 +436,12 @@ class OperatorManager:
         descriptions = {}
         for operator in self._transform_operators:
             descriptions[operator] = self._transform_operators[operator]["desc"]
+        return descriptions
+
+    def get_collection_descriptions(self) -> dict[str, object]:
+        descriptions = {}
+        for operator in self._collection_operators:
+            descriptions[operator] = self._collection_operators[operator]["desc"]
         return descriptions
 
     def get_stack_descriptions(self) -> dict[str, object]:

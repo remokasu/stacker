@@ -72,7 +72,7 @@ class TestAnalyzeTerminals(unittest.TestCase):
     def test_open_array(self):
         state = analyze_terminals("[1 2")
         self.assertFalse(state.complete)
-        self.assertEqual(state.open_construct, "array")
+        self.assertEqual(state.open_construct, "list")
 
     def test_open_block(self):
         state = analyze_terminals("{1 2 +")
