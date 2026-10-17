@@ -125,7 +125,7 @@ class TestIncludeRunsInPlace:
     def test_a_trailing_row_separator_means_the_same_as_in_a_script(self, tmp_path: Path):
         lib = write(tmp_path, "lib.stk", "[1 2 3;]\n:m set\n")
         stacker = Stacker()
-        assert run(stacker, f'"{lib}" include', "m") == [[1, 2, 3]]
+        assert run(stacker, f'"{lib}" include', "m") == [[[1, 2, 3]]]
 
     def test_two_interpreters_do_not_share_the_include_stack(self, tmp_path: Path):
         lib = write(tmp_path, "lib.stk", "1 :x set\n")

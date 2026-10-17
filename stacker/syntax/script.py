@@ -7,10 +7,6 @@ from collections.abc import Iterator
 from stacker.error import UnterminatedTokenError
 from stacker.syntax.lexer import TerminalScanner
 
-#: A `;` right before the closing bracket of a list or block at the end of an
-#: expression is dropped: `[1 2 3;]` written on a line of its own is `[1 2 3]`.
-_TRAILING_ROW_SEPARATORS = frozenset({";]", ";)"})
-
 
 def iter_expressions(code: str) -> Iterator[tuple[int, str]]:
     """Yields the expressions of ``code`` with the line each one starts on.
@@ -56,8 +52,6 @@ def iter_expressions(code: str) -> Iterator[tuple[int, str]]:
         if state.complete:
             candidate = expression.strip()
             if candidate:
-                if candidate[-2:] in _TRAILING_ROW_SEPARATORS:
-                    candidate = candidate[:-2] + candidate[-1]
                 yield start_line, candidate
             expression = ""
             start_line = 0

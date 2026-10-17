@@ -156,11 +156,11 @@ class TestParser(unittest.TestCase):
         )
         self.assertEqual(
             convert_custom_array_to_proper_list("((1 2; 3 4); (5 6; 7 8))"),
-            "(((1,2),(3,4)),((5,6),(7,8)))",
+            "((((1,2),(3,4))),(((5,6),(7,8))))",
         )
         self.assertEqual(
             convert_custom_array_to_proper_list("[1 2 3; (4 5 6; 7 8 9)]"),
-            "[[1,2,3],((4,5,6),(7,8,9))]",
+            "[[1,2,3],[((4,5,6),(7,8,9))]]",
         )
         self.assertEqual(
             convert_custom_array_to_proper_list("[1 2.5 3.5]"), "[1,2.5,3.5]"
@@ -184,9 +184,14 @@ class TestParser(unittest.TestCase):
     def test_convert_custom_array_to_proper_list_3d_array(self):
         self.assertEqual(
             convert_custom_array_to_proper_list(
-                "[[[1 2 3; 4 5 6]; [7 8 9; 10 11 12]]; [[13 14 15; 16 17 18]; [19 20 21; 22 23 24]]]"
+                "[[[1 2 3; 4 5 6] [7 8 9; 10 11 12]] [[13 14 15; 16 17 18] [19 20 21; 22 23 24]]]"
             ),
             "[[[[1,2,3],[4,5,6]],[[7,8,9],[10,11,12]]],[[[13,14,15],[16,17,18]],[[19,20,21],[22,23,24]]]]",
+        )
+        # `;` wraps every row, a single matrix included
+        self.assertEqual(
+            convert_custom_array_to_proper_list("[[1 2 3; 4 5 6]; [7 8 9; 10 11 12]]"),
+            "[[[[1,2,3],[4,5,6]]],[[[7,8,9],[10,11,12]]]]",
         )
 
     def test_parse_expression(self):
