@@ -14,6 +14,9 @@ class ScopedVariables:
     """
     Variable scope with parent chain for efficient variable lookup.
 
+    Slots keep a scope small and quick to make: a loop makes one per
+    iteration and a function call one per call.
+
     This class implements lexical scoping using a parent chain, similar to
     how JavaScript, Python, and many other languages handle variable scopes.
 
@@ -27,6 +30,8 @@ class ScopedVariables:
 
     This avoids the need for deep copying entire variable dictionaries.
     """
+
+    __slots__ = ("_local", "_parent", "_transparent", "_write_barrier")
 
     def __init__(
         self, parent: ScopedVariables | None = None, local_vars: dict[str, object] | None = None

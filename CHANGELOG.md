@@ -15,6 +15,8 @@ Note: This change is not backwards compatible with previous versions.
   - When the file fails part way, what it defined before the error stays defined
   - Each expression of an included file is read as a script reads it, so the file means the same whether it is run or included (`[1 2 3;]` on a line of its own is `[1 2 3]`)
   - A script that includes itself fails at once, before running a second time. `ans` cannot be used inside an included file
+- **Each Iteration Of `do` And `dolist` Has A Scope Of Its Own**:
+  - A lambda or block made in the body and kept past the iteration sees that iteration's loop variable: `1 3 :i {{} {i} lambda} do 3 listn {eval} map` is `[1 2 3]` (every lambda used to see the last value, 3). A variable first set in the body still outlives the loop
 - **A Function Returns Every Value Its Body Leaves**:
   - A function defined with `defun`, and a lambda called with `eval` or `apply`, push every value their body leaves, in order; a body that leaves nothing pushes nothing. Until now only the top value was pushed and the others were dropped without a word
   - Example: `{a b} {b a} :swap2 defun 1 2 swap2` leaves `2 1` (was `1`); `{n} {n 0 > {n 1 - h n} if} :h defun 3 h` leaves `1 2 3` (was `3`)

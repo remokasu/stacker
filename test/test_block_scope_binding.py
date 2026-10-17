@@ -126,3 +126,27 @@ class TestLoopBodyVariables:
 
     def test_an_existing_variable_is_updated_in_place(self):
         assert run("0 :s set 1 3 :i {s i + :s set} do s") == [6]
+
+
+class TestClosuresKeptAcrossIterations:
+    @pytest.mark.parametrize(
+        "program, expected",
+        [
+            ("1 3 :i {{} {i} lambda} do 3 listn {eval} map", [[1, 2, 3]]),
+            ("[10 20 30] :x {{} {x} lambda} dolist 3 listn {eval} map", [[10, 20, 30]]),
+            ("[1 2] 0 :acc :x {{} {x} lambda :f set acc x +} reduce f eval", [3, 2]),
+        ],
+    )
+    def test_a_lambda_kept_from_one_iteration_sees_that_iterations_variable(self, program, expected):
+        assert run(program) == expected
+
+    def test_a_variable_first_set_in_the_body_still_outlives_the_loop(self):
+        assert run("1 3 :i {i :last set} do last") == [3]
+        assert run("0 :s set 1 3 :i {s i + :s set} do s") == [6]
+
+    def test_a_lambda_kept_from_a_nested_loop_sees_both_loop_variables(self):
+        assert run("1 2 :i {1 2 :j {{} {i 10 * j +} lambda} do} do 4 listn {eval} map") == [[11, 12, 21, 22]]
+
+    def test_a_block_left_on_the_stack_keeps_its_iterations_variable(self):
+        # (`map` runs a block in the scope it is bound to; `eval` would use the caller's)
+        assert run("1 3 :i {{drop i}} do 3 listn {b} {[0] b map 0 nth nip} lambda map") == [[1, 2, 3]]
