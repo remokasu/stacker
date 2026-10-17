@@ -16,6 +16,7 @@ from stacker.error import (
     StackerTypeError,
     UndefinedSymbolError,
     attach_macro_context,
+    not_a_sequence_message,
     symbol_as_value_message,
     # UnexpectedTokenError,
 )
@@ -26,7 +27,7 @@ from stacker.syntax.parser import (
 from stacker.error import BreakException
 from stacker.engine.boundary import token_to_value, value_to_token
 from stacker.util.disp import plain_text  # disp.py must not import core.py
-from stacker.engine.data_type import String, Symbol, stack_data, VOID
+from stacker.engine.data_type import Array, String, Symbol, stack_data, VOID
 from stacker.syntax.token_rules import (
     KEYWORD_LITERALS,
     OLD_SYMBOL_PREFIX,
@@ -747,7 +748,7 @@ class StackerCore:
     def _prio_dolist(self, op, stack) -> None:
         body = stack.pop()
         symbol = stack.pop()
-        lst = self._pop_arg(stack, "dolist")
+        lst = self._data_items(self._pop_arg(stack, "dolist"), "dolist")
         name = self._name_of(symbol, "dolist")
         try:
             op["func"](name, lst, body, self, stack)
@@ -1036,7 +1037,7 @@ class StackerCore:
         # A symbol passes here and is reported as a symbol by the handler below
         if not isinstance(lst, (str, StackerCore, list, tuple, Symbol)):
             raise StackerTypeError(
-                f"`nth` expects a list, a string or a code block, got {plain_text(lst)}"
+                f"`nth` expects a list, an array, a string or a code block, got {plain_text(lst)}"
             )
         if isinstance(n, bool) or not isinstance(n, (int, Symbol)):
             raise StackerTypeError(f"`nth` expects an integer index, got {plain_text(n)}")
@@ -1052,6 +1053,8 @@ class StackerCore:
 
     def _prio_expand(self, op, stack) -> None:
         iterable = stack.pop()
+        if isinstance(iterable, dict):
+            raise StackerTypeError(not_a_sequence_message("expand"))
         if isinstance(iterable, (list, tuple)):
             stack.extend(iterable)  # type: ignore[arg-type]
         elif isinstance(iterable, StackerCore):
@@ -1206,7 +1209,7 @@ class StackerCore:
             body = stack.pop()
             hof_args = stack.pop()
             func = self._resolve_function_spec(body, token)
-            items = self._data_items(hof_args)
+            items = self._data_items(hof_args, token)
             try:
                 self._push_like(hof_args, op["func"](func, items), stack)  # type: ignore[operator]
             except (TypeError, AttributeError) as error:
@@ -1221,7 +1224,7 @@ class StackerCore:
                 body = self._block_of([body.name])
             if not isinstance(body, StackerCore):
                 raise StackerTypeError(
-                    f"`{token}` expects a code block as the function, got {body!r}"
+                    f"`{token}` expects a code block as the function, got {plain_text(body)}"
                 )
 
             # Extract variable names (same as dolist pattern)
@@ -1249,7 +1252,7 @@ class StackerCore:
                     self.variables = original_parent_vars
                 return self._one_result(result_stack, token, "the block")
 
-            items = self._data_items(fold_args)
+            items = self._data_items(fold_args, token)
             try:
                 stack.append(op["func"](reduce_func, init, items))  # type: ignore[operator]
             except (TypeError, AttributeError) as error:
@@ -1257,21 +1260,30 @@ class StackerCore:
         elif token in ["zip"]:
             xs2 = stack.pop()
             xs1 = stack.pop()
-            items1, items2 = self._data_items(xs1), self._data_items(xs2)
+            items1, items2 = self._data_items(xs1, token), self._data_items(xs2, token)
             try:
                 self._push_like(xs1, op["func"](items1, items2), stack)  # type: ignore[operator]
             except (TypeError, AttributeError) as error:
                 _reraise_type_error(token, [items1, items2], error)
 
-    def _data_items(self, value: object) -> object:
+    def _data_items(self, value: object, word: str = "") -> object:
         """Returns the items a data word iterates over.
 
         A code block is read as data: each name token becomes a ``Symbol``
-        (see ``engine/boundary.py``); lists and other iterables are used as
-        they are.
+        (see ``engine/boundary.py``). An array gives the elements it holds
+        now (a copy), so the word runs through those even when its body
+        changes the array. A dictionary is not a sequence. Lists and other
+        iterables are used as they are.
+
+        Raises:
+            StackerTypeError: ``value`` is a dictionary.
         """
         if isinstance(value, StackerCore):
             return [token_to_value(token) for token in value.tokens]
+        if isinstance(value, Array):
+            return list(value)
+        if isinstance(value, dict):
+            raise StackerTypeError(not_a_sequence_message(word))
         return value
 
     def _push_like(self, source: object, result: object, stack: stack_data[object]) -> None:
@@ -1291,7 +1303,7 @@ class StackerCore:
     ) -> None:
         """Execute a transform operator, preserving the input's container type on push."""
         tf_args = stack.pop()
-        items = self._data_items(tf_args)
+        items = self._data_items(tf_args, token)
         try:
             lst = op["func"](items)  # type: ignore[operator]
             if token == "list":
@@ -1312,6 +1324,8 @@ class StackerCore:
                 stack.append(len(agg_args.tokens))
                 return
             agg_args = [self._block_token_value(t) for t in agg_args.tokens]
+        elif isinstance(agg_args, dict) and token != "len":
+            raise StackerTypeError(not_a_sequence_message(token))  # `len` of a dictionary is its number of keys
         try:
             if op["push_result_to_stack"]:
                 result = op["func"](agg_args)  # type: ignore[operator]
@@ -1321,6 +1335,17 @@ class StackerCore:
                 op["func"](agg_args)  # type: ignore[operator]
         except (TypeError, AttributeError) as error:
             _reraise_type_error(token, [agg_args], error)
+
+    def _exec_collection(
+        self, token: str, op: dict[str, object], stack: stack_data[object]
+    ) -> None:
+        """Execute an array / dictionary word: its arguments are taken as they are (a block is stored, not run)."""
+        args: list[object] = []
+        for _ in range(op["arg_count"]):  # type: ignore[arg-type]
+            args.insert(0, self._pop_and_resolve(stack))
+        result = op["func"](*args)  # type: ignore[operator]
+        if result is not VOID:
+            stack.append(result)
 
     def _exec_file(
         self, token: str, op: dict[str, object], stack: stack_data[object]
@@ -1364,6 +1389,7 @@ class StackerCore:
         "hof": _exec_hof,
         "transform": _exec_transform,
         "aggregate": _exec_aggregate,
+        "collection": _exec_collection,
         "file": _exec_file,
         "settings": _exec_settings,
     }
@@ -1439,7 +1465,7 @@ class StackerCore:
 
     @staticmethod
     def _function_spec_message(word: str, spec: object) -> str:
-        return f"`{word}` expects a code block, a lambda or a symbol as the function, got {spec!r}"
+        return f"`{word}` expects a code block, a lambda or a symbol as the function, got {plain_text(spec)}"
 
     def _resolve_function_spec(self, spec: object, word: str) -> Callable[[object], object]:
         """Turns the function argument of ``map`` / ``filter`` into a callable.

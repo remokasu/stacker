@@ -104,6 +104,7 @@ class ReplMode(ExecutionMode):
             ("Higher-order operators:", manager.get_hof_descriptions()),
             ("Aggregate operators:", manager.get_aggregate_descriptions()),
             ("Transform operators:", manager.get_transform_descriptions()),
+            ("Array and dictionary operators:", manager.get_collection_descriptions()),
         ):
             print(title)
             for operator_name, operator_descriptions in descriptions.items():

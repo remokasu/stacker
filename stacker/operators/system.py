@@ -84,6 +84,7 @@ def _operators(core: StackerCore) -> None:
         ("Higher-order operators:", core.operator_manager.get_hof_descriptions()),
         ("Aggregate operators:", core.operator_manager.get_aggregate_descriptions()),
         ("Transform operators:", core.operator_manager.get_transform_descriptions()),
+        ("Array and dictionary operators:", core.operator_manager.get_collection_descriptions()),
     ):
         print(f"\n{title}")
         for name, desc in descriptions.items():

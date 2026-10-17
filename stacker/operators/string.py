@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from stacker.engine.data_type import Symbol
-from stacker.error import StackerTypeError, symbol_as_value_message
+from stacker.error import StackerRuntimeError, StackerTypeError, symbol_as_value_message
 from stacker.util.disp import plain_text
 
 
@@ -79,6 +79,18 @@ def _join(parts: object, sep: object) -> str:
                 "Make the elements strings first: {str} map"
             )
     return sep.join(parts)
+
+
+def _contains(container: object, value: object) -> bool:
+    """``c v contains``: whether a string or a sequence holds ``v``."""
+    if isinstance(container, dict):
+        raise StackerTypeError("`contains` cannot look through a dictionary; ask for a key with `has?`, or look through its keys")
+    try:
+        return value in container  # type: ignore[operator]
+    except RecursionError:
+        raise StackerRuntimeError(
+            "`contains` cannot compare arrays or dictionaries nested this deep or containing themselves"
+        ) from None
 
 
 def _format_value(value: object) -> object:
@@ -206,7 +218,7 @@ string_operators = {
     #     "desc": "Returns the length of the specified string.",
     # },
     "contains": {
-        "func": (lambda value1, value2: value2 in value1),
+        "func": (lambda value1, value2: _contains(value1, value2)),
         "arg_count": 2,
         "push_result_to_stack": True,
         "desc": "Returns whether the first string contains the second string.",

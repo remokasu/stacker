@@ -201,7 +201,7 @@
       "patterns": [
         {
           "name": "keyword.operator.comparison.stacker",
-          "match": "(?<![\\w?!-])(neq|eq|ge|gt|le|lt)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(same\\?|neq|eq|ge|gt|le|lt)(?![\\w?!-])"
         },
         {
           "name": "keyword.operator.comparison.stacker",
@@ -257,7 +257,7 @@
       "patterns": [
         {
           "name": "keyword.operator.list.stacker",
-          "match": "(?<![\\w?!-])(enumerate|reversed|filter|reduce|sorted|listn|null\\?|pair\\?|cons|fold|list|all|any|car|cdr|len|map|max|min|nth|seq|sum|zip)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(enumerate|array\\-of|reversed|append!|filter|reduce|sorted|values|array|listn|null\\?|pair\\?|cons|del!|dict|fold|has\\?|keys|list|pop!|put!|all|any|at!|car|cdr|get|len|map|max|min|nth|seq|sum|zip|at)(?![\\w?!-])"
         }
       ]
     },
@@ -273,7 +273,7 @@
       "patterns": [
         {
           "name": "keyword.operator.type.stacker",
-          "match": "(?<![\\w?!-])(complex\\?|complex|number\\?|symbol\\?|float\\?|bool\\?|float|list\\?|bool|int\\?|str\\?|type|int|str)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(complex\\?|complex|number\\?|symbol\\?|array\\?|float\\?|bool\\?|dict\\?|float|list\\?|bool|int\\?|str\\?|type|int|str)(?![\\w?!-])"
         }
       ]
     },

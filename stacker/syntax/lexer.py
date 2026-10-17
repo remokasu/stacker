@@ -119,7 +119,7 @@ class TerminalState:
         complete: True if no string / array / block / block comment is
             left open at the end of the input.
         open_construct: Kind of the innermost open construct
-            ("string", "array", "block", or "block comment"), or None.
+            ("string", "list", "block", or "block comment"), or None.
         start_line: 1-based line (within the scanned text) where the
             open construct started, or None when complete.
     """
@@ -133,7 +133,7 @@ class TerminalState:
 _OPEN_BRACKETS = {"[": "]", "(": ")", "{": "}"}
 
 #: Opening bracket -> construct name reported by TerminalState.
-_BRACKET_CONSTRUCTS = {"[": "array", "(": "block", "{": "block"}
+_BRACKET_CONSTRUCTS = {"[": "list", "(": "block", "{": "block"}
 
 #: Triple-quote string delimiters (must be checked before single quotes).
 _TRIPLE_DELIMS = ('"""', "'''")

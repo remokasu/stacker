@@ -1,8 +1,18 @@
 from __future__ import annotations
 
+from stacker.error import StackerTypeError, not_a_sequence_message
+
+
+def _sequence(word: str, xs: object) -> object:
+    """Returns ``xs`` unless it is a dictionary, which is not a sequence."""
+    if isinstance(xs, dict):
+        raise StackerTypeError(not_a_sequence_message(word))
+    return xs
+
 
 def _car(xs: list | tuple) -> object:
     """Returns the first element of a list."""
+    _sequence("car", xs)
     if not xs:
         raise ValueError("car: empty list")
     return xs[0]
@@ -10,6 +20,7 @@ def _car(xs: list | tuple) -> object:
 
 def _cdr(xs: list | tuple) -> list:
     """Returns the list without the first element."""
+    _sequence("cdr", xs)
     if not xs:
         raise ValueError("cdr: empty list")
     return list(xs[1:])
@@ -17,7 +28,7 @@ def _cdr(xs: list | tuple) -> list:
 
 def _cons(x: object, xs: list) -> list:
     """Prepends x to the list xs."""
-    return [x] + list(xs)
+    return [x] + list(_sequence("cons", xs))  # type: ignore[arg-type]
 
 
 def _null(xs: object) -> bool:

@@ -115,6 +115,21 @@ class VoidType:
 VOID = VoidType()
 
 
+class Array(list):
+    """A list that is changed in place: the value `[1 2 3] array` makes.
+
+    It is a ``list``, so every word that reads a list reads an array too;
+    only the display's color and ``list?`` tell them apart. Two
+    arrays with equal elements are equal (``==``); ``same?`` tells whether
+    they are the same one.
+    """
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return f"Array({list.__repr__(self)})"  # list's repr shows a self-reference as [...]
+
+
 class String(str):
     def __init__(self, value: str) -> None:
         self.value = str(value)

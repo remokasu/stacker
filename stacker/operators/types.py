@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from stacker.engine.data_type import Symbol
+from stacker.engine.data_type import Array, Symbol
 from stacker.util.disp import display_text
 
 
@@ -72,10 +72,22 @@ type_operators = {
         "desc": "Returns true if the value is a complex number",
     },
     "list?": {
-        "func": (lambda x: isinstance(x, list)),
+        "func": (lambda x: isinstance(x, list) and not isinstance(x, Array)),
         "arg_count": 1,
         "push_result_to_stack": True,
-        "desc": "Returns true if the value is a list",
+        "desc": "Returns true if the value is a list (an array is not a list)",
+    },
+    "array?": {
+        "func": (lambda x: isinstance(x, Array)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns true if the value is an array",
+    },
+    "dict?": {
+        "func": (lambda x: isinstance(x, dict)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns true if the value is a dictionary",
     },
     "number?": {
         "func": (lambda x: isinstance(x, (int, float, complex)) and not isinstance(x, bool)),

@@ -135,6 +135,18 @@ class StackUnderflowError(StackerError):
         super().__init__(message)
 
 
+def not_a_sequence_message(word: str) -> str:
+    """The message for a dictionary handed to ``word``, which goes through a sequence.
+
+    Args:
+        word: The word that received the dictionary.
+
+    Returns:
+        A message that says to go through the keys instead.
+    """
+    return f"`{word}` cannot go through a dictionary; go through its keys: d keys :k {{...}} dolist"
+
+
 def symbol_as_value_message(word: str, name: str) -> str:
     """The message for a word that was handed a symbol where a value is needed.
 
@@ -163,7 +175,7 @@ class StackerSyntaxError(StackerError):
 class UnterminatedTokenError(StackerSyntaxError):
     """Raised when input ends inside an unterminated construct.
 
-    Covers strings (single or triple quoted), arrays, code blocks, and
+    Covers strings (single or triple quoted), lists, code blocks, and
     block comments. Raised by the lexer scan core once the input is
     final (script / ``-e`` / confirmed REPL input); interactive modes
     use ``analyze_terminals`` first to offer continuation input instead.
@@ -261,6 +273,23 @@ class NoValueProducedError(StackerError):
                 f"Use `dolist` for side-effect-only iteration."
             )
         super().__init__(message)
+
+
+class StackerIndexError(StackerError, IndexError):
+    """Raised when an index points outside an array or a list, or an empty array is popped.
+
+    Also an ``IndexError`` so that callers catching Python's index errors
+    keep working; the stack-underflow conversion in the executor goes by
+    the message, so it is not mistaken for a missing argument.
+    """
+
+
+class KeyNotFoundError(StackerError):
+    """Raised when a key is removed from a dictionary that does not have it.
+
+    Not a ``KeyError``: the error display reads a ``KeyError`` as an
+    undefined variable, which this is not.
+    """
 
 
 class ResultCountError(StackerError):
