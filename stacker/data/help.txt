@@ -46,5 +46,9 @@ Macros:
   {2 *} {double} alias          names a code snippet
   gensym, macroexpand, concat-block, expand, sub, parse
 
+Scripts:
+  "lib.stk" include   run a file here, in this scope, every time
+  "lib.stk" require   the same, once: requiring it again does nothing
+
 Constants:
   pi  e  phi  tau  inf  nan

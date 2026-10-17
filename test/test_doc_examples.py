@@ -46,6 +46,7 @@ LANGUAGES = ("ja", "en")
 SKIP: dict[str, str] = {
     '"my_script.stk" include': "needs a script file",
     '"file.stk" include': "needs a script file",
+    '"file.stk" require': "needs a script file",
     "read": "reads standard input",
     '"hoge" disable_plugin': "needs a plugin",
     "exit": "terminates the interpreter",

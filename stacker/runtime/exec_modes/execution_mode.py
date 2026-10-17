@@ -5,9 +5,10 @@ from pathlib import Path
 from stacker.include.stk_file_read import readtxt
 from stacker.stacker import Stacker
 
-from stacker.error import UnterminatedTokenError
-from stacker.syntax.lexer import TerminalScanner
+from stacker.error import UnterminatedTokenError, include_location_of
+from stacker.include.include import pop_entry_file, push_entry_file
 from stacker.syntax.parser import remove_start_end_quotes
+from stacker.syntax.script import iter_expressions
 
 # from stacker.syntax.parser import is_string
 from stacker.util.disp import disp_stack, plain_text
@@ -183,76 +184,69 @@ class ExecutionMode:
         print(plain_text(_stack[-1]))
 
     def execute_stacker_dotfile(self, filename: str | Path, stackerrc: bool = False) -> None:
-        """Import a stacker script and return the stacker object.
+        """Runs a script expression by expression.
 
         Args:
             filename: Script to run.
             stackerrc: True for ~/.stackerrc, whose REPL commands go to
                 ``_run_stackerrc_command`` instead of the interpreter.
+
+        Raises:
+            UnterminatedTokenError: The file ends inside an open construct;
+                ``current_line`` names the line it started on.
         """
         path = Path(remove_start_end_quotes(str(filename)))
         code = readtxt(path)
-        expression = ""
-        lines = code.splitlines()
+        calculator = self.rpn_calculator
 
         # Set source file and store all source lines for error reporting
-        self.rpn_calculator.current_file = str(path.resolve())
-        for line_num, line_text in enumerate(lines, start=1):
-            self.rpn_calculator.source_lines[line_num] = line_text
+        calculator.current_file = str(path.resolve())
+        for line_num, line_text in enumerate(code.splitlines(), start=1):
+            calculator.source_lines[line_num] = line_text
 
-        i = 0
-        expression_start_line = None  # Track which line the expression started on
-        # Incremental scanner: feeds only the newly appended chunk, so a
-        # multi-line expression stays O(total size) instead of re-scanning
-        # the whole accumulated buffer on every line
-        scanner = TerminalScanner()
+        # The script is the bottom frame of the include stack: a file that
+        # includes it is caught as circular, and an error inside an
+        # included file can name the line here that included it
+        push_entry_file(calculator, path)
+        expressions = iter_expressions(code)
+        try:
+            while True:
+                try:
+                    line_number, expression = next(expressions)
+                except StopIteration:
+                    break
+                except UnterminatedTokenError as error:
+                    # The file ends inside an open construct: report its line
+                    # (an unterminated text handed to `parse` keeps the
+                    # expression's own line)
+                    calculator.current_line = error.start_line
+                    raise
+                calculator.current_line = line_number
+                if not (stackerrc and self._run_stackerrc_command(expression)):
+                    calculator.process_expression(expression)
+        finally:
+            pop_entry_file(calculator)
 
-        while i < len(lines):
-            line_number = i + 1  # 1-indexed line numbers
+    def _error_location(
+        self, error: BaseException
+    ) -> tuple[str | None, int | None, str | None, list[str]] | None:
+        """Where an error raised inside an included file happened, for the display.
 
-            if scanner.state().complete:
-                line = lines[i].strip()
-                # Skip blank lines between expressions
-                if not expression and not line:
-                    i += 1
-                    continue
-                # Track the first line of the expression
-                if not expression:
-                    expression_start_line = line_number
-                chunk = line + "\n"
-            else:
-                # Inside an open string / block comment / bracket: keep the
-                # raw line so string content (including newlines) survives
-                chunk = lines[i] + "\n"
+        Args:
+            error: The exception being reported.
 
-            expression += chunk
-            state = scanner.feed(chunk)
-
-            if state.complete:
-                candidate = expression.strip()
-                if candidate:
-                    if candidate[-2:] in {";]", ";)"}:
-                        closer = candidate[-1]
-                        candidate = candidate[:-2] + closer
-                    # Set current line before processing expression
-                    self.rpn_calculator.current_line = expression_start_line
-                    if not (stackerrc and self._run_stackerrc_command(candidate)):
-                        self.rpn_calculator.process_expression(candidate)
-                    expression = ""
-                    expression_start_line = None
-                    scanner = TerminalScanner()
-
-            i += 1
-
-        # Unterminated construct at end of file: report the absolute line
-        if expression.strip():
-            _, state = scanner.finalize()
-            if not state.complete:
-                start = expression_start_line
-                if start is not None and state.start_line is not None:
-                    start = start + state.start_line - 1
-                self.rpn_calculator.current_line = start
-                raise UnterminatedTokenError(state.open_construct, start)
+        Returns:
+            ``(file, line, source_line, frames)`` when the error carries an
+            include position (``frames`` are the ``path:line`` of the
+            including files, innermost first, without the ones that have
+            no line); None for an error raised outside any included file.
+        """
+        found = include_location_of(error)
+        if found is None:
+            return None
+        (file, line, source_line), include_frames = found
+        frames = [f"{path}:{frame_line}" for path, frame_line in include_frames if frame_line is not None]
+        return file, line, source_line, frames
 
     def _run_stackerrc_command(self, expression: str) -> bool:
         """Handles a REPL command found in ~/.stackerrc.

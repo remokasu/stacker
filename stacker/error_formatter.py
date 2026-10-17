@@ -42,7 +42,8 @@ class ErrorFormatter:
         error_type: str,
         message: str,
         source_line: Optional[str] = None,
-        hint: Optional[str] = None
+        hint: Optional[str] = None,
+        frames: list[str] | None = None,
     ) -> str:
         """
         Format an error message in Clang style.
@@ -55,6 +56,8 @@ class ErrorFormatter:
             message: Error message
             source_line: The source code line that caused the error
             hint: Optional hint for fixing the error
+            frames: The files that included the failing one, innermost
+                first, each as ``path:line``; shown as ``included from`` lines
 
         Returns:
             Formatted error message string
@@ -115,6 +118,12 @@ class ErrorFormatter:
                     indicator = f"{blank_prefix}{spaces}^"
 
                 lines.append(indicator)
+
+        for frame in frames or []:
+            if use_color:
+                lines.append(f"  {cls.GRAY}included from {frame}{cls.RESET}")
+            else:
+                lines.append(f"  included from {frame}")
 
         # Optional hint
         if hint:

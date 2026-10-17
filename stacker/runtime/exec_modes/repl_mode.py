@@ -307,15 +307,21 @@ class ReplMode(ExecutionMode):
                 # Generate hint based on error type
                 hint = self._get_error_hint(e)
 
-                # Format the error (REPL mode doesn't have file/line info)
+                # The REPL has no file or line of its own; an error inside
+                # an included file is reported at that file's line
+                filename, line_number, source_line, frames = None, None, None, []
+                location = self._error_location(e)
+                if location is not None:
+                    filename, line_number, source_line, frames = location  # type: ignore[assignment]
                 formatted_error = ErrorFormatter.format_error(
-                    filename=None,  # REPL has no file
-                    line_number=None,  # REPL has no line numbers
+                    filename=filename,
+                    line_number=line_number,
                     column=None,
                     error_type=error_type,
                     message=message,
-                    source_line=None,
-                    hint=hint
+                    source_line=source_line,
+                    hint=hint,
+                    frames=frames,
                 )
 
                 print(formatted_error, file=sys.stderr)

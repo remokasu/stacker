@@ -74,7 +74,7 @@ stacker fact.stk
 
 ## 別のファイルを取り込む: include
 
-`"ファイル名" include` で、別の `.stk` ファイルを読み込みます。取り込んだファイルで定義された変数・関数・マクロが、取り込んだ側で使えるようになります。
+`"ファイル名" include` で、別の `.stk` ファイルを読み込みます。取り込んだファイルは、取り込んだ側のインタプリタの、`include` を書いた場所のスコープで評価されます。ファイルの中身をその場に書いたのと同じで、ファイルで定義した変数・関数・マクロが、取り込んだ側でそのまま使えます。同じファイルを一度だけ読みたいときは `require` を使います（後述）。
 
 次の 3 つのファイルを考えます。
 
@@ -133,7 +133,47 @@ stacker main.stk
 
 ### 取り込まれるもの
 
-取り込んだファイルで定義した変数・関数・マクロが、取り込んだ側に引き継がれます。取り込んだファイルが最後に残したスタックの値は引き継がれません（`depth` は `include` の前後で変わりません）。同じファイルを 2 回 `include` しても問題ありません。
+取り込んだファイルは、取り込んだ側と同じインタプリタで評価されます。
+
+- 変数は 1 つです。ファイルの関数が更新する変数と、取り込んだ側が読む変数は同じものです。ファイルのトップレベルの `set` も関数の中の `set` も、取り込んだ側に同じ名前の変数があればそれを書き換えます（名前は共有されます）。
+- ファイルの関数は、取り込んだ側や、先に取り込んだ別のファイルが定義した関数を呼べます。ファイルは、取り込む時点で定義済みの変数・関数・マクロ・プラグインの語を使えます。
+- 取り込むたびに評価されます。`0 :counter set` のように状態を作るファイルは、2 回目の `include` で状態を作り直します。状態を持つライブラリは `require` で読んでください。
+- ファイルは空のスタックで始まり、取り込んだ側のスタックの値は見えません。ファイルが最後に残した値は捨てられ、`depth` は `include` の前後で変わりません。
+- 関数の中で取り込むと、ファイルが作った変数はその呼び出しの中だけで使えます。関数・マクロはどこで定義しても全体から使えます。
+- ファイルの途中でエラーになると、そこまでに定義したものは残ります。
+
+### 一度だけ読む: require
+
+`"ファイル名" require` は、そのファイルをこのインタプリタでまだ読んでいなければ `include` と同じように評価し、すでに読んでいれば何もしません。
+
+```stk
+# lib/counter.stk
+0 :counter set
+{} {counter 1 + :counter set counter} :tick defun
+```
+
+```stk
+# a.stk
+"lib/counter.stk" require
+{} {tick drop} :bump defun
+```
+
+```stk
+# main.stk
+"lib/counter.stk" require
+tick drop            # counter = 1
+"a.stk" require      # a.stk は初めてなので評価される。その中の counter.stk の require は何もしない
+bump                 # counter = 2
+tick echo            # 3
+```
+
+同じものをすべて `include` で書くと、`a.stk` の中の `include` が `0 :counter set` をもう一度走らせるので、最後の `tick echo` は `2` になります。
+
+- 読んだ記録はインタプリタごとです。`"lib.stk"`、`"./lib.stk"`、絶対パスのように書き方が違っても、同じファイルなら 1 回だけ評価されます。
+- `include` で最後まで評価したファイルも「読んだ」ことになり、そのあとの `require` は何もしません。逆に `require` のあとの `include` は評価します。
+- 途中でエラーになったファイルは記録されません。直してもう一度 `require` すると評価されます。
+- ファイルを直しても `require` は読み直しません。REPL で読み直すときは `include` を使ってください。
+- `require` は、どこに書いてもトップレベルに書いたのと同じで、ファイルが作った変数は全体から見えます。
 
 ### エラー
 
@@ -141,7 +181,7 @@ stacker main.stk
 
 - ファイルが見つからない。メッセージに、探したパスがすべて載ります。
 - 拡張子が `.stk` ではない（`File x.txt is not a stacker script.`）。
-- ファイルが循環して取り込まれている（`a.stk` が `b.stk` を、`b.stk` が `a.stk` を取り込むなど。`Circular include detected: b.stk`）。
+- ファイルが循環して取り込まれている（`a.stk` が `b.stk` を、`b.stk` が `a.stk` を取り込むなど。`Circular include detected: b.stk`）。実行中のスクリプト自身を取り込むのも循環です。`require` も同じです。
 
 取り込んだファイルの中で起きたエラーについては、後述の「エラーの表示」を参照してください。
 
@@ -165,7 +205,7 @@ stacker:2> [1 2 3 4] mean
 
 `alias` の詳しい使い方は[関数・ラムダ・マクロ](functions-and-macros.md)、すべての語の一覧は[演算子リファレンス](operators.md)にあります。
 
-prelude の語は、自分のスクリプトで同じ名前を定義し直せます。そのときは `redefining prelude word 'mean'` という警告が表示されます。`include` で取り込んだファイルが prelude の語を再定義した場合は、その定義が取り込んだ側に引き継がれます。
+prelude の語は、自分のスクリプトで同じ名前を定義し直せます。そのときは `redefining prelude word 'mean'` という警告が表示されます。取り込んだファイルは同じインタプリタで評価されるので、取り込んだファイルが prelude の語を再定義すると、取り込んだ側でもその定義になります。取り込む前に再定義した語は、取り込んだファイルの中でもその定義です。
 
 Python から使うときは `Stacker(prelude=False)` で prelude を読み込まないようにできます。詳しくは[プラグインと Python からの利用](plugins-and-python-api.md)を参照してください。
 
@@ -233,7 +273,19 @@ hint: To use the name itself, write `:total` or `{total}`
 
 - 列の位置は表示されません。どの語でエラーになったかは、メッセージ（上の例では `` `total` ``）から読み取ります。
 - 式が複数行にわたるときは、その式の最初の行が表示されます。たとえば `1 3 :i {` で始まる `do` のブロックの途中で起きたエラーは、`do` を書いた最初の行を指します。
-- `include` したファイルの中で起きたエラーは、そのファイル自身ではなく、`include` を書いた行が表示されます。メッセージだけでは場所が分からないときは、取り込んだファイルを直接実行して調べてください。
+- `include` / `require` したファイルの中で起きたエラーは、そのファイルと行で表示され、その下に取り込んだ側のファイルと行が `included from` として、取り込みの段ごとに 1 行ずつ付きます。`main.stk` の 1 行目が `lib/geometry.stk` を取り込み、その 1 行目が `helpers.stk` を取り込み、`helpers.stk` の 2 行目でエラーになると次のようになります。
+
+  ```text
+  /home/user/project/lib/helpers.stk:2: error: `total` is not defined.
+    [UndefinedSymbolError]
+    | 
+  2 | 10 total +
+    included from /home/user/project/lib/geometry.stk:1
+    included from /home/user/project/main.stk:1
+  hint: To use the name itself, write `:total` or `{total}`
+  ```
+
+  REPL や `-e` から取り込んだときは、入口には行がないので、その段の `included from` は付きません。
 - 閉じていない文字列や括弧は、`Unterminated string starting at line 2` のように、開始した行を示すメッセージになります。
 - `-e` で渡した式のエラーも、同じ形式で標準エラー出力に表示されます。ファイルがないので 1 行目は `stacker: error: メッセージ` になり、ソース行は表示されません。
 

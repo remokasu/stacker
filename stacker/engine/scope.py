@@ -253,8 +253,7 @@ class ScopedVariables:
         """
         Update local scope with variables from a dict.
 
-        The names go into this scope itself, transparent or not (so what
-        ``include`` brings in under a loop scope is dropped with the loop).
+        The names go into this scope itself, transparent or not.
 
         Args:
             other: Dictionary of variables to add
@@ -271,6 +270,17 @@ class ScopedVariables:
         # Count unique keys across all scopes
         all_keys = set(self.keys())
         return len(all_keys)
+
+    def root(self) -> ScopedVariables:
+        """Returns the top of the parent chain: the interpreter's global scope.
+
+        Returns:
+            The scope with no parent.
+        """
+        scope = self
+        while scope._parent is not None:
+            scope = scope._parent
+        return scope
 
     def create_child_scope(self) -> ScopedVariables:
         """
