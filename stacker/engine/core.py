@@ -1039,9 +1039,21 @@ class StackerCore:
     def _prio_exit(self, op, stack) -> None:
         op["func"]()
 
-    # Dispatch table for priority operators. Names absent here (e.g. `ans`)
-    # are silent no-ops, matching the former elif chain's fall-through.
+    def _prio_abort(self, op, stack) -> None:
+        op["func"]()
+
+    def _prio_exit_code(self, op, stack) -> None:
+        code = self._pop_arg(stack, "exit-code")
+        if isinstance(code, bool) or not isinstance(code, int):
+            raise StackerTypeError(f"`exit-code` expects an integer, got {plain_text(code)}")
+        op["func"](code)
+
+    # Dispatch table for priority operators. `ans` is the only name absent
+    # here: the REPL handles it before evaluation, so it is a no-op (the
+    # test suite checks every other priority word has a handler).
     _PRIORITY_HANDLERS = {
+        "abort": _prio_abort,
+        "exit-code": _prio_exit_code,
         "do": _prio_do,
         "dolist": _prio_dolist,
         "times": _prio_times,
