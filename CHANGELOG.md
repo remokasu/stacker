@@ -1,5 +1,42 @@
 # CHANGE LOG
 
+## [1.16.1] - 2026-10-17
+
+Bug fixes found while solving a problem set in Stacker. Some fixes change what existing code does; they are bugs, not new behavior, and are listed under Breaking Changes as well.
+
+### Breaking Changes
+
+- **Behavior Fixed Under Bug Reports** (each is a bug, listed again under Fixed; here because code written around the old behavior changes meaning):
+  - `split` pushes one list, not the parts one by one: `"a,b,c" "," split` leaves `['a' 'b' 'c']`. Code that counted the parts with `depth` or collected them with `listn` gets a list inside a list
+  - `echo`, `print`, `printc`, `str` and `format` write `true` / `false` / `null`, a symbol and a list in Stacker's notation (`true`, `null`, `a`, `[1 'a']`), not the host's (`True`, `None`, `Symbol('a')`, `[1, 'a']`). Text that compared against the old spelling (`true str "True" ==`) changes
+  - A variable first `set` in the body of `do`, `dolist`, `reduce` or `fold` stays after the loop, as in `while`, `times` and `loop`
+  - A list literal keeps its nesting: `[[1 2]]` is a list holding one list, `[[]]` a list holding an empty list, and `[1 2 3;]` written inside an expression (not at the end of a REPL or script line, where the `;` before `]` is dropped) is one row, `[[1 2 3]]`
+  - A code block that leaves nothing, handed to a word as an argument (`{} echo`, `{"x" echo} 1 +`), is an error, not a value
+  - `-e` reports an error on stderr, like a script does, not on stdout
+  - `abort` and `exit-code` end the program, as documented; code that ran past them does not run any more
+
+### Migration
+
+- `split` followed by code that gathered the parts (`depth :d set ... split depth d - listn`): drop the gathering, the result is already a list. For the parts on the stack, write `split expand`
+- Output compared against `True` / `None` / `[1, 2]`: compare against `true` / `null` / `[1 2]`
+- A loop body that reused a temporary name and relied on it being dropped: the name now stays in the enclosing scope (inside a function it is still local to the function)
+- `[[1 2]]` written to get `[1 2]`: write `[1 2]`
+
+### Fixed
+
+- A lambda made inside a function call saw the variables of the latest call of that function, not of the call that made it: after `{n} {{x} {x n +} lambda} :adder defun 10 adder :add10 set 20 adder :add20 set`, `5 add10 eval` gave 25. A block is bound to the scope it is written in when it is pushed, so `5 add10 eval` is 15 and a lambda or a `map` body made in a recursive call keeps that call's variables
+- A block handed to `map` or `filter` was deep-copied, interpreter and all, once per element: `[1 2 3] {1 +} map` took 100 times longer than the same with a lambda, and grew with the number of variables; an assignment inside the block was lost with the copy. The block runs as it is, in the caller's scope: `0 :c set [1 2 3] {c 1 + :c set 0} map drop c` is 3
+- A variable first `set` in the body of `do`, `dolist`, `reduce` or `fold` was gone after the loop (`1 3 :i {i :last set} do last` was "`last` is not defined"), unlike in `while`, `times` and `loop`. It stays, as the docs describe; only the loop variable is dropped
+- `[[1 2]]` was read as `[1 2]`: a list literal whose only element is a list lost its outer brackets, however deep (`[[[1 2]]]` too, and `[[]]` was `[]`). The nesting is kept as written
+- `abort` and `exit-code` did nothing: `3 exit-code` went on with the next word and exited 0, and left the 3 on the stack. They exit with their status (`exit-code` needs an integer)
+- `split` pushed the parts one by one (`"a,b,c" "," split` left `'a' 'b' 'c'`); it pushes one list, as described (`['a' 'b' 'c']`). Write `split expand` for the parts
+- `echo`, `print`, `printc`, `str` and `format` wrote `true`, `null`, a symbol and a list as the host writes them (`True`, `None`, `Symbol('a')`, `[1, 'a']`); they write them as the stack display does (`true`, `null`, `a`, `[1 'a']`). A string is still written bare, and a number keeps its type in `format` (`"{:.2f}" 3.14159 format`)
+- A code block that left nothing, handed to a word as an argument, leaked the interpreter's own "no value" marker: `{} echo` printed `VOID`, `{} str` made the string `'VOID'`, `{"x" echo} 1 +` failed on `'VoidType'`. It is a `NoValueProducedError` ("The block passed to `echo` left nothing on the stack"). `apply` with an empty argument block applies the function to nothing
+- `-e` printed its error on stdout, with a caret that always pointed at the last word of the expression. It reports like the REPL does, on stderr, with the error type and a hint, and no caret
+- `listn` / `subn` with fewer values than the count asked for said "`listn` requires 1 arguments" and dropped the values it had taken. The message says how many values it needs and how many the stack has, and the stack is left as it was
+- A string word given the wrong type leaked the host's message (`5 upper` → "'int' object has no attribute 'upper'", `[1 2 3] 2 search` → "'list' object has no attribute 'find'"); the error names the word and shows the value (`` `search` expects a string to search in, got [1 2 3] ``). `join` on a list of numbers says to make them strings first (`{str} map`); `nth` on a value that is not a list, a string or a block, or with a non-integer index, names itself; the hint for an index error no longer suggests `[]`
+- A word written inside a list literal (`[1 dup]`) was reported as "`dup` is not defined" with a hint to write `:dup`; it is a syntax error that says a list literal holds values only and how to build the list on the stack (`listn`)
+
 ## [1.16.0] - 2026-10-15
 
 ### Breaking Changes
