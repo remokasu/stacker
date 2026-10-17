@@ -1,5 +1,22 @@
 # CHANGE LOG
 
+## [1.18.0] - 2026-10-17
+
+### Added
+
+- **Arrays And Dictionaries You Can Change In Place**:
+  - `[1 2 3] array` makes an array: like a list, but its elements can be changed where it stands. `5 0 array-of` makes one of five zeros. A list stays a value that never changes; `a list` turns an array back into a list
+  - Words that change an array or a dictionary end in `!`: `v a i at!` stores v at index i, `v a append!` adds v at the end, `a pop!` takes the last element off and pushes it
+  - `c i at` pushes element i and takes the container off the stack (`nth` leaves it there); it reads lists, strings and blocks too
+  - `dict` makes an empty dictionary. `v d k put!` stores v under key k, `d k get` pushes its value (`null` when k is not there), `d k has?` tells whether k is there, `d k del!` removes it, and `d keys` / `d values` give lists in the order the keys were added. A key is a string, a number or a symbol
+  - An array or a dictionary is one thing however it is passed around: `dup`, a variable, a function argument or a list element refers to the same one, and a change made through any of them is seen through all. `a b same?` tells whether two are the same one; `==` compares contents (two different ones that contain themselves cannot be compared that way)
+  - An array is shown like a list, `[1 2 3]`, in a color of its own in the REPL (`array?` tells for sure); a dictionary as `{'a' 1 'b' 2}`. One inside itself, or nested too deep, shows as `[...]` / `{...}`
+  - Words that only read (`len`, `nth`, `dolist`, `map`, `sorted`, ...) take arrays as they take lists; the ones that make a new sequence make a list. `dolist`, `map` and the like go through the elements an array had when they started. A dictionary is not a sequence: those words say to go through its keys
+  - `array?`, `dict?`; `list?` is false for an array
+  - From Python, an array is an `Array` (a `list` subclass, `from stacker import Array`) and a dictionary a `dict`, the same objects the interpreter holds
+  - New errors `StackerIndexError` (an index out of range, `pop!` on an empty array) and `KeyNotFoundError` (`del!` of a missing key)
+- Messages that called a list an array now call it a list (`Unterminated list starting at line 3`, `Commas are not used in Stacker lists`)
+
 ## [1.17.0] - 2026-10-17
 
 ### Breaking Changes

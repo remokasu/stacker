@@ -148,7 +148,7 @@ stacker:1> [1 [2 3] [4 [5]]]
 [[1 2 3] [1 [2 3] [4 [5]]]]
 ```
 
-外側の `[ ]` はスタック全体の表示、内側がリスト 1 つです。リストは入れ子にできます。要素に書けるのは、数値・文字列・`true` / `false` / `null`・リスト・名前（変数の値になる）で、演算子は書けません（`[1 2 +]` はエラーです）。ブロックも書けません。ブロックを要素にしたいときは `{1 2 +} 1 listn` のようにスタックから作ります。
+外側の `[ ]` はスタック全体の表示、内側がリスト 1 つです。リストは入れ子にできます。要素に書けるのは、数値・文字列・`true` / `false` / `null`・リスト・名前（変数の値になる）で、演算子は書けません（`[1 2 +]` はエラーです）。ブロックも書けません。ブロックを要素にしたいときは `{1 2 +} 1 listn` のようにスタックから作ります。リストは不変で、要素を書き換える語はありません。書き換えたいときは配列にします（[配列と辞書](arrays-and-dicts.md)）。
 
 ### 行列と区切りの `;`
 
@@ -173,7 +173,7 @@ stacker:0> [1 2 3;]
 [[[1 2 3]]]
 ```
 
-行列を要素に持つリスト（3 次元配列）は、行列のあいだを `;` ではなく空白で区切ります。
+行列を要素に持つリスト（3 次元のリスト）は、行列のあいだを `;` ではなく空白で区切ります。
 
 ```
 stacker:0> [[1 2; 3 4] [5 6; 7 8]]
@@ -186,7 +186,7 @@ stacker:0> [[1 2; 3 4] [5 6; 7 8]]
 
 ```text
 [1, 2, 3]
-StackerSyntaxError: Commas are not used in Stacker arrays; separate elements with spaces: [1 2 3]
+StackerSyntaxError: Commas are not used in Stacker lists; separate elements with spaces: [1 2 3]
 ```
 
 ## コードブロック
@@ -260,6 +260,8 @@ stacker:1> #| 外側 #| 内側 |# まだ外側 |# 3
 | complex | `1+2j` |
 | str | `"abc"`、`'abc'` |
 | list | `[1 2 3]` |
+| array | `[1 2 3] array`（[配列と辞書](arrays-and-dicts.md)） |
+| dict | `dict` |
 | ブロック | `{1 2 +}` |
 | Symbol | `:x` |
 | bool | `true`、`false` |
@@ -272,7 +274,7 @@ stacker:1> #| 外側 #| 内側 |# まだ外側 |# 3
 - Symbol は名前そのものを表す値です。詳しくは [名前とシンボル](names-and-symbols.md) を参照してください。
 - `lambda` で作る無名関数も値の一種で、`λa.{a}` のように表示されます。
 
-型の確認には `int?`、`float?`、`complex?`、`str?`、`list?`、`bool?`、`number?`、`symbol?`、`null?` を使います。`int?` と `number?` は `bool` に対して `false` を返します。
+型の確認には `int?`、`float?`、`complex?`、`str?`、`list?`、`array?`、`dict?`、`bool?`、`number?`、`symbol?`、`null?` を使います。`int?` と `number?` は `bool` に対して `false` を返します。
 
 ```
 stacker:0> 1 int?

@@ -188,6 +188,7 @@ True abc
 
 - 整数・小数・真偽値・`null` は、Python の `int`・`float`・`bool`・`None` です。
 - リストは `list` です。
+- 配列（`[1 2 3] array`）は `list` を継承した `Array` で、`repr` は `Array([1, 2, 3])`。辞書（`dict`）は Python の `dict` そのものです。どちらもインタプリタの中と同じ実体なので、Python 側で書き換えるとスクリプトからも変わります。`from stacker import Array` で使えます。
 - 文字列は `str` を継承した `String` です。`== "hi"` のように普通の `str` と比べられます。
 - シンボルは `Symbol` で、`str` ではありません。名前は `.name` で読み、`Symbol("abc")` で作れます。文字列 `"abc"` とは等しくなりません。詳しくは[名前とシンボル](names-and-symbols.md)を参照してください。
 - コードブロックは `Stacker` のインスタンスです。
@@ -248,6 +249,8 @@ Stacker が意図して出すエラーは、すべて `stacker.error.StackerErro
 | `StackerSyntaxError` | 構文が不正（名前の位置に文字列を書いたなど） |
 | `UnterminatedTokenError` | 閉じていない文字列・リスト・ブロック・ブロックコメント。`StackerSyntaxError` の子クラス |
 | `StackerTypeError` | 語に渡した値の型が違う。Python の `TypeError` も継承する |
+| `StackerIndexError` | `at` / `at!` の添字が範囲外、空の配列の `pop!`。Python の `IndexError` も継承する |
+| `KeyNotFoundError` | `del!` に無いキーを渡した |
 | `ResultCountError` | `map` / `filter` の関数や `reduce` / `fold` の本体が、要素ごとに 2 つ以上の値を残した |
 | `StackerRecursionError` | 再帰の上限を超えた。`name`・`limit`・`kind` 属性を持つ |
 | `IncludeError` | `include` / `require` に失敗した（見つからない、`.stk` でない、循環） |
@@ -269,7 +272,7 @@ for source in ["1 foo", "1 +", "[1 2", "1 0 /", '"a" 1 +']:
 ```text
 UndefinedSymbolError: `foo` is not defined.
 StackUnderflowError: Operator `+` requires 2 arguments.
-UnterminatedTokenError: Unterminated array starting at line 1
+UnterminatedTokenError: Unterminated list starting at line 1
 (Python) ZeroDivisionError: division by zero
 (Python) TypeError: can only concatenate str (not "int") to str
 ```
