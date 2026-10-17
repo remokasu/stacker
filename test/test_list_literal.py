@@ -24,8 +24,14 @@ class TestNesting:
             ("[[[1 2]] 5]", [[[1, 2]], 5]),
             ("[1 2 3]", [1, 2, 3]),
             ("[1 2; 3 4]", [[1, 2], [3, 4]]),
-            # A `;` row that is one list is that list (rows of matrices)
-            ("[[1 2; 3 4]; [5 6; 7 8]]", [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]),
+            # `;` wraps every row, whatever it holds: `[a; b]` is `[[a] [b]]`
+            ("[[1 2] [3 4]; [5 6]]", [[[1, 2], [3, 4]], [[5, 6]]]),
+            ("[[1 2]; [3 4]]", [[[1, 2]], [[3, 4]]]),
+            ("[[1 2; 3 4]; [5 6; 7 8]]", [[[[1, 2], [3, 4]]], [[[5, 6], [7, 8]]]]),
+            ("[[1 2; 3 4] [5 6; 7 8]]", [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]),
+            # A trailing `;` ends the last row; an empty row is nothing
+            ("[1 2 3;]", [[1, 2, 3]]),
+            ("[1 2 3; 4 5 6;]", [[1, 2, 3], [4, 5, 6]]),
         ],
     )
     def test_a_literal_keeps_its_depth(self, program, expected):
@@ -36,6 +42,16 @@ class TestNesting:
 
     def test_inside_a_block(self):
         assert run("{[[1 2]]} eval") == [[[1, 2]]]
+
+    def test_a_trailing_row_separator_means_the_same_in_a_script(self, tmp_path):
+        from stacker.runtime.exec_modes import ScriptMode
+
+        script = tmp_path / "m.stk"
+        script.write_text("[1 2 3;]\n:m set\n[1 2;\n 3 4;]\n:n set\n", encoding="utf-8")
+        stacker = Stacker()
+        ScriptMode(stacker).run(str(script))
+        assert stacker.variables["m"] == [[1, 2, 3]]
+        assert stacker.variables["n"] == [[1, 2], [3, 4]]
 
     def test_with_a_name(self):
         assert run("[1 2] :v set [[v]]") == [[[[1, 2]]]]

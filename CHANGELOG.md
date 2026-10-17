@@ -13,8 +13,11 @@ Note: This change is not backwards compatible with previous versions.
   - Names are shared: a variable the file sets, at its top level or inside its functions, is the includer's variable of that name when there is one
   - Inside a function, the variables an included file makes are local to that call; its functions and macros are global, as always
   - When the file fails part way, what it defined before the error stays defined
-  - Each expression of an included file is read as a script reads it, so the file means the same whether it is run or included (`[1 2 3;]` on a line of its own is `[1 2 3]`)
+  - Each expression of an included file is read as a script reads it, so the file means the same whether it is run or included
   - A script that includes itself fails at once, before running a second time. `ans` cannot be used inside an included file
+- **`;` Wraps Every Row**:
+  - In a list literal, `;` ends a row and every row becomes a list, whatever it holds: `[a b; c]` is `[[a b] [c]]`. A row that held one list used to be that list itself, so `[[1 2] [3 4]; [5 6]]` was `[[[1 2] [3 4]] [5 6]]`; it is `[[[1 2] [3 4]] [[5 6]]]`. Write `[[1 2; 3 4] [5 6; 7 8]]`, without the outer `;`, for a list of matrices
+  - A `;` before the closing bracket is no longer dropped by the REPL and the script reader: `[1 2 3;]` is the one-row matrix `[[1 2 3]]` wherever it is written (it was `[1 2 3]` at the end of a REPL or script line and `[[1 2 3]]` elsewhere). A trailing `;` after the last row still adds nothing: `[1 2 3; 4 5 6;]` is two rows
 - **Each Iteration Of `do` And `dolist` Has A Scope Of Its Own**:
   - A lambda or block made in the body and kept past the iteration sees that iteration's loop variable: `1 3 :i {{} {i} lambda} do 3 listn {eval} map` is `[1 2 3]` (every lambda used to see the last value, 3). A variable first set in the body still outlives the loop
 - **A Function Returns Every Value Its Body Leaves**:
@@ -48,6 +51,7 @@ Note: This change is not backwards compatible with previous versions.
 - To return several values as one, collect them in the body (`2 listn`) and spread them with `expand`, as before
 - A block given to `map` that left several values per element to get a list of them: collect them in the block (`{dup 2 listn} map`)
 - Python code that called a `StackerFunction` or a `StackerLambda` and used its return value: the value is now a list of the results (`[0]` for a one-value function)
+- `[1 2 3;]` at the end of a REPL or script line to get `[1 2 3]`: drop the `;`. A matrix of matrices written as `[[1 2; 3 4]; [5 6; 7 8]]`: drop the `;` between them, `[[1 2; 3 4] [5 6; 7 8]]`
 
 ## [1.16.1] - 2026-10-17
 

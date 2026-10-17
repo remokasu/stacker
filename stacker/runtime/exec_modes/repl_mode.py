@@ -205,9 +205,6 @@ class ReplMode(ExecutionMode):
         while True:
             try:
                 expression = self.get_input(f"stacker:{line_count}> ", multiline=False)
-                if expression[-2:] in {";]", ";)"}:
-                    closer = expression[-1]
-                    expression = expression[:-2] + closer
 
                 # Continuation input is judged by the lexer scan core
                 # (analyze_terminals) so strings, comments, and brackets
@@ -243,14 +240,8 @@ class ReplMode(ExecutionMode):
                         if next_line in {"]", ")"}:
                             expression += next_line
                             if analyze_terminals(expression).complete:
-                                if expression[-2:] in {";]", ";)"}:
-                                    closer = expression[-1]
-                                    expression = expression[:-2] + closer
                                 break
                             continue
-                        if next_line[-2:] in {";]", ";)"}:
-                            closer = next_line[-1]
-                            next_line = next_line[:-2] + closer
                         # Join with "\n" (not " ") so a trailing '#'
                         # comment on the previous line cannot swallow
                         # the row separator or this line

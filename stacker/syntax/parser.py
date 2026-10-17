@@ -116,30 +116,22 @@ class Parser:
     def _split_by_semicolon(
         self, elements: list[object], node_class: type[ListNode | TupleNode]
     ) -> list[object]:
-        """Split elements by semicolon into subnodes"""
+        """Splits ``elements`` at each `;` into rows, every row a node of its own: `[a; b]` is `[[a] [b]]`."""
         result = []
         current = []
 
         for item in elements:
             if item == ";":
                 if current:
-                    result.append(self._wrap_node(current, node_class))
+                    result.append(node_class(current))
                     current = []
             else:
                 current.append(item)
 
         if current:
-            result.append(self._wrap_node(current, node_class))
+            result.append(node_class(current))
 
         return result
-
-    def _wrap_node(
-        self, elements: list[object], node_class: type[ListNode | TupleNode]
-    ) -> ListNode | TupleNode:
-        """Wraps one `;`-separated row; a row that is one list is that list (`[[1 2; 3 4]; [5 6; 7 8]]`)."""
-        if len(elements) == 1 and isinstance(elements[0], (ListNode, TupleNode)):
-            return elements[0]
-        return node_class(elements)
 
 
 class Formatter:

@@ -31,8 +31,12 @@ class TestUnit(unittest.TestCase):
 
     def test_valid_list_4(self):
         stacker = Stacker()
-        ans = stacker.eval("[[1 2 3; 4 5 6]; [7 8 9; 10 11 12]]")
+        # Matrices side by side make a 3-D array; `;` between them would
+        # wrap each matrix in a row of its own
+        ans = stacker.eval("[[1 2 3; 4 5 6] [7 8 9; 10 11 12]]")
         self.assertEqual(ans[-1], [[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
+        ans = stacker.eval("[[1 2 3; 4 5 6]; [7 8 9; 10 11 12]]")
+        self.assertEqual(ans[-1], [[[[1, 2, 3], [4, 5, 6]]], [[[7, 8, 9], [10, 11, 12]]]])
 
     ############################
     # Invalid list
