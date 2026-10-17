@@ -215,6 +215,18 @@ def plain_text(item: object) -> str:
     return repr(printed) if isinstance(printed, CustomPrinter) else str(printed)
 
 
+def display_text(value: object) -> str:
+    """The text a value is written as outside the stack: a string bare, the rest as the stack shows it.
+
+    Args:
+        value: Any value.
+
+    Returns:
+        The value itself for a string; ``plain_text`` of it otherwise.
+    """
+    return value if isinstance(value, str) else plain_text(value)
+
+
 def disp_default(stack_list: list[object]) -> str:
     """Formats the stack without colors: items space-separated inside brackets.
 

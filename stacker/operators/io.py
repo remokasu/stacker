@@ -1,20 +1,22 @@
 from __future__ import annotations
 
+from stacker.util.disp import display_text
+
 io_operators = {
     "echo": {
-        "func": (lambda content: print(content)),
+        "func": (lambda content: print(display_text(content))),
         "arg_count": 1,
         "push_result_to_stack": False,
         "desc": "Prints the specified content to the console.",
     },
     "print": {
-        "func": (lambda content: print(content)),
+        "func": (lambda content: print(display_text(content))),
         "arg_count": 1,
         "push_result_to_stack": False,
         "desc": "Prints the specified content to the console.",
     },
     "printc": {
-        "func": (lambda content: print(content, end="")),
+        "func": (lambda content: print(display_text(content), end="")),
         "arg_count": 1,
         "push_result_to_stack": False,
         "desc": "Prints the specified content to the console without a newline.",
