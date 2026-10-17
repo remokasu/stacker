@@ -1,5 +1,52 @@
 # CHANGE LOG
 
+## [1.17.0] - 2026-10-17
+
+### Breaking Changes
+
+Note: This change is not backwards compatible with previous versions.
+
+- **`include` Runs The File In Place**:
+  - An included file runs in the interpreter that includes it, in the scope where `include` is written, as if its text stood there. Nothing is copied: the variables, functions and macros it defines are the ones the includer sees afterwards. Until now the file ran in an interpreter of its own and copies of its definitions were added, so a variable read after `include` was a snapshot that the file's own functions no longer updated, and a second `include` of the same file split its state in two
+  - The file sees what is already defined: its functions can call the includer's functions and those of other included files, and it uses the includer's plugins and the prelude words the includer redefined
+  - The file runs every time it is included. A file that sets up state (`0 :counter set`) sets it up again on a second `include`; read such a file with `require`
+  - Names are shared: a variable the file sets, at its top level or inside its functions, is the includer's variable of that name when there is one
+  - Inside a function, the variables an included file makes are local to that call; its functions and macros are global, as always
+  - When the file fails part way, what it defined before the error stays defined
+  - Each expression of an included file is read as a script reads it, so the file means the same whether it is run or included (`[1 2 3;]` on a line of its own is `[1 2 3]`)
+  - A script that includes itself fails at once, before running a second time. `ans` cannot be used inside an included file
+- **A Function Returns Every Value Its Body Leaves**:
+  - A function defined with `defun`, and a lambda called with `eval` or `apply`, push every value their body leaves, in order; a body that leaves nothing pushes nothing. Until now only the top value was pushed and the others were dropped without a word
+  - Example: `{a b} {b a} :swap2 defun 1 2 swap2` leaves `2 1` (was `1`); `{n} {n 0 > {n 1 - h n} if} :h defun 3 h` leaves `1 2 3` (was `3`)
+  - `map` and `filter` need the function, block or lambda to leave exactly one value for each element, and the block of `reduce` / `fold` exactly one value per step. Leaving none is a `NoValueProducedError` as before; leaving several is a `ResultCountError` (a block given to `map` used to collect them into a list, and `reduce` kept the bottom one)
+  - Called from Python, a function or a lambda returns the list of the values its body leaves; the `stack` attribute of `StackerFunction` and `StackerLambda` (their former working stack) is gone
+
+### Added
+
+- **`require`**: `"lib.stk" require` runs a file like `include` the first time, and does nothing when the same file is required again in the same interpreter, however its path is written. A file already run by `include` is not run again by `require`; a file that failed part way is not recorded and runs again next time. `require` binds at the top level wherever it is written. `Stacker.require(path)` does the same from Python
+- **Errors Inside Included Files Say Where**: an error inside an included file is reported at the line of that file, followed by the lines that included it:
+  ```text
+  /home/user/project/lib/helpers.stk:2: error: `total` is not defined.
+    [UndefinedSymbolError]
+    | 
+  2 | 10 total +
+    included from /home/user/project/lib/geometry.stk:1
+    included from /home/user/project/main.stk:1
+  hint: To use the name itself, write `:total` or `{total}`
+  ```
+  The REPL and `-e` show the same without the line of the entry. From Python, the exception carries `include_location` (file, line, source line) and `include_frames`; its message is unchanged
+- **`ResultCountError`**: raised when a function, lambda or block leaves more than one value where one is read
+
+### Migration
+
+- A library that keeps state and is read from more than one file: read it with `require` in every file that reads it
+- An included file that used a temporary name at its top level (`0 :i set`) changes the includer's variable of that name: rename it, or move the code into a function
+- A file that called a prelude word the includer redefines: the file now gets the redefinition
+- A function whose body leaves something below its result (a value it did not use up) now hands that to the caller too: drop it in the body. It shows up as an extra value on the stack, or as an argument error further on
+- To return several values as one, collect them in the body (`2 listn`) and spread them with `expand`, as before
+- A block given to `map` that left several values per element to get a list of them: collect them in the block (`{dup 2 listn} map`)
+- Python code that called a `StackerFunction` or a `StackerLambda` and used its return value: the value is now a list of the results (`[0]` for a one-value function)
+
 ## [1.16.1] - 2026-10-17
 
 Bug fixes found while solving a problem set in Stacker. Some fixes change what existing code does; they are bugs, not new behavior, and are listed under Breaking Changes as well.
