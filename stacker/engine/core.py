@@ -1715,6 +1715,10 @@ class StackerCore:
         cached = self._bound_cache
         if cached is not None and cached[0] is scope:
             return cached[1]
+        # Each iteration of a loop has a scope of its own, so a block in a
+        # loop body is copied once per iteration: the copy may have been
+        # captured (by a lambda, a variable, the stack), and there is no
+        # portable way to tell, so it is never reused for another scope
         bound = object.__new__(type(self))  # a shallow copy, without copy.copy's overhead
         bound.__dict__.update(self.__dict__)
         bound.variables = scope

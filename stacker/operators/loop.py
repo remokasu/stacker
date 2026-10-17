@@ -75,13 +75,14 @@ def _do(
     parent: Stacker,
     stack: stack_data[object],
 ) -> None:
-    # One scope for the loop variable, shared by all iterations; a name
-    # the body is first to set goes to the caller's scope (see loop_scope)
+    # Each iteration gets a scope of its own holding the loop variable, so
+    # a lambda or block kept from one iteration sees that iteration's
+    # value; a name the body is first to set goes to the caller's scope
+    # (see loop_scope)
     original_parent_vars = parent.variables
-    child_scope = ScopedVariables.loop_scope(parent.variables)
-
     try:
         for i in range(start_value, end_value + 1):
+            child_scope = ScopedVariables.loop_scope(original_parent_vars)
             child_scope.bind(symbol, i)
             parent.variables = child_scope
             try:
@@ -122,13 +123,14 @@ def _dolist(
     parent: Stacker,
     stack: stack_data[object],
 ) -> None:
-    # One scope for the loop variable, shared by all iterations; a name
-    # the body is first to set goes to the caller's scope (see loop_scope)
+    # Each iteration gets a scope of its own holding the loop variable, so
+    # a lambda or block kept from one iteration sees that iteration's
+    # value; a name the body is first to set goes to the caller's scope
+    # (see loop_scope)
     original_parent_vars = parent.variables
-    child_scope = ScopedVariables.loop_scope(parent.variables)
-
     try:
         for i in lst:
+            child_scope = ScopedVariables.loop_scope(original_parent_vars)
             child_scope.bind(symbol, i)
             parent.variables = child_scope
             try:
