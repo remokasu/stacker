@@ -111,8 +111,9 @@ class TestExpansionScope:
 
     def test_assignment_inside_do_in_body_never_reaches_the_caller(self):
         # The write barrier stops `update_existing` at the expansion scope, so
-        # the loop's `t =` binds in the loop scope and the caller's `t` is intact.
-        assert run("1 :t =", "{} { 1 2 :i { i :t = } do {t} } :m defmacro", "m t") == [1, 1]
+        # the loop's `t =` binds there (a loop body binds in the enclosing
+        # scope, as `9 :t =` would) and the caller's `t` is intact.
+        assert run("1 :t =", "{} { 1 2 :i { i :t = } do {t} } :m defmacro", "m t") == [2, 1]
 
 
 def test_name_set_in_body_is_not_visible_to_the_caller_after_expansion():

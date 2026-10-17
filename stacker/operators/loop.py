@@ -3,25 +3,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from stacker.engine.data_type import Symbol
+from stacker.engine.scope import ScopedVariables
 from stacker.error import BreakException, StackerSyntaxError
 from stacker.operators.block_exec import resolve_condition, run_block
 from stacker.util.disp import plain_text
 
 if TYPE_CHECKING:
-    from stacker.engine.scope import ScopedVariables
     from stacker.stacker import Stacker
     from stacker.util.stack_data import stack_data
-
-
-def _update_nested_variables(tokens: list[object], new_variables: ScopedVariables) -> None:
-    """Recursively update variable references in nested StackerCore instances."""
-    from stacker.engine.core import StackerCore
-
-    for token in tokens:
-        if isinstance(token, StackerCore):
-            token.variables = new_variables
-            # Recursively update nested code blocks
-            _update_nested_variables(token.tokens, new_variables)
 
 
 def _loop(body: object, parent: Stacker, stack: stack_data[object]) -> None:
@@ -86,17 +75,14 @@ def _do(
     parent: Stacker,
     stack: stack_data[object],
 ) -> None:
-    # Create child scope once for all iterations (optimization)
+    # One scope for the loop variable, shared by all iterations; a name
+    # the body is first to set goes to the caller's scope (see loop_scope)
     original_parent_vars = parent.variables
-    child_scope = parent.variables.create_child_scope()
-
-    # Update nested StackerCore instances to use the child scope
-    _update_nested_variables(block.tokens, child_scope)
+    child_scope = ScopedVariables.loop_scope(parent.variables)
 
     try:
         for i in range(start_value, end_value + 1):
-            # Update loop variable
-            child_scope[symbol] = i
+            child_scope.bind(symbol, i)
             parent.variables = child_scope
             try:
                 parent.evaluate(block.tokens, stack=stack)
@@ -136,18 +122,14 @@ def _dolist(
     parent: Stacker,
     stack: stack_data[object],
 ) -> None:
-    # Create child scope once for all iterations (optimization)
+    # One scope for the loop variable, shared by all iterations; a name
+    # the body is first to set goes to the caller's scope (see loop_scope)
     original_parent_vars = parent.variables
-    child_scope = parent.variables.create_child_scope()
-
-    # Update nested StackerCore instances to use the child scope
-    # This is necessary because block.tokens may contain nested code blocks
-    _update_nested_variables(block.tokens, child_scope)
+    child_scope = ScopedVariables.loop_scope(parent.variables)
 
     try:
         for i in lst:
-            # Update loop variable
-            child_scope[symbol] = i
+            child_scope.bind(symbol, i)
             parent.variables = child_scope
             try:
                 parent.evaluate(block.tokens, stack=stack)
