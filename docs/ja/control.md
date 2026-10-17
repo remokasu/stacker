@@ -263,7 +263,7 @@ stacker: error: `break` can only be used inside a loop
 
 ## map・filter・reduce とループの使い分け
 
-`map`、`filter`、`reduce`（`fold` も同じ）に渡すブロックは、スタックに値を残さなければなりません。`map` と `filter` はブロックの実行前にスタックへ要素を積み、ブロックが残した値を結果に使います。
+`map`、`filter`、`reduce`（`fold` も同じ）に渡すブロックは、スタックに値を残さなければなりません。`map` と `filter` はブロックの実行前にスタックへ要素を積み、ブロックが残した値を結果に使います。ブロックは呼び出し側の変数をそのまま使うので、ブロックの中の `set` はループのあとも残ります。
 
 ```
 stacker:0> [1 2 3] {2 *} map

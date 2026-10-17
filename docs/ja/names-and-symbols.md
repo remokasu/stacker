@@ -222,7 +222,12 @@ tmp
 UndefinedSymbolError: `tmp` is not defined.
 ```
 
-`do` / `dolist` のループ変数も、ループの外では参照できません。
+`do` / `dolist` のループ変数も、ループの外では参照できません。ループの本体で新しく `set` した変数は、ループのあとも使えます（`while` などと同じです）。
+
+```
+stacker:0> 1 3 :i {i :last set} do last
+[3]
+```
 
 関数の定義そのものは [関数・ラムダ・マクロ](functions-and-macros.md)、ループは [制御構文](control.md) を参照してください。
 
