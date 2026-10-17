@@ -145,28 +145,6 @@ class ReplMode(ExecutionMode):
         """Handle 'delete_history' command."""
         delete_history()
 
-    def _get_error_hint(self, error: Exception) -> str | None:  # type: ignore[override]
-        """Generate helpful hint based on error type."""
-        error_type = type(error).__name__
-        message = str(error)
-
-        if "UndefinedSymbol" in error_type:
-            # Extract the name from the message
-            if "`" in message:
-                var_name = message.split("`")[1]
-                return f"To use the name itself, write `:{var_name}` or `{{{var_name}}}`"
-        elif "IndexError" in error_type and "pop from an empty deque" in message:
-            return "Stack underflow: Not enough elements on the stack for this operation"
-        elif "NoValueProduced" in error_type:
-            return "Make the block leave a value on the stack, or use `dolist` for side-effect-only iteration"
-        elif "ZeroDivisionError" in error_type:
-            return "Cannot divide by zero"
-        elif "TypeError" in error_type:
-            if "concatenate str" in message:
-                return "Cannot mix string and number types. Convert one to match the other"
-
-        return None
-
     def _run_stackerrc_command(self, expression: str) -> bool:
         """Applies a display setting from ~/.stackerrc as if it were typed.
 
