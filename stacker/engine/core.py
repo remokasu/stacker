@@ -468,6 +468,31 @@ class StackerCore:
             return value.value
         return value
 
+    def _pop_arg(self, stack: stack_data[object], word: str) -> object:
+        """Pops an argument of ``word``, evaluating a code block to its value.
+
+        Unlike ``_pop_and_eval`` (which a function call uses to read its
+        body's result, where "nothing" is a valid outcome), an argument must
+        be a value: a block that leaves nothing is an error here, so the
+        interpreter's own "no value" marker never reaches a host function.
+
+        Args:
+            stack: Stack to pop from.
+            word: The word reading the argument (for the error).
+
+        Returns:
+            The argument value.
+
+        Raises:
+            NoValueProducedError: The block left nothing on the stack.
+        """
+        value = self._pop_and_eval(stack)
+        if value is VOID:
+            raise NoValueProducedError(
+                word, f"The block passed to `{word}` left nothing on the stack."
+            )
+        return value
+
     def _pop_and_resolve(self, stack: stack_data[object]) -> object:
         """Pops a value for a binding form without evaluating it.
 
@@ -644,7 +669,7 @@ class StackerCore:
             args = []
             op = self.plugins[token]
             for _ in range(op["arg_count"]):  # type: ignore[index]
-                args.insert(0, self._pop_and_eval(stack))
+                args.insert(0, self._pop_arg(stack, token))
             try:
                 if op["push_result_to_stack"]:  # type: ignore[index]
                     result = op["func"](*args)  # type: ignore[index]
@@ -681,8 +706,8 @@ class StackerCore:
     def _prio_do(self, op, stack) -> None:
         body = stack.pop()
         symbol = stack.pop()
-        end_value = self._pop_and_eval(stack)
-        start_value = self._pop_and_eval(stack)
+        end_value = self._pop_arg(stack, "do")
+        start_value = self._pop_arg(stack, "do")
         name = self._name_of(symbol, "do")
         try:
             op["func"](start_value, end_value, name, body, self, stack)
@@ -692,7 +717,7 @@ class StackerCore:
     def _prio_dolist(self, op, stack) -> None:
         body = stack.pop()
         symbol = stack.pop()
-        lst = self._pop_and_eval(stack)
+        lst = self._pop_arg(stack, "dolist")
         name = self._name_of(symbol, "dolist")
         try:
             op["func"](name, lst, body, self, stack)
@@ -701,6 +726,14 @@ class StackerCore:
 
     def _prio_times(self, op, stack) -> None:
         n_times = self._pop_and_eval(stack)
+        if n_times is VOID:
+            # The body and the count written the wrong way round, with a
+            # body that leaves nothing: the same advice as for any other
+            # value in the count's place
+            raise StackerSyntaxError(
+                "`times` expects a number of repetitions on top, got a block that leaves nothing: "
+                "write `{body} n times`"
+            )
         body = stack.pop()
         try:
             op["func"](n_times, body, self, stack)
@@ -719,7 +752,7 @@ class StackerCore:
     def _prio_break(self, op, stack) -> None:
         raise BreakException()
     def _prio_cond(self, op, stack) -> None:
-        n = self._pop_and_eval(stack)
+        n = self._pop_arg(stack, "cond")
         pairs = []
         try:
             count = range(n)  # type: ignore[arg-type]
@@ -976,7 +1009,9 @@ class StackerCore:
     def _prio_apply(self, op, stack) -> None:
         func = stack.pop()
         args_list = self._pop_and_eval(stack)
-        if isinstance(args_list, (list, tuple)):
+        if args_list is VOID:
+            pass  # an empty argument block: the function is applied to nothing
+        elif isinstance(args_list, (list, tuple)):
             for arg in args_list:
                 stack.append(arg)
         elif isinstance(args_list, StackerCore):
@@ -1047,7 +1082,7 @@ class StackerCore:
         """Execute a stack-category operator; the stack itself is the last argument."""
         op_args: list[object] = [stack]
         for _ in range(op["arg_count"]):  # type: ignore[arg-type]
-            op_args.insert(0, self._pop_and_eval(stack))
+            op_args.insert(0, self._pop_arg(stack, token))
         try:
             if op["push_result_to_stack"]:
                 result = op["func"](*op_args)  # type: ignore[operator]
@@ -1064,7 +1099,7 @@ class StackerCore:
         """Execute a system-category operator; receives the stack and interpreter as trailing arguments."""
         sys_args: list[object] = [stack, self]
         for _ in range(op["arg_count"]):  # type: ignore[arg-type]
-            sys_args.insert(0, self._pop_and_eval(stack))
+            sys_args.insert(0, self._pop_arg(stack, token))
         try:
             if op["push_result_to_stack"]:
                 result = op["func"](*sys_args)  # type: ignore[operator]
@@ -1081,7 +1116,7 @@ class StackerCore:
         """Execute a regular operator: pop arg_count evaluated arguments, push non-VOID results."""
         reg_args: list[object] = []
         for _ in range(op["arg_count"]):  # type: ignore[arg-type]
-            reg_args.insert(0, self._pop_and_eval(stack))
+            reg_args.insert(0, self._pop_arg(stack, token))
         try:
             if op["push_result_to_stack"]:
                 result = op["func"](*reg_args)  # type: ignore[operator]
@@ -1226,7 +1261,7 @@ class StackerCore:
         """Execute a file operator: pop arg_count evaluated arguments, push non-VOID results."""
         file_args: list[object] = []
         for _ in range(op["arg_count"]):  # type: ignore[arg-type]
-            file_args.insert(0, self._pop_and_eval(stack))
+            file_args.insert(0, self._pop_arg(stack, token))
         try:
             if op["push_result_to_stack"]:
                 result = op["func"](*file_args)  # type: ignore[operator]
@@ -1384,7 +1419,7 @@ class StackerCore:
                         # is evaluated, a String literal is unwrapped), and a
                         # type error names the word, as `_execute` would.
                         try:
-                            return func(self._pop_and_eval(stack_data([element])))
+                            return func(self._pop_arg(stack_data([element]), name))
                         except (TypeError, AttributeError) as error:
                             _reraise_type_error(name, [element], error)
 
