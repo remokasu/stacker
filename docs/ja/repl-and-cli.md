@@ -3,7 +3,7 @@
 ## コマンドライン
 
 ```text
-stacker [-h] [--addplugin path] [--version] [--debug] [-e E] [--recursion-limit N] [script]
+stacker [-h] [--addplugin path] [--version] [--debug] [-e E] [--recursion-limit N] [script [arg ...]]
 ```
 
 `stacker` の代わりに `python -m stacker` でも同じオプションを使えます。
@@ -15,7 +15,7 @@ stacker [-h] [--addplugin path] [--version] [--debug] [-e E] [--recursion-limit 
 | `--debug` | デバッグモード。ログを DEBUG レベルで出力し、REPL ではエラー時に評価の経過と Python のトレースバックも表示します。 |
 | `--recursion-limit N` | ユーザー定義関数の再帰の深さの上限。1 から 1800 までで、省略時は 1500 です。範囲外の値はエラーになります。 |
 | `--addplugin path` | プラグインのファイルを Stacker のインストール先のプラグインディレクトリにコピーして終了します。 |
-| `--version` | `Stacker 1.19.0` のように版を表示して終了します。スクリプトの中からは語 `version` で読めます。 |
+| `--version` | `Stacker 1.20.0` のように版を表示して終了します。スクリプトの中からは語 `version` で読めます。 |
 | `-h`, `--help` | ヘルプを表示して終了します。 |
 
 `script` も `-e` も指定しなければ REPL が始まります。`-e` を指定したときは、位置引数はすべてスクリプトの引数（`args`）になります。オプションはファイル名より前に書きます。

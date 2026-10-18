@@ -1,3 +1,3 @@
 """The version of this Stacker, the one `--version` prints and the word `version` pushes."""
 
-__version__ = "1.19.1"
+__version__ = "1.20.0"

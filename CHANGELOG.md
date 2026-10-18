@@ -1,5 +1,45 @@
 # CHANGE LOG
 
+## [1.20.0] - 2026-10-19
+
+### Breaking Changes
+
+- **A string literal reads escapes.** `"a\tb"` is three characters, `"\"42\""` is `"42"` with its quotes, and `\\` is one backslash; the escapes are `\n` `\t` `\r` `\0` `\\` `\"` `\'` `\xNN` `\uNNNN`, in single, double and triple quotes alike. Any other escape (`\q`) is a syntax error, never left in the text. Until now a backslash stayed in the text (though it already kept `\"` from ending the string)
+- **A block runs in the scope it is bound to, whichever word runs it.** `eval`, `if`, `ifelse`, `cond`, `iferror`, `times`, `loop`, `while`, `do`, `dolist`, `collect`, `apply` and `reduce` ran a block in the scope of the word's caller; `map`, `filter`, `lambda` and `defun` ran it in the scope it was written in. Every word now does the latter. A block written where it runs behaves exactly as before; a block carried somewhere else is a closure: `{x} {{x 100 +}} :mk defun 5 mk eval` is 105, `1 3 :i {{i}} do 3 listn {eval} map` is `[1 2 3]`, and a function that takes a block sees the caller's variables through it with every word. What changes is the other direction: a block made at the top level and `eval`ed inside a function no longer sees the function's variables
+- **`null?` is true for null alone.** It was also true for an empty list and an empty array, so a check written for null refused an empty list handed in as a value. Whether a list, an array, a string or a dictionary has nothing in it is `empty?`
+- **A plugin registered with `pass_core` reads the interpreter's own scope.** It used to see the loop variable while a `do` / `dolist` body ran, since the interpreter's scope was swapped for the iteration's; the iteration's scope now belongs to the running body alone
+- **`stacker -e expr file.stk` no longer ignores `file.stk`**: with `-e`, every positional is an argument for `args`
+- **`subseq` takes a start and an end.** `"hello" 1 3 subseq` is `el`; it is the string-only form of `slice`. It used to push the first whitespace-separated word of a string
+
+### Migration
+
+- A backslash that was meant literally is written `\\` (`"C:\\new"`); a `\"` that was meant as a backslash and a quote is `\\"`
+- A block that must see a function's variables is written inside the function, or the values are passed on the stack. A block that `eval`s another block kept in a variable and expects the loop variable (`{i} :b set 1 3 :i {b eval} do`) hands the block to `do` as its body instead (`1 3 :i b do`)
+- `[] null?` as an emptiness test becomes `[] empty?`; `null?` keeps its name for the null test
+- `s subseq` for the first word becomes `s words 0 at`
+
+### Added
+
+- **`args`, `script-path`, `script-dir`**: `stacker script.stk 200 100` hands what follows the script name to the program, and `args` pushes those arguments as a list of strings (`['200' '100']`; with `-e`, every positional is one, and `--` lets an option-like argument through). `script-path` is the absolute path of the file that is running (inside an included file, that file; null in the REPL and with `-e`) and `script-dir` its directory, so a script finds the data next to it wherever it is run from
+- **`read-line`, `read-stdin`**: one line of standard input as a string without its line break (null at the end), and the rest of standard input as one string. `read` keeps parsing a line as code
+- **`throw`, `try`**: `kind message throw` raises an error of the program's own kind, shown where a built-in error shows its class name (`  [IllegalArgumentException]`). `{try} {handler} try` catches what `iferror` catches and runs the handler with the error on the stack as a dictionary with the keys `"kind"` and `"message"`, so a handler can tell a wrong argument from a typo and throw the error again with `e "kind" get e "message" get throw`. `break` and an exit pass through both
+- **`slice`**: `xs a b slice` cuts a list, an array or a string from index a up to b into a new value of the same kind; negative indexes count from the end and an index past either end is cut off
+- **`words`, `starts-with?`, `ends-with?`**: the whitespace-separated words of a string (no empty strings), and whether a string begins or ends with another
+- **`empty?`**: whether a list, an array, a string or a dictionary has no elements; any other value (null included) is refused by name
+- The stack shows control characters and backslashes in a string as escapes (`9 chr` is `'\t'`), and a block shows its string literals so that the text reads back as the same block; `echo` and `str` give the raw text
+
+### Fixed
+
+- A string inside a list literal was read by the host, twice: `["a\\b"]` held a backspace, `["a\tb"]` a tab while `"a\tb"` did not, and `["it's"]` leaked the host's syntax error. The list parser reads strings by the same rule as the rest
+- `split` with an empty separator leaked the host's message; it is refused by name, pointing at `array` for the characters and `words` for the words
+- Running `~/.stackerrc` left it as the current file, so the REPL and `-e` searched its directory for a relative include; the position is put back once it has run
+- A host operand type error inside nested words was attributed to every enclosing word in turn (`` Operator `if` received… Operator `if` received… ``); it is attributed once
+
+### Performance
+
+- Every Stacker nesting level costs fewer host frames: `if` 9 to 5, `do` 8 to 5, `times` 9 to 5, `eval` 6 to 4, a function call 5 to 3, a lambda through `map` 8 to 6. The host keeps its frames in 16 KiB chunks and frees a chunk the moment it empties, so a hot loop whose call depth crossed a chunk boundary paid for a chunk on every iteration (up to 7 times slower, depending on nothing visible in the program); with narrower levels the boundary is crossed less often: in a sweep of a loop wrapped in 0 to 33 function calls, the depths that paid for a chunk went from four (11, 12, 29, 30) to two (17, 18); a depth that does pay is as slow as before. Loops themselves run at the same speed as in 1.19.1 (a loop body with a variable is bound to its iteration's scope, which costs what the fewer frames save)
+- A function or lambda call no longer re-enters the host's call machinery twice, which is what bounded the recursion depth at about 2000 calls whatever the limit asked for
+
 ## [1.19.1] - 2026-10-18
 
 ### Fixed
