@@ -1,5 +1,13 @@
 # CHANGE LOG
 
+## [1.19.0] - 2026-10-18
+
+### Added
+
+- **`real`, `imag`, `conj`, `arg`, `polar`**: the parts of a complex number, its conjugate and its angle, and a complex number from a length and an angle (`r t polar`). `real`, `imag` and `conj` take every number: `3 imag` is 0 and `3 real` is 3, so code need not ask whether it holds a complex number
+- **`collect`**: `{...} collect` runs a block on an empty stack, in the caller's scope, and pushes everything it left as one list: `{8 5 frac 3 5 frac 0} collect`, `{0 3 :i {i i *} do} collect` is `[0 1 4 9]`. A list literal holds values only; `collect` is the way to make a list from expressions without counting them for `listn`. A symbol or a lambda without parameters is run the same way
+- **`--version`**: `stacker --version` prints `Stacker 1.19.0`; the word `version` pushes the version as a string
+
 ## [1.18.1] - 2026-10-18
 
 ### Fixed

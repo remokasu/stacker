@@ -5,8 +5,9 @@ import os
 from stacker import constant, error, stacker
 from stacker.engine.data_type import Array, Symbol
 from stacker.stacker import Stacker
+from stacker.version import __version__
 
-__all__ = ["stacker", "error", "constant", "include", "Stacker", "Symbol", "Array"]
+__all__ = ["stacker", "error", "constant", "include", "Stacker", "Symbol", "Array", "__version__"]
 
 # リソースフォルダへのパスを取得する
 resource_path = os.path.join(os.path.dirname(__file__), "data")

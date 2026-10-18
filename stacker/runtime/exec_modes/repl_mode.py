@@ -11,12 +11,12 @@ if TYPE_CHECKING:
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import FileHistory
-from importlib.metadata import version
 from stacker.runtime.exec_modes.error import create_error_message
 from stacker.runtime.exec_modes.execution_mode import REPL_SETTINGS, ExecutionMode
 from stacker.lib import delete_history, disp_about, disp_help
 from stacker.lib.config import history_file_path
 from stacker.error_formatter import ErrorFormatter
+from stacker.version import __version__
 
 # Import parser utility functions (not lexer components)
 # Lexer components (TokenType, UnifiedLexer, etc.) are in stacker.syntax.lexer
@@ -78,7 +78,7 @@ class ReplMode(ExecutionMode):
             sys.exit()
 
     def get_version(self) -> str:  # type: ignore[override]
-        return version("pystacker")
+        return __version__
 
     # REPL Command Handlers
     def _cmd_help(self) -> None:
