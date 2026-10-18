@@ -1,6 +1,7 @@
 from __future__ import annotations
 import copy
 import logging
+import sys
 from collections.abc import Callable, Iterator, Sequence
 from typing import NoReturn
 import ast
@@ -139,6 +140,34 @@ def _reraise_type_error(word: str, args: object, error: Exception) -> NoReturn:
 # Token classification kinds. Every decision below is a pure function of
 # the token values (never of interpreter state), so a classification can be
 # computed once per token list and reused across evaluations.
+def _refcount_of_cached(cached: tuple[object, object]) -> int:
+    """How many references the cached bound copy ``cached[1]`` has, counted the same way every time."""
+    return sys.getrefcount(cached[1])
+
+
+def _calibrate_unshared_refcount() -> int | None:
+    """The reference count a bound copy has when only its cache holds it, or None when it cannot be known.
+
+    Measured at import on a probe of the same shape as the real call, so
+    the count stays right whichever way this interpreter counts a
+    temporary argument. None when there is no reference counting to ask
+    (no ``sys.getrefcount``) or the counts are not exact (a free-threaded
+    build): the copy is then never reused.
+    """
+    getrefcount = getattr(sys, "getrefcount", None)
+    if getrefcount is None:
+        return None
+    gil_enabled = getattr(sys, "_is_gil_enabled", None)
+    if gil_enabled is not None and not gil_enabled():
+        return None
+    probe = (None, object())
+    return _refcount_of_cached(probe)
+
+
+#: See _calibrate_unshared_refcount; used by StackerCore._bound_to
+_UNSHARED_REFCOUNT = _calibrate_unshared_refcount()
+
+
 K_VALUE = 0  # non-str token: push as-is
 K_STRING = 1  # quoted string literal: payload is the prebuilt String
 K_LIST = 2  # list literal: payload is the parsed template (or None)
@@ -1739,12 +1768,22 @@ class StackerCore:
         # bound copy is kept for as long as the scope asking for it is the
         # same one, so the copy is made once per scope, not once per push
         cached = self._bound_cache
-        if cached is not None and cached[0] is scope:
-            return cached[1]
-        # Each iteration of a loop has a scope of its own, so a block in a
-        # loop body is copied once per iteration: the copy may have been
-        # captured (by a lambda, a variable, the stack), and there is no
-        # portable way to tell, so it is never reused for another scope
+        if cached is not None:
+            if cached[0] is scope:
+                return cached[1]
+            # Each iteration of a loop has a scope of its own. The previous
+            # iteration's copy is bound to the new scope instead of being
+            # made again when nothing else holds it: then no lambda, variable,
+            # container or stack has captured it, and nothing can tell. The
+            # reference count says so, where it is exact (see
+            # _calibrate_unshared_refcount); elsewhere a copy is always made
+            if _UNSHARED_REFCOUNT is not None and _refcount_of_cached(cached) == _UNSHARED_REFCOUNT:
+                bound = cached[1]
+                bound.variables = scope
+                if bound.stack:
+                    bound.stack = stack_data()
+                self._bound_cache = (scope, bound)
+                return bound
         bound = object.__new__(type(self))  # a shallow copy, without copy.copy's overhead
         bound.__dict__.update(self.__dict__)
         bound.variables = scope
