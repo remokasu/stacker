@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from stacker.error import StackerTypeError, not_a_sequence_message
+from stacker.operators.arguments import integer_argument
 
 
 def _sequence(word: str, xs: object) -> object:
@@ -43,7 +44,7 @@ def _pair(xs: object) -> bool:
 
 list_operators = {
     "seq": {
-        "func": (lambda x1, x2: list(range(x1, x2 + 1))),
+        "func": (lambda x1, x2: list(range(integer_argument("seq", x1), integer_argument("seq", x2) + 1))),
         "arg_count": 2,
         "push_result_to_stack": True,
         "desc": "Generate sequence from x1 to x2",

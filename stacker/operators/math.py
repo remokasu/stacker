@@ -8,6 +8,7 @@ from typing import Callable
 
 from stacker.engine.data_type import Symbol
 from stacker.error import StackerTypeError, ValidationError, symbol_as_value_message
+from stacker.operators.arguments import integer_argument
 from stacker.operators.arith import checked_binary
 from stacker.util.disp import plain_text
 
@@ -212,8 +213,8 @@ def _floor(x: int | float) -> int:
     return math.floor(x)
 
 
-def _roundn(x: int | float, n: int) -> int | float:
-    return round(x, n)
+def _roundn(x: object, n: object) -> int | float:
+    return round(_real_number("roundn", x), integer_argument("roundn", n))  # type: ignore[call-overload]
 
 
 def _round(x: int | float) -> int:
