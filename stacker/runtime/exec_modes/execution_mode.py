@@ -133,10 +133,10 @@ class ExecutionMode:
             elif "quote" in message.lower():
                 return "Check for matching quotes in strings"
 
-        # File errors
-        elif "FileNotFoundError" in error_type:
+        # File errors (a file word raises its own error from the host's)
+        elif isinstance(error.__cause__, FileNotFoundError) or "FileNotFoundError" in error_type:
             return "File not found. Check the file path is correct"
-        elif "PermissionError" in error_type:
+        elif isinstance(error.__cause__, PermissionError) or "PermissionError" in error_type:
             return "Permission denied. Check file permissions"
 
         # Attribute errors
