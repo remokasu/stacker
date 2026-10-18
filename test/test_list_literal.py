@@ -74,3 +74,32 @@ class TestWordsInsideALiteral:
 
     def test_a_variable_named_like_a_word_is_its_value(self):
         assert run("5 :dup set [dup]") == [[5]]
+
+
+class TestInsideABlock:
+    @pytest.mark.parametrize(
+        "program, expected",
+        [
+            ('{["A" "B"]} eval', [["A", "B"]]),
+            ('{} {["p" "q"]} :f defun f', [["p", "q"]]),
+            ('1 1 :i {["x" "y"]} do', [["x", "y"]]),
+            ('{["a" 1 "b"]} eval', [["a", 1, "b"]]),
+            ("{[1 2 3]} eval", [[1, 2, 3]]),
+            ('{[["A" "B"]]} eval', [[["A", "B"]]]),
+        ],
+    )
+    def test_a_literal_inside_a_block_is_read_as_at_the_top_level(self, program, expected):
+        assert run(program) == expected
+
+    @pytest.mark.parametrize("program", ['{["a" "b", "c"]} eval', "{[1, 2]} eval", "{[None, True]} eval", "{[(1, 2)]} eval", "{[{}]} eval"])
+    def test_what_the_top_level_rejects_is_rejected_inside_a_block_too(self, program):
+        with pytest.raises(StackerSyntaxError):
+            run(program)
+
+    def test_a_block_is_made_before_its_literal_is_read(self):
+        # the literal is read when the block runs, so a block that is never run is no error
+        assert run("{[1, 2]} drop 7") == [7]
+
+    def test_each_evaluation_makes_a_fresh_list(self):
+        # two calls, two arrays: changing one leaves the other as built
+        assert run("{} {[1 2] array} :f defun f :a set f :b set 9 a append! b a") == [[1, 2], [1, 2, 9]]

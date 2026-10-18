@@ -408,6 +408,10 @@ class StackerCore:
             return temp_stack.pop()
         if is_string_token(token):
             return String(strip_string_delimiters(token))
+        if is_list(token):
+            # Kept as the token: it is read as a list literal when the block
+            # runs, as at the top level, and each run makes a fresh list
+            return token
         return cached_literal_eval(token)
 
     def _substack(self, token: str, stack: stack_data[object]) -> None:
