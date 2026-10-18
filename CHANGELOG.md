@@ -1,5 +1,15 @@
 # CHANGE LOG
 
+## [1.19.1] - 2026-10-18
+
+### Fixed
+
+- A list literal written inside a code block (`{["A" "B"]} eval`, a function body, a `do` body) was read by the host when the block was made, so `["A" "B"]` became a list of the one string `"AB"`, and every run of the block pushed the same list. The literal is read when the block runs, exactly as at the top level: the strings stay separate, what the top level refuses (commas, a block inside a list) is refused here too, and each run makes a fresh list
+- `write-to-file`, `append-to-file`, `read-from-file`, `read-lines` and `file-exists` handed whatever they got to the host, which reads an integer as a file descriptor: `"x" 1 write-to-file` wrote to the standard output and closed it (`true` is 1 as well). A file name must be a string; anything else is refused with the word's name. A file that cannot be opened is reported by the word with the file's name and the reason (`` `read-lines` cannot open `nope.txt`: No such file or directory ``)
+- `write-to-file` and `append-to-file` wrote the host's text of a value (`True`, `None`, `['a', 'b']`); they write what `str` gives (`true`, `null`, `['a' 'b']`, `{'k' 1}`), so a file written by Stacker reads as Stacker shows the value
+- `do`, `seq`, `listn`, `subn`, `dropn`, `dupn`, `pick`, `roll`, `roundn`, `band`, `bor`, `bxor`, `~`, `<<` and `>>` leaked the host's message when given a float where an integer is needed (`'float' object cannot be interpreted as an integer`, `unsupported operand type(s) for &`), which is what `/` leaves. Each names itself and shows the value: `` `dropn` expects an integer, got 2.0; `int` makes an integer of a number ``
+- The hint for a word written inside a list literal (`[1 dup]`) also mentions `{... dup ...} collect`, the way to build a list from words without counting them
+
 ## [1.19.0] - 2026-10-18
 
 ### Added
