@@ -14,6 +14,7 @@ from stacker.error import (
     NipError,
     InsertError,
 )
+from stacker.operators.arguments import integer_argument
 from stacker.util.disp import disp_stack
 
 
@@ -69,6 +70,7 @@ def _dropn(num: int, stack: deque | list) -> None:
         # 2: 'e'  | 2: 'a'
         # 1: 3    | 1: 'b'
     """
+    num = integer_argument("dropn", num)
     if len(stack) == 0:
         raise DropError("Stack is empty")
     if num > len(stack):
@@ -119,6 +121,7 @@ def _dupn(num: int, stack: deque | list) -> None:
         # 2: 'c'  | 2: 'b'
         # 1: 3    | 1: 'c'
     """
+    num = integer_argument("dupn", num)
     if len(stack) == 0:
         raise DupError("Stack is empty")
     if num > len(stack):
@@ -167,6 +170,7 @@ def _roll(n: int, stack: deque | list) -> None:
         # 2: 'd'  | 2: 'a'
         # 1: 4
     """
+    n = integer_argument("roll", n)
     if len(stack) == 0:
         raise RollError("Stack is empty")
     if n == 0:
@@ -214,6 +218,7 @@ def _pick(num: int, stack: deque | list) -> None:
         # 2: 'd'  | 2: 'd'
         # 1: 2    | 1: 'c'
     """
+    num = integer_argument("pick", num)
     if len(stack) == 0:
         raise PickError("Stack is empty")
     if num < 0:

@@ -146,3 +146,51 @@ class TestWordsInsideAListLiteral:
             run(program)
         assert f"`{word}` is a word" in str(info.value)
         assert "listn" in str(info.value)
+
+
+class TestIntegerArguments:
+    @pytest.mark.parametrize(
+        "program, word",
+        [
+            ("1 2.5 :i {i echo} do", "do"),
+            ("1.0 2 :i {i echo} do", "do"),
+            ("1 2.0 seq", "seq"),
+            ("[1 2] 1.0 listn", "listn"),
+            ("[1 2] 1.0 subn", "subn"),
+            ("1 2 3 1.0 dropn", "dropn"),
+            ("1 2 3 1.0 pick", "pick"),
+            ("1 2 3 2.0 roll", "roll"),
+            ("1 2 1.0 dupn", "dupn"),
+            ("5.123 2.0 roundn", "roundn"),
+            ("3 2.0 <<", "<<"),
+            ("3 2.0 >>", ">>"),
+            ("7.0 2 band", "band"),
+            ("7 2.0 bor", "bor"),
+            ("7 2.0 bxor", "bxor"),
+            ("2.0 ~", "~"),
+        ],
+    )
+    def test_a_word_that_needs_an_integer_names_itself(self, program, word):
+        with pytest.raises(StackerTypeError) as info:
+            run(program)
+        text = str(info.value)
+        assert f"`{word}`" in text and "integer" in text
+        assert "cannot be interpreted" not in text and "islice" not in text and "unsupported" not in text
+
+    def test_integers_still_work(self):
+        assert run("1 3 :i {i} do 1 3 seq 1 2 2 listn 3 1 << 7 2 band 5.123 2 roundn") == [1, 2, 3, [1, 2, 3], [1, 2], 6, 2, 5.12]
+
+    def test_a_bool_counts_as_an_integer(self):
+        assert run("1 2 3 true dropn true 3 seq true ~") == [1, 2, [1, 2, 3], -2]
+
+    @pytest.mark.parametrize(
+        "program, text",
+        [
+            ("1 3 frac 1 3 frac band", "`band` expects an integer, got 1/3"),
+            ('"a" 1 roundn', "`roundn` expects a number, got 'a'"),
+            ("1 2 3 :n dropn", "`dropn` cannot use the symbol `n`"),
+        ],
+    )
+    def test_other_values_are_refused_with_the_word(self, program, text):
+        with pytest.raises(StackerTypeError, match=text.replace("`", "`").replace("(", "\\(")):
+            run(program)

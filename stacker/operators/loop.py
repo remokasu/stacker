@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from stacker.engine.data_type import Symbol
 from stacker.engine.scope import ScopedVariables
 from stacker.error import BreakException, StackerSyntaxError
+from stacker.operators.arguments import integer_argument
 from stacker.operators.block_exec import resolve_condition, run_block
 from stacker.util.disp import plain_text
 
@@ -79,6 +80,8 @@ def _do(
     # a lambda or block kept from one iteration sees that iteration's
     # value; a name the body is first to set goes to the caller's scope
     # (see loop_scope)
+    start_value = integer_argument("do", start_value)
+    end_value = integer_argument("do", end_value)
     original_parent_vars = parent.variables
     try:
         for i in range(start_value, end_value + 1):

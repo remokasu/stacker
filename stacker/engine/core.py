@@ -49,6 +49,7 @@ from stacker.engine.slambda import StackerLambda
 from stacker.engine.scope import ScopedVariables
 from stacker.engine import recursion
 from stacker.engine.smacro import StackerMacro, gensym
+from stacker.operators.arguments import integer_argument
 from stacker.operators.manager import OperatorManager
 from stacker.include.include import IncludeState
 
@@ -1044,18 +1045,14 @@ class StackerCore:
             StackUnderflowError: Fewer values below the count than it asks
                 for; the stack is left as it was.
         """
-        n = stack.pop()
-        try:
-            range(n)  # type: ignore[arg-type]
-        except (TypeError, AttributeError) as error:
-            _reraise_type_error(word, [n], error)
-        if len(stack) < n:  # type: ignore[operator]
+        n = integer_argument(word, stack.pop())
+        if len(stack) < n:
             have = len(stack)
             stack.append(n)
             raise StackUnderflowError(
-                word, n, f"`{word}` needs {n} values below the count, but the stack has {have}."  # type: ignore[arg-type]
+                word, n, f"`{word}` needs {n} values below the count, but the stack has {have}."
             )
-        return n  # type: ignore[return-value]
+        return n
 
     def _prio_subn(self, op, stack) -> None:
         n = self._pop_count(stack, "subn")
