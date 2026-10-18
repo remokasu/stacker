@@ -309,7 +309,7 @@
       "patterns": [
         {
           "name": "keyword.operator.io.stacker",
-          "match": "(?<![\\w?!-])(append\\-to\\-file|read\\-from\\-file|write\\-to\\-file|file\\-exists|read\\-lines|newline|printc|print|echo|read|time|cat|pwd|cd|ls)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(append\\-to\\-file|read\\-from\\-file|write\\-to\\-file|file\\-exists|read\\-lines|read\\-stdin|read\\-line|newline|printc|print|echo|read|time|cat|pwd|cd|ls)(?![\\w?!-])"
         }
       ]
     },
@@ -317,7 +317,7 @@
       "patterns": [
         {
           "name": "keyword.operator.system.stacker",
-          "match": "(?<![\\w?!-])(disable_all_plugins|disable_plugin|exit\\-code|operators|version|macros|abort|funcs|exit|vars)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(disable_all_plugins|disable_plugin|script\\-path|script\\-dir|exit\\-code|operators|version|macros|abort|funcs|args|exit|vars)(?![\\w?!-])"
         }
       ]
     },

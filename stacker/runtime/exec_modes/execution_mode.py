@@ -198,6 +198,10 @@ class ExecutionMode:
         path = Path(remove_start_end_quotes(str(filename)))
         code = readtxt(path)
         calculator = self.rpn_calculator
+        # ~/.stackerrc runs before the REPL, -e or the script: what it sets
+        # as the current file must not outlive it (relative includes and
+        # `script-path` would otherwise point at the rc file)
+        before = (calculator.current_file, calculator.current_line, dict(calculator.source_lines))
 
         # Set source file and store all source lines for error reporting
         calculator.current_file = str(path.resolve())
@@ -226,6 +230,10 @@ class ExecutionMode:
                     calculator.process_expression(expression)
         finally:
             pop_entry_file(calculator)
+            if stackerrc:
+                calculator.current_file, calculator.current_line, source_lines = before
+                calculator.source_lines.clear()
+                calculator.source_lines.update(source_lines)
 
     def _error_location(
         self, error: BaseException

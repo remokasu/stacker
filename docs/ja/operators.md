@@ -339,7 +339,9 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `echo`, `print` | 値を出力して改行する（スタックには積まない） | `3 4 + echo`, `"hello" print` |
 | `printc` | 値を改行なしで出力 | `"hello" printc` |
 | `newline` | 改行を出力 | `newline` |
-| `read` | 標準入力から 1 行読み、コードブロックとして積む（`parse` と同じ解析） | `read` |
+| `read` | 標準入力から 1 行読み、コードブロックとして積む（`parse` と同じ解析）。文字列として読むには `read-line` | `read` |
+| `read-line` | 標準入力から 1 行を文字列で積む（末尾の改行は除く）。入力の終わりなら `null` | `read-line` |
+| `read-stdin` | 標準入力の残り全部を 1 つの文字列で積む。入力の終わりなら `""` | `read-stdin` |
 
 ## ファイル
 
@@ -392,6 +394,9 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `macros` | 定義済みのマクロを出力 | `macros` |
 | `operators` | 使える演算子の説明を一覧で出力 | `operators` |
 | `version` | この Stacker の版を文字列で積む | `version` |
+| `args` | コマンドラインでスクリプト名の後ろに書いた引数を、文字列のリストで積む（`stacker s.stk 200 100` なら `['200' '100']`）。REPL では `[]` | `args` |
+| `script-path` | 実行中のファイルの絶対パス。取り込まれたファイルの中ではそのファイル。REPL と `-e` では `null` | `script-path` |
+| `script-dir` | 実行中のファイルのディレクトリ。REPL と `-e` では `null` | `script-dir` |
 | `ans` | 値を残した最後の入力（REPL の 1 行、スクリプトの 1 式）の結果を、もう一度積む。値を残さない入力（`clear` など）では変わらない。1 つの入力の中では、その入力より前の結果を指す。まだ結果がなければエラー。`include` / `require` したファイルの中では使えない | `ans` |
 
 REPL の `enable_disp_ans` / `disable_disp_ans` は、スタックの一番上を毎回表示するかどうかの設定です（[REPL とコマンドライン](repl-and-cli.md)）。

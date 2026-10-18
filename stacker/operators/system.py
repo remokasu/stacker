@@ -1,11 +1,30 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from stacker.version import __version__
 
 if TYPE_CHECKING:
     from stacker.engine.core import StackerCore
+
+
+def _args(core: StackerCore) -> list[str]:
+    """``args``: the command-line arguments of the program, as a new list of strings."""
+    root = core
+    while root.parent is not None:
+        root = root.parent
+    return list(root.arguments)
+
+
+def _script_path(core: StackerCore) -> str | None:
+    """``script-path``: the absolute path of the file that is running, or null in the REPL and -e."""
+    return core.current_file
+
+
+def _script_dir(core: StackerCore) -> str | None:
+    """``script-dir``: the directory of the file that is running, or null in the REPL and -e."""
+    return None if core.current_file is None else str(Path(core.current_file).parent)
 
 
 def _vars(core: StackerCore) -> None:
@@ -112,6 +131,24 @@ system_operators = {
         "arg_count": 0,
         "push_result_to_stack": True,
         "desc": f"Pushes the version of this Stacker as a string: version -> '{__version__}'",
+    },
+    "args": {
+        "func": (lambda stack, core: _args(core)),
+        "arg_count": 0,
+        "push_result_to_stack": True,
+        "desc": "The command-line arguments after the script name, as a list of strings (`stacker s.stk 200 100` gives ['200' '100'])",
+    },
+    "script-path": {
+        "func": (lambda stack, core: _script_path(core)),
+        "arg_count": 0,
+        "push_result_to_stack": True,
+        "desc": "The absolute path of the file that is running (inside an included file, that file); null in the REPL and with -e",
+    },
+    "script-dir": {
+        "func": (lambda stack, core: _script_dir(core)),
+        "arg_count": 0,
+        "push_result_to_stack": True,
+        "desc": "The directory of the file that is running; null in the REPL and with -e",
     },
     "vars": {
         "func": (lambda stack, core: _vars(core)),

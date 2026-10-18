@@ -337,6 +337,8 @@ class StackerCore:
         # the core, and a copied sentinel is no longer `is` the original.
         self.has_result = False
         self.last_result: object = None
+        # The command-line arguments after the script name (`args`); set by the CLI
+        self.arguments: list[str] = []
 
         # Macro expansion state: set only on the throwaway core that runs a
         # macro body. `_interp_scope` is the expansion scope whose own

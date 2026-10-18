@@ -42,7 +42,18 @@ parser.add_argument(
     ),
 )
 parser.add_argument("script", nargs="?", default=None, help="Script file to run.")
+parser.add_argument(
+    "args",
+    nargs=argparse.REMAINDER,
+    help="Arguments for the script (the word `args` reads them); with -e, every positional is one.",
+)
 argv = parser.parse_args()
+if argv.e is not None and argv.script is not None:
+    # -e takes no script: the first positional is an argument like the rest
+    argv.args = [argv.script] + argv.args
+    argv.script = None
+if argv.args and argv.args[0] == "--":
+    argv.args = argv.args[1:]
 
 if not 1 <= argv.recursion_limit <= MAX_RECURSION_LIMIT:
     parser.error(
@@ -134,6 +145,7 @@ def main() -> None:
         logging.basicConfig(level=logging.INFO)
 
     rpn_calculator = Stacker()
+    rpn_calculator.arguments = list(argv.args)
 
     # load plugins from the Stacker's installation directory
     script_dir = os.path.dirname(os.path.abspath(__file__))

@@ -967,6 +967,11 @@ Note: Blocks, lambdas and functions passed to `map` and `filter` must leave exac
 | eval     | Run a code block, a symbol or a lambda (text: `parse` first) | `{3 5 +} eval`, `'3 5 +' parse eval` |
 | echo     | Print the specified value to stdout without adding it to the stack | `3 4 + echo`  |
 | read     | Read one line from the console and push it as a code block | `read`                |
+| read-line | Read one line of standard input as a string (null at the end) | `read-line`        |
+| read-stdin | Read the rest of standard input as one string | `read-stdin`                 |
+| args     | The command-line arguments after the script name, as strings | `args`            |
+| script-path | The absolute path of the running file (null in the REPL) | `script-path`      |
+| script-dir | Its directory | `script-dir`                                                  |
 | write-to-file | Write the top element of the stack to a file       | `3 "output.txt" write-to-file` |
 | append-to-file | Append the top element of the stack to a file      | `3 "output.txt" append-to-file` |
 | read-from-file | Read the contents of a file and push it to the stack | `"input.txt" read-from-file` |
