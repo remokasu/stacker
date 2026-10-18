@@ -904,6 +904,7 @@ print(stacker.eval("3 4 +"))
 | cons     | Prepend an element to a list                          | `1 [2 3] cons`             |
 | pair?    | Return true if the value is a non-empty list          | `[1 2 3] pair?`            |
 | apply    | Expand list elements onto the stack and apply a function | `[3 4] {+} apply`       |
+| collect  | Run a block on an empty stack and push what it left as one list | `{1 2 3} collect` |
 | expand   | Push the elements of a list, or each token of a code block as a one-token block | `[1 2 3] expand`, `{a b} expand` |
 | concat-block | Join two code blocks                              | `{a b} {c} concat-block`   |
 

@@ -979,6 +979,28 @@ class StackerCore:
         else:
             stack.append(expression)
 
+    def _prio_collect(self, op, stack) -> None:
+        """``{...} collect``: runs the code on an empty stack, in this scope, and pushes what it left as one list.
+
+        The code is a block, a symbol (run as its name) or a lambda, as for
+        `eval`; a lambda takes its arguments from the empty stack, so only
+        one without parameters runs. The caller's stack is not visible to
+        the code; values below stay where they are.
+        """
+        code = stack.pop()
+        collected: stack_data[object] = stack_data()
+        if isinstance(code, StackerCore):
+            self._eval_block(code, stack=collected)
+        elif isinstance(code, Symbol):
+            self._evaluate([code.name], stack=collected)
+        elif isinstance(code, StackerLambda):
+            self._call_lambda(code, collected)
+        else:
+            raise StackerTypeError(
+                f"`collect` expects a code block, a symbol or a lambda, got {plain_text(code)}"
+            )
+        stack.append(list(collected))
+
     def _call_lambda(self, fn: StackerLambda, stack: stack_data[object]) -> None:
         """Calls a lambda value with arguments popped from ``stack``.
 
@@ -1166,6 +1188,7 @@ class StackerCore:
         "concat-block": _prio_concat_block,
         "lambda": _prio_lambda,
         "eval": _prio_eval,
+        "collect": _prio_collect,
         "sub": _prio_sub,
         "subn": _prio_subn,
         "listn": _prio_listn,

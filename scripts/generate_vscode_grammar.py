@@ -64,7 +64,7 @@ GROUPS: list[tuple[str, set[str]]] = [
     ("keyword.control.stacker", set(loop.loop_operators) | set(if_else.condition_operators) | {"break"}),
     ("keyword.control.definition.stacker", {"defun", "defmacro", "lambda", "alias"}),
     ("keyword.operator.assignment.stacker", {"set", "=", "global"}),
-    ("keyword.operator.code.stacker", {"eval", "apply", "expand", "sub", "subn", "parse", "concat-block", "gensym", "macroexpand", "symbol", "include", "require"}),
+    ("keyword.operator.code.stacker", {"eval", "apply", "expand", "sub", "subn", "parse", "concat-block", "gensym", "macroexpand", "symbol", "include", "require", "collect"}),
     ("keyword.operator.arithmetic.stacker", set(arith.arith_operators) | set(algebra.alge_operators)),
     ("keyword.operator.comparison.stacker", set(comparison.compare_operators)),
     ("keyword.operator.logical.stacker", set(logic.logic_operators)),
