@@ -23,7 +23,7 @@ from stacker.error import (
     word_in_list_literal_message,
     # UnexpectedTokenError,
 )
-from stacker.syntax.lexer import Identifier, ListNode
+from stacker.syntax.lexer import Identifier, ListNode, TupleNode
 from stacker.syntax.parser import Parser, parse_expression
 from stacker.error import BreakException
 from stacker.engine.boundary import token_to_value, value_to_token
@@ -263,12 +263,12 @@ def _compile_list_template(token: str) -> list[object]:
     return _template_from_node(parsed if isinstance(parsed, ListNode) else ListNode([parsed]))
 
 
-def _template_from_node(node: ListNode) -> list[object]:
+def _template_from_node(node: ListNode | TupleNode) -> list[object]:
     """Turns the parser's tree of one list literal into a template, element by element."""
     compiled: list[object] = []
     for element in node.elements:
-        if isinstance(element, ListNode):
-            compiled.append(_template_from_node(element))
+        if isinstance(element, (ListNode, TupleNode)):
+            compiled.append(_template_from_node(element))  # `(1 2)` inside a list is a nested list, as it always was
         elif isinstance(element, Identifier):
             name = element.name
             if name.startswith(SYMBOL_PREFIX):
@@ -1428,6 +1428,10 @@ class StackerCore:
                 # `len` counts tokens so `dup len` works on any block
                 stack.append(len(agg_args.tokens))
                 return
+            if token == "empty?":
+                raise StackerTypeError(
+                    f"`empty?` expects a list, an array, a string or a dictionary, got {plain_text(agg_args)}"
+                )
             agg_args = [self._block_token_value(t) for t in agg_args.tokens]
         elif isinstance(agg_args, dict) and token not in ("len", "empty?"):
             raise StackerTypeError(not_a_sequence_message(token))  # `len` and `empty?` count a dictionary's keys
@@ -1726,8 +1730,8 @@ class StackerCore:
 
         The body runs on a throwaway stack in a child scope of the caller
         where the arguments are bound and assignments stay local. Exactly one
-        value must remain: a code block is evaluated on ``stack`` in the
-        caller's scope, any other value is pushed.
+        value must remain: a code block is bound to the caller's scope and
+        evaluated on ``stack``, any other value is pushed.
 
         Args:
             name: Macro name (already known to be in ``self.macros``).

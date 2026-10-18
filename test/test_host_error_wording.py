@@ -177,6 +177,11 @@ class TestIntegerArguments:
         assert f"`{word}`" in text and "integer" in text
         assert "cannot be interpreted" not in text and "islice" not in text and "unsupported" not in text
 
+    @pytest.mark.parametrize("program, word", [("1 3 :i 5 do", "do"), ("[1] :i 5 dolist", "dolist")])
+    def test_a_loop_body_that_is_not_a_block_is_refused_by_name(self, program, word):
+        with pytest.raises(StackerTypeError, match=f"`{word}` expects a code block as the body"):
+            run(program)
+
     def test_integers_still_work(self):
         assert run("1 3 :i {i} do 1 3 seq 1 2 2 listn 3 1 << 7 2 band 5.123 2 roundn") == [1, 2, 3, [1, 2, 3], [1, 2], 6, 2, 5.12]
 
