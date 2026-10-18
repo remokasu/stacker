@@ -103,16 +103,18 @@ class ScopedVariables:
         self._local[key] = value
 
     @classmethod
-    def loop_scope(cls, parent: ScopedVariables) -> ScopedVariables:
+    def loop_scope(cls, parent: ScopedVariables, bindings: dict[str, object] | None = None) -> ScopedVariables:
         """Returns a transparent child of ``parent`` for a loop's own variables.
 
         Args:
             parent: The scope the loop runs in.
+            bindings: The loop's own names and values, if any (a loop
+                variable); more can be added with ``bind``.
 
         Returns:
-            A scope that holds only what ``bind`` puts in it.
+            A scope that holds only what ``bindings`` and ``bind`` put in it.
         """
-        scope = cls(parent=parent)
+        scope = cls(parent=parent, local_vars=bindings)
         scope._transparent = True
         return scope
 

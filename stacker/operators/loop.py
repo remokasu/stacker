@@ -82,8 +82,7 @@ def _do(
     original_parent_vars = parent.variables
     try:
         for i in range(start_value, end_value + 1):
-            child_scope = ScopedVariables.loop_scope(original_parent_vars)
-            child_scope.bind(symbol, i)
+            child_scope = ScopedVariables.loop_scope(original_parent_vars, {symbol: i})
             parent.variables = child_scope
             try:
                 parent.evaluate(block.tokens, stack=stack)
@@ -130,8 +129,7 @@ def _dolist(
     original_parent_vars = parent.variables
     try:
         for i in lst:
-            child_scope = ScopedVariables.loop_scope(original_parent_vars)
-            child_scope.bind(symbol, i)
+            child_scope = ScopedVariables.loop_scope(original_parent_vars, {symbol: i})
             parent.variables = child_scope
             try:
                 parent.evaluate(block.tokens, stack=stack)
