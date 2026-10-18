@@ -76,6 +76,15 @@ class TestWordsInsideALiteral:
         assert run("5 :dup set [dup]") == [[5]]
 
 
+class TestParenthesisedRows:
+    @pytest.mark.parametrize(
+        "program, expected",
+        [("[(1 2) 3]", [[[1, 2], 3]]), ("[()]", [[[]]]), ("[1 [2 (3 4)]]", [[1, [2, [3, 4]]]])],
+    )
+    def test_a_parenthesised_group_is_a_nested_list(self, program, expected):
+        assert run(program) == expected
+
+
 class TestInsideABlock:
     @pytest.mark.parametrize(
         "program, expected",
