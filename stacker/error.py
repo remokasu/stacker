@@ -146,7 +146,8 @@ def word_in_list_literal_message(name: str) -> str:
     """
     return (
         f"`{name}` is a word, and a list literal holds values only. "
-        f"Build the list on the stack and collect it with `listn`: ... {name} ... n listn"
+        f"Build the list on the stack and collect it with `listn`: ... {name} ... n listn, "
+        f"or run the words in a block and collect what they leave: {{... {name} ...}} collect"
     )
 
 
