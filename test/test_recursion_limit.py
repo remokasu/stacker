@@ -56,6 +56,7 @@ class TestRecursionGuardSubprocess(unittest.TestCase):
         self.assertIn("Maximum recursion depth", combined)
         self.assertIn("rundeep", combined)
 
+    @unittest.skipIf(sys.version_info < (3, 11), "the C stack overflows at the default recursion limit on 3.10")
     def test_deep_recursion_within_default_limit_passes(self):
         result = _run_stacker([], script_content=DEEP_LEGAL_RECURSION)
         self.assertEqual(result.returncode, 0, result.stderr)
