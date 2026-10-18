@@ -97,7 +97,7 @@ stacker:0> [1 2] array [1 2] array ==  [1 2] array [1 2] ==  [1 2] array dup sam
 
 辞書は列ではありません。`dolist` / `map` / `sorted` / `sum` / `list` などに渡すとエラーになります。`keys` や `values` のリストを回してください。`len` は辞書のキーの数を返します。
 
-`list?` は配列に `false`、`array?` と `dict?` がそれぞれ `true` です。`null?` は空の配列にも `true` です。
+`list?` は配列に `false`、`array?` と `dict?` がそれぞれ `true` です。`empty?` は空の配列にも `true` です（`null?` は `null` にだけ `true`）。
 
 ## 表示
 

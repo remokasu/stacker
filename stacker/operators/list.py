@@ -33,8 +33,8 @@ def _cons(x: object, xs: list) -> list:
 
 
 def _null(xs: object) -> bool:
-    """Returns true if the value is null (None) or an empty list."""
-    return xs is None or xs == [] or xs == ()
+    """Returns true if the value is null, and nothing else (an empty list is `empty?`)."""
+    return xs is None
 
 
 def _pair(xs: object) -> bool:
@@ -71,7 +71,7 @@ list_operators = {
         "func": (lambda xs: _null(xs)),
         "arg_count": 1,
         "push_result_to_stack": True,
-        "desc": "Returns true if the list is empty.",
+        "desc": "Returns true if the value is null (an empty list is not null: see empty?)",
     },
     "pair?": {
         "func": (lambda xs: _pair(xs)),

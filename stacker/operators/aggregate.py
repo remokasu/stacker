@@ -4,6 +4,18 @@ from stacker.error import StackerTypeError, ValidationError
 from stacker.util.disp import plain_text
 
 
+def _empty(xs: object) -> bool:
+    """Returns True when a list, an array, a string or a dictionary has nothing in it.
+
+    Raises:
+        StackerTypeError: ``xs`` has no elements to count (``null`` included:
+            whether a value is null is `null?`'s question).
+    """
+    if isinstance(xs, (list, str, dict)):
+        return len(xs) == 0
+    raise StackerTypeError(f"`empty?` expects a list, an array, a string or a dictionary, got {plain_text(xs)}")
+
+
 def _uncomparable_message(word: str, items: object) -> str:
     """The message for ``word`` given items that have no order between them."""
     seen: list[object] = []
@@ -57,6 +69,12 @@ aggregate_operators = {
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Returns the length of an iterable.",
+    },
+    "empty?": {
+        "func": (lambda xs: _empty(xs)),
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Returns true if a list, an array, a string or a dictionary has no elements",
     },
     "min": {
         "func": ordered("min", min),

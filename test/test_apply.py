@@ -32,7 +32,7 @@ class TestApply(unittest.TestCase):
     def test_apply_recursive_map(self):
         # my-map defined recursively; the lambda held in `lf` is passed on as a value
         self.stacker.eval(
-            "{xs lf} {xs null? {[]} {xs car lf eval  xs cdr lf my-map  cons} ifelse}"
+            "{xs lf} {xs empty? {[]} {xs car lf eval  xs cdr lf my-map  cons} ifelse}"
             " :my-map defun"
         )
         ans = self.stacker.eval("[1 2 3] {x} {x 2 *} lambda my-map")
@@ -41,7 +41,7 @@ class TestApply(unittest.TestCase):
     def test_apply_recursive_filter(self):
         # my-filter defined recursively
         self.stacker.eval(
-            "{xs pred} {xs null? {[]} {xs car pred eval"
+            "{xs pred} {xs empty? {[]} {xs car pred eval"
             "  {xs car xs cdr pred my-filter cons}"
             "  {xs cdr pred my-filter}"
             "  ifelse} ifelse}"

@@ -257,7 +257,7 @@
       "patterns": [
         {
           "name": "keyword.operator.list.stacker",
-          "match": "(?<![\\w?!-])(enumerate|array\\-of|reversed|append!|filter|reduce|sorted|values|array|listn|null\\?|pair\\?|cons|del!|dict|fold|has\\?|keys|list|pop!|put!|all|any|at!|car|cdr|get|len|map|max|min|nth|seq|sum|zip|at)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(enumerate|array\\-of|reversed|append!|empty\\?|filter|reduce|sorted|values|array|listn|null\\?|pair\\?|cons|del!|dict|fold|has\\?|keys|list|pop!|put!|all|any|at!|car|cdr|get|len|map|max|min|nth|seq|sum|zip|at)(?![\\w?!-])"
         }
       ]
     },

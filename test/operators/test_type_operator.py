@@ -195,10 +195,10 @@ class TestUnit(unittest.TestCase):
         ans = self.stacker.eval("null null?")
         self.assertTrue(ans[-1])
 
-    def test_null_check_true_for_empty_list(self):
+    def test_null_check_false_for_empty_list(self):
         self.stacker.stack.clear()
         ans = self.stacker.eval("[] null?")
-        self.assertTrue(ans[-1])
+        self.assertFalse(ans[-1])
 
     def test_null_check_false_for_int(self):
         self.stacker.stack.clear()
