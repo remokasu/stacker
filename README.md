@@ -120,7 +120,11 @@ Stacker allows for straightforward RPN input. For example:
     stacker:0> "Hello, World!"
     ['Hello, World!']
     ```
-    In this example, the string "Hello, World!" is added to the stack. Strings are written with double quotes and shown on the stack with single quotes.
+    In this example, the string "Hello, World!" is added to the stack. Strings are written with double quotes and shown on the stack with single quotes. A backslash starts an escape: `\n` `\t` `\r` `\0` `\\` `\"` `\'` `\xNN` `\uNNNN`.
+    ```bash
+    stacker:0> "say \"hi\"\tnow" echo
+    say "hi"	now
+    ```
 
 
 - ### Variables:
@@ -897,6 +901,7 @@ print(stacker.eval("3 4 +"))
 | zip      | Pair up the elements of two lists: `[[1 4] [2 5] [3 6]]` | `[1 2 3] [4 5 6] zip` |
 | filter   | Filter a list based on a condition                    | `[1 2 3 4 5] {2 % 0 ==} filter` |
 | at       | Push element i, taking the container off (`nth` leaves it) | `[10 20 30] 1 at`     |
+| slice    | Elements a up to b as a new value of the same kind (list, array or string) | `[10 20 30 40] 1 3 slice` |
 | all      | Check if all elements of a list are true              | `[true true false] all`    |
 | any      | Check if any element of a list is true                | `[true false false] any`   |
 | car      | Return the first element of a list                    | `[1 2 3] car`              |

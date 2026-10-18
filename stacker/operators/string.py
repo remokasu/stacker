@@ -8,6 +8,7 @@ from stacker.error import (
     ValidationError,
     symbol_as_value_message,
 )
+from stacker.operators.arguments import integer_argument
 from stacker.util.disp import plain_text
 
 #: The largest code point `chr` makes
@@ -166,6 +167,28 @@ def _format_value(value: object) -> object:
 #     return value1.join(value2)
 
 
+
+def _subseq(value: object, start: object, end: object) -> str:
+    """``s a b subseq``: the characters of ``s`` from ``a`` up to ``b``, as `slice` cuts a string."""
+    text = _require_str("subseq", value)
+    return text[integer_argument("subseq", start) : integer_argument("subseq", end)]
+
+
+def _words(value: object) -> list[str]:
+    """``s words``: the whitespace-separated words of ``s``, none of them empty."""
+    return _require_str("words", value).split()
+
+
+def _starts_with(value: object, prefix: object) -> bool:
+    """``s p starts-with?``: whether ``s`` begins with ``p``."""
+    return _require_str("starts-with?", value).startswith(_require_str("starts-with?", prefix))
+
+
+def _ends_with(value: object, suffix: object) -> bool:
+    """``s p ends-with?``: whether ``s`` ends with ``p``."""
+    return _require_str("ends-with?", value).endswith(_require_str("ends-with?", suffix))
+
+
 string_operators = {
     "asc": {
         "func": _asc,
@@ -258,10 +281,28 @@ string_operators = {
         "desc": "Returns whether the first string contains the second string.",
     },
     "subseq": {
-        "func": (lambda value: value.split()[0]),
+        "func": _subseq,
+        "arg_count": 3,
+        "push_result_to_stack": True,
+        "desc": "s a b subseq: the characters of s from index a up to (not including) b; the string form of slice",
+    },
+    "words": {
+        "func": _words,
         "arg_count": 1,
         "push_result_to_stack": True,
-        "desc": "Returns a substring of the specified string.",
+        "desc": "Splits a string at whitespace into a list of its words (no empty strings)",
+    },
+    "starts-with?": {
+        "func": _starts_with,
+        "arg_count": 2,
+        "push_result_to_stack": True,
+        "desc": "s p starts-with?: whether s begins with p",
+    },
+    "ends-with?": {
+        "func": _ends_with,
+        "arg_count": 2,
+        "push_result_to_stack": True,
+        "desc": "s p ends-with?: whether s ends with p",
     },
     "format": {
         "func": _format,

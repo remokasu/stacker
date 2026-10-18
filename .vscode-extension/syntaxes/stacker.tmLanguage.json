@@ -94,22 +94,50 @@
         {
           "name": "string.quoted.triple.stacker",
           "begin": "\"\"\"",
-          "end": "\"\"\""
+          "end": "\"\"\"",
+          "patterns": [
+            {
+              "include": "#escapes"
+            }
+          ]
         },
         {
           "name": "string.quoted.triple.stacker",
           "begin": "'''",
-          "end": "'''"
+          "end": "'''",
+          "patterns": [
+            {
+              "include": "#escapes"
+            }
+          ]
         },
         {
           "name": "string.quoted.double.stacker",
           "begin": "\"",
-          "end": "\""
+          "end": "\"",
+          "patterns": [
+            {
+              "include": "#escapes"
+            }
+          ]
         },
         {
           "name": "string.quoted.single.stacker",
           "begin": "'",
-          "end": "'"
+          "end": "'",
+          "patterns": [
+            {
+              "include": "#escapes"
+            }
+          ]
+        }
+      ]
+    },
+    "escapes": {
+      "patterns": [
+        {
+          "name": "constant.character.escape.stacker",
+          "match": "\\\\."
         }
       ]
     },
@@ -257,7 +285,7 @@
       "patterns": [
         {
           "name": "keyword.operator.list.stacker",
-          "match": "(?<![\\w?!-])(enumerate|array\\-of|reversed|append!|empty\\?|filter|reduce|sorted|values|array|listn|null\\?|pair\\?|cons|del!|dict|fold|has\\?|keys|list|pop!|put!|all|any|at!|car|cdr|get|len|map|max|min|nth|seq|sum|zip|at)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(enumerate|array\\-of|reversed|append!|empty\\?|filter|reduce|sorted|values|array|listn|null\\?|pair\\?|slice|cons|del!|dict|fold|has\\?|keys|list|pop!|put!|all|any|at!|car|cdr|get|len|map|max|min|nth|seq|sum|zip|at)(?![\\w?!-])"
         }
       ]
     },
@@ -265,7 +293,7 @@
       "patterns": [
         {
           "name": "keyword.operator.string.stacker",
-          "match": "(?<![\\w?!-])(contains|replace|concat|format|lstrip|rstrip|search|subseq|lower|split|strip|title|upper|join|asc|chr)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(starts\\-with\\?|ends\\-with\\?|contains|replace|concat|format|lstrip|rstrip|search|subseq|lower|split|strip|title|upper|words|join|asc|chr)(?![\\w?!-])"
         }
       ]
     },

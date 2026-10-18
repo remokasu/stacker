@@ -6,7 +6,7 @@ arguments from it. Type 'exit' to quit, 'clear' to empty the stack.
 Values:
   integer 3, float 3.14, scientific 1.23e-4, hex 0x1a, binary 0b1010,
   octal 0o123, complex 1+2j
-  string:  "hello"   (shown on the stack as 'hello')
+  string:  "hello"   (shown on the stack as 'hello'; escapes \n \t \" \\ \xNN \uNNNN)
   list:    [1 2 3]   [1 2 3; 4 5 6]
   block:   {1 2 +}   (code, stored unevaluated; run it with eval)
            {1 2 +} collect -> [3]: run it on an empty stack, list what it left

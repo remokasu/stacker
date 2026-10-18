@@ -32,6 +32,8 @@ from __future__ import annotations
 import ast
 from functools import lru_cache
 
+from stacker.error import StackerSyntaxError
+
 
 def is_string_token(token) -> bool:
     """Return True if the token is a quote-delimited string literal.
@@ -74,6 +76,118 @@ def strip_string_delimiters(token) -> str:
     ):
         return token[TRIPLE_QUOTE_LEN:-TRIPLE_QUOTE_LEN]
     return token[1:-1]
+
+
+#: Escapes a string literal reads, and what each stands for.
+SIMPLE_ESCAPES: dict[str, str] = {
+    "n": "\n",
+    "t": "\t",
+    "r": "\r",
+    "0": "\0",
+    "\\": "\\",
+    '"': '"',
+    "'": "'",
+}
+
+#: Digits each code-point escape takes: ``\xNN`` and ``\uNNNN``.
+CODE_POINT_ESCAPE_DIGITS: dict[str, int] = {"x": 2, "u": 4}
+
+#: Code points that are not characters (UTF-16 surrogates); an escape must not make one.
+_SURROGATE_RANGE = range(0xD800, 0xE000)
+
+#: How a character is shown inside quotes, when it is not shown as itself.
+_DISPLAY_ESCAPES: dict[str, str] = {
+    "\\": "\\\\",
+    "\n": "\\n",
+    "\t": "\\t",
+    "\r": "\\r",
+    "\0": "\\0",
+}
+
+#: Code points below this are control characters, shown as ``\xNN`` unless named above.
+_CONTROL_LIMIT = 0x20
+_DELETE = 0x7F
+
+
+def decode_string_token(token: str) -> str:
+    """Return the text a string token stands for: delimiters removed, escapes read.
+
+    The escapes are ``\\n`` ``\\t`` ``\\r`` ``\\0`` ``\\\\`` ``\\"`` ``\\'``
+    ``\\xNN`` and ``\\uNNNN``; a triple-quoted token reads them too. Any other
+    escape is an error, never left in the text, so a mistyped escape is
+    found where it is written.
+
+    Args:
+        token: A quote-delimited string token (``is_string_token`` is True).
+
+    Returns:
+        The decoded text.
+
+    Raises:
+        StackerSyntaxError: An escape that is not one of the above, a
+            code-point escape short of digits, a code point that is not a
+            character, or a lone backslash at the end.
+    """
+    content = strip_string_delimiters(token)
+    if "\\" not in content:
+        return content
+    out: list[str] = []
+    i = 0
+    n = len(content)
+    while i < n:
+        ch = content[i]
+        if ch != "\\":
+            out.append(ch)
+            i += 1
+            continue
+        if i + 1 >= n:
+            raise StackerSyntaxError("a string cannot end with a lone backslash; write `\\\\` for a backslash")
+        key = content[i + 1]
+        if key in SIMPLE_ESCAPES:
+            out.append(SIMPLE_ESCAPES[key])
+            i += 2
+            continue
+        digits = CODE_POINT_ESCAPE_DIGITS.get(key)
+        if digits is None:
+            raise StackerSyntaxError(f"unknown escape `\\{key}` in a string; write `\\\\` for a backslash")
+        hex_text = content[i + 2 : i + 2 + digits]
+        if len(hex_text) < digits or not all(c in "0123456789abcdefABCDEF" for c in hex_text):
+            raise StackerSyntaxError(f"`\\{key}` in a string takes {digits} hex digits, got `\\{key}{hex_text}`")
+        code = int(hex_text, 16)
+        if code in _SURROGATE_RANGE:
+            raise StackerSyntaxError(f"`\\{key}{hex_text}` is not a character")
+        out.append(chr(code))
+        i += 2 + digits
+    return "".join(out)
+
+
+def escape_for_display(text: str, quote: str | None = None) -> str:
+    """Return ``text`` as it is shown inside quotes: control characters and backslashes escaped.
+
+    The inverse of ``decode_string_token`` for what cannot be shown as
+    itself: ``\\`` and the named control characters come out as their
+    escapes, other control characters as ``\\xNN``. With ``quote``, that
+    quote character is escaped too, so the result reads back as the same
+    text when wrapped in it.
+
+    Args:
+        text: The text of a string value.
+        quote: The quote the text will be wrapped in, or None to leave quotes alone.
+
+    Returns:
+        The text with escapes written out.
+    """
+    out: list[str] = []
+    for ch in text:
+        if ch in _DISPLAY_ESCAPES:
+            out.append(_DISPLAY_ESCAPES[ch])
+        elif ch == quote:
+            out.append("\\" + ch)
+        elif ord(ch) < _CONTROL_LIMIT or ord(ch) == _DELETE:
+            out.append(f"\\x{ord(ch):02x}")
+        else:
+            out.append(ch)
+    return "".join(out)
 
 
 #: First characters a Python literal can start with. A token starting with

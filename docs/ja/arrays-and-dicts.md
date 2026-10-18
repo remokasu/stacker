@@ -27,6 +27,7 @@ stacker:5> clear 3 0 array-of
 | `array-of` | `n x array-of` | 長さ n、どの要素も x の新しい配列 |
 | `at` | `c i at` | c の i 番目。c は取り去る。リスト・文字列・ブロックにも使える（`nth` は c を残す） |
 | `at!` | `v a i at!` | a の i 番目を v にする。何も積まない。範囲外はエラー（配列は伸びない） |
+| `slice` | `a i j slice` | i 番目から j 番目の手前までを**新しい配列**で積む。a は取り去る。リスト・文字列にも使える |
 | `append!` | `v a append!` | a の末尾に v を足す |
 | `pop!` | `a pop!` | a の末尾の要素を取り除いて積む。空ならエラー |
 

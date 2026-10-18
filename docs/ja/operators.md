@@ -188,7 +188,10 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `asc` | 1 文字の文字コード | `"A" asc` |
 | `chr` | 文字コードに対応する 1 文字 | `65 chr` |
 | `format` | `template value format` は `template` の `{}` に value を埋め込む（Python の `str.format`） | `"x={}" 3 format`, `"{:.2f}" 3.14159 format` |
-| `subseq` | 文字列を空白で区切った最初の語を返す（名前から連想される部分文字列の切り出しではない） | `"hello world" subseq` |
+| `subseq` | `s a b subseq` は s の a 番目から b 番目の手前までの部分文字列（文字列専用の `slice`） | `"hello" 1 3 subseq` |
+| `words` | 空白（スペース・タブ・改行）で区切った語のリスト。空の文字列は入らない | `"  a b  c " words` |
+| `starts-with?` | `s p starts-with?` は s が p で始まるか | `"hello" "he" starts-with?` |
+| `ends-with?` | `s p ends-with?` は s が p で終わるか | `"hello" "lo" ends-with?` |
 
 `format` が埋め込める値は 1 つだけです。`join` に数値のリストは渡せません（先に `map` と `str` で文字列にします）。
 
@@ -206,6 +209,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `listn` | スタックの上から n 個を 1 つのリストにまとめる。`1 2 3 3 listn` は `[1 2 3]` | `3 listn` |
 | `nth` | `container i nth` は 0 始まりの i 番目の要素を積む。対象はリスト・配列・文字列・コードブロックで、`container` はスタックに残る。負の添字は末尾から | `[10 20 30] 1 nth` |
 | `at` | `container i at` は i 番目の要素を積み、`container` は取り去る。対象は `nth` と同じ | `[10 20 30] 1 at` |
+| `slice` | `xs a b slice` は a 番目から b 番目の手前までを、同じ種類の新しい値で積む。リスト・配列・文字列。負の添字は末尾から、範囲外は切り詰める | `[10 20 30 40] 1 3 slice` |
 | `expand` | リストの要素をスタックに展開する。コードブロックはトークンごとに 1 トークンのブロックに分ける | `[1 2 3] expand`, `{a b} expand` |
 
 ## 高階関数

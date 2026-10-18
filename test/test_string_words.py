@@ -71,3 +71,62 @@ class TestTypeErrors:
         with pytest.raises(StackerTypeError) as info:
             run(program)
         assert "cannot use the symbol `x`" in str(info.value)
+
+
+class TestSliceAndSubseq:
+    @pytest.mark.parametrize(
+        "program, expected",
+        [
+            ('"hello" 1 3 slice', "el"),
+            ('"hello" -3 -1 slice', "ll"),
+            ('"hello" 3 1 slice', ""),
+            ('"hello" 0 99 slice', "hello"),
+            ("[1 2 3 4] 1 3 slice", [2, 3]),
+            ("[1 2 3] array 0 5 slice", [1, 2, 3]),
+            ('"hello" 1 3 subseq', "el"),
+        ],
+    )
+    def test_slice_cuts_a_sequence(self, program, expected):
+        assert run(program) == [expected]
+
+    def test_slice_of_an_array_is_a_new_array(self):
+        assert run("[1 2 3] array :a set a 0 2 slice :b set 9 b append! a b array? b") == [[1, 2, 3], True, [1, 2, 9]]
+
+    @pytest.mark.parametrize(
+        "program, text",
+        [
+            ('"hello" 1.0 3 slice', "`slice` expects an integer, got 1.0"),
+            ("dict 0 1 slice", "`slice` expects a list, an array or a string"),
+            ("[1 2] 0 1 subseq", "`subseq` expects a string"),
+        ],
+    )
+    def test_slice_names_itself(self, program, text):
+        with pytest.raises(StackerTypeError, match=text.replace("`", "`").replace("(", "\\(")):
+            run(program)
+
+
+class TestWordsAndAffixes:
+    @pytest.mark.parametrize(
+        "program, expected",
+        [
+            ('"  a\\tb\\n c " words', ["a", "b", "c"]),
+            ('"" words', []),
+            ('"one" words', ["one"]),
+            ('"hello" "he" starts-with?', True),
+            ('"hello" "lo" starts-with?', False),
+            ('"hello" "lo" ends-with?', True),
+            ('"hello" "" starts-with?', True),
+            ('"hello" "" ends-with?', True),
+        ],
+    )
+    def test_words_and_affixes(self, program, expected):
+        assert run(program) == [expected]
+
+    @pytest.mark.parametrize("program, word", [("1 words", "words"), ('"a" 1 starts-with?', "starts-with?"), ("1 \"a\" ends-with?", "ends-with?")])
+    def test_a_non_string_is_refused_by_name(self, program, word):
+        with pytest.raises(StackerTypeError, match=f"`{word}` expects a string".replace("?", "\\?")):
+            run(program)
+
+    def test_an_empty_separator_is_refused_with_the_alternatives(self):
+        with pytest.raises(StackerTypeError, match="empty separator"):
+            run('"abc" "" split')

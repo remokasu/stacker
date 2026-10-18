@@ -12,7 +12,9 @@ from stacker.syntax.lexer import (
     UnifiedLexer,
 )
 from stacker.error import StackerSyntaxError, word_in_list_literal_message
+from stacker.engine.data_type import String
 from stacker.syntax.token_rules import (  # noqa: F401 -- is_code_block / is_list / is_symbol are re-exported
+    decode_string_token,
     is_code_block,
     is_list,
     is_string_token,
@@ -96,7 +98,7 @@ class Parser:
         elif token.type == TokenType.NUMBER:
             return ast.literal_eval(token.value)
         elif token.type == TokenType.STRING:
-            return ast.literal_eval(token.value)
+            return String(decode_string_token(token.value))  # a String: never a name
         elif token.type == TokenType.IDENTIFIER:
             return Identifier(token.value)
         elif token.type == TokenType.SYMBOL:

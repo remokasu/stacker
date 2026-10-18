@@ -4,7 +4,6 @@ import logging
 import sys
 from collections.abc import Callable, Iterator, Sequence
 from typing import NoReturn
-import ast
 from stacker.constant import constants
 from stacker.error import (
     MacroExpansionError,
@@ -22,10 +21,8 @@ from stacker.error import (
     word_in_list_literal_message,
     # UnexpectedTokenError,
 )
-from stacker.syntax.parser import (
-    convert_custom_array_to_proper_list,
-    parse_expression,
-)
+from stacker.syntax.lexer import Identifier, ListNode
+from stacker.syntax.parser import Parser, parse_expression
 from stacker.error import BreakException
 from stacker.engine.boundary import token_to_value, value_to_token
 from stacker.util.disp import plain_text  # disp.py must not import core.py
@@ -35,6 +32,8 @@ from stacker.syntax.token_rules import (
     OLD_SYMBOL_PREFIX,
     SYMBOL_PREFIX,
     cached_literal_eval,
+    decode_string_token,
+    escape_for_display,
     is_bare_name,
     is_code_block,
     is_list,
@@ -42,7 +41,6 @@ from stacker.syntax.token_rules import (
     is_symbol,
     is_symbol_name,
     not_a_symbol_message,
-    strip_string_delimiters,
 )
 from stacker.engine.sfunction import StackerFunction
 from stacker.engine.slambda import StackerLambda
@@ -206,7 +204,10 @@ def _classify_token(token: object) -> tuple[int, object, object]:
     if isinstance(token, String):
         return (K_STRING, token, token)
     if is_string_token(token):
-        return (K_STRING, token, String(strip_string_delimiters(token)))
+        try:
+            return (K_STRING, token, String(decode_string_token(token)))
+        except StackerSyntaxError as error:
+            return (K_INVALID, token, str(error))  # a bad escape: raised where the token runs
     if is_list(token):
         try:
             template = _compile_list_template(token)
@@ -256,31 +257,31 @@ def _compile_list_template(token: str) -> list[object]:
     Raises:
         StackerSyntaxError: A code block is written inside the literal.
     """
-    parsed = ast.literal_eval(convert_custom_array_to_proper_list(token))
-    return _compile_list_elements(parsed if isinstance(parsed, list) else [parsed])
+    parsed = Parser(token).parse()
+    return _template_from_node(parsed if isinstance(parsed, ListNode) else ListNode([parsed]))
 
 
-def _compile_list_elements(elements: list[object]) -> list[object]:
+def _template_from_node(node: ListNode) -> list[object]:
+    """Turns the parser's tree of one list literal into a template, element by element."""
     compiled: list[object] = []
-    for element in elements:
-        if isinstance(element, (list, tuple)):
-            compiled.append(_compile_list_elements(list(element)))
-        elif type(element) is str:
-            if is_string_token(element):
-                compiled.append(String(strip_string_delimiters(element)))
-            elif element.startswith(SYMBOL_PREFIX):
-                compiled.append(Symbol(element[1:]))  # checked by the array lexer
-            elif element in KEYWORD_LITERALS:
-                compiled.append(KEYWORD_LITERALS[element])
-            elif is_code_block(element):
-                raise StackerSyntaxError(
-                    "a code block cannot be written inside a list literal; "
-                    "use {x} 1 listn, or [:x] for a symbol"
-                )
+    for element in node.elements:
+        if isinstance(element, ListNode):
+            compiled.append(_template_from_node(element))
+        elif isinstance(element, Identifier):
+            name = element.name
+            if name.startswith(SYMBOL_PREFIX):
+                compiled.append(Symbol(name[1:]))  # checked by the list parser
+            elif name in KEYWORD_LITERALS:
+                compiled.append(KEYWORD_LITERALS[name])
             else:
-                compiled.append(element)  # a name, referenced on evaluation
+                compiled.append(name)  # a name, referenced on evaluation
+        elif isinstance(element, dict):
+            raise StackerSyntaxError(
+                "a code block cannot be written inside a list literal; "
+                "use {x} 1 listn, or [:x] for a symbol"
+            )
         else:
-            compiled.append(element)
+            compiled.append(element)  # a String, a number or a complex number
     return compiled
 
 
@@ -408,7 +409,7 @@ class StackerCore:
             self._substack(token, temp_stack)
             return temp_stack.pop()
         if is_string_token(token):
-            return String(strip_string_delimiters(token))
+            return String(decode_string_token(token))
         if is_list(token):
             # Kept as the token: it is read as a list literal when the block
             # runs, as at the top level, and each run makes a fresh list
@@ -1075,6 +1076,10 @@ class StackerCore:
     def _prio_split(self, op, stack) -> None:
         sep = stack.pop()
         word = stack.pop()
+        if isinstance(sep, str) and sep == "":
+            raise StackerTypeError(
+                "`split` cannot split with an empty separator; `array` gives the characters and `words` the words"
+            )
         try:
             parts = word.split(sep)  # type: ignore[union-attr]
         except (TypeError, AttributeError) as error:
@@ -1836,9 +1841,10 @@ class StackerCore:
             if isinstance(item, StackerCore):
                 return str(item)
             elif isinstance(item, String):
-                # A string literal, quotes and all (single quotes if the text has double ones).
+                # A string literal, quotes and all, escaped so that the text reads
+                # back (single quotes when the text has double ones but no single ones)
                 quote = "'" if '"' in item.value and "'" not in item.value else '"'
-                return f"{quote}{item.value}{quote}"
+                return f"{quote}{escape_for_display(item.value, quote)}{quote}"
             elif is_list(item):
                 return item.replace(",", " ")  # type: ignore[union-attr]
             elif isinstance(item, str):
