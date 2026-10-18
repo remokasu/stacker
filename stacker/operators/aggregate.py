@@ -1,5 +1,37 @@
 from __future__ import annotations
 
+from stacker.error import StackerTypeError, ValidationError
+from stacker.util.disp import plain_text
+
+
+def _uncomparable_message(word: str, items: object) -> str:
+    """The message for ``word`` given items that have no order between them."""
+    seen: list[object] = []
+    for item in items:  # type: ignore[attr-defined]
+        for other in seen:
+            try:
+                other < item  # noqa: B015
+            except TypeError:
+                return f"`{word}` cannot compare {plain_text(other)} with {plain_text(item)}"
+        seen.append(item)
+    return f"`{word}` cannot order these values"
+
+
+def ordered(word: str, operate):  # type: ignore[no-untyped-def]
+    """Wraps a word that orders its items so a type error names the word and the two values."""
+
+    def apply(items: object) -> object:
+        if isinstance(items, (int, float, complex, bool)) or items is None:
+            raise StackerTypeError(f"`{word}` expects a list, got {plain_text(items)}")
+        try:
+            return operate(items)
+        except ValueError as error:
+            raise ValidationError(f"`{word}` expects at least one value, got an empty list") from error
+        except TypeError as error:
+            raise StackerTypeError(_uncomparable_message(word, items)) from error
+
+    return apply
+
 
 aggregate_operators = {
     "any": {
@@ -27,13 +59,13 @@ aggregate_operators = {
         "desc": "Returns the length of an iterable.",
     },
     "min": {
-        "func": (lambda xs: min(xs)),
+        "func": ordered("min", min),
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Returns the minimum value in an iterable.",
     },
     "max": {
-        "func": (lambda xs: max(xs)),
+        "func": ordered("max", max),
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Returns the maximum value in an iterable.",

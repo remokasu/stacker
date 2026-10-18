@@ -11,7 +11,7 @@ from stacker.syntax.lexer import (
     TupleNode,
     UnifiedLexer,
 )
-from stacker.error import StackerSyntaxError
+from stacker.error import StackerSyntaxError, word_in_list_literal_message
 from stacker.syntax.token_rules import (  # noqa: F401 -- is_code_block / is_list / is_symbol are re-exported
     is_code_block,
     is_list,
@@ -110,6 +110,14 @@ class Parser:
                 "Commas are not used in Stacker lists; "
                 "separate elements with spaces: [1 2 3]"
             )
+        elif token.type in (TokenType.OPERATOR, TokenType.OTHER):
+            # A symbolic word (`+`, `^`, `==`): the lexer hands it over one
+            # character at a time, so the characters that follow are joined
+            word = token.value
+            while self.current_token is not None and self.current_token.type in (TokenType.OPERATOR, TokenType.OTHER):
+                word += self.current_token.value
+                self.next_token()
+            raise StackerSyntaxError(word_in_list_literal_message(word))
         else:
             raise StackerSyntaxError(f"Unexpected token `{token.value}`")
 

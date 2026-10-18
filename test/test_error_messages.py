@@ -45,10 +45,10 @@ class TestErrorMessages(unittest.TestCase):
             self.stacker.process_expression('"hello" 42 +')
 
         error_msg = str(context.exception)
-        # Should mention the type incompatibility
-        self.assertTrue(
-            "concatenate" in error_msg or "incompatible" in error_msg.lower()
-        )
+        # Names the word and shows both values
+        self.assertIn("`+`", error_msg)
+        self.assertIn("'hello'", error_msg)
+        self.assertIn("42", error_msg)
 
     def test_zero_division_error(self):
         """Test division by zero error."""

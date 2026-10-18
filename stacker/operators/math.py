@@ -1,9 +1,32 @@
 from __future__ import annotations
 
-import math
 import cmath
-from typing import Callable
+import math
+import numbers
 from fractions import Fraction
+from typing import Callable
+
+from stacker.engine.data_type import Symbol
+from stacker.error import StackerTypeError, ValidationError, symbol_as_value_message
+from stacker.operators.arith import checked_binary
+from stacker.util.disp import plain_text
+
+
+def _real_number(word: str, x: object) -> numbers.Real:
+    """Returns ``x`` when it is a real number (a fraction or a bool included); otherwise raises an error that names the word."""
+    if isinstance(x, Symbol):
+        raise StackerTypeError(symbol_as_value_message(word, x.name))
+    if not isinstance(x, numbers.Real):
+        raise StackerTypeError(f"`{word}` expects a number, got {plain_text(x)}")
+    return x
+
+
+def _positive(word: str, x: object) -> numbers.Real:
+    """Returns ``x`` when it is a real number greater than 0."""
+    value = _real_number(word, x)
+    if value <= 0:
+        raise ValidationError(f"`{word}` expects a number greater than 0, got {plain_text(x)}")
+    return value
 
 
 def _pow(x1: int | float | complex, x2: int | float | complex) -> int | float | complex:
@@ -13,22 +36,19 @@ def _pow(x1: int | float | complex, x2: int | float | complex) -> int | float | 
 def _log(x: int | float | complex) -> float | complex:
     if type(x) is complex:
         return cmath.log(x)
-    else:
-        return math.log(x)
+    return math.log(_positive("log", x))
 
 
 def _log2(x: int | float | complex) -> float | complex:
     if type(x) is complex:
         return cmath.log(x, 2)
-    else:
-        return math.log(x, 2)
+    return math.log2(_positive("log2", x))
 
 
 def _log10(x: int | float | complex) -> float | complex:
     if type(x) is complex:
         return cmath.log(x, 10)
-    else:
-        return math.log10(x)
+    return math.log10(_positive("log10", x))
 
 
 def _exp(x: int | float | complex) -> float | complex:
@@ -125,8 +145,13 @@ def _atanh(x: int | float | complex) -> float | complex:
 def _sqrt(x: int | float | complex) -> float | complex:
     if type(x) is complex:
         return cmath.sqrt(x)
-    else:
-        return math.sqrt(x)
+    value = _real_number("sqrt", x)
+    if value < 0:
+        raise ValidationError(
+            f"`sqrt` expects a number of 0 or more, got {plain_text(x)}; "
+            "a complex square root takes a complex number: -1+0j sqrt"
+        )
+    return math.sqrt(value)
 
 
 def _gcd(x1: int, x2: int) -> int:
@@ -196,7 +221,7 @@ def _numeric_diff(f: Callable[[float], float], x: float) -> float:
 
 math_operators = {
     "^": {
-        "func": (lambda x1, x2: _pow(x1, x2)),
+        "func": checked_binary("^", _pow),
         "arg_count": 2,
         "push_result_to_stack": True,
         "desc": "Power",

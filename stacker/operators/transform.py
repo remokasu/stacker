@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from stacker.operators.aggregate import ordered
+
 
 transform_operators = {
     "enumerate": {
@@ -9,7 +11,7 @@ transform_operators = {
         "desc": "Pairs each element with its index: [10 20] enumerate -> [[0 10] [1 20]]",
     },
     "sorted": {
-        "func": (lambda xs: sorted(xs)),
+        "func": ordered("sorted", sorted),
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Sorts a list.",

@@ -229,10 +229,10 @@ class TestSymbolInComputation:
         with pytest.raises(StackerTypeError):
             stacker.process_expression(":x twice")
 
-    def test_other_type_errors_are_unchanged(self):
+    def test_other_type_errors_are_not_blamed_on_a_symbol(self):
         with pytest.raises(TypeError) as info:
             run('"a" 1 +')
-        assert not isinstance(info.value, StackerTypeError)
+        assert "symbol" not in str(info.value)
 
     def test_stack_words_accept_symbols(self):
         assert run(":x dup") == [Symbol("x"), Symbol("x")]

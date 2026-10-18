@@ -29,7 +29,7 @@ class TestAttribution:
     def test_unrelated_error_in_a_body_is_not_blamed_on_the_element(self, program):
         with pytest.raises(TypeError) as info:
             run(program)
-        assert not isinstance(info.value, StackerTypeError)
+        assert "symbol" not in str(info.value)
 
     def test_symbol_element_that_is_dropped_causes_no_error(self):
         assert run("5 :x set [:x] {drop x 1 +} map") == [[6]]

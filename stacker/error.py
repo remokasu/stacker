@@ -135,6 +135,21 @@ class StackUnderflowError(StackerError):
         super().__init__(message)
 
 
+def word_in_list_literal_message(name: str) -> str:
+    """The message for a word written inside a list literal, which holds values only.
+
+    Args:
+        name: The word as written (`dup`, `+`, ...).
+
+    Returns:
+        A message that says how to build the list on the stack instead.
+    """
+    return (
+        f"`{name}` is a word, and a list literal holds values only. "
+        f"Build the list on the stack and collect it with `listn`: ... {name} ... n listn"
+    )
+
+
 def not_a_sequence_message(word: str) -> str:
     """The message for a dictionary handed to ``word``, which goes through a sequence.
 
