@@ -16,6 +16,7 @@ from stacker.error import (
     ValidationError,
     symbol_as_value_message,
 )
+from stacker.operators.arguments import integer_argument
 from stacker.util.disp import plain_text
 
 
@@ -110,6 +111,23 @@ def _itself(value: object) -> object:
     return value
 
 
+def _slice(container: object, start: object, end: object) -> object:
+    """``xs a b slice``: elements ``a`` up to ``b`` of a list, an array or a string, as a new value of the same kind.
+
+    Negative indexes count from the end and an index past either end is
+    cut to it, so the result is never an error for a sequence.
+    """
+    a = integer_argument("slice", start)
+    b = integer_argument("slice", end)
+    if isinstance(container, Symbol):
+        raise StackerTypeError(symbol_as_value_message("slice", container.name))
+    if isinstance(container, Array):
+        return Array(container[a:b])
+    if isinstance(container, (str, list)):
+        return container[a:b]
+    raise StackerTypeError(f"`slice` expects a list, an array or a string, got {plain_text(container)}")
+
+
 def _at(container: object, index: object) -> object:
     """``c i at``: element ``i`` of an array, a list, a string or a block; the container is taken off."""
     i = _require_index("at", index)
@@ -201,6 +219,12 @@ collection_operators = {
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Makes an array, a list that can be changed in place, from a list, a string or a block: [1 2 3] array",
+    },
+    "slice": {
+        "func": _slice,
+        "arg_count": 3,
+        "push_result_to_stack": True,
+        "desc": "xs a b slice: the elements of a list, an array or a string from index a up to (not including) b, as a new value of the same kind; negative indexes count from the end",
     },
     "array-of": {
         "func": _array_of,

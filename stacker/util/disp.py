@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 
 from stacker.engine.data_type import Array, Symbol
+from stacker.syntax.token_rules import escape_for_display
 from stacker.util import colored
 
 
@@ -210,7 +211,7 @@ class CustomStringPrinter(CustomPrinter):
         return colored(repr(self), self.color)
 
     def __repr__(self) -> str:
-        return "'" + str(self.value) + "'"
+        return "'" + escape_for_display(str(self.value)) + "'"
 
 
 class CutomCallablePrinter(CustomPrinter):

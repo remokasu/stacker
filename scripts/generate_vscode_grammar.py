@@ -155,13 +155,16 @@ def grammar() -> dict:
                 ]
             },
             "strings": {
-                # Escapes are not interpreted: a backslash is an ordinary character
+                # A backslash escapes the next character (\n, \t, \", \\, \xNN, \uNNNN)
                 "patterns": [
-                    {"name": "string.quoted.triple.stacker", "begin": '"""', "end": '"""'},
-                    {"name": "string.quoted.triple.stacker", "begin": "'''", "end": "'''"},
-                    {"name": "string.quoted.double.stacker", "begin": '"', "end": '"'},
-                    {"name": "string.quoted.single.stacker", "begin": "'", "end": "'"},
+                    {"name": "string.quoted.triple.stacker", "begin": '"""', "end": '"""', "patterns": [{"include": "#escapes"}]},
+                    {"name": "string.quoted.triple.stacker", "begin": "'''", "end": "'''", "patterns": [{"include": "#escapes"}]},
+                    {"name": "string.quoted.double.stacker", "begin": '"', "end": '"', "patterns": [{"include": "#escapes"}]},
+                    {"name": "string.quoted.single.stacker", "begin": "'", "end": "'", "patterns": [{"include": "#escapes"}]},
                 ]
+            },
+            "escapes": {
+                "patterns": [{"name": "constant.character.escape.stacker", "match": r"\\."}]
             },
             "numbers": {
                 "patterns": [
