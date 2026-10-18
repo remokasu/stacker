@@ -19,6 +19,7 @@ from stacker.error import (
     attach_macro_context,
     not_a_sequence_message,
     symbol_as_value_message,
+    word_in_list_literal_message,
     # UnexpectedTokenError,
 )
 from stacker.syntax.parser import (
@@ -655,10 +656,7 @@ class StackerCore:
             or name in self.plugins
             or name in self.operator_manager.built_in_operators
         ):
-            raise StackerSyntaxError(
-                f"`{name}` is a word, and a list literal holds values only. "
-                f"Build the list on the stack and collect it with `listn`: ... {name} ... n listn"
-            )
+            raise StackerSyntaxError(word_in_list_literal_message(name))
         raise UndefinedSymbolError(name)
 
     def _execute(self, token: str, stack: stack_data[object]) -> None:

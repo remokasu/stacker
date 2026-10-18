@@ -1,18 +1,35 @@
 from __future__ import annotations
 
 from stacker.engine.data_type import Array, Symbol
-from stacker.util.disp import display_text
+from stacker.error import StackerTypeError, symbol_as_value_message
+from stacker.util.disp import display_text, plain_text
+
+
+def _convert(word: str, convert: type, kind: str):  # type: ignore[no-untyped-def]
+    """Wraps ``int`` / ``float`` so a value that cannot be read names the word."""
+
+    def apply(x: object) -> object:
+        if isinstance(x, Symbol):
+            raise StackerTypeError(symbol_as_value_message(word, x.name))
+        try:
+            return convert(x)
+        except ValueError as error:
+            raise StackerTypeError(f"`{word}` cannot read {plain_text(x)} as {kind}") from error
+        except TypeError as error:
+            raise StackerTypeError(f"`{word}` expects a number or a string, got {plain_text(x)}") from error
+
+    return apply
 
 
 type_operators = {
     "int": {
-        "func": (lambda x: int(x)),
+        "func": _convert("int", int, "an integer"),
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Convert to int",
     },
     "float": {
-        "func": (lambda x: float(x)),
+        "func": _convert("float", float, "a number"),
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Convert to float",

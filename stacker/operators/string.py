@@ -1,8 +1,17 @@
 from __future__ import annotations
 
 from stacker.engine.data_type import Symbol
-from stacker.error import StackerRuntimeError, StackerTypeError, symbol_as_value_message
+from stacker.error import (
+    StackerIndexError,
+    StackerRuntimeError,
+    StackerTypeError,
+    ValidationError,
+    symbol_as_value_message,
+)
 from stacker.util.disp import plain_text
+
+#: The largest code point `chr` makes
+CODE_POINT_MAX = 0x10FFFF
 
 
 def _require_str(word: str, value: object, what: str = "a string") -> str:
@@ -56,7 +65,32 @@ def _format(template: object, value: object) -> str:
     Returns:
         The formatted string.
     """
-    return _require_str("format", template, "a format string").format(_format_value(value))
+    text = _require_str("format", template, "a format string")
+    try:
+        return text.format(_format_value(value))
+    except (IndexError, KeyError) as error:
+        raise StackerIndexError(
+            f"`format` fills one value into the template, but {plain_text(template)} asks for more"
+        ) from error
+
+
+def _asc(value: object) -> int:
+    """``c asc``: the code point of a one-character string."""
+    text = _require_str("asc", value, "a string of one character")
+    if len(text) != 1:
+        raise StackerTypeError(f"`asc` expects a string of one character, got {plain_text(value)}")
+    return ord(text)
+
+
+def _chr(value: object) -> str:
+    """``n chr``: the character with code point ``n``."""
+    if isinstance(value, Symbol):
+        raise StackerTypeError(symbol_as_value_message("chr", value.name))
+    if not isinstance(value, int):
+        raise StackerTypeError(f"`chr` expects an integer from 0 to {CODE_POINT_MAX}, got {plain_text(value)}")
+    if not 0 <= value <= CODE_POINT_MAX:
+        raise ValidationError(f"`chr` expects an integer from 0 to {CODE_POINT_MAX}, got {value}")
+    return chr(value)
 
 
 def _join(parts: object, sep: object) -> str:
@@ -134,13 +168,13 @@ def _format_value(value: object) -> object:
 
 string_operators = {
     "asc": {
-        "func": (lambda value: ord(value)),
+        "func": _asc,
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Returns the ASCII value of the specified character.",
     },
     "chr": {
-        "func": (lambda value: chr(value)),
+        "func": _chr,
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Returns the character that matches the specified ASCII value.",
