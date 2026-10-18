@@ -1,5 +1,13 @@
 # CHANGE LOG
 
+## [1.18.1] - 2026-10-18
+
+### Fixed
+
+- A `do` or `dolist` body holding a code block copied that block on every iteration since 1.17.0 (each iteration has a scope of its own, and a block is bound to the scope it is pushed from), which made such loops up to twice as slow as in 1.16.0. The copy made for one iteration is bound again for the next when nothing holds it any more, which the reference count tells on the interpreters where it is exact (the count is calibrated when Stacker starts, so it is right on every version; where it cannot be known a copy is made as before). A loop body with blocks in it is now about a third slower than in 1.16.0 (it was up to twice as slow), and a lambda kept from an iteration still sees that iteration's variable
+- `asc`, `chr`, `int`, `float`, `sqrt`, `log`, `log2`, `log10`, `sorted`, `min`, `max`, `format` and the arithmetic words (`+` `-` `*` `/` `//` `%` `^` `++` `--`) leaked the host's message when given a value they cannot use (`ord() expected a character`, `invalid literal for int()`, `math domain error`, `can only concatenate str`, `'<' not supported between instances of 'String' and 'int'`). Each names itself and shows the value as the stack does: `` `asc` expects a string of one character, got 'abc' ``, `` `int` cannot read 'x' as an integer ``, `` `sqrt` expects a number of 0 or more, got -1 ``, `` `sorted` cannot compare 1 with 'a' ``, `` `+` cannot use 'a' and 1 together; to join text, make both values strings with `str` ``. A value outside a word's domain (`-1 sqrt`, `0 log`, `-1 chr`, `[] min`) is a `ValidationError`; a template given to `format` that asks for more than its one value is a `StackerIndexError`
+- A symbolic word written inside a list literal (`[1 2 +]`, `[1 2 ^]`) was reported as "Unexpected token"; it gets the same explanation as a named word (`[1 dup]`): a list literal holds values only, build the list on the stack and collect it with `listn`
+
 ## [1.18.0] - 2026-10-17
 
 ### Added
@@ -95,7 +103,7 @@ Bug fixes found while solving a problem set in Stacker. Some fixes change what e
 ### Fixed
 
 - A lambda made inside a function call saw the variables of the latest call of that function, not of the call that made it: after `{n} {{x} {x n +} lambda} :adder defun 10 adder :add10 set 20 adder :add20 set`, `5 add10 eval` gave 25. A block is bound to the scope it is written in when it is pushed, so `5 add10 eval` is 15 and a lambda or a `map` body made in a recursive call keeps that call's variables
-- A block handed to `map` or `filter` was deep-copied, interpreter and all, once per element: `[1 2 3] {1 +} map` took 100 times longer than the same with a lambda, and grew with the number of variables; an assignment inside the block was lost with the copy. The block runs as it is, in the caller's scope: `0 :c set [1 2 3] {c 1 + :c set 0} map drop c` is 3
+- A block handed to `map` or `filter` was deep-copied, interpreter and all, once per element: `[1 2 3] {1 +} map` took 100 times longer than the same with a lambda, and grew with the number of variables; an assignment inside the block was lost with the copy. The block runs as it is, in the caller's scope: `0 :c set [1 2 3] {drop c 1 + :c set 0} map drop c` is 3
 - A variable first `set` in the body of `do`, `dolist`, `reduce` or `fold` was gone after the loop (`1 3 :i {i :last set} do last` was "`last` is not defined"), unlike in `while`, `times` and `loop`. It stays, as the docs describe; only the loop variable is dropped
 - `[[1 2]]` was read as `[1 2]`: a list literal whose only element is a list lost its outer brackets, however deep (`[[[1 2]]]` too, and `[[]]` was `[]`). The nesting is kept as written
 - `abort` and `exit-code` did nothing: `3 exit-code` went on with the next word and exited 0, and left the 3 on the stack. They exit with their status (`exit-code` needs an integer)
