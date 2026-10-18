@@ -57,5 +57,5 @@ def test_the_arguments_are_read_as_text_and_converted_by_the_program(tmp_path):
 
 
 def test_read_line_and_read_stdin_from_the_command_line():
-    result = stacker("-e", "read-line read-line read-stdin", stdin="first\nsecond\nrest\nof it\n")
-    assert result.stdout == "['first' 'second' 'rest\\nof it\\n']\n"
+    result = stacker("-e", "read-line echo read-line echo read-stdin echo", stdin="first\nsecond\nrest\nof it\n")
+    assert result.stdout == "first\nsecond\nrest\nof it\n\n"

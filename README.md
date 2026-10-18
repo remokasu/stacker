@@ -870,6 +870,8 @@ print(stacker.eval("3 4 +"))
 | if       | Conditional statement                                 | `true {...} if`            |
 | ifelse   | Conditional statement with an else block              | `true {"yes"} {"no"} ifelse`  |
 | iferror  | Conditional statement for error handling              | `{1 0 /} {"caught"} iferror` |
+| try      | Like iferror, with the error pushed as a dictionary ('kind', 'message') before the handler runs | `{1 0 /} {"kind" get} try` |
+| throw    | Raise your own error: `kind message throw`            | `{"E" "boom" throw} {"message" get} try` |
 | cond     | Multi-branch conditional (first matching pair wins)   | `5 :x set {x 0 >} {"pos"} {true} {"other"} 2 cond` |
 | do       | Loop                                                  | `0 10 :i {i echo} do`      |
 | dolist   | Loop over the elements of a list                      | `[1 2 3] :x {x echo} dolist` |

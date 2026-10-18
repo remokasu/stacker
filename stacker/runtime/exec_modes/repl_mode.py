@@ -15,6 +15,7 @@ from stacker.runtime.exec_modes.error import create_error_message
 from stacker.runtime.exec_modes.execution_mode import REPL_SETTINGS, ExecutionMode
 from stacker.lib import delete_history, disp_about, disp_help
 from stacker.lib.config import history_file_path
+from stacker.error import error_kind
 from stacker.error_formatter import ErrorFormatter
 from stacker.version import __version__
 
@@ -293,7 +294,7 @@ class ReplMode(ExecutionMode):
 
             except Exception as e:
                 # Format error using Clang-style formatter
-                error_type = type(e).__name__
+                error_type = error_kind(e)
                 message = str(e)
 
                 # Generate hint based on error type

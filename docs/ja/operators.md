@@ -296,6 +296,8 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `if` | `cond {body} if` は cond が真なら body を実行 | `true {"yes" echo} if` |
 | `ifelse` | `cond {then} {else} ifelse` は cond に応じて then か else を実行 | `true {"yes"} {"no"} ifelse` |
 | `iferror` | `{try} {handler} iferror` は try がエラーを起こしたら handler を実行 | `{1 0 /} {"caught"} iferror` |
+| `try` | `{try} {handler} try` は try がエラーを起こしたら、エラーの辞書（`"kind"` と `"message"`）を積んでから handler を実行 | `{1 0 /} {"kind" get} try` |
+| `throw` | `kind message throw` は自分のエラーを起こす。kind は文字列かシンボル、message は文字列 | `{"E" "boom" throw} {"message" get} try` |
 | `cond` | `{c1} {r1} {c2} {r2} ... n cond` は n 組の条件と結果を順に調べ、最初に条件が真になった組の結果を実行 | `5 :x set {x 0 >} {"pos"} {true} {"other"} 2 cond` |
 | `do` | `start end :name {body} do` は start から end まで（両端を含む）の整数を name に束縛して body を実行 | `1 5 :i {i echo} do` |
 | `dolist` | `list :name {body} dolist` は各要素を name に束縛して body を実行 | `[1 2 3] :x {x echo} dolist` |

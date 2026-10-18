@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import traceback
 
+from stacker.error import error_kind
 from stacker.error_formatter import ErrorFormatter
 from stacker.runtime.exec_modes.execution_mode import ExecutionMode
 
@@ -25,7 +26,7 @@ class CommandLineMode(ExecutionMode):
                 filename=filename,
                 line_number=line_number,
                 column=None,
-                error_type=type(e).__name__,
+                error_type=error_kind(e),
                 message=str(e),
                 source_line=source_line,
                 hint=self._get_error_hint(e),

@@ -5,7 +5,7 @@ from pathlib import Path
 from stacker.include.stk_file_read import readtxt
 from stacker.stacker import Stacker
 
-from stacker.error import UnterminatedTokenError, include_location_of
+from stacker.error import UnterminatedTokenError, UserError, include_location_of
 from stacker.include.include import pop_entry_file, push_entry_file
 from stacker.syntax.parser import remove_start_end_quotes
 from stacker.syntax.script import iter_expressions
@@ -72,6 +72,8 @@ class ExecutionMode:
 
     def _get_error_hint(self, error: Exception) -> str | None:
         """Generate helpful hint based on error type."""
+        if isinstance(error, UserError):
+            return None  # the program's own error says what it means
         error_type = type(error).__name__
         message = str(error)
 

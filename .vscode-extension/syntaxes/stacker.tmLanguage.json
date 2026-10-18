@@ -181,7 +181,7 @@
       "patterns": [
         {
           "name": "keyword.control.stacker",
-          "match": "(?<![\\w?!-])(iferror|dolist|ifelse|break|times|while|cond|loop|do|if)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(iferror|dolist|ifelse|break|throw|times|while|cond|loop|try|do|if)(?![\\w?!-])"
         }
       ]
     },

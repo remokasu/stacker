@@ -31,7 +31,8 @@ Conditionals:
   cond {true-branch} if
   cond {true-branch} {false-branch} ifelse
   {c1} {r1} {c2} {r2} 2 cond
-  {try} {catch} iferror
+  {try} {catch} iferror       {try} {handler} try  (handler gets {'kind' 'message'})
+  "MyError" "what went wrong" throw
 
 Loops:
   1 10 :i {i echo} do         [1 2 3] :x {x echo} dolist

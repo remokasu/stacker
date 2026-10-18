@@ -841,6 +841,16 @@ class StackerCore:
         condition = stack.pop()
         op["func"](condition, true_block, false_block, self, stack)
 
+    def _prio_try(self, op, stack) -> None:
+        handler = stack.pop()
+        try_block = stack.pop()
+        op["func"](try_block, handler, self, stack)
+
+    def _prio_throw(self, op, stack) -> None:
+        message = self._pop_arg(stack, "throw")
+        kind = self._pop_arg(stack, "throw")
+        op["func"](kind, message)
+
     def _prio_iferror(self, op, stack) -> None:
         catch_block = stack.pop()
         try_block = stack.pop()
@@ -1184,6 +1194,8 @@ class StackerCore:
         "if": _prio_if,
         "ifelse": _prio_ifelse,
         "iferror": _prio_iferror,
+        "try": _prio_try,
+        "throw": _prio_throw,
         "set": _prio_set,
         "=": _prio_set,
         "global": _prio_global,
