@@ -801,6 +801,11 @@ print(stacker.eval("3 4 +"))
 |----------|-------------------------------------------------------|----------------------------|
 | abs      | Absolute value                                        | `-3 abs`                   |
 | exp      | Exponential                                           | `3 exp`                    |
+| real     | Real part (a real number is its own)                  | `3+4j real`                |
+| imag     | Imaginary part (0 for a real number)                  | `3+4j imag`                |
+| conj     | Complex conjugate                                     | `3+4j conj`                |
+| arg      | Angle of a number, from -pi to pi                     | `1j arg`                   |
+| polar    | Complex number of length r and angle t: `r t polar`   | `1 pi 2 / polar`           |
 | log      | Natural logarithm                                     | `2 log`                    |
 | log10    | Common logarithm (base 10)                            | `4 log10`                  |
 | log2     | Logarithm base 2                                      | `4 log2`                   |

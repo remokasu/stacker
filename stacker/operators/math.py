@@ -21,6 +21,40 @@ def _real_number(word: str, x: object) -> numbers.Real:
     return x
 
 
+def _number(word: str, x: object) -> numbers.Complex:
+    """Returns ``x`` when it is a number of any kind; otherwise raises an error that names the word."""
+    if isinstance(x, Symbol):
+        raise StackerTypeError(symbol_as_value_message(word, x.name))
+    if not isinstance(x, numbers.Complex):
+        raise StackerTypeError(f"`{word}` expects a number, got {plain_text(x)}")
+    return x
+
+
+def _real(x: object) -> object:
+    """``z real``: the real part; a real number is its own real part."""
+    return _number("real", x).real
+
+
+def _imag(x: object) -> object:
+    """``z imag``: the imaginary part; 0 for a real number."""
+    return _number("imag", x).imag
+
+
+def _conj(x: object) -> object:
+    """``z conj``: the complex conjugate; a real number is its own conjugate."""
+    return _number("conj", x).conjugate()
+
+
+def _arg(x: object) -> float:
+    """``z arg``: the angle of the number, from -pi to pi (0 for a positive real, pi for a negative one)."""
+    return cmath.phase(complex(_number("arg", x)))
+
+
+def _polar(r: object, t: object) -> complex:
+    """``r t polar``: the complex number of length ``r`` and angle ``t``."""
+    return cmath.rect(float(_real_number("polar", r)), float(_real_number("polar", t)))
+
+
 def _positive(word: str, x: object) -> numbers.Real:
     """Returns ``x`` when it is a real number greater than 0."""
     value = _real_number(word, x)
@@ -220,6 +254,36 @@ def _numeric_diff(f: Callable[[float], float], x: float) -> float:
 
 
 math_operators = {
+    "real": {
+        "func": _real,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Real part of a number (a real number is its own): 3+4j real -> 3.0",
+    },
+    "imag": {
+        "func": _imag,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Imaginary part of a number (0 for a real number): 3+4j imag -> 4.0",
+    },
+    "conj": {
+        "func": _conj,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Complex conjugate: 3+4j conj -> 3-4j",
+    },
+    "arg": {
+        "func": _arg,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Angle of a number, from -pi to pi: 1j arg -> pi/2",
+    },
+    "polar": {
+        "func": _polar,
+        "arg_count": 2,
+        "push_result_to_stack": True,
+        "desc": "Complex number of length r and angle t: 2 0 polar -> 2+0j",
+    },
     "^": {
         "func": checked_binary("^", _pow),
         "arg_count": 2,
