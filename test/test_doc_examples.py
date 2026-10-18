@@ -48,6 +48,8 @@ SKIP: dict[str, str] = {
     '"file.stk" include': "needs a script file",
     '"file.stk" require': "needs a script file",
     "read": "reads standard input",
+    "read-line": "reads standard input",
+    "read-stdin": "reads standard input",
     '"hoge" disable_plugin': "needs a plugin",
     "exit": "terminates the interpreter",
     '"file.txt" read-from-file': "needs a file",

@@ -10,7 +10,7 @@ stacker [-h] [--addplugin path] [--version] [--debug] [-e E] [--recursion-limit 
 
 | オプション | 説明 |
 | --- | --- |
-| `script` | 実行する `.stk` ファイル。指定すると、REPL を開かずにファイルを実行して終了します。 |
+| `script [arg ...]` | 実行する `.stk` ファイル。指定すると、REPL を開かずにファイルを実行して終了します。ファイル名の後ろの引数は、スクリプトの中で語 `args` が文字列のリストとして読みます（`stacker s.stk 200 100` なら `['200' '100']`）。`-` で始まる引数を渡すときは `--` の後ろに書きます |
 | `-e E` | 式 `E` を実行して終了します。 |
 | `--debug` | デバッグモード。ログを DEBUG レベルで出力し、REPL ではエラー時に評価の経過と Python のトレースバックも表示します。 |
 | `--recursion-limit N` | ユーザー定義関数の再帰の深さの上限。1 から 1800 までで、省略時は 1500 です。範囲外の値はエラーになります。 |
@@ -18,13 +18,15 @@ stacker [-h] [--addplugin path] [--version] [--debug] [-e E] [--recursion-limit 
 | `--version` | `Stacker 1.19.0` のように版を表示して終了します。スクリプトの中からは語 `version` で読めます。 |
 | `-h`, `--help` | ヘルプを表示して終了します。 |
 
-`script` も `-e` も指定しなければ REPL が始まります。`-e` と `script` を同時に指定すると、`-e` だけが実行されます。
+`script` も `-e` も指定しなければ REPL が始まります。`-e` を指定したときは、位置引数はすべてスクリプトの引数（`args`）になります。オプションはファイル名より前に書きます。
 
 どちらの実行方法でも、実行時エラーが起きると、エラーメッセージを表示して終了コード 1 で終了します。スクリプトの場合はファイル名と行番号が付きます。
 
 ```bash
 stacker script.stk
+stacker script.stk 200 100        # args が ['200' '100']
 stacker -e "3 4 + echo"
+stacker -e "args echo" a b         # ['a' 'b']
 stacker --recursion-limit 3000 script.stk
 stacker --addplugin my_plugin.py
 ```
