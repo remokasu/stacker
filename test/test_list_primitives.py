@@ -42,17 +42,17 @@ class TestListPrimitives(unittest.TestCase):
         ans = self.stacker.eval("1 [] cons")
         self.assertEqual(ans[-1], [1])
 
-    # null?
-    def test_null_empty_list(self):
+    # null? / empty?
+    def test_null_empty_list_is_not_null(self):
         ans = self.stacker.eval("[] null?")
-        self.assertEqual(ans[-1], True)
+        self.assertEqual(ans[-1], False)
 
     def test_null_nonempty_list(self):
         ans = self.stacker.eval("[1 2] null?")
         self.assertEqual(ans[-1], False)
 
-    def test_null_empty_tuple(self):
-        ans = self.stacker.eval("[] null?")
+    def test_empty_list_is_empty(self):
+        ans = self.stacker.eval("[] empty?")
         self.assertEqual(ans[-1], True)
 
     # pair?

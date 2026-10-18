@@ -119,7 +119,7 @@ class TestLambdaIsAValue:
 
     def test_lambda_passed_to_a_function_as_a_value(self):
         assert run(
-            "{xs lf} {xs null? {[]} {xs car lf eval xs cdr lf my-map cons} ifelse} :my-map defun",
+            "{xs lf} {xs empty? {[]} {xs car lf eval xs cdr lf my-map cons} ifelse} :my-map defun",
             "[1 2 3] {x} {x 2 *} lambda my-map",
         ) == [[2, 4, 6]]
 

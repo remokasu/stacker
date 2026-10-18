@@ -946,7 +946,8 @@ Note: Blocks, lambdas and functions passed to `map` and `filter` must leave exac
 | list?    | Returns true if the value is a list (an array is not) | `[1 2 3] list?`            |
 | array?   | Returns true if the value is an array                 | `[1 2 3] array array?`     |
 | dict?    | Returns true if the value is a dictionary             | `dict dict?`               |
-| null?    | Returns true if the value is null, an empty list or an empty array | `null null?`  |
+| null?    | Returns true if the value is null (an empty list is not) | `null null?`           |
+| empty?   | Returns true if a list, an array, a string or a dictionary has no elements | `[] empty?` |
 | number?  | Returns true if the value is a number (int, float, or complex) | `42 number?`    |
 
 

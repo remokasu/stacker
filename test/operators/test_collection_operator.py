@@ -151,7 +151,7 @@ class TestPredicates:
         assert run("[1] array array? [1] array? dict array? dict dict? [1] dict?") == [True, False, False, True, False]
 
     def test_list_null_pair_on_arrays_and_dicts(self):
-        assert run("[] array list? [] array null? [1] array pair? dict null? dict list?") == [False, True, True, False, False]
+        assert run("[] array list? [] array empty? [1] array pair? dict empty? dict list?") == [False, True, True, True, False]
 
     def test_same_is_identity_for_arrays_and_dicts_and_equality_otherwise(self):
         assert run("[1 2] array dup same?") == [True]

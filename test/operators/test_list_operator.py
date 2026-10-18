@@ -48,10 +48,10 @@ class TestUnit(unittest.TestCase):
         stacker.process_expression(expr)
         self.assertEqual(list(stacker.stack), [15])
 
-    def test_null_check_empty_list(self):
+    def test_null_check_empty_list_is_not_null(self):
         stacker = Stacker()
         ans = stacker.eval("[] null?")
-        self.assertTrue(ans[-1])
+        self.assertFalse(ans[-1])
 
     def test_null_check_nonempty_list(self):
         stacker = Stacker()

@@ -1375,8 +1375,8 @@ class StackerCore:
                 stack.append(len(agg_args.tokens))
                 return
             agg_args = [self._block_token_value(t) for t in agg_args.tokens]
-        elif isinstance(agg_args, dict) and token != "len":
-            raise StackerTypeError(not_a_sequence_message(token))  # `len` of a dictionary is its number of keys
+        elif isinstance(agg_args, dict) and token not in ("len", "empty?"):
+            raise StackerTypeError(not_a_sequence_message(token))  # `len` and `empty?` count a dictionary's keys
         try:
             if op["push_result_to_stack"]:
                 result = op["func"](agg_args)  # type: ignore[operator]

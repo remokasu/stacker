@@ -165,7 +165,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `same?` | `a b same?` は、配列・辞書なら同じ実体か。それ以外の値は `==` と同じ | `dict dup same?` |
 | `number?` | 数値（整数・float・複素数）か | `42 number?` |
 | `symbol?` | シンボルか。`:x` はシンボル | `:x symbol?` |
-| `null?` | `null` か空リストか（空の配列も） | `[] null?` |
+| `null?` | `null` か（空のリストは `null` ではない） | `null null?` |
 
 ## 文字列
 
@@ -247,6 +247,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 |---|---|---|
 | `sum` | 合計 | `[1 2 3] sum` |
 | `len` | 要素数・文字数。辞書はキーの数 | `[1 2 3] len` |
+| `empty?` | リスト・配列・文字列・辞書が空か。`null` には使えない（`null?` を先に見る） | `[] empty?` |
 | `min` | 最小値 | `[3 1 2] min` |
 | `max` | 最大値 | `[3 1 2] max` |
 | `any` | 真の要素が 1 つでもあるか | `[true false] any` |
