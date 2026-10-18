@@ -10,14 +10,10 @@ class TestReplMode(unittest.TestCase):
         self.rpn_calculator = Stacker()
         self.repl_mode = ReplMode(self.rpn_calculator)
 
-    @patch("stacker.runtime.exec_modes.repl_mode.version")
-    def test_get_version(self, mock_version):
-        mock_version.return_value = "1.0.0"
-        rpn_calculator = Stacker()
-        repl_mode = ReplMode(rpn_calculator)
-        result = repl_mode.get_version()
-        self.assertEqual(result, "1.0.0")
-        mock_version.assert_called_once_with("pystacker")
+    def test_get_version(self):
+        from stacker import __version__
+
+        self.assertEqual(self.repl_mode.get_version(), __version__)
 
     def test_repl_mode_initialization(self):
         """Test that ReplMode initializes with correct default settings."""

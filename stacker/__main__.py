@@ -22,11 +22,13 @@ from stacker.lib.config import (
 )
 from stacker.stacker import Stacker
 from stacker.util import colored
+from stacker.version import __version__
 
 parser = argparse.ArgumentParser(description="Stacker command line interface.")
 parser.add_argument(
     "--addplugin", metavar="path", type=str, help="Path to the plugin to add."
 )
+parser.add_argument("--version", action="version", version=f"Stacker {__version__}")
 parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 parser.add_argument("-e", default=None, help="Execute the given command.")
 parser.add_argument(

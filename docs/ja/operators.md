@@ -386,6 +386,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `funcs` | 定義済みの関数を出力 | `funcs` |
 | `macros` | 定義済みのマクロを出力 | `macros` |
 | `operators` | 使える演算子の説明を一覧で出力 | `operators` |
+| `version` | この Stacker の版を文字列で積む | `version` |
 | `ans` | 値を残した最後の入力（REPL の 1 行、スクリプトの 1 式）の結果を、もう一度積む。値を残さない入力（`clear` など）では変わらない。1 つの入力の中では、その入力より前の結果を指す。まだ結果がなければエラー。`include` / `require` したファイルの中では使えない | `ans` |
 
 REPL の `enable_disp_ans` / `disable_disp_ans` は、スタックの一番上を毎回表示するかどうかの設定です（[REPL とコマンドライン](repl-and-cli.md)）。

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from stacker.version import __version__
+
 if TYPE_CHECKING:
     from stacker.engine.core import StackerCore
 
@@ -105,6 +107,12 @@ def _operators(core: StackerCore) -> None:
 
 # Export operators
 system_operators = {
+    "version": {
+        "func": (lambda stack, core: __version__),
+        "arg_count": 0,
+        "push_result_to_stack": True,
+        "desc": f"Pushes the version of this Stacker as a string: version -> '{__version__}'",
+    },
     "vars": {
         "func": (lambda stack, core: _vars(core)),
         "arg_count": 0,
