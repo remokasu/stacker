@@ -1,8 +1,8 @@
 """A block is bound to the scope it is pushed from, and keeps it.
 
 A lambda made inside a function call remembers that call's variables, not
-the latest call's. A `map` / `filter` block runs in the caller's scope, so
-what it assigns stays assigned. A variable first set in a loop body
+the latest call's. A `map` / `filter` block written in the caller runs in
+the caller's scope, so what it assigns stays assigned. A variable first set in a loop body
 outlives the loop, as it does in `while`, `times` and `loop`.
 """
 
@@ -148,5 +148,5 @@ class TestClosuresKeptAcrossIterations:
         assert run("1 2 :i {1 2 :j {{} {i 10 * j +} lambda} do} do 4 listn {eval} map") == [[11, 12, 21, 22]]
 
     def test_a_block_left_on_the_stack_keeps_its_iterations_variable(self):
-        # (`map` runs a block in the scope it is bound to; `eval` would use the caller's)
+        # (every word runs a block in the scope it is bound to; `eval` does the same)
         assert run("1 3 :i {{drop i}} do 3 listn {b} {[0] b map 0 nth nip} lambda map") == [[1, 2, 3]]

@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 from stacker.engine.data_type import Symbol
 from stacker.error import StackerTypeError, UserError, error_kind
-from stacker.operators.block_exec import resolve_condition, run_block
 from stacker.util.disp import plain_text
 
 if TYPE_CHECKING:
@@ -23,8 +22,8 @@ def _if(
     {block}
     if
     """
-    if resolve_condition(condition, parent, stack, "if"):
-        run_block(blockstack, parent, stack)
+    if parent._condition_of(condition, stack, "if"):
+        parent._run_block(blockstack, stack)
 
 
 def _if_else(
@@ -40,10 +39,10 @@ def _if_else(
     {false block}
     ifelse
     """
-    if resolve_condition(condition, parent, stack, "ifelse"):
-        run_block(true_block, parent, stack)
+    if parent._condition_of(condition, stack, "ifelse"):
+        parent._run_block(true_block, stack)
     else:
-        run_block(false_block, parent, stack)
+        parent._run_block(false_block, stack)
 
 
 def _cond(pairs: list[tuple[object, object]], parent: Stacker, stack: stack_data[object]) -> None:
@@ -51,8 +50,8 @@ def _cond(pairs: list[tuple[object, object]], parent: Stacker, stack: stack_data
     {c1} {r1} {c2} {r2} ... n cond
     """
     for condition, result in pairs:
-        if resolve_condition(condition, parent, stack, "cond"):
-            run_block(result, parent, stack)
+        if parent._condition_of(condition, stack, "cond"):
+            parent._run_block(result, stack)
             return
 
 
@@ -68,7 +67,7 @@ def _iferror(
     iferror
     """
     try:
-        run_block(try_block, parent, stack)
+        parent._run_block(try_block, stack)
     # Deliberately Exception, not BaseException: control-flow signals such as
     # BreakException derive from BaseException so they pass through iferror
     # (a break inside the try block must exit the enclosing loop, not run the
@@ -76,7 +75,7 @@ def _iferror(
     # language's user-facing generic try/catch construct, so it must catch
     # every runtime error, unlike internal error handling.
     except Exception as _:  # noqa: BLE001
-        run_block(catch_block, parent, stack)
+        parent._run_block(catch_block, stack)
 
 
 def _throw(kind: object, message: object) -> None:
@@ -104,35 +103,27 @@ def _try(
     `iferror` catches: every error, but not `break` or an exit.
     """
     try:
-        run_block(try_block, parent, stack)
+        parent._run_block(try_block, stack)
     except Exception as error:  # noqa: BLE001 -- the language's try/catch, see _iferror
         stack.append({"kind": error_kind(error), "message": str(error)})
-        run_block(handler, parent, stack)
+        parent._run_block(handler, stack)
 
 
 condition_operators = {
     "cond": {
-        "func": (lambda pairs, parent, stack: _cond(pairs, parent, stack)),
+        "func": _cond,
         "arg_count": 0,
         "push_result_to_stack": False,
         "desc": "Evaluates condition-result pairs in order. {c1} {r1} ... n cond",
     },
     "if": {
-        "func": (
-            lambda condition, blockstack, parent, stack: _if(
-                condition, blockstack, parent, stack
-            )
-        ),
+        "func": _if,
         "arg_count": 2,
         "push_result_to_stack": False,
         "desc": "Executes a block of code if a condition is true.",
     },
     "ifelse": {
-        "func": (
-            lambda condition, true_block, false_block, parent, stack: _if_else(
-                condition, true_block, false_block, parent, stack
-            )
-        ),
+        "func": _if_else,
         "arg_count": 3,
         "push_result_to_stack": False,
         "desc": (
@@ -141,23 +132,19 @@ condition_operators = {
         ),
     },
     "iferror": {
-        "func": (
-            lambda try_block, catch_block, parent, stack: _iferror(
-                try_block, catch_block, parent, stack
-            )
-        ),
+        "func": _iferror,
         "arg_count": 2,
         "push_result_to_stack": False,
         "desc": "Executes a block of code if an error occurs.",
     },
     "try": {
-        "func": (lambda try_block, handler, parent, stack: _try(try_block, handler, parent, stack)),
+        "func": _try,
         "arg_count": 2,
         "push_result_to_stack": False,
         "desc": "{try} {handler} try: runs the handler with the error on the stack as a dictionary ('kind' and 'message') if the first block raises one",
     },
     "throw": {
-        "func": (lambda kind, message: _throw(kind, message)),
+        "func": _throw,
         "arg_count": 2,
         "push_result_to_stack": False,
         "desc": "kind message throw: raises an error of your own kind (a string or a symbol) with a message",

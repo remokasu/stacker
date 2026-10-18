@@ -4,9 +4,8 @@ from typing import TYPE_CHECKING
 
 from stacker.engine.data_type import Symbol
 from stacker.engine.scope import ScopedVariables
-from stacker.error import BreakException, StackerSyntaxError
+from stacker.error import BreakException, StackerSyntaxError, StackerTypeError
 from stacker.operators.arguments import integer_argument
-from stacker.operators.block_exec import resolve_condition, run_block
 from stacker.util.disp import plain_text
 
 if TYPE_CHECKING:
@@ -14,11 +13,18 @@ if TYPE_CHECKING:
     from stacker.util.stack_data import stack_data
 
 
+def _body_scope(word: str, block: object, parent: Stacker) -> ScopedVariables:
+    """Returns the scope the loop body ``block`` is bound to; a value that is not a block is refused by name."""
+    if not isinstance(block, type(parent)):
+        raise StackerTypeError(f"`{word}` expects a code block as the body, got {plain_text(block)}")
+    return block.variables
+
+
 def _loop(body: object, parent: Stacker, stack: stack_data[object]) -> None:
     """Evaluates ``body`` on ``stack`` forever until ``break`` is raised.
 
     This is the single looping primitive every other loop can be built on.
-    Each iteration runs in the caller's scope; no Python recursion
+    Each iteration runs the body in its own scope; no Python recursion
     accumulates across iterations, so the recursion guard is unaffected.
 
     Args:
@@ -34,7 +40,7 @@ def _loop(body: object, parent: Stacker, stack: stack_data[object]) -> None:
         raise StackerSyntaxError(f"`loop` expects a code block, got {body}")
     while True:
         try:
-            parent.evaluate(body.tokens, stack=stack)
+            parent._run_block(body, stack)
         except BreakException:
             break
 
@@ -62,7 +68,7 @@ def _times(
     count = 0
     while count < n_times:  # a comparison, not range(): non-integer counts keep working
         try:
-            run_block(block, parent, stack)
+            parent._run_block(block, stack)
         except BreakException:
             return
         count += 1
@@ -76,23 +82,18 @@ def _do(
     parent: Stacker,
     stack: stack_data[object],
 ) -> None:
-    # Each iteration gets a scope of its own holding the loop variable, so
-    # a lambda or block kept from one iteration sees that iteration's
-    # value; a name the body is first to set goes to the caller's scope
-    # (see loop_scope)
+    # Each iteration runs in a scope of its own holding the loop variable,
+    # a child of the body's own scope: a lambda or block kept from one
+    # iteration sees that iteration's value, and a name the body is first
+    # to set goes to the body's scope (see loop_scope)
     start_value = integer_argument("do", start_value)
     end_value = integer_argument("do", end_value)
-    original_parent_vars = parent.variables
-    try:
-        for i in range(start_value, end_value + 1):
-            child_scope = ScopedVariables.loop_scope(original_parent_vars, {symbol: i})
-            parent.variables = child_scope
-            try:
-                parent.evaluate(block.tokens, stack=stack)
-            except BreakException:
-                break
-    finally:
-        parent.variables = original_parent_vars
+    body_scope = _body_scope("do", block, parent)
+    for i in range(start_value, end_value + 1):
+        try:
+            parent._run_bound(block, ScopedVariables.loop_scope(body_scope, {symbol: i}), stack)
+        except BreakException:
+            break
 
 
 def _while(
@@ -110,10 +111,10 @@ def _while(
     if not isinstance(condition, type(parent)):
         raise StackerSyntaxError(f"`while` expects a condition block, got {condition}")
     while True:
-        if not resolve_condition(condition, parent, stack, "while"):
+        if not parent._condition_of(condition, stack, "while"):
             break
         try:
-            parent.evaluate(body.tokens, stack=stack)
+            parent._run_block(body, stack)
         except BreakException:
             break
 
@@ -125,60 +126,43 @@ def _dolist(
     parent: Stacker,
     stack: stack_data[object],
 ) -> None:
-    # Each iteration gets a scope of its own holding the loop variable, so
-    # a lambda or block kept from one iteration sees that iteration's
-    # value; a name the body is first to set goes to the caller's scope
-    # (see loop_scope)
-    original_parent_vars = parent.variables
-    try:
-        for i in lst:
-            child_scope = ScopedVariables.loop_scope(original_parent_vars, {symbol: i})
-            parent.variables = child_scope
-            try:
-                parent.evaluate(block.tokens, stack=stack)
-            except BreakException:
-                break
-    finally:
-        parent.variables = original_parent_vars
+    # Each iteration runs in a scope of its own holding the loop variable,
+    # a child of the body's own scope (see _do)
+    body_scope = _body_scope("dolist", block, parent)
+    for i in lst:
+        try:
+            parent._run_bound(block, ScopedVariables.loop_scope(body_scope, {symbol: i}), stack)
+        except BreakException:
+            break
 
 
 loop_operators = {
     "loop": {
-        "func": (lambda body, parent, stack: _loop(body, parent, stack)),
+        "func": _loop,
         "arg_count": 1,
         "push_result_to_stack": False,
         "desc": "Repeats a block of code until `break`. {body} loop",
     },
     "while": {
-        "func": (
-            lambda condition, body, parent, stack: _while(condition, body, parent, stack)
-        ),
+        "func": _while,
         "arg_count": 2,
         "push_result_to_stack": False,
         "desc": "Repeats a block while a condition block is true: {cond} {body} while",
     },
     "times": {
-        "func": (lambda n_times, block, parent, stack: _times(n_times, block, parent, stack)),
+        "func": _times,
         "arg_count": 2,
         "push_result_to_stack": False,
         "desc": "Repeats a block n times: {body} n times",
     },
     "do": {
-        "func": (
-            lambda start_value, end_value, symbol, block, parent, stack: _do(
-                start_value, end_value, symbol, block, parent, stack
-            )
-        ),
+        "func": _do,
         "arg_count": 4,
         "push_result_to_stack": False,
         "desc": "Runs a block for each integer of a range, bound to a name: 1 10 :i {i echo} do",
     },
     "dolist": {
-        "func": (
-            lambda symbol, lst, block, parent, stack: _dolist(
-                symbol, lst, block, parent, stack
-            )
-        ),
+        "func": _dolist,
         "arg_count": 4,
         "push_result_to_stack": False,
         "desc": "Runs a block for each element of a list, bound to a name: [1 2 3] :x {x echo} dolist",
