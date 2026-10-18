@@ -9,6 +9,7 @@ Values:
   string:  "hello"   (shown on the stack as 'hello')
   list:    [1 2 3]   [1 2 3; 4 5 6]
   block:   {1 2 +}   (code, stored unevaluated; run it with eval)
+           {1 2 +} collect -> [3]: run it on an empty stack, list what it left
   symbol:  :name     (a name as a value)
   array:   [1 2 3] array   (changes in place; shown like a list, in its own color)
   dict:    dict            (keys to values, changes in place; shown as {'a' 1})

@@ -62,6 +62,12 @@ special_operators = {
         "push_result_to_stack": False,
         "desc": "Sets a variable in global scope.",
     },
+    "collect": {
+        "func": None,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Runs a block (or a symbol or a lambda) on an empty stack and pushes what it left as one list: {1 2 3} collect",
+    },
     "eval": {
         "func": None,
         "arg_count": 1,

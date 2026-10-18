@@ -181,7 +181,7 @@
       "patterns": [
         {
           "name": "keyword.operator.code.stacker",
-          "match": "(?<![\\w?!-])(concat\\-block|macroexpand|include|require|expand|gensym|symbol|apply|parse|eval|subn|sub)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(concat\\-block|macroexpand|collect|include|require|expand|gensym|symbol|apply|parse|eval|subn|sub)(?![\\w?!-])"
         }
       ]
     },
@@ -237,7 +237,7 @@
       "patterns": [
         {
           "name": "keyword.operator.math.stacker",
-          "match": "(?<![\\w?!-])(radians|randint|uniform|roundn|acosh|asinh|atanh|floor|log10|round|acos|asin|atan|cbrt|ceil|comb|cosh|dice|frac|log2|perm|rand|sinh|sqrt|tanh|abs|cos|exp|gcd|lcm|log|ncr|npr|sin|tan)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(radians|randint|uniform|roundn|acosh|asinh|atanh|floor|log10|polar|round|acos|asin|atan|cbrt|ceil|comb|conj|cosh|dice|frac|imag|log2|perm|rand|real|sinh|sqrt|tanh|abs|arg|cos|exp|gcd|lcm|log|ncr|npr|sin|tan)(?![\\w?!-])"
         },
         {
           "name": "keyword.operator.math.stacker",
@@ -289,7 +289,7 @@
       "patterns": [
         {
           "name": "keyword.operator.system.stacker",
-          "match": "(?<![\\w?!-])(disable_all_plugins|disable_plugin|exit\\-code|operators|macros|abort|funcs|exit|vars)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(disable_all_plugins|disable_plugin|exit\\-code|operators|version|macros|abort|funcs|exit|vars)(?![\\w?!-])"
         }
       ]
     },
