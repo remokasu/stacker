@@ -164,7 +164,7 @@ special_operators = {
 
 
 # Category lookup order for the unified dispatch table. Must mirror the
-# elif order of the dispatch chain in StackerCore._execute_impl.
+# elif order of the dispatch chain in StackerCore._execute.
 _DISPATCH_ORDER = (
     "priority",
     "stack",
@@ -242,7 +242,7 @@ class OperatorManager:
 
         Maps each operator name to its ``(category, definition)`` pair.
         Categories are visited in the same order as the dispatch chain in
-        ``StackerCore._execute_impl``; first match wins, so a name present
+        ``StackerCore._execute``; first match wins, so a name present
         in several categories (e.g. file operators, which are also merged
         into ``regular``) resolves to the same category as before.
 

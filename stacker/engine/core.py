@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from functools import partial
 import copy
 import logging
 import sys
@@ -342,10 +344,8 @@ class StackerCore:
 
         # Macro expansion state: set only on the throwaway core that runs a
         # macro body. `_interp_scope` is the expansion scope whose own
-        # bindings get interpolated into block literals; `_interp_target_vars`
-        # is the caller's scope the interpolated copies must run in.
+        # bindings get interpolated into block literals.
         self._interp_scope: ScopedVariables | None = None
-        self._interp_target_vars: ScopedVariables | None = None
 
         if self.parent is not None:  # it is a substack of a parent stacker
             self.operator_manager = self.parent.operator_manager
@@ -553,8 +553,67 @@ class StackerCore:
         """
         return stack.pop()
 
-    def _eval_block(self, block: StackerCore, stack: stack_data[object]) -> None:
-        self._evaluate(block.tokens, stack=stack)
+    def _run_block(self, block: object, stack: stack_data[object]) -> None:
+        """Runs ``block`` on ``stack``, in the scope the block is bound to; a value that is not a block is pushed.
+
+        Every word that runs a block goes through here (or ``_run_bound``),
+        so a block reads its names the same way wherever it is run: `if`,
+        `eval`, `times` and `map` agree. The stack is the caller's; the
+        scope is the block's own (``block.variables``), which is the
+        caller's scope when the block was written where it is run.
+
+        Args:
+            block: The code block, or any other value.
+            stack: The stack the block runs on.
+        """
+        if not isinstance(block, StackerCore):
+            stack.append(block)
+            return
+        try:
+            block._evaluate(block.tokens, stack=stack)
+        except Exception:
+            self.trace = block.trace  # what the REPL's debug display shows
+            raise
+
+    def _run_bound(self, block: StackerCore, scope: ScopedVariables, stack: stack_data[object]) -> None:
+        """Runs ``block`` on ``stack`` with ``scope`` as its scope: a loop iteration's scope, a child of the block's own.
+
+        Args:
+            block: The code block.
+            scope: The scope to run in (a loop scope whose parent is ``block.variables``).
+            stack: The stack the block runs on.
+        """
+        bound = block._bound_to(scope)
+        try:
+            bound._evaluate(bound.tokens, stack=stack)
+        except Exception:
+            self.trace = bound.trace
+            raise
+
+    def _condition_of(self, condition: object, stack: stack_data[object], word: str) -> object:
+        """Returns the value a condition stands for: a block is run on ``stack`` and its top taken, a value is itself.
+
+        A symbol or a string is never looked up as a variable here: a symbol
+        is truthy, a string is truthy when non-empty. Write the bare name to
+        test a variable's value.
+
+        Args:
+            condition: The value or block written at the condition's position.
+            stack: The caller's stack.
+            word: The word reading the condition (for the error message).
+
+        Raises:
+            NoValueProducedError: The block ran and the stack is empty, so
+                there is nothing to read as the condition.
+        """
+        if isinstance(condition, StackerCore):
+            self._run_block(condition, stack)
+            if not stack:
+                raise NoValueProducedError(
+                    word, f"The condition block of `{word}` left nothing on the stack to test."
+                )
+            return stack.pop()
+        return condition
 
     def _evaluate(self, tokens: list[object], stack: stack_data[object] | None = None) -> stack_data[object]:
         """
@@ -668,12 +727,57 @@ class StackerCore:
         raise UndefinedSymbolError(name)
 
     def _execute(self, token: str, stack: stack_data[object]) -> None:
-        """
-        Applies an operator to the top elements on the stack.
-        Modifies the stack in-place.
+        """Applies the word ``token`` to the stack, in place.
+
+        A function, a plugin word or an operator, in that order of lookup. A
+        pop past the bottom of the stack is reported as a stack underflow,
+        and an operand type error the host raised is attributed to the word
+        (once: an enclosing word leaves the message as it is).
         """
         try:
-            self._execute_impl(token, stack)
+            if token in self.sfunctions:  # sfunctions
+                args: list[object] = []
+                sfunc = self.sfunctions[token]
+                for _ in range(sfunc["arg_count"]):  # type: ignore[index]
+                    # Parameters are binding forms: block arguments bind
+                    # raw (code is data)
+                    args.insert(0, self._pop_and_resolve(stack))
+                func = sfunc["func"]  # type: ignore[index]
+                if isinstance(func, StackerFunction):
+                    result = func.run(args)
+                    if sfunc["push_result_to_stack"]:  # type: ignore[index]
+                        stack.extend(result)  # every value the body left, in order
+                else:
+                    result = func(*args)
+                    if sfunc["push_result_to_stack"] and result is not VOID:  # type: ignore[index]
+                        stack.append(result)  # a host function registered as a word: one value
+            elif token in self.plugins:
+                args = []
+                op = self.plugins[token]
+                for _ in range(op["arg_count"]):  # type: ignore[index]
+                    args.insert(0, self._pop_arg(stack, token))
+                try:
+                    if op["push_result_to_stack"]:  # type: ignore[index]
+                        result = op["func"](*args)  # type: ignore[index]
+                        if result is not VOID:
+                            stack.append(result)
+                    else:
+                        op["func"](*args)  # type: ignore[index]
+                except (TypeError, AttributeError) as error:
+                    _reraise_type_error(token, args, error)
+            else:
+                entry = self.operator_manager.dispatch_table.get(token)
+                if entry is None:
+                    raise StackerSyntaxError(f"Unknown operator '{token}'")
+                category, op = entry
+                if category == "priority":
+                    # Some priority operators (e.g. `ans`) have no handler;
+                    # they fall through silently, as the former elif chain did
+                    handler = self._PRIORITY_HANDLERS.get(token)
+                    if handler is not None:
+                        handler(self, op, stack)
+                else:
+                    self._CATEGORY_EXECUTORS[category](self, token, op, stack)
         except IndexError as e:
             # Only a pop or peek past the bottom of a stack means the operator
             # ran out of arguments. A list, string or format index out of
@@ -685,7 +789,7 @@ class StackerCore:
         except TypeError as e:
             # Provide more helpful type error messages
             error_msg = str(e)
-            if "unsupported operand type" in error_msg:
+            if "unsupported operand type" in error_msg and not error_msg.startswith("Operator `"):
                 raise TypeError(  # the include position, if any, stays readable through __cause__
                     f"Operator `{token}` received incompatible types. {error_msg}"
                 ) from e
@@ -711,63 +815,6 @@ class StackerCore:
                 return 1
             return op["arg_count"]  # type: ignore[return-value]
         return 1  # Default
-
-    def _execute_impl(self, token: str, stack: stack_data[object]) -> None:
-        """
-        Internal implementation of operator execution.
-        IndexError and TypeError are caught by _execute and converted to better errors.
-        """
-        if token in self.sfunctions:  # sfunctions
-            args: list[object] = []
-            sfunc = self.sfunctions[token]
-            for _ in range(sfunc["arg_count"]):  # type: ignore[index]
-                # Parameters are binding forms: block arguments bind
-                # raw (code is data)
-                args.insert(0, self._pop_and_resolve(stack))
-            result = sfunc["func"](*args)  # type: ignore[index]
-            if not sfunc["push_result_to_stack"]:  # type: ignore[index]
-                pass
-            elif isinstance(sfunc["func"], StackerFunction):
-                stack.extend(result)  # every value the body left, in order
-            elif result is not VOID:
-                stack.append(result)  # a host function registered as a word: one value
-        elif token in self.plugins:
-            args = []
-            op = self.plugins[token]
-            for _ in range(op["arg_count"]):  # type: ignore[index]
-                args.insert(0, self._pop_arg(stack, token))
-            try:
-                if op["push_result_to_stack"]:  # type: ignore[index]
-                    result = op["func"](*args)  # type: ignore[index]
-                    if result is not VOID:
-                        stack.append(result)
-                else:
-                    op["func"](*args)  # type: ignore[index]
-            except (TypeError, AttributeError) as error:
-                _reraise_type_error(token, args, error)
-        else:
-            entry = self.operator_manager.dispatch_table.get(token)
-            if entry is None:
-                raise StackerSyntaxError(f"Unknown operator '{token}'")
-            category, op = entry
-            self._CATEGORY_EXECUTORS[category](self, token, op, stack)
-        return
-
-    # ------------------------------------------------------------------
-    # Category executors. Bodies are moved verbatim from the former
-    # _execute_impl elif chain; the unified dispatch table replaced the
-    # per-category membership checks.
-    # ------------------------------------------------------------------
-
-    def _exec_priority(
-        self, token: str, op: dict[str, object], stack: stack_data[object]
-    ) -> None:
-        """Execute a priority operator via its per-name handler (see _PRIORITY_HANDLERS)."""
-        handler = self._PRIORITY_HANDLERS.get(token)
-        # Some priority operators (e.g. `ans`) have no handler; falling
-        # through silently preserves the former elif chain's behavior.
-        if handler is not None:
-            handler(self, op, stack)
 
     def _prio_do(self, op, stack) -> None:
         body = stack.pop()
@@ -991,7 +1038,7 @@ class StackerCore:
                 'e.g. "3 4 +" parse eval'
             )
         elif isinstance(expression, StackerCore):
-            self._eval_block(expression, stack=stack)
+            self._run_block(expression, stack)
         elif isinstance(expression, StackerLambda):
             self._call_lambda(expression, stack)
         else:
@@ -1008,7 +1055,7 @@ class StackerCore:
         code = stack.pop()
         collected: stack_data[object] = stack_data()
         if isinstance(code, StackerCore):
-            self._eval_block(code, stack=collected)
+            self._run_block(code, collected)
         elif isinstance(code, Symbol):
             self._evaluate([code.name], stack=collected)
         elif isinstance(code, StackerLambda):
@@ -1039,7 +1086,7 @@ class StackerCore:
                 args.insert(0, self._pop_and_resolve(stack))
         except IndexError:
             raise StackUnderflowError("lambda", fn.arg_count) from None
-        stack.extend(fn(*args))  # every value the body left, in order
+        stack.extend(fn.run(args))  # every value the body left, in order
 
     def _prio_sub(self, op, stack) -> None:
         self._substack_with_tokens([value_to_token(stack.pop())], stack)
@@ -1146,7 +1193,7 @@ class StackerCore:
         else:
             stack.append(args_list)
         if isinstance(func, StackerCore):
-            self._eval_block(func, stack=stack)
+            self._run_block(func, stack)
         elif isinstance(func, StackerLambda):
             self._call_lambda(func, stack)
         elif isinstance(func, Symbol):
@@ -1301,25 +1348,13 @@ class StackerCore:
             name_acc = self._name_of(symbol_acc, token)
             name_x = self._name_of(symbol_x, token)
 
-            # Create binary function with variable binding
             def reduce_func(acc: object, x: object) -> object:
-                # Create child scope for this reduction step
-                original_parent_vars = self.variables
-                original_parent_stack = self.stack
+                # Each step runs in a loop scope holding the two names, a
+                # child of the body's own scope: a name the body is first to
+                # set goes to that scope (see loop_scope)
                 result_stack: stack_data[object] = stack_data()
-                try:
-                    # A loop scope: it holds the two names, and a name the
-                    # body is first to set goes to the caller's scope
-                    self.variables = ScopedVariables.loop_scope(self.variables)
-                    self.variables.bind(name_acc, acc)
-                    self.variables.bind(name_x, x)
-                    # Evaluate the body using a temporary stack
-                    self.stack = result_stack
-                    self._evaluate(body.tokens, stack=result_stack)  # type: ignore[union-attr]
-                finally:
-                    # Restore parent scope and stack even if the body raised
-                    self.stack = original_parent_stack
-                    self.variables = original_parent_vars
+                scope = ScopedVariables.loop_scope(body.variables, {name_acc: acc, name_x: x})  # type: ignore[union-attr]
+                self._run_bound(body, scope, result_stack)  # type: ignore[arg-type]
                 return self._one_result(result_stack, token, "the block")
 
             items = self._data_items(fold_args, token)
@@ -1452,7 +1487,6 @@ class StackerCore:
     # Category -> executor. Keys must cover every category in
     # OperatorManager's dispatch table (_DISPATCH_ORDER).
     _CATEGORY_EXECUTORS = {
-        "priority": _exec_priority,
         "stack": _exec_stack,
         "system": _exec_system,
         "regular": _exec_regular,
@@ -1558,11 +1592,11 @@ class StackerCore:
             StackerTypeError: ``spec`` is none of the above (a string, a number, ...).
         """
         if isinstance(spec, StackerCore):
-            # The block runs as it is, in the scope it is bound to (the
-            # caller's): what it assigns stays assigned, and nothing is copied
-            return lambda element: self._stacker_lambda(element, spec, word)
+            # The block runs as it is, in the scope it is bound to: what it
+            # assigns stays assigned, and nothing is copied
+            return partial(self._stacker_lambda, body=spec, operator=word)
         if isinstance(spec, StackerLambda):
-            return lambda element: self._one_result(spec(element), word, "the lambda")
+            return lambda element: self._one_result(spec.run([element]), word, "the lambda")
         if isinstance(spec, Symbol):
             name = spec.name
             if name not in self.macros and self.variables.get(name, _MISSING) is _MISSING:
@@ -1570,7 +1604,7 @@ class StackerCore:
                 if sfunc is not None and sfunc["arg_count"] == 1 and sfunc["push_result_to_stack"]:  # type: ignore[index]
                     func = sfunc["func"]  # type: ignore[index]
                     if isinstance(func, StackerFunction):
-                        return lambda element: self._one_result(func(element), word, f"`{name}`")
+                        return lambda element: self._one_result(func.run([element]), word, f"`{name}`")
                     return func  # type: ignore[return-value]
                 host = self.plugins.get(name)
                 if host is None:
@@ -1591,7 +1625,7 @@ class StackerCore:
 
                     return call
             block = self._block_of([name])
-            return lambda element: self._stacker_lambda(element, block, word)
+            return partial(self._stacker_lambda, body=block, operator=word)
         raise StackerTypeError(self._function_spec_message(word, spec))
 
     def _lookup_name(self, name: str) -> object:
@@ -1631,7 +1665,7 @@ class StackerCore:
             scope: Expansion scope; only its own bindings are consulted.
 
         Returns:
-            A fresh block whose scope is the caller's.
+            A fresh block, bound to the expansion scope.
 
         Raises:
             StackerSyntaxError: A ``:name`` whose binding is not a name.
@@ -1658,7 +1692,10 @@ class StackerCore:
             copy_core = type(self)(parent=self)
             copy_core.tokens = TokenList([substitute(token) for token in template.tokens])
             copy_core.bracket_type = template.bracket_type
-            copy_core.variables = self._interp_target_vars  # type: ignore[assignment]
+            # Bound to the expansion scope while the body runs (a block the
+            # body runs during expansion writes behind the write barrier);
+            # the expansion itself is bound to the caller's scope by _expand_macro
+            copy_core.variables = self.variables
             return copy_core
 
         return build(block)
@@ -1723,7 +1760,6 @@ class StackerCore:
             expander.bracket_type = macro.body.bracket_type
             expander.variables = scope
             expander._interp_scope = scope
-            expander._interp_target_vars = self.variables
             expansion_stack: stack_data[object] = stack_data()
             try:
                 expander._evaluate(expander.tokens, stack=expansion_stack)
@@ -1738,12 +1774,17 @@ class StackerCore:
             if len(expansion_stack) > 1:
                 raise MacroExpansionError(name, len(expansion_stack))
             result = expansion_stack.pop()
+            # The expansion runs where the macro was called, as if written there
+            if isinstance(result, StackerCore):
+                result = result._bound_to(self.variables)
+            elif isinstance(result, StackerLambda):
+                result.blockstack = result.blockstack._bound_to(self.variables)
 
             if not evaluate or not isinstance(result, StackerCore):
                 stack.append(result)
                 return
             try:
-                self._eval_block(result, stack)
+                self._run_block(result, stack)
             except StackerError as error:
                 attach_macro_context(error, f"in code generated by macro '{name}'")
                 raise
