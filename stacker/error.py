@@ -179,6 +179,30 @@ def symbol_as_value_message(word: str, name: str) -> str:
     )
 
 
+class UserError(StackerError):
+    """An error the program raised itself with `throw`.
+
+    ``kind`` is shown where a built-in error shows its class name, so a
+    program can name its errors as it likes (``IllegalArgumentException``,
+    ``empty queue``); ``message`` is the text.
+    """
+
+    def __init__(self, kind: str, message: str) -> None:
+        super().__init__(message)
+        self.kind = kind
+        self.message = message
+
+    def __reduce__(self) -> tuple[type[UserError], tuple[str, str]]:
+        return (UserError, (self.kind, self.message))
+
+
+def error_kind(error: BaseException) -> str:
+    """The kind of ``error`` as the display and `try` show it: the `throw` kind or the class name."""
+    if isinstance(error, UserError):
+        return error.kind
+    return type(error).__name__
+
+
 class StackerSyntaxError(StackerError):
     """Syntax error"""
 

@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from stacker.engine.data_type import Symbol
+from stacker.error import StackerTypeError, UserError, error_kind
 from stacker.operators.block_exec import resolve_condition, run_block
+from stacker.util.disp import plain_text
 
 if TYPE_CHECKING:
     from stacker.stacker import Stacker
@@ -76,6 +79,37 @@ def _iferror(
         run_block(catch_block, parent, stack)
 
 
+def _throw(kind: object, message: object) -> None:
+    """``kind message throw``: raises an error of the program's own kind with ``message`` as its text."""
+    if isinstance(kind, Symbol):
+        kind = kind.name
+    if not isinstance(kind, str) or kind == "" or not isinstance(message, str):
+        raise StackerTypeError(
+            "`throw` expects a kind (a string or a symbol) and a message (a string), "
+            f"got {plain_text(kind)} and {plain_text(message)}"
+        )
+    raise UserError(str(kind), str(message))
+
+
+def _try(
+    try_block: Stacker | object,
+    handler: Stacker | object,
+    parent: Stacker,
+    stack: stack_data[object],
+) -> None:
+    """``{try} {handler} try``: runs ``try_block``; on an error, pushes the error as a dictionary and runs ``handler``.
+
+    The dictionary has the keys ``"kind"`` (a `throw` kind, or the class
+    name of a built-in error) and ``"message"``. What is caught is what
+    `iferror` catches: every error, but not `break` or an exit.
+    """
+    try:
+        run_block(try_block, parent, stack)
+    except Exception as error:  # noqa: BLE001 -- the language's try/catch, see _iferror
+        stack.append({"kind": error_kind(error), "message": str(error)})
+        run_block(handler, parent, stack)
+
+
 condition_operators = {
     "cond": {
         "func": (lambda pairs, parent, stack: _cond(pairs, parent, stack)),
@@ -115,5 +149,17 @@ condition_operators = {
         "arg_count": 2,
         "push_result_to_stack": False,
         "desc": "Executes a block of code if an error occurs.",
+    },
+    "try": {
+        "func": (lambda try_block, handler, parent, stack: _try(try_block, handler, parent, stack)),
+        "arg_count": 2,
+        "push_result_to_stack": False,
+        "desc": "{try} {handler} try: runs the handler with the error on the stack as a dictionary ('kind' and 'message') if the first block raises one",
+    },
+    "throw": {
+        "func": (lambda kind, message: _throw(kind, message)),
+        "arg_count": 2,
+        "push_result_to_stack": False,
+        "desc": "kind message throw: raises an error of your own kind (a string or a symbol) with a message",
     },
 }

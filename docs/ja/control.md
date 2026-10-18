@@ -139,6 +139,36 @@ stacker:0> 1 2 {3 0 /} {"エラー" echo} iferror
 
 try ブロックの中で `break` を使うと、catch は実行されず、囲んでいるループが抜けます（次節）。
 
+## throw と try
+
+`throw` は自分でエラーを起こします。種類（文字列かシンボル）とメッセージを取ります。種類は、組み込みのエラーがクラス名を出す場所に表示されます。
+
+```
+"IllegalArgumentException" "row 5 is outside 0..4" throw
+```
+
+```
+stacker: error: row 5 is outside 0..4
+  [IllegalArgumentException]
+```
+
+`try` は `iferror` と同じようにエラーを捕まえますが、handler を実行する前に**エラーを辞書としてスタックに積みます**。キーは文字列の `"kind"`（`throw` の種類。組み込みのエラーならクラス名）と `"message"` です。
+
+```
+{try} {handler} try
+```
+
+```
+stacker:0> {"E" "boom" throw} {:e set e "kind" get e "message" get} try
+['E' 'boom']
+stacker:1> {1 0 /} {"kind" get} try
+['E' 'boom' 'ZeroDivisionError']
+stacker:2> {1 2 +} {drop "never" echo} try
+['E' 'boom' 'ZeroDivisionError' 3]
+```
+
+エラーをそのまま投げ直すには、辞書の 2 つの値で `throw` します（`e "kind" get e "message" get throw`）。`iferror` と同じく、スタックは戻りませんし、`break` と `exit` は捕まえません。
+
 ## ループ
 
 ### do

@@ -4,7 +4,7 @@ import sys
 import traceback
 from pathlib import Path
 
-from stacker.error import ScriptReadError
+from stacker.error import error_kind, ScriptReadError
 from stacker.runtime.exec_modes.execution_mode import ExecutionMode
 from stacker.lib.config import script_extension_name
 from stacker.stacker import Stacker
@@ -30,7 +30,7 @@ class ScriptMode(ExecutionMode):
             self.execute_stacker_dotfile(path)
         except Exception as e:
             # Format error using Clang-style formatter
-            error_type = type(e).__name__
+            error_type = error_kind(e)
             message = str(e)
 
             # Get line number and source line from tracked information
