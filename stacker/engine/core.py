@@ -17,6 +17,7 @@ from stacker.error import (
     StackerSyntaxError,
     StackerTypeError,
     UndefinedSymbolError,
+    ValidationError,
     attach_macro_context,
     not_a_sequence_message,
     symbol_as_value_message,
@@ -554,7 +555,7 @@ class StackerCore:
         return stack.pop()
 
     def _run_block(self, block: object, stack: stack_data[object]) -> None:
-        """Runs ``block`` on ``stack``, in the scope the block is bound to; a value that is not a block is pushed.
+        """Runs ``block`` on ``stack``, in the scope the block is bound to.
 
         Every word that runs a block goes through here (or ``_run_bound``),
         so a block reads its names the same way wherever it is run: `if`,
@@ -562,12 +563,22 @@ class StackerCore:
         scope is the block's own (``block.variables``), which is the
         caller's scope when the block was written where it is run.
 
+        A lambda is called with its arguments from ``stack`` and a symbol is
+        run as its name, as `eval` does, so a word that runs code runs
+        every kind of code the same way; any other value is pushed as it is
+        (`true 1 2 ifelse` chooses a value).
+
         Args:
-            block: The code block, or any other value.
+            block: The code block, a lambda, a symbol, or any other value.
             stack: The stack the block runs on.
         """
         if not isinstance(block, StackerCore):
-            stack.append(block)
+            if isinstance(block, StackerLambda):
+                self._call_lambda(block, stack)
+            elif isinstance(block, Symbol):
+                self._evaluate([block.name], stack=stack)
+            else:
+                stack.append(block)
             return
         try:
             block._evaluate(block.tokens, stack=stack)
@@ -865,13 +876,20 @@ class StackerCore:
     def _prio_break(self, op, stack) -> None:
         raise BreakException()
     def _prio_cond(self, op, stack) -> None:
-        n = self._pop_arg(stack, "cond")
+        n = integer_argument("cond", self._pop_arg(stack, "cond"))
+        if n < 0:
+            stack.append(n)
+            raise ValidationError(f"`cond` expects a count of 0 or more, got {n}")
+        if len(stack) < 2 * n:
+            have = len(stack)
+            stack.append(n)
+            raise StackUnderflowError(
+                "cond", 2 * n,
+                f"`cond` needs {2 * n} values below the count ({n} pairs of a condition and a result), "
+                f"but the stack has {have}.",
+            )
         pairs = []
-        try:
-            count = range(n)  # type: ignore[arg-type]
-        except (TypeError, AttributeError) as error:
-            _reraise_type_error("cond", [n], error)
-        for _ in count:
+        for _ in range(n):
             result = stack.pop()
             condition = stack.pop()
             pairs.insert(0, (condition, result))
