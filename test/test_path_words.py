@@ -43,3 +43,10 @@ def test_a_path_must_be_a_string(program, word):
 def test_a_directory_that_cannot_be_listed_is_reported_by_the_word(tmp_path):
     with pytest.raises(StackerRuntimeError, match="`list-dir` cannot list"):
         run(f'"{tmp_path}/nope" list-dir')
+
+
+def test_path_join_takes_a_list_of_parts_on_the_right():
+    assert run('"a" ["b" "c" "d.txt"] path-join') == [os.path.join("a", "b", "c", "d.txt")]
+    assert run('"a" [] path-join') == ["a"]
+    with pytest.raises(StackerTypeError, match="`path-join` expects a file name"):
+        run('"a" ["b" 1] path-join')
