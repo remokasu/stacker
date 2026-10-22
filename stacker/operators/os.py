@@ -20,8 +20,12 @@ def _cd(path: object) -> None:
 
 
 def _path_join(head: object, tail: object) -> str:
-    """``a b path-join``: ``b`` under ``a``, with the separator put in (an absolute ``b`` stands alone)."""
-    return os.path.join(file_name_argument("path-join", head), file_name_argument("path-join", tail))
+    """``a b path-join``: ``b`` under ``a``, with the separator put in (an absolute ``b`` stands alone).
+
+    ``b`` may be a list of parts, joined in turn: ``script-dir ["data" "x.txt"] path-join``.
+    """
+    parts = list(tail) if isinstance(tail, list) else [tail]
+    return os.path.join(file_name_argument("path-join", head), *(file_name_argument("path-join", p) for p in parts))
 
 
 def _list_dir(path: object) -> list[str]:
@@ -82,7 +86,7 @@ os_operators = {
         "func": _path_join,
         "arg_count": 2,
         "push_result_to_stack": True,
-        "desc": "a b path-join: joins two parts of a path with the separator",
+        "desc": "a b path-join: joins two parts of a path with the separator; b may be a list of parts (a [b c] path-join)",
     },
     "list-dir": {
         "func": _list_dir,
