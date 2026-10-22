@@ -6,7 +6,7 @@
 
 - **`bit-length`, `popcount`, `trailing-zeros`**: the bits an integer needs, its one bits, and the zero bits below its lowest one bit, so a program no longer counts bits through the binary text of a number
 - **`path-join` takes a list on the right**: `script-dir ["data" "x.csv"] path-join` joins every part in turn, so a path of several parts no longer needs one `path-join` per part (and cannot be short of one)
-- A script, or a file read by `include` or `require`, that ends with values on its stack logs them (`1 value left on the stack at the end of main.stk: '/home/.../ps3'`): a value left behind is usually an argument too many or a result never used, which the file's own output does not show. The REPL and `-e` show the stack and log nothing
+- A script, or a file read by `include` or `require`, that ends with values on its stack logs them (`1 value left on the stack at the end of main.stk: '/home/.../ps3'`): a value left behind is usually an argument too many or a result never used, which the file's own output does not show (a long value is cut short; a file included several times is logged each time). The REPL and `-e` show the stack and log nothing
 - A `set` or `global` that makes a new global variable with a built-in word's name logs `redefining built-in word 'all'`, as `defun` does since 1.22.0: a global variable hides the word everywhere, a required library's functions included. A local variable (inside a function or a loop) hides it only there and is not logged
 
 ## [1.22.0] - 2026-10-22
