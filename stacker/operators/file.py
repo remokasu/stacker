@@ -5,6 +5,7 @@ from pathlib import Path
 
 from stacker.engine.data_type import Symbol
 from stacker.error import StackerRuntimeError, StackerTypeError, symbol_as_value_message
+from stacker.operators.arguments import byte_values
 from stacker.util.disp import display_text, plain_text
 
 
@@ -125,6 +126,27 @@ def file_exists(filename: object) -> bool:
     return os.path.exists(file_name_argument("file-exists", filename))
 
 
+def read_bytes(filename: object) -> list[int]:
+    """``path read-bytes``: the whole file as a list of its bytes (integers 0 to 255)."""
+    filename = file_name_argument("read-bytes", filename)
+    try:
+        with open(filename, "rb") as f:
+            return list(f.read())
+    except OSError as error:
+        raise cannot_open_error("read-bytes", filename, error) from error
+
+
+def write_bytes(data: object, filename: object) -> None:
+    """``bytes path write-bytes``: writes the bytes to a file, replacing what it held."""
+    filename = file_name_argument("write-bytes", filename)
+    content = byte_values("write-bytes", data)
+    try:
+        with open(filename, "wb") as f:
+            f.write(content)
+    except OSError as error:
+        raise cannot_open_error("write-bytes", filename, error) from error
+
+
 file_operators = {
     "write-to-file": {
         "func": (lambda data, filename: write_to_file(data, filename)),
@@ -149,6 +171,18 @@ file_operators = {
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Read all content from file",
+    },
+    "read-bytes": {
+        "func": read_bytes,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Read a whole file as a list of its bytes (integers 0 to 255)",
+    },
+    "write-bytes": {
+        "func": write_bytes,
+        "arg_count": 2,
+        "push_result_to_stack": False,
+        "desc": "bytes path write-bytes: write a list or an array of bytes (integers 0 to 255) to a file",
     },
     "file-exists": {
         "func": (lambda filename: file_exists(filename)),
