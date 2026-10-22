@@ -29,6 +29,7 @@ class ScriptMode(ExecutionMode):
             self.rpn_calculator.main_script = str(path.resolve())
             # Use the parent class's execute_stacker_dotfile which handles multi-line properly
             self.execute_stacker_dotfile(path)
+            self.rpn_calculator.warn_values_left(path.name, self.rpn_calculator.stack)
         except Exception as e:
             # Format error using Clang-style formatter
             error_type = error_kind(e)

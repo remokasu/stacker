@@ -56,6 +56,9 @@ from stacker.include.include import IncludeState
 
 _LOGGER = logging.getLogger("stacker")
 
+#: How many of the values left on a stack at the end of a file are named in the warning
+LEFTOVER_VALUES_SHOWN = 3
+
 _DEFMACRO_USAGE = (
     "`defmacro` takes three arguments: {args} {body} :name defmacro. "
     "For a plain named code snippet use `alias`: {body} {name} alias."
@@ -951,6 +954,28 @@ class StackerCore:
             self._warn_prelude_redefinition(name)
         # Always set in global (root) scope
         self.variables.set_global(name, value)
+
+    @staticmethod
+    def warn_values_left(file: str, values: Sequence[object]) -> None:
+        """Logs the values a script or an included file left on its stack when it ended.
+
+        A value left behind is usually an argument too many or a result
+        never used, which the file's own output does not show; the top
+        few values are named so that the mistake can be found.
+
+        Args:
+            file: The file that ended.
+            values: Its stack, bottom first.
+        """
+        if not values:
+            return
+        count = len(values)
+        shown = ", ".join(plain_text(v) for v in list(values)[-LEFTOVER_VALUES_SHOWN:])
+        more = f" (and {count - LEFTOVER_VALUES_SHOWN} more below)" if count > LEFTOVER_VALUES_SHOWN else ""
+        _LOGGER.warning(
+            "%d value%s left on the stack at the end of %s: %s%s",
+            count, "" if count == 1 else "s", file, shown, more,
+        )
 
     def _warn_prelude_redefinition(self, name: str) -> None:
         """Logs a warning when user code redefines a word the prelude defined."""
