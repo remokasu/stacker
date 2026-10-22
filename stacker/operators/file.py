@@ -52,8 +52,8 @@ class FileIterator:
         return None
 
 
-def _file_name(word: str, filename: object) -> str:
-    """Returns ``filename`` when it is a string; otherwise raises an error that names the word.
+def file_name_argument(word: str, filename: object) -> str:
+    """Returns ``filename`` when it is a string; otherwise raises an error that names the word (shared by the OS words).
 
     A number is refused on purpose: ``open`` would read it as a file
     descriptor and ``1 write-to-file`` would close the standard output.
@@ -65,64 +65,64 @@ def _file_name(word: str, filename: object) -> str:
     return filename
 
 
-def _cannot_open(word: str, filename: str, error: OSError) -> StackerRuntimeError:
-    """The error for a file ``word`` could not open or go through, from the host's reason."""
+def cannot_open_error(word: str, filename: str, error: OSError, verb: str = "open") -> StackerRuntimeError:
+    """The error for a file ``word`` could not open (or ``verb``) ``filename``, from the host's reason."""
     reason = error.strerror or str(error)
-    return StackerRuntimeError(f"`{word}` cannot open `{filename}`: {reason}")
+    return StackerRuntimeError(f"`{word}` cannot {verb} `{filename}`: {reason}")
 
 
-def _not_text(word: str, filename: str, error: UnicodeDecodeError) -> StackerRuntimeError:
+def not_text_error(word: str, filename: str, error: UnicodeDecodeError) -> StackerRuntimeError:
     """The error for a file ``word`` could not read as text."""
     return StackerRuntimeError(f"`{word}` cannot read `{filename}` as text: {error.reason}")
 
 
 def write_to_file(data: object, filename: object) -> None:
     """Writes ``data`` to a file, as the text `str` gives, replacing what the file held."""
-    filename = _file_name("write-to-file", filename)
+    filename = file_name_argument("write-to-file", filename)
     try:
         with open(filename, "w") as f:
             f.write(display_text(data))
     except OSError as error:
-        raise _cannot_open("write-to-file", filename, error) from error
+        raise cannot_open_error("write-to-file", filename, error) from error
 
 
 def read_from_file(filename: object) -> str:
     """Reads the whole content of a file as one string."""
-    filename = _file_name("read-from-file", filename)
+    filename = file_name_argument("read-from-file", filename)
     try:
         with open(filename, "r") as f:
             return f.read()
     except OSError as error:
-        raise _cannot_open("read-from-file", filename, error) from error
+        raise cannot_open_error("read-from-file", filename, error) from error
     except UnicodeDecodeError as error:
-        raise _not_text("read-from-file", filename, error) from error
+        raise not_text_error("read-from-file", filename, error) from error
 
 
 def append_to_file(data: object, filename: object) -> None:
     """Appends ``data`` to a file, as the text `str` gives."""
-    filename = _file_name("append-to-file", filename)
+    filename = file_name_argument("append-to-file", filename)
     try:
         with open(filename, "a") as f:
             f.write(display_text(data))
     except OSError as error:
-        raise _cannot_open("append-to-file", filename, error) from error
+        raise cannot_open_error("append-to-file", filename, error) from error
 
 
 def read_lines_from_file(filename: object) -> list[str]:
     """Reads a file as a list of its lines, line breaks removed."""
-    filename = _file_name("read-lines", filename)
+    filename = file_name_argument("read-lines", filename)
     try:
         with open(filename, "r") as f:
             return [line.rstrip("\n") for line in f]
     except OSError as error:
-        raise _cannot_open("read-lines", filename, error) from error
+        raise cannot_open_error("read-lines", filename, error) from error
     except UnicodeDecodeError as error:
-        raise _not_text("read-lines", filename, error) from error
+        raise not_text_error("read-lines", filename, error) from error
 
 
 def file_exists(filename: object) -> bool:
     """Returns True when a file (or a directory) of that name exists."""
-    return os.path.exists(_file_name("file-exists", filename))
+    return os.path.exists(file_name_argument("file-exists", filename))
 
 
 file_operators = {
