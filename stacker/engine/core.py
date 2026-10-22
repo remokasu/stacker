@@ -927,12 +927,17 @@ class StackerCore:
         symbol = stack.pop()
         name = self._name_of(symbol, "set")
         value = self._pop_and_resolve(stack)
-        if name in self._prelude["names"]:
-            self._warn_prelude_redefinition(name)
         # Try to update existing variable in scope chain
         # If not found, create in local scope
         if not self.variables.update_existing(name, value):
+            if self.variables.binds_globally():
+                # A global variable hides a word of its name everywhere, a
+                # required library's functions included; a local one only
+                # inside its function or loop, so only the global is logged
+                self._warn_builtin_redefinition(name)
             self.variables[name] = value
+        elif name in self._prelude["names"]:
+            self._warn_prelude_redefinition(name)
 
     def _prio_global(self, op, stack) -> None:
         # RPN: value varname global
@@ -940,7 +945,9 @@ class StackerCore:
         symbol = stack.pop()  # Pop varname
         name = self._name_of(symbol, "global")
         value = self._pop_and_resolve(stack)  # Blocks bind raw (code is data)
-        if name in self._prelude["names"]:
+        if name not in self.variables.root().own_bindings():
+            self._warn_builtin_redefinition(name)  # a new global hides a word of its name everywhere
+        elif name in self._prelude["names"]:
             self._warn_prelude_redefinition(name)
         # Always set in global (root) scope
         self.variables.set_global(name, value)
@@ -951,7 +958,7 @@ class StackerCore:
             _LOGGER.warning("redefining prelude word '%s'", name)
 
     def _warn_builtin_redefinition(self, name: str) -> None:
-        """Logs a warning when `defun` or `defmacro` gives a built-in or plugin word's name to a new word.
+        """Logs a warning when a new word or a new global variable takes a built-in, plugin or prelude word's name.
 
         The new word wins, as it always did, so a program keeps working
         when a later version adds a word of the same name; the warning is
