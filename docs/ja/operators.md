@@ -153,7 +153,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `str` | 文字列に変換 | `42 str` |
 | `bool` | 真偽値に変換（`0`, 空文字列, 空リストは `false`） | `1 bool` |
 | `complex` | 複素数に変換 | `3 complex` |
-| `type` | 値の型を積む | `42 type` |
+| `type` | 値の種類をシンボルで積む: `:int` `:float` `:complex` `:fraction` `:bool` `:str` `:list` `:array` `:dict` `:symbol` `:lambda` `:null`（ブロックは引数として評価されるので、その結果の種類になる。プラグインが積んだ値はそのクラス名）。`x type :array ==` のように比べる | `42 type` |
 | `int?` | 整数か。`bool` は整数ではない | `42 int?` |
 | `float?` | float か | `3.14 float?` |
 | `str?` | 文字列か | `"hello" str?` |

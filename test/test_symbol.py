@@ -405,7 +405,7 @@ class TestSymbolPredicateAndType:
         assert run('"x" str?') == [True]
 
     def test_type_of_a_symbol(self):
-        assert run(":x type") == [Symbol]
+        assert run(":x type") == [Symbol("symbol")]
 
 
 class TestStringArguments:
@@ -484,7 +484,7 @@ class TestEdgeCasesNotCoveredElsewhere:
         assert run('"$x" :y set y list') == [["$", "x"]]
 
     def test_symbol_bound_through_a_name_keeps_its_type(self):
-        assert run(":x :y set y type") == [Symbol]
+        assert run(":x :y set y type") == [Symbol("symbol")]
 
     def test_listn_of_symbols(self):
         assert run(":x 1 listn") == [[Symbol("x")]]
