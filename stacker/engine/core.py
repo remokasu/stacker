@@ -950,12 +950,23 @@ class StackerCore:
         if not self._prelude["loading"]:
             _LOGGER.warning("redefining prelude word '%s'", name)
 
+    def _warn_builtin_redefinition(self, name: str) -> None:
+        """Logs a warning when `defun` or `defmacro` gives a built-in or plugin word's name to a new word.
+
+        The new word wins, as it always did, so a program keeps working
+        when a later version adds a word of the same name; the warning is
+        what tells its author that the built-in is now hidden.
+        """
+        if name in self._prelude["names"]:
+            self._warn_prelude_redefinition(name)
+        elif name in self.operator_manager.dispatch_table or name in self.plugins:
+            _LOGGER.warning("redefining built-in word '%s'", name)
+
     def _prio_defun(self, op, stack) -> None:
         """``{args} {body} :name defun`` -- the argument list is validated like ``defmacro``'s."""
         symbol = stack.pop()
         name = self._name_of(symbol, "defun")
-        if name in self._prelude["names"]:
-            self._warn_prelude_redefinition(name)
+        self._warn_builtin_redefinition(name)
         body = stack.pop()
         fargs = self._parse_arg_names(stack.pop(), "defun")
         op["func"](self, name, fargs, body)
@@ -975,8 +986,7 @@ class StackerCore:
                 f"`defmacro` expects a code block as the macro body, got {body}. {_DEFMACRO_USAGE}"
             )
         args = self._parse_arg_names(fargs, "defmacro")
-        if name in self._prelude["names"]:
-            self._warn_prelude_redefinition(name)
+        self._warn_builtin_redefinition(name)
         op["func"](self, name, args, body)
 
     def _prio_macroexpand(self, op, stack) -> None:
