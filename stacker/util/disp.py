@@ -138,6 +138,8 @@ class CustomDictPrinter(CustomPrinter):
         self.color = color
 
     def __str__(self) -> str:
+        if not self.value:
+            return colored("{:}", self.color)  # an empty dictionary, told apart from an empty block `{}`
         if not _entered(self.value):
             return colored("{...}", self.color)
         try:
@@ -147,6 +149,8 @@ class CustomDictPrinter(CustomPrinter):
         return colored("{", self.color) + inner + colored("}", self.color)
 
     def __repr__(self) -> str:
+        if not self.value:
+            return "{:}"
         if not _entered(self.value):
             return "{...}"
         try:

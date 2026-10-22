@@ -12,7 +12,7 @@ Values:
            {1 2 +} collect -> [3]: run it on an empty stack, list what it left
   symbol:  :name     (a name as a value)
   array:   [1 2 3] array   (changes in place; shown like a list, in its own color)
-  dict:    dict            (keys to values, changes in place; shown as {'a' 1})
+  dict:    dict            (keys to values, changes in place; shown as {'a' 1}, empty as {:})
   literals: true false null
 
 Names (three ways to write one):
