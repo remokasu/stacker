@@ -1,5 +1,14 @@
 # CHANGE LOG
 
+## [1.20.1] - 2026-10-22
+
+### Fixed
+
+- `cat` and `cd` handed their argument to the host, which reads an integer as a file descriptor: `1 cat` closed the standard output and silenced everything after it. A path must be a string, as for the file words since 1.19.1; a path that cannot be opened or changed to is reported by the word with the path and the reason (`` `cd` cannot change to `nope_dir`: No such file or directory ``)
+- A lambda or a symbol handed to `if`, `ifelse`, `iferror`, `times`, `cond` or `try` in a block's place was pushed as a value, so `true f if` left the lambda on the stack and a `try` handler written as `{e} {...} lambda` swallowed the error and did nothing, while `eval`, `collect` and `apply` ran the same values. Every word that runs code now runs a lambda (with its arguments from the stack, so a `try` handler takes the error dictionary) and a symbol (as its name) the way `eval` does. Any other value is still pushed: `true 1 2 ifelse` chooses a value as before. What changes is choosing between two lambdas (`true f g ifelse` now runs the chosen one) or between two symbols (`true :a :b ifelse` now runs the chosen name; to choose the symbol itself, write `true {:a} {:b} ifelse`)
+- `cond` reported too few pairs as "requires 0 arguments" and leaked the host's message for a count that is not an integer; it says how many values the pairs need (`` `cond` needs 6 values below the count (3 pairs of a condition and a result), but the stack has 2 ``) and leaves the stack as it was
+- `bin`, `oct`, `hex` and `dec` raised "Invalid number format.(convert_to_base)" for every value they cannot read; each names itself and shows the value (`` `bin` expects an integer or a string such as "0b101", got 7.5 ``)
+
 ## [1.20.0] - 2026-10-19
 
 ### Breaking Changes

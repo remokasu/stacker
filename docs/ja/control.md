@@ -167,6 +167,10 @@ stacker:2> {1 2 +} {drop "never" echo} try
 ['E' 'boom' 'ZeroDivisionError' 3]
 ```
 
+`if` / `ifelse` / `iferror` / `try` / `times` / `cond` のブロックの位置にラムダやシンボルを書くと、`eval` と同じように実行されます（ラムダは引数をスタックから取り、シンボルはその名前を実行）。数や文字列などの値はそのまま積まれるので、`true 1 2 ifelse` は値を選びます。シンボルそのものを選びたいときは `true {:a} {:b} ifelse` と書きます。
+
+handler はラムダでも書けます。エラーの辞書がスタックにあるので、引数を 1 つ取るラムダがそれを受け取ります（`{try} {e} {e "kind" get echo} lambda try`）。`if` や `times` などブロックを実行する語はどれも、ラムダとシンボルを `eval` と同じように実行します。
+
 エラーをそのまま投げ直すには、辞書の 2 つの値で `throw` します（`e "kind" get e "message" get throw`）。`iferror` と同じく、スタックは戻りませんし、`break` と `exit` は捕まえません。
 
 ## ループ
