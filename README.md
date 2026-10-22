@@ -974,10 +974,22 @@ Note: Blocks, lambdas and functions passed to `map` and `filter` must leave exac
 | args     | The command-line arguments after the script name, as strings | `args`            |
 | script-path | The absolute path of the running file (null in the REPL) | `script-path`      |
 | script-dir | Its directory | `script-dir`                                                  |
+| main-script-path | The absolute path of the script the command line ran (null in the REPL) | `main-script-path` |
+| main?    | Whether the running code is that script (false inside an included file) | `main?`       |
+| read-stdin-bytes | The rest of standard input as a list of bytes (0 to 255) | `read-stdin-bytes`  |
+| write-stdout-bytes | Write a list of bytes to standard output | `[72 105 10] write-stdout-bytes` |
 | write-to-file | Write the top element of the stack to a file       | `3 "output.txt" write-to-file` |
 | append-to-file | Append the top element of the stack to a file      | `3 "output.txt" append-to-file` |
 | read-from-file | Read the contents of a file and push it to the stack | `"input.txt" read-from-file` |
 | file-exists | Check if a file exists                                | `"file.txt" file-exists`    |
+| read-bytes | Read a whole file as a list of bytes (0 to 255)      | `"image.png" read-bytes`    |
+| write-bytes | Write a list of bytes to a file                     | `[72 105] "out.bin" write-bytes` |
+| path-join | Join two parts of a path                              | `"data" "in.txt" path-join` |
+| list-dir | The names inside a directory, in name order            | `"." list-dir`              |
+| path-base | The last part of a path                               | `"a/b/c.txt" path-base`    |
+| path-dir | The directory part of a path                           | `"a/b/c.txt" path-dir`     |
+| encode   | The bytes of a string in an encoding                   | `"hi" "utf-8" encode`     |
+| decode   | The string a list of bytes spells in an encoding       | `[104 105] "utf-8" decode` |
 
 
 

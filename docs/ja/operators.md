@@ -192,6 +192,8 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `words` | 空白（スペース・タブ・改行）で区切った語のリスト。空の文字列は入らない | `"  a b  c " words` |
 | `starts-with?` | `s p starts-with?` は s が p で始まるか | `"hello" "he" starts-with?` |
 | `ends-with?` | `s p ends-with?` は s が p で終わるか | `"hello" "lo" ends-with?` |
+| `encode` | `s encoding encode` は文字列をその符号化（`"utf-8"`、`"latin-1"` など）のバイトのリストに。符号化できない文字はエラー（置き換えはしない）。`"utf-16"` は BOM 付きになるので、固定したいときは `"utf-16-le"` | `"hi" "utf-8" encode` |
+| `decode` | `bytes encoding decode` はバイトのリスト（配列でも）を文字列に | `[104 105] "utf-8" decode` |
 
 `format` が埋め込める値は 1 つだけです。`join` に数値のリストは渡せません（先に `map` と `str` で文字列にします）。
 
@@ -344,6 +346,8 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `read` | 標準入力から 1 行読み、コードブロックとして積む（`parse` と同じ解析）。文字列として読むには `read-line` | `read` |
 | `read-line` | 標準入力から 1 行を文字列で積む（末尾の改行は除く）。入力の終わりなら `null` | `read-line` |
 | `read-stdin` | 標準入力の残り全部を 1 つの文字列で積む。入力の終わりなら `""` | `read-stdin` |
+| `read-stdin-bytes` | 標準入力の残り全部を、バイト（0〜255 の整数）のリストで積む。`read-line` / `read-stdin` と同じ位置から続けて読める | `read-stdin-bytes` |
+| `write-stdout-bytes` | `bytes write-stdout-bytes` はバイトのリスト（配列でも）を標準出力にそのまま書く | `[72 105 10] write-stdout-bytes` |
 
 ## ファイル
 
@@ -352,6 +356,8 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `write-to-file` | `data path write-to-file` はファイルに書き込む（既存の内容は置き換わる） | `3 "output.txt" write-to-file` |
 | `append-to-file` | `data path append-to-file` はファイルの末尾に追記 | `3 "output.txt" append-to-file` |
 | `read-from-file` | ファイルの内容全体を 1 つの文字列として積む | `"input.txt" read-from-file` |
+| `read-bytes` | ファイル全体をバイト（0〜255 の整数）のリストで積む | `"image.png" read-bytes` |
+| `write-bytes` | `bytes path write-bytes` はバイトのリスト（配列でも）をファイルに書く（置き換え）。0〜255 の整数以外の要素はエラー | `[72 105] "out.bin" write-bytes` |
 | `read-lines` | ファイルの全行を、文字列のリストとして積む | `"input.txt" read-lines` |
 | `file-exists` | ファイルが存在するか | `"file.txt" file-exists` |
 
@@ -363,6 +369,10 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `cd` | `path cd` はカレントディレクトリを変更 | `".." cd` |
 | `pwd` | カレントディレクトリのパスを積む | `pwd` |
 | `cat` | `path cat` はファイルの内容を出力（スタックには積まない） | `"file.txt" cat` |
+| `path-join` | `a b path-join` は区切りを補ってつなぐ。3 つ以上は `a b path-join c path-join` と続ける | `"data" "in.txt" path-join` |
+| `list-dir` | ディレクトリの中の名前のリスト（名前順） | `"." list-dir` |
+| `path-base` | パスの最後の要素（ファイル名） | `"a/b/c.txt" path-base` |
+| `path-dir` | パスのディレクトリ部分。ディレクトリのないファイル名なら `""` | `"a/b/c.txt" path-dir` |
 
 ## 時間
 
@@ -399,6 +409,8 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `args` | コマンドラインでスクリプト名の後ろに書いた引数を、文字列のリストで積む（`stacker s.stk 200 100` なら `['200' '100']`）。REPL では `[]` | `args` |
 | `script-path` | 実行中のファイルの絶対パス。取り込まれたファイルの中ではそのファイル。REPL と `-e` では `null` | `script-path` |
 | `script-dir` | 実行中のファイルのディレクトリ。REPL と `-e` では `null` | `script-dir` |
+| `main-script-path` | コマンドラインで実行したスクリプトの絶対パス。REPL と `-e` では `null` | `main-script-path` |
+| `main?` | 実行中のコードが、コマンドラインで実行したスクリプトか。取り込まれたファイルの中では偽、REPL と `-e` では真。モジュールの末尾に `main? {args 0 at int run} if` と書くと、取り込まれたときは動かない | `main?` |
 | `ans` | 値を残した最後の入力（REPL の 1 行、スクリプトの 1 式）の結果を、もう一度積む。値を残さない入力（`clear` など）では変わらない。1 つの入力の中では、その入力より前の結果を指す。まだ結果がなければエラー。`include` / `require` したファイルの中では使えない | `ans` |
 
 REPL の `enable_disp_ans` / `disable_disp_ans` は、スタックの一番上を毎回表示するかどうかの設定です（[REPL とコマンドライン](repl-and-cli.md)）。

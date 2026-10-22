@@ -1,5 +1,18 @@
 # CHANGE LOG
 
+## [1.22.0] - 2026-10-22
+
+### Added
+
+- **`read-bytes`, `write-bytes`, `read-stdin-bytes`, `write-stdout-bytes`, `encode`, `decode`**: a file or standard input read as a list of its bytes (integers 0 to 255), bytes written back as they are, and a string turned into its bytes in an encoding (`"hi" "utf-8" encode`) or back (`[104 105] "utf-8" decode`), so a program that reads a picture or writes a compressed file no longer needs a helper outside Stacker. A byte that is not an integer 0 to 255 is refused by name and position
+- **`path-join`, `list-dir`, `path-base`, `path-dir`**: two parts of a path joined with the separator (`script-dir "data.txt" path-join`), the names inside a directory in name order, and the last part or the directory part of a path. `ls` is unchanged
+- **`main-script-path`, `main?`**: the script the command line ran, and whether the running code is it, so a module can end with `main? {args 0 at int run} if` and stay quiet when another script requires it. `main?` is true in the REPL and with `-e`, where `main-script-path` is null
+- A `defun` or `defmacro` that gives a built-in or plugin word's name to a new word logs `redefining built-in word 'slice'`, as it already did for a prelude word. The new word still wins, so a program keeps working when a later version adds a word of the same name; the warning is what tells its author that the built-in is now hidden
+
+### Changed
+
+- An empty dictionary is shown as `{:}`, on the stack and in error messages, so it is told apart from an empty block `{}`. `{:}` is not a way to write one; `dict` makes it
+
 ## [1.21.0] - 2026-10-22
 
 ### Breaking Changes
