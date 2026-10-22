@@ -237,3 +237,17 @@ class TestCondAndBaseWords:
 
     def test_they_still_work(self):
         assert run('{false} {1} {true} {2} 2 cond 5 bin "0b101" dec 255 hex 8 oct "017" dec "08" dec 5 0 cond') == [2, "0b101", 5, "0xff", "0o10", 17, 8, 5]
+
+
+class TestBitWords:
+    @pytest.mark.parametrize(
+        "program, expected",
+        [("255 bit-length", 8), ("0 bit-length", 0), ("-255 bit-length", 8), ("255 popcount", 8), ("0 popcount", 0), ("-5 popcount", 2), ("40 trailing-zeros", 3), ("1 trailing-zeros", 0), ("-8 trailing-zeros", 3)],
+    )
+    def test_they_count_bits(self, program, expected):
+        assert run(program) == [expected]
+
+    @pytest.mark.parametrize("program, text", [("2.5 bit-length", "`bit-length` expects an integer"), ('"a" popcount', "`popcount` expects an integer"), ("0 trailing-zeros", "`trailing-zeros` of 0 is undefined")])
+    def test_they_refuse_by_name(self, program, text):
+        with pytest.raises((StackerTypeError, ValidationError), match=text.replace("`", "`")):
+            run(program)
