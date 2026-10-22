@@ -3,7 +3,12 @@
 import pytest
 
 from stacker import Stacker
-from stacker.error import StackerSyntaxError, StackerTypeError, ValidationError
+from stacker.error import (
+    StackerSyntaxError,
+    StackerTypeError,
+    StackUnderflowError,
+    ValidationError,
+)
 
 
 def run(*lines: str) -> list[object]:
@@ -199,3 +204,36 @@ class TestIntegerArguments:
     def test_other_values_are_refused_with_the_word(self, program, text):
         with pytest.raises(StackerTypeError, match=text.replace("`", "`").replace("(", "\\(")):
             run(program)
+
+
+class TestCondAndBaseWords:
+    @pytest.mark.parametrize(
+        "program, text",
+        [
+            ("5 cond", "`cond` needs 10 values below the count (5 pairs of a condition and a result), but the stack has 0"),
+            ("{false} {1} 3 cond", "`cond` needs 6 values below the count (3 pairs"),
+            ("{false} {1} 1.5 cond", "`cond` expects an integer, got 1.5"),
+            ("[1 2] cond", "`cond` expects an integer, got [1 2]"),
+            ("1 2 -3 cond", "`cond` expects a count of 0 or more, got -3"),
+            ("7.5 bin", '`bin` expects an integer or a string such as "0b101", got 7.5'),
+            ('"x" bin', "`bin` cannot read 'x' as a number"),
+            ("7.5 hex", "`hex` expects an integer"),
+            ('"zz" dec', "`dec` cannot read 'zz' as a number"),
+            ("[1] oct", "`oct` expects an integer"),
+            (":s hex", "`hex` cannot use the symbol `s`"),
+        ],
+    )
+    def test_the_word_names_itself(self, program, text):
+        with pytest.raises((StackerTypeError, StackUnderflowError, ValidationError)) as info:
+            run(program)
+        assert text in str(info.value) and "convert_to_base" not in str(info.value)
+
+    @pytest.mark.parametrize("program, kept", [("{false} {1} 3 cond", [False, 1, 3]), ("1 2 -3 cond", [1, 2, -3])])
+    def test_the_stack_is_left_as_it_was_when_cond_refuses_the_count(self, program, kept):
+        stacker = Stacker()
+        with pytest.raises((StackUnderflowError, ValidationError)):
+            stacker.process_expression(program)
+        assert [v if not hasattr(v, "tokens") else list(v.tokens)[0] for v in stacker.stack] == kept
+
+    def test_they_still_work(self):
+        assert run('{false} {1} {true} {2} 2 cond 5 bin "0b101" dec 255 hex 8 oct "017" dec "08" dec 5 0 cond') == [2, "0b101", 5, "0xff", "0o10", 17, 8, 5]

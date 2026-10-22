@@ -2,8 +2,18 @@ from __future__ import annotations
 
 import re
 
+from stacker.engine.data_type import Symbol
+from stacker.error import StackerTypeError, symbol_as_value_message
+from stacker.util.disp import plain_text
 
-def _convert_to_base(value: str | int, base: int) -> str | int:
+
+def _convert_to_base(word: str, value: object, base: int) -> str | int:
+    """``value word``: ``value`` (an integer, or a string such as ``"0b101"``) in the base of ``word``."""
+    if isinstance(value, Symbol):
+        raise StackerTypeError(symbol_as_value_message(word, value.name))
+    if isinstance(value, bool) or not isinstance(value, (int, str)):
+        raise StackerTypeError(f'`{word}` expects an integer or a string such as "0b101", got {plain_text(value)}')
+    shown = value
     value = str(value)
 
     # Binary (0b...)
@@ -21,10 +31,10 @@ def _convert_to_base(value: str | int, base: int) -> str | int:
         or decimal_pattern.match(value)
         or hex_pattern.match(value)
     ):
-        raise ValueError("Invalid number format.(convert_to_base)")
+        raise StackerTypeError(f"`{word}` cannot read {plain_text(shown)} as a number")
 
-    value_as_int = int(value, 0)
-    # 0 means that binary, octal, and hexadecimal numbers are automatically detected and processed
+    # a plain decimal (leading zeros allowed) is read as such; the prefixed forms by their prefix
+    value_as_int = int(value, 10) if decimal_pattern.match(value) else int(value, 0)
 
     if base == 2:
         return bin(value_as_int)
@@ -40,25 +50,25 @@ def _convert_to_base(value: str | int, base: int) -> str | int:
 
 base_operators = {
     "bin": {
-        "func": (lambda value: _convert_to_base(value, 2)),
+        "func": (lambda value: _convert_to_base("bin", value, 2)),
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Binary representation",
     },
     "oct": {
-        "func": (lambda value: _convert_to_base(value, 8)),
+        "func": (lambda value: _convert_to_base("oct", value, 8)),
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Octal representation",
     },
     "dec": {
-        "func": (lambda value: _convert_to_base(value, 10)),
+        "func": (lambda value: _convert_to_base("dec", value, 10)),
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Decimal representation",
     },
     "hex": {
-        "func": (lambda value: _convert_to_base(value, 16)),
+        "func": (lambda value: _convert_to_base("hex", value, 16)),
         "arg_count": 1,
         "push_result_to_stack": True,
         "desc": "Hexadecimal representation",
