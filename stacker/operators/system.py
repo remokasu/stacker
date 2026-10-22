@@ -22,6 +22,19 @@ def _script_path(core: StackerCore) -> str | None:
     return core.current_file
 
 
+def _main_script_path(core: StackerCore) -> str | None:
+    """``main-script-path``: the absolute path of the script the command line ran, or null in the REPL and -e."""
+    root = core
+    while root.parent is not None:
+        root = root.parent
+    return root.main_script
+
+
+def _is_main(core: StackerCore) -> bool:
+    """``main?``: whether the running code is the script the command line ran (not an included file); true in the REPL and -e."""
+    return core.current_file == _main_script_path(core)
+
+
 def _script_dir(core: StackerCore) -> str | None:
     """``script-dir``: the directory of the file that is running, or null in the REPL and -e."""
     return None if core.current_file is None else str(Path(core.current_file).parent)
@@ -143,6 +156,18 @@ system_operators = {
         "arg_count": 0,
         "push_result_to_stack": True,
         "desc": "The absolute path of the file that is running (inside an included file, that file); null in the REPL and with -e",
+    },
+    "main-script-path": {
+        "func": (lambda stack, core: _main_script_path(core)),
+        "arg_count": 0,
+        "push_result_to_stack": True,
+        "desc": "The absolute path of the script the command line ran; null in the REPL and with -e",
+    },
+    "main?": {
+        "func": (lambda stack, core: _is_main(core)),
+        "arg_count": 0,
+        "push_result_to_stack": True,
+        "desc": "Whether the running code is the script the command line ran (false inside an included file; true in the REPL and with -e)",
     },
     "script-dir": {
         "func": (lambda stack, core: _script_dir(core)),
