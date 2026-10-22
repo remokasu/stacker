@@ -253,7 +253,7 @@
       "patterns": [
         {
           "name": "keyword.operator.bitwise.stacker",
-          "match": "(?<![\\w?!-])(band|bxor|bin|bor|dec|hex|oct)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(trailing\\-zeros|bit\\-length|popcount|band|bxor|bin|bor|dec|hex|oct)(?![\\w?!-])"
         },
         {
           "name": "keyword.operator.bitwise.stacker",

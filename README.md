@@ -792,6 +792,9 @@ print(stacker.eval("3 4 +"))
 | bxor     | Bitwise xor                                           | `3 2 bxor`                 |
 | >>       | Right bit shift                                       | `8 2 >>`                   |
 | <<       | Left bit shift                                        | `2 2 <<`                   |
+| bit-length | The bits needed to write an integer                   | `255 bit-length`           |
+| popcount | The number of one bits in an integer                   | `255 popcount`             |
+| trailing-zeros | Zero bits below the lowest one bit               | `40 trailing-zeros`        |
 | ~        | Bitwise not                                           | `5 ~`                      |
 | bin      | Binary representation (result is a string)            | `5 bin`                    |
 | oct      | Octal representation (result is a string)             | `10 oct`                   |
@@ -984,7 +987,7 @@ Note: Blocks, lambdas and functions passed to `map` and `filter` must leave exac
 | file-exists | Check if a file exists                                | `"file.txt" file-exists`    |
 | read-bytes | Read a whole file as a list of bytes (0 to 255)      | `"image.png" read-bytes`    |
 | write-bytes | Write a list of bytes to a file                     | `[72 105] "out.bin" write-bytes` |
-| path-join | Join two parts of a path                              | `"data" "in.txt" path-join` |
+| path-join | Join two parts of a path (the right one may be a list) | `"data" ["in" "x.txt"] path-join` |
 | list-dir | The names inside a directory, in name order            | `"." list-dir`              |
 | path-base | The last part of a path                               | `"a/b/c.txt" path-base`    |
 | path-dir | The directory part of a path                           | `"a/b/c.txt" path-dir`     |
