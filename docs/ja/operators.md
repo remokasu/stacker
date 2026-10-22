@@ -86,6 +86,9 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `~` | ビット反転（`n` に対して `-n-1`） | `5 ~` |
 | `>>` | 右シフト。`a n >>` は a を n ビット右へ | `8 2 >>` |
 | `<<` | 左シフト。`a n <<` は a を n ビット左へ | `2 2 <<` |
+| `bit-length` | 整数を書くのに要るビット数（0 は 0。負の数は絶対値） | `255 bit-length` |
+| `popcount` | 整数の 1 のビットの数（負の数は絶対値） | `255 popcount` |
+| `trailing-zeros` | 最下位の 1 のビットより下の 0 の数。0 はエラー | `40 trailing-zeros` |
 | `bin` | 2 進表記の文字列（`"0b101"`） | `5 bin` |
 | `oct` | 8 進表記の文字列（`"0o12"`） | `10 oct` |
 | `hex` | 16 進表記の文字列（`"0xff"`） | `255 hex` |
@@ -369,7 +372,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `cd` | `path cd` はカレントディレクトリを変更 | `".." cd` |
 | `pwd` | カレントディレクトリのパスを積む | `pwd` |
 | `cat` | `path cat` はファイルの内容を出力（スタックには積まない） | `"file.txt" cat` |
-| `path-join` | `a b path-join` は区切りを補ってつなぐ。3 つ以上は `a b path-join c path-join` と続ける | `"data" "in.txt" path-join` |
+| `path-join` | `a b path-join` は区切りを補ってつなぐ。右がリストなら順につなぐ（`script-dir ["data" "in.txt"] path-join`） | `"data" ["in" "x.txt"] path-join` |
 | `list-dir` | ディレクトリの中の名前のリスト（名前順） | `"." list-dir` |
 | `path-base` | パスの最後の要素（ファイル名） | `"a/b/c.txt" path-base` |
 | `path-dir` | パスのディレクトリ部分。ディレクトリのないファイル名なら `""` | `"a/b/c.txt" path-dir` |
