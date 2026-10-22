@@ -1,5 +1,15 @@
 # CHANGE LOG
 
+## [1.21.0] - 2026-10-22
+
+### Breaking Changes
+
+- **`type` pushes a symbol.** `42 type` is `:int`, `"a" type` is `:str`, `[1] array type` is `:array`, `null type` is `:null`; the kinds are `int` `float` `complex` `fraction` `bool` `str` `list` `array` `dict` `symbol` `lambda` `null` (a block is evaluated as an argument, so `{1} type` is `:int`; a value a plugin pushed gives its class name). Shown with `echo` or `str`, the kind is its bare name: `42 type echo` prints `int` where it printed `<class 'int'>`. It used to push the host's class object, shown as `<class 'int'>` or `<class 'stacker.engine.data_type.Array'>`, which no word but `str` could use
+
+### Migration
+
+- A comparison of two types (`a type b type ==`) still works. Code that showed the type as text compares with a symbol instead: `x type :int ==`, or `x type str` for the name as text (`int`)
+
 ## [1.20.1] - 2026-10-22
 
 ### Fixed

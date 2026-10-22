@@ -943,7 +943,7 @@ Note: Blocks, lambdas and functions passed to `map` and `filter` must leave exac
 | str      | Convert to string                                     | `42 str`                   |
 | bool     | Convert to bool                                       | `1 bool`                   |
 | complex  | Convert to complex number                             | `3 complex`                |
-| type     | Get the type of a value                               | `42 type`                  |
+| type     | The kind of a value as a symbol (`:int`, `:str`, `:array`, `:null`, ...) | `42 type`                  |
 | int?     | Returns true if the value is an int (not bool)        | `42 int?`                  |
 | float?   | Returns true if the value is a float                  | `3.14 float?`              |
 | str?     | Returns true if the value is a string                 | `"hello" str?`             |

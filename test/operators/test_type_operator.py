@@ -1,5 +1,6 @@
 import unittest
 
+from stacker.engine.data_type import Symbol
 from stacker.stacker import Stacker
 
 
@@ -98,27 +99,27 @@ class TestUnit(unittest.TestCase):
     def test_type_of_int(self):
         self.stacker.stack.clear()
         ans = self.stacker.eval("42 type")
-        self.assertEqual(ans[-1], int)
+        self.assertEqual(ans[-1], Symbol("int"))
 
     def test_type_of_float(self):
         self.stacker.stack.clear()
         ans = self.stacker.eval("3.14 type")
-        self.assertEqual(ans[-1], float)
+        self.assertEqual(ans[-1], Symbol("float"))
 
     def test_type_of_string(self):
         self.stacker.stack.clear()
         ans = self.stacker.eval("'hello' type")
-        self.assertEqual(ans[-1], str)
+        self.assertEqual(ans[-1], Symbol("str"))
 
     def test_type_of_bool(self):
         self.stacker.stack.clear()
         ans = self.stacker.eval("true type")
-        self.assertEqual(ans[-1], bool)
+        self.assertEqual(ans[-1], Symbol("bool"))
 
     def test_type_of_list(self):
         self.stacker.stack.clear()
         ans = self.stacker.eval("[1 2 3] type")
-        self.assertEqual(ans[-1], list)
+        self.assertEqual(ans[-1], Symbol("list"))
 
     def test_int_check_true(self):
         self.stacker.stack.clear()
