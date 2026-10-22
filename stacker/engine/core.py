@@ -56,8 +56,9 @@ from stacker.include.include import IncludeState
 
 _LOGGER = logging.getLogger("stacker")
 
-#: How many of the values left on a stack at the end of a file are named in the warning
+#: How many of the values left on a stack at the end of a file are named in the warning, and how long each may be
 LEFTOVER_VALUES_SHOWN = 3
+LEFTOVER_VALUE_MAX_CHARS = 80
 
 _DEFMACRO_USAGE = (
     "`defmacro` takes three arguments: {args} {body} :name defmacro. "
@@ -117,6 +118,13 @@ def _symbol_in(args: object) -> str | None:
                 if isinstance(item, Symbol):
                     return item.name
     return None
+
+
+def _clipped(text: str) -> str:
+    """Returns ``text`` cut to ``LEFTOVER_VALUE_MAX_CHARS`` with an ellipsis, for a log line."""
+    if len(text) <= LEFTOVER_VALUE_MAX_CHARS:
+        return text
+    return text[:LEFTOVER_VALUE_MAX_CHARS] + "..."
 
 
 def _reraise_type_error(word: str, args: object, error: Exception) -> NoReturn:
@@ -937,10 +945,9 @@ class StackerCore:
                 # A global variable hides a word of its name everywhere, a
                 # required library's functions included; a local one only
                 # inside its function or loop, so only the global is logged
+                # (a prelude word's name the same way as a built-in's)
                 self._warn_builtin_redefinition(name)
             self.variables[name] = value
-        elif name in self._prelude["names"]:
-            self._warn_prelude_redefinition(name)
 
     def _prio_global(self, op, stack) -> None:
         # RPN: value varname global
@@ -950,8 +957,6 @@ class StackerCore:
         value = self._pop_and_resolve(stack)  # Blocks bind raw (code is data)
         if name not in self.variables.root().own_bindings():
             self._warn_builtin_redefinition(name)  # a new global hides a word of its name everywhere
-        elif name in self._prelude["names"]:
-            self._warn_prelude_redefinition(name)
         # Always set in global (root) scope
         self.variables.set_global(name, value)
 
@@ -970,7 +975,7 @@ class StackerCore:
         if not values:
             return
         count = len(values)
-        shown = ", ".join(plain_text(v) for v in list(values)[-LEFTOVER_VALUES_SHOWN:])
+        shown = ", ".join(_clipped(plain_text(v)) for v in list(values)[-LEFTOVER_VALUES_SHOWN:])
         more = f" (and {count - LEFTOVER_VALUES_SHOWN} more below)" if count > LEFTOVER_VALUES_SHOWN else ""
         _LOGGER.warning(
             "%d value%s left on the stack at the end of %s: %s%s",

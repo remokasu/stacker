@@ -30,6 +30,10 @@ class TestValuesLeftAtTheEnd:
         _, logged = run_script(tmp_path, '1 2 3 4 "five"\n', caplog)
         assert logged == ["5 values left on the stack at the end of main.stk: 3, 4, 'five' (and 2 more below)"]
 
+    def test_a_long_value_is_cut_short(self, tmp_path, caplog):
+        _, logged = run_script(tmp_path, '"x" 500 * 1\n', caplog)
+        assert len(logged) == 1 and logged[0].endswith("... , 1") is False and "..." in logged[0] and len(logged[0]) < 200
+
     def test_a_clean_end_logs_nothing(self, tmp_path, caplog):
         _, logged = run_script(tmp_path, "1 2 + drop\n", caplog)
         assert logged == []
@@ -62,7 +66,12 @@ class TestAGlobalThatHidesAWord:
         if "my-total" in program or "do" in program and "len" in program or "defun" in program:
             assert messages(caplog) == []
 
-    def test_a_prelude_word_keeps_its_message(self, caplog):
+    def test_a_prelude_word_keeps_its_message_for_a_new_global_only(self, caplog):
         with caplog.at_level(logging.WARNING, logger="stacker"):
-            Stacker().process_expression("5 :alias set")
+            Stacker().process_expression("5 :alias set 6 :alias set")
         assert messages(caplog) == ["redefining prelude word 'alias'"]
+
+    def test_a_local_with_a_prelude_words_name_is_not_logged(self, caplog):
+        with caplog.at_level(logging.WARNING, logger="stacker"):
+            Stacker().process_expression("{} {5 :alias set} :f defun f")
+        assert messages(caplog) == []
