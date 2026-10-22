@@ -342,6 +342,8 @@ class StackerCore:
         self.last_result: object = None
         # The command-line arguments after the script name (`args`); set by the CLI
         self.arguments: list[str] = []
+        # The absolute path of the script the command line ran (`main-script-path`); set by script mode
+        self.main_script: str | None = None
 
         # Macro expansion state: set only on the throwaway core that runs a
         # macro body. `_interp_scope` is the expansion scope whose own
