@@ -118,6 +118,17 @@ class ScopedVariables:
         scope._transparent = True
         return scope
 
+    def binds_globally(self) -> bool:
+        """Whether a name first set here lands in the global scope (through any transparent loop scopes).
+
+        Returns:
+            True for the root scope and for a loop scope whose parents up to the root are all transparent.
+        """
+        scope: ScopedVariables = self
+        while scope._transparent and scope._parent is not None:
+            scope = scope._parent
+        return scope._parent is None
+
     def own_bindings(self) -> dict[str, object]:
         """Returns this scope's own bindings (parents excluded), by reference.
 
