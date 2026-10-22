@@ -91,9 +91,9 @@ class TestDisplay:
             ("[1 2 3] array", "[1 2 3]"),
             ("[] array", "[]"),
             ('[1 "a" :b null] array', "[1 'a' b null]"),
-            ("dict", "{}"),
+            ("dict", "{:}"),
             ('dict :d set 1 d "a" put! 2 d :b put! d', "{'a' 1 b 2}"),
-            ("[1 2] array dict 2 listn", "[[1 2] {}]"),
+            ("[1 2] array dict 2 listn", "[[1 2] {:}]"),
             ("[1 2] array :a set a a 0 at! a", "[[...] 2]"),
             ("dict :d set d d :self put! d", "{self {...}}"),
         ],
@@ -152,3 +152,13 @@ class TestReviewFindings:
         with pytest.raises(RuntimeError):
             plain_text(Array([Bad()]))
         assert disp._showing() == []
+
+
+def test_an_empty_dictionary_is_shown_apart_from_an_empty_block():
+    from stacker.util.disp import plain_text
+
+    assert plain_text({}) == "{:}"
+    assert plain_text({"k": 1}) == "{'k' 1}"
+    stacker = Stacker()
+    stacker.process_expression("dict")
+    assert plain_text(stacker.stack[0]) == "{:}"
