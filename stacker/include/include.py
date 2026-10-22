@@ -206,6 +206,7 @@ def include_file(core: Stacker, filename: str, once: bool = False) -> None:
         raise
     finally:
         state.stack.pop()
+    runner.warn_values_left(resolved.name, file_stack)  # what a file leaves is dropped; it is named first
     state.loaded.add(resolved)
 
 
