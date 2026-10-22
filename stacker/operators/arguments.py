@@ -5,7 +5,7 @@ from __future__ import annotations
 import operator
 
 from stacker.engine.data_type import Symbol
-from stacker.error import StackerTypeError, symbol_as_value_message
+from stacker.error import StackerTypeError, ValidationError, symbol_as_value_message
 from stacker.util.disp import plain_text
 
 
@@ -34,3 +34,22 @@ def integer_argument(word: str, value: object) -> int:
     except TypeError as error:
         hint = "; `int` makes an integer of a number" if isinstance(value, float) else ""
         raise StackerTypeError(f"`{word}` expects an integer, got {plain_text(value)}{hint}") from error
+
+
+
+BYTE_MAX = 255
+
+
+def byte_values(word: str, value: object) -> bytes:
+    """Returns the bytes a list or an array of integers 0..255 stands for; anything else is refused by name."""
+    if isinstance(value, Symbol):
+        raise StackerTypeError(symbol_as_value_message(word, value.name))
+    if not isinstance(value, list):
+        raise StackerTypeError(f"`{word}` expects a list or an array of bytes (integers 0 to 255), got {plain_text(value)}")
+    out = bytearray()
+    for index, item in enumerate(value):
+        if isinstance(item, bool) or not isinstance(item, int) or not 0 <= item <= BYTE_MAX:
+            raise ValidationError(f"`{word}` expects bytes (integers 0 to 255), but element {index} is {plain_text(item)}")
+        out.append(item)
+    return bytes(out)
+

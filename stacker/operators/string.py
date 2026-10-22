@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import codecs
+
 from stacker.engine.data_type import Symbol
 from stacker.error import (
     StackerIndexError,
@@ -8,7 +10,7 @@ from stacker.error import (
     ValidationError,
     symbol_as_value_message,
 )
-from stacker.operators.arguments import integer_argument
+from stacker.operators.arguments import byte_values, integer_argument
 from stacker.util.disp import plain_text
 
 #: The largest code point `chr` makes
@@ -189,6 +191,36 @@ def _ends_with(value: object, suffix: object) -> bool:
     return _require_str("ends-with?", value).endswith(_require_str("ends-with?", suffix))
 
 
+def _codec(word: str, encoding: object) -> str:
+    """Returns ``encoding`` when it names a text encoding the host knows."""
+    name = _require_str(word, encoding)
+    try:
+        codecs.lookup(name)
+    except LookupError as error:
+        raise StackerTypeError(f"`{word}` does not know the encoding {plain_text(name)}") from error
+    return name
+
+
+def _encode(value: object, encoding: object) -> list[int]:
+    """``s encoding encode``: the bytes of ``s`` in ``encoding``, as a list of integers 0 to 255."""
+    text = _require_str("encode", value)
+    codec = _codec("encode", encoding)
+    try:
+        return list(text.encode(codec))
+    except UnicodeEncodeError as error:
+        raise StackerRuntimeError(f"`encode` cannot write {plain_text(text)} as {codec}: {error.reason}") from error
+
+
+def _decode(value: object, encoding: object) -> str:
+    """``bytes encoding decode``: the text the bytes spell in ``encoding``."""
+    codec = _codec("decode", encoding)
+    content = byte_values("decode", value)
+    try:
+        return content.decode(codec)
+    except UnicodeDecodeError as error:
+        raise StackerRuntimeError(f"`decode` cannot read the bytes as {codec}: {error.reason}") from error
+
+
 string_operators = {
     "asc": {
         "func": _asc,
@@ -303,6 +335,18 @@ string_operators = {
         "arg_count": 2,
         "push_result_to_stack": True,
         "desc": "s p ends-with?: whether s ends with p",
+    },
+    "encode": {
+        "func": _encode,
+        "arg_count": 2,
+        "push_result_to_stack": True,
+        "desc": "s encoding encode: the bytes of a string in an encoding (\"utf-8\", \"latin-1\", ...), as a list of integers 0 to 255",
+    },
+    "decode": {
+        "func": _decode,
+        "arg_count": 2,
+        "push_result_to_stack": True,
+        "desc": "bytes encoding decode: the string a list or an array of bytes spells in an encoding",
     },
     "format": {
         "func": _format,
