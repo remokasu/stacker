@@ -189,20 +189,21 @@ def _sqrt(x: int | float | complex) -> float | complex:
     return math.sqrt(value)
 
 
-def _gcd(x1: int, x2: int) -> int:
-    return math.gcd(x1, x2)
+def _gcd(x1: object, x2: object) -> int:
+    return math.gcd(integer_argument("gcd", x1), integer_argument("gcd", x2))
 
 
-def _lcm(x1: int, x2: int) -> int:
-    return (x1 * x2) // math.gcd(x1, x2)
+def _lcm(x1: object, x2: object) -> int:
+    """``a b lcm``: the least common multiple, 0 or more (`0 0 lcm` is 0)."""
+    return math.lcm(integer_argument("lcm", x1), integer_argument("lcm", x2))
 
 
 def _radians(deg: int | float) -> float:
     return math.radians(deg)
 
 
-def _factorial(x: int) -> int:
-    return math.factorial(x)
+def _factorial(x: object) -> int:
+    return math.factorial(integer_argument("!", x))
 
 
 def _ceil(x: int | float) -> int:
@@ -213,28 +214,45 @@ def _floor(x: int | float) -> int:
     return math.floor(x)
 
 
+#: `roundn` accepts digit counts within this many places either side of the point (`10 ** n` is built)
+ROUNDN_MAX_DIGITS = 1000
+
+
 def _roundn(x: object, n: object) -> int | float:
-    return round(_real_number("roundn", x), integer_argument("roundn", n))  # type: ignore[call-overload]
+    digits = integer_argument("roundn", n)
+    if abs(digits) > ROUNDN_MAX_DIGITS:
+        raise ValidationError(f"`roundn` expects a digit count between -{ROUNDN_MAX_DIGITS} and {ROUNDN_MAX_DIGITS}, got {digits}")
+    return round(_real_number("roundn", x), digits)  # type: ignore[call-overload]
 
 
 def _round(x: int | float) -> int:
     return round(x)
 
 
-def _comb(n: int, k: int) -> int:
-    return math.comb(int(n), int(k))
+def _comb(n: object, k: object, word: str = "comb") -> int:
+    return math.comb(integer_argument(word, n), integer_argument(word, k))
 
 
-def _perm(n: int, k: int) -> int:
-    return math.perm(int(n), int(k))
+def _perm(n: object, k: object, word: str = "perm") -> int:
+    return math.perm(integer_argument(word, n), integer_argument(word, k))
 
 
 def _abs(x: int | float | complex) -> int | float:
     return abs(x)
 
 
-def _cbrt(x: int | float) -> float:
-    return x ** (1 / 3)
+def _cbrt(x: object) -> float:
+    """``x cbrt``: the real cube root, negative for a negative number (`-8 cbrt` is -2.0, `64 cbrt` is 4.0)."""
+    value = float(_real_number("cbrt", x))
+    if value == 0.0 or not math.isfinite(value):
+        return value  # 0, an infinity or nan is its own cube root
+    if hasattr(math, "cbrt"):
+        root = math.cbrt(value)
+    else:
+        root = math.copysign(abs(value) ** (1 / 3), value)
+        root = root - (root * root * root - value) / (3 * root * root)  # one correction step
+    nearest = float(round(root))
+    return nearest if nearest * nearest * nearest == value else root  # a perfect cube gives its exact root
 
 
 def _ncr(n: int, k: int) -> int:
@@ -454,13 +472,13 @@ math_operators = {
         "desc": "Cube root",
     },
     "ncr": {
-        "func": (lambda n, k: _ncr(n, k)),
+        "func": (lambda n, k: _comb(n, k, word="ncr")),
         "arg_count": 2,
         "push_result_to_stack": True,
         "desc": "Combinations",
     },
     "npr": {
-        "func": (lambda n, k: _npr(n, k)),
+        "func": (lambda n, k: _perm(n, k, word="npr")),
         "arg_count": 2,
         "push_result_to_stack": True,
         "desc": "Permutations",

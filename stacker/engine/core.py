@@ -14,6 +14,7 @@ from stacker.error import (
     ResultCountError,
     StackUnderflowError,
     StackerError,
+    StackerIndexError,
     StackerRuntimeError,
     StackerSyntaxError,
     StackerTypeError,
@@ -51,7 +52,7 @@ from stacker.engine.slambda import StackerLambda
 from stacker.engine.scope import ScopedVariables
 from stacker.engine import recursion
 from stacker.engine.smacro import StackerMacro, gensym
-from stacker.operators.arguments import integer_argument
+from stacker.operators.arguments import count_argument, integer_argument
 from stacker.operators.manager import OperatorManager
 from stacker.include.include import IncludeState
 
@@ -126,6 +127,40 @@ def _clipped(text: str) -> str:
     if len(text) <= LEFTOVER_VALUE_MAX_CHARS:
         return text
     return text[:LEFTOVER_VALUE_MAX_CHARS] + "..."
+
+
+#: The host errors a word that runs no user code can raise, and the Stacker error each becomes
+_HOST_ERRORS: tuple[type[BaseException], ...] = (TypeError, AttributeError, ValueError, OverflowError, IndexError)
+
+
+def _host_error_as_the_words(word: str, args: object, error: Exception) -> NoReturn:
+    """Re-raises a host error from a word that runs no user code as that word's own error.
+
+    A symbol among the arguments is reported as a symbol; otherwise the
+    word names itself and shows its arguments, with the host's reason
+    after a colon. A type error becomes ``StackerTypeError``, a value out
+    of range (``ValueError``, ``OverflowError``) ``ValidationError``, and
+    an index past the end ``StackerIndexError``, so a handler can tell
+    them apart by kind. A Stacker error is re-raised as it is.
+
+    Args:
+        word: The word being executed.
+        args: Its arguments (the values handed to the host function).
+        error: The error the host function raised.
+    """
+    if isinstance(error, StackerError):
+        raise error
+    name = _symbol_in(args)
+    if name is not None:
+        raise StackerTypeError(symbol_as_value_message(word, name)) from error
+    shown = " and ".join(_clipped(plain_text(a)) for a in args) if isinstance(args, (list, tuple)) and args else ""
+    where = f" {shown}" if shown else ""
+    reason = str(error) or type(error).__name__
+    if isinstance(error, IndexError):
+        raise StackerIndexError(f"`{word}` cannot use{where}: {reason}") from error
+    if isinstance(error, (ValueError, OverflowError)):
+        raise ValidationError(f"`{word}` cannot use{where}: {reason}") from error
+    raise StackerTypeError(f"`{word}` cannot use{where}: {reason}") from error
 
 
 def _reraise_type_error(word: str, args: object, error: Exception) -> NoReturn:
@@ -545,11 +580,24 @@ class StackerCore:
         Raises:
             NoValueProducedError: The block left nothing on the stack.
         """
-        value = self._pop_and_eval(stack)
-        if value is VOID:
-            raise NoValueProducedError(
-                word, f"The block passed to `{word}` left nothing on the stack."
-            )
+        value = stack.pop()
+        if isinstance(value, StackerCore):
+            value._evaluate(value.tokens, stack=value.stack)
+            sub = value.stack
+            if not sub:
+                raise NoValueProducedError(
+                    word, f"The block passed to `{word}` left nothing on the stack."
+                )
+            if len(sub) > 1:
+                shown = " ".join(plain_text(v) for v in sub)
+                sub.clear()  # (so that running the same block again starts clean)
+                raise ResultCountError(
+                    f"The block passed to `{word}` left {len(shown.split())} values on the stack ({shown}); an argument must be one value"
+                )
+            result = sub.pop()
+            return result.value if isinstance(result, String) else result
+        if isinstance(value, String):
+            return value.value
         return value
 
     def _pop_and_resolve(self, stack: stack_data[object]) -> object:
@@ -814,6 +862,8 @@ class StackerCore:
             plural = "" if arg_count == 1 else "s"
             raise StackUnderflowError(token, arg_count, f"{what} `{token}` requires {arg_count} argument{plural}.") from e
         except TypeError as e:
+            if isinstance(e, StackerError):
+                raise  # a word already said what went wrong
             # Provide more helpful type error messages
             error_msg = str(e)
             if "unsupported operand type" in error_msg and not error_msg.startswith("Operator `"):
@@ -1175,7 +1225,7 @@ class StackerCore:
             StackUnderflowError: Fewer values below the count than it asks
                 for; the stack is left as it was.
         """
-        n = integer_argument(word, stack.pop())
+        n = count_argument(word, stack.pop())
         if len(stack) < n:
             have = len(stack)
             stack.append(n)
@@ -1197,7 +1247,12 @@ class StackerCore:
         stack.append(elms)
 
     def _prio_parse(self, op, stack) -> None:
-        self._substack_with_expression(stack.pop(), stack)  # type: ignore[arg-type]
+        text = stack.pop()
+        if isinstance(text, Symbol):
+            text = text.name  # `:x parse` is the quoted name `{x}`
+        elif not isinstance(text, str):
+            raise StackerTypeError(f"`parse` expects a string of code, got {plain_text(text)}")
+        self._substack_with_expression(str(text), stack)
 
     def _prio_read(self, op, stack) -> None:
         self._substack_with_expression(input(), stack)
@@ -1237,6 +1292,8 @@ class StackerCore:
                 stack.append(token_to_value(lst.tokens[n]))  # type: ignore[index]
             else:
                 stack.append(lst[n])  # type: ignore[index]
+        except IndexError:
+            raise StackerIndexError(f"`nth` index {plain_text(n)} is out of range for a length of {len(lst)}") from None  # type: ignore[arg-type]
         except (TypeError, AttributeError) as error:
             _reraise_type_error("nth", [lst, n], error)
 
@@ -1357,8 +1414,8 @@ class StackerCore:
                     stack.append(result)
             else:
                 op["func"](*op_args)  # type: ignore[operator]
-        except (TypeError, AttributeError) as error:
-            _reraise_type_error(token, op_args, error)
+        except (TypeError, AttributeError, ValueError, OverflowError) as error:
+            _host_error_as_the_words(token, op_args[:-1], error)  # (the stack itself is the last argument)
 
     def _exec_system(
         self, token: str, op: dict[str, object], stack: stack_data[object]
@@ -1374,8 +1431,8 @@ class StackerCore:
                     stack.append(result)
             else:
                 op["func"](*sys_args)  # type: ignore[operator]
-        except (TypeError, AttributeError) as error:
-            _reraise_type_error(token, sys_args, error)
+        except _HOST_ERRORS as error:
+            _host_error_as_the_words(token, sys_args, error)
 
     def _exec_regular(
         self, token: str, op: dict[str, object], stack: stack_data[object]
@@ -1391,8 +1448,8 @@ class StackerCore:
                     stack.append(result)
             else:
                 op["func"](*reg_args)  # type: ignore[operator]
-        except (TypeError, AttributeError) as error:
-            _reraise_type_error(token, reg_args, error)
+        except _HOST_ERRORS as error:
+            _host_error_as_the_words(token, reg_args, error)
     def _exec_hof(
         self, token: str, op: dict[str, object], stack: stack_data[object]
     ) -> None:
@@ -1466,7 +1523,7 @@ class StackerCore:
             raise StackerTypeError(not_a_sequence_message(word))
         if isinstance(value, Symbol):
             raise StackerTypeError(symbol_as_value_message(word, value.name))
-        if value is None or isinstance(value, (bool, int, float, complex, Fraction)):
+        if value is None or isinstance(value, (bool, int, float, complex, Fraction, StackerLambda, StackerFunction)):
             raise StackerTypeError(f"`{word}` expects a list, an array, a string or a block, got {plain_text(value)}")
         return value
 
@@ -1494,8 +1551,8 @@ class StackerCore:
                 stack.append(list(lst))
             else:
                 self._push_like(tf_args, lst, stack)
-        except (TypeError, AttributeError) as error:
-            _reraise_type_error(token, [items], error)
+        except _HOST_ERRORS as error:
+            _host_error_as_the_words(token, [tf_args], error)
 
     def _exec_aggregate(
         self, token: str, op: dict[str, object], stack: stack_data[object]
@@ -1516,7 +1573,7 @@ class StackerCore:
             raise StackerTypeError(not_a_sequence_message(token))  # `len` and `empty?` count a dictionary's keys
         elif isinstance(agg_args, Symbol):
             raise StackerTypeError(symbol_as_value_message(token, agg_args.name))
-        elif token != "empty?" and (agg_args is None or isinstance(agg_args, (bool, int, float, complex, Fraction))):
+        elif token != "empty?" and (agg_args is None or isinstance(agg_args, (bool, int, float, complex, Fraction, StackerLambda, StackerFunction))):
             raise StackerTypeError(f"`{token}` expects a list, an array, a string or a block, got {plain_text(agg_args)}")  # (`empty?` has its own wording)
         try:
             if op["push_result_to_stack"]:
@@ -1525,8 +1582,8 @@ class StackerCore:
                     stack.append(result)
             else:
                 op["func"](agg_args)  # type: ignore[operator]
-        except (TypeError, AttributeError) as error:
-            _reraise_type_error(token, [agg_args], error)
+        except _HOST_ERRORS as error:
+            _host_error_as_the_words(token, [agg_args], error)
 
     def _exec_collection(
         self, token: str, op: dict[str, object], stack: stack_data[object]
@@ -1535,7 +1592,10 @@ class StackerCore:
         args: list[object] = []
         for _ in range(op["arg_count"]):  # type: ignore[arg-type]
             args.insert(0, self._pop_and_resolve(stack))
-        result = op["func"](*args)  # type: ignore[operator]
+        try:
+            result = op["func"](*args)  # type: ignore[operator]
+        except _HOST_ERRORS as error:
+            _host_error_as_the_words(token, args, error)
         if result is not VOID:
             stack.append(result)
 
@@ -1553,8 +1613,8 @@ class StackerCore:
                     stack.append(result)
             else:
                 op["func"](*file_args)  # type: ignore[operator]
-        except (TypeError, AttributeError) as error:
-            _reraise_type_error(token, file_args, error)
+        except _HOST_ERRORS as error:
+            _host_error_as_the_words(token, file_args, error)
 
     def _exec_settings(
         self, token: str, op: dict[str, object], stack: stack_data[object]
@@ -1687,6 +1747,8 @@ class StackerCore:
             # assigns stays assigned, and nothing is copied
             return partial(self._stacker_lambda, body=spec, operator=word)
         if isinstance(spec, StackerLambda):
+            if spec.arg_count != 1:
+                raise StackerTypeError(f"`{word}` expects a lambda of one parameter, got one of {spec.arg_count}")
             return lambda element: self._one_result(spec.run([element]), word, "the lambda")
         if isinstance(spec, Symbol):
             name = spec.name

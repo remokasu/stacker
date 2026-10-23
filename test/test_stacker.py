@@ -306,7 +306,7 @@ class TestStacker(unittest.TestCase):
         self.assertEqual(self.stacker.stack[-1], 8)
 
         self.stacker.stack.clear()
-        self.stacker.process_expression("{3 5} {*} eval")
+        self.stacker.process_expression("{3 5} eval {*} eval")  # a block argument must be one value
         self.assertEqual(self.stacker.stack[-1], 15)
 
     def test_eval_list_via_parse(self):
