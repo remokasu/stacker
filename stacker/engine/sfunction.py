@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
 from stacker.engine import recursion
 from stacker.engine.data_type import stack_data
+from stacker.error import StackerRecursionError
 
 
 class StackerFunction:
@@ -65,6 +66,11 @@ class StackerFunction:
 
             new_blockstack._evaluate(new_blockstack.tokens, stack=new_blockstack.stack)
             return list(new_blockstack.stack)
+
+        except RecursionError:
+            # The host ran out of call depth before the guard did; the innermost
+            # call reports it, by name, so `try` sees the usual kind
+            raise StackerRecursionError(self.name, recursion.get_limit(), depth=recursion.get_depth()) from None
         finally:
             recursion.leave()
 

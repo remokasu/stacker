@@ -274,12 +274,22 @@ class StackerRecursionError(StackerError):
     can be changed with the --recursion-limit CLI flag.
     """
 
-    def __init__(self, name: str, limit: int, kind: str = "function") -> None:
-        message = f"Maximum recursion depth ({limit}) exceeded in {kind} `{name}`"
+    def __init__(self, name: str, limit: int, kind: str = "function", depth: int | None = None) -> None:
+        if depth is None:
+            message = f"Maximum recursion depth ({limit}) exceeded in {kind} `{name}`"
+        else:
+            # The host's own call depth ran out first: the function nests
+            # blocks (if, ifelse, while, ...) that cost depth of their own
+            message = (
+                f"Maximum recursion depth exceeded in {kind} `{name}` at {depth} calls, "
+                f"before the limit ({limit}): the host ran out of call depth first, "
+                f"usually because the blocks nested inside the body cost depth too"
+            )
         super().__init__(message)
         self.name = name
         self.limit = limit
         self.kind = kind
+        self.depth = depth
 
 
 class MacroExpansionError(StackerError):

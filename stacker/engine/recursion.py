@@ -70,6 +70,11 @@ def set_limit(limit: int) -> None:
     _limit = limit
 
 
+def get_depth() -> int:
+    """Return the number of Stacker function calls currently on the way."""
+    return _depth
+
+
 def get_limit() -> int:
     """Return the current maximum Stacker recursion depth."""
     return _limit

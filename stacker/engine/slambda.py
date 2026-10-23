@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from stacker.engine import recursion
 from stacker.engine.data_type import stack_data
+from stacker.error import StackerRecursionError
 
 #: Name reported by the recursion guard for anonymous lambdas
 LAMBDA_NAME = "<lambda>"
@@ -62,6 +63,11 @@ class StackerLambda:
             blockstack._evaluate(blockstack.tokens, stack=blockstack.stack)
             return list(blockstack.stack)
 
+
+        except RecursionError:
+            # The host ran out of call depth before the guard did; the innermost
+            # call reports it, by name, so `try` sees the usual kind
+            raise StackerRecursionError(LAMBDA_NAME, recursion.get_limit(), depth=recursion.get_depth()) from None
         finally:
             recursion.leave()
 

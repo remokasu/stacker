@@ -17,7 +17,11 @@ script_extension_name = ".stk"
 # sys.setrecursionlimit), which stops this engine's call chain at 2000
 # Stacker levels with a plain RecursionError. The limits below stay under
 # that ceiling so the guard's named StackerRecursionError always fires
-# first.
+# first for a function body without nested blocks. Blocks nested inside
+# a function (if, ifelse, while, ...) cost host depth of their own, so a
+# deeply nested body reaches the host's limit before the guard does; a
+# function call then reports it as a StackerRecursionError that names
+# the function and the depth reached.
 #
 # Default maximum Stacker-level recursion depth for user-defined
 # functions and lambdas; overridable per run with --recursion-limit
