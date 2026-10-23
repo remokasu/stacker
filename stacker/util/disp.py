@@ -3,8 +3,12 @@ from __future__ import annotations
 import threading
 
 from stacker.engine.data_type import Array, Symbol
+from stacker.error import StackerRuntimeError
 from stacker.syntax.token_rules import escape_for_display
 from stacker.util import colored
+
+#: The error for a value nested too deep for the display to walk
+TOO_DEEP_TO_SHOW = "cannot show a value nested this deep; take it apart first (`at`, `dolist`)"
 
 
 class CustomPrinter:
@@ -306,7 +310,10 @@ def plain_text(item: object) -> str:
     printed = custom_print(item)
     # custom_print hands back unknown kinds of value unchanged; the colored
     # display shows those with str(), so do the same here.
-    return repr(printed) if isinstance(printed, CustomPrinter) else str(printed)
+    try:
+        return repr(printed) if isinstance(printed, CustomPrinter) else str(printed)
+    except RecursionError:
+        raise StackerRuntimeError(TOO_DEEP_TO_SHOW) from None
 
 
 def display_text(value: object) -> str:
@@ -338,7 +345,8 @@ def disp_default(stack_list: list[object]) -> str:
 
 
 def disp_stack(stack_list: list[object], colored: bool = False) -> None:
-    if colored:
-        print(disp_colored(stack_list))
-    else:
-        print(disp_default(stack_list))
+    try:
+        text = disp_colored(stack_list) if colored else disp_default(stack_list)
+    except RecursionError:
+        raise StackerRuntimeError(TOO_DEEP_TO_SHOW) from None
+    print(text)
