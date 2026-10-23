@@ -2,22 +2,26 @@ from __future__ import annotations
 
 import random
 
+from stacker.operators.arguments import integer_argument
+
 
 def _rand() -> float:
     return random.random()
 
 
-def _randint(x1: int, x2: int) -> int:
-    return random.randint(int(x1), int(x2))
+def _randint(x1: object, x2: object) -> int:
+    return random.randint(integer_argument("randint", x1), integer_argument("randint", x2))
 
 
 def _uniform(x1: float, x2: float) -> float:
     return random.uniform(float(x1), float(x2))
 
 
-def _dice(num_dice: int, num_faces: int) -> int:
+def _dice(num_dice: object, num_faces: object) -> int:
     # Roll dice (e.g., 3d6)
-    return sum(random.randint(1, int(num_faces)) for _ in range(int(num_dice)))
+    count = integer_argument("dice", num_dice)
+    faces = integer_argument("dice", num_faces)
+    return sum(random.randint(1, faces) for _ in range(count))
 
 
 random_operators = {

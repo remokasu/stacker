@@ -40,6 +40,19 @@ def integer_argument(word: str, value: object) -> int:
 BYTE_MAX = 255
 
 
+def count_argument(word: str, value: object) -> int:
+    """Returns ``value`` as a count: an integer of 0 or more.
+
+    Raises:
+        StackerTypeError: ``value`` is not an integer.
+        ValidationError: ``value`` is negative.
+    """
+    count = integer_argument(word, value)
+    if count < 0:
+        raise ValidationError(f"`{word}` expects a count of 0 or more, got {count}")
+    return count
+
+
 def byte_values(word: str, value: object) -> bytes:
     """Returns the bytes a list or an array of integers 0..255 stands for; anything else is refused by name."""
     if isinstance(value, Symbol):

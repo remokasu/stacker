@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from stacker.engine import recursion
 from stacker.engine.data_type import stack_data
-from stacker.error import StackerRecursionError
+from stacker.error import StackerRecursionError, StackerTypeError
 
 #: Name reported by the recursion guard for anonymous lambdas
 LAMBDA_NAME = "<lambda>"
@@ -50,7 +50,7 @@ class StackerLambda:
         recursion.enter(LAMBDA_NAME)
         try:
             if len(values_list) != len(self.args):
-                raise ValueError(f"Expected {len(self.args)} arguments, got {len(values_list)}")
+                raise StackerTypeError(f"The lambda takes {len(self.args)} arguments, got {len(values_list)}")
             # The body keeps the scope it was made in; each call runs in a
             # child of that scope, with its own stack. A block written inside
             # the body is bound to the call's scope when the body pushes it.

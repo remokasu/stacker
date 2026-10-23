@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 from stacker.engine import recursion
 from stacker.engine.data_type import stack_data
-from stacker.error import StackerRecursionError
+from stacker.error import StackerRecursionError, StackerTypeError
 
 
 class StackerFunction:
@@ -50,7 +50,7 @@ class StackerFunction:
         recursion.enter(self.name)
         try:
             if len(values_list) != len(self.args):
-                raise ValueError(f"Expected {len(self.args)} arguments, got {len(values_list)}")
+                raise StackerTypeError(f"The function `{self.name}` takes {len(self.args)} arguments, got {len(values_list)}")
 
             # The body is shared by every call: a shallow copy carries this
             # call's own scope and stack. A block written inside the body is
