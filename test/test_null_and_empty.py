@@ -45,7 +45,12 @@ def test_empty_counts_the_elements(program, expected):
     assert run(program) == [expected]
 
 
-@pytest.mark.parametrize("program", ["null empty?", "0 empty?", "true empty?", ":s empty?", "{} empty?", "{[]} empty?"])
+@pytest.mark.parametrize("program", ["null empty?", "0 empty?", "true empty?", "{} empty?", "{[]} empty?"])
 def test_a_value_without_elements_is_refused(program):
     with pytest.raises(StackerTypeError, match="`empty\\?` expects a list, an array, a string or a dictionary"):
         run(program)
+
+
+def test_a_symbol_is_reported_as_a_symbol():
+    with pytest.raises(StackerTypeError, match="`empty\\?` cannot use the symbol `s`"):
+        run(":s empty?")

@@ -39,7 +39,7 @@ class TestTokenToValue:
         literal = String("x")
         assert token_to_value(literal) is literal
 
-    @pytest.mark.parametrize("token", ["[1 2]", ":1", ":", "::x", ":true", "$x", "{x}", '"x"', "5", "True"])
+    @pytest.mark.parametrize("token", ["[1 2]", ":1", ":", "::x", "$x", "{x}", '"x"', "5", "True"])
     def test_raw_text_that_is_not_a_name_is_kept_as_text(self, token):
         value = token_to_value(token)
         assert type(value) is str and value == token

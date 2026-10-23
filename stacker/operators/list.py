@@ -1,13 +1,23 @@
 from __future__ import annotations
 
-from stacker.error import StackerTypeError, not_a_sequence_message
+from stacker.engine.data_type import Symbol
+from stacker.error import (
+    StackerTypeError,
+    not_a_sequence_message,
+    symbol_as_value_message,
+)
 from stacker.operators.arguments import integer_argument
+from stacker.util.disp import plain_text
 
 
 def _sequence(word: str, xs: object) -> object:
-    """Returns ``xs`` unless it is a dictionary, which is not a sequence."""
+    """Returns ``xs`` when it is a list, an array or a string; a dictionary or a scalar is refused by name."""
     if isinstance(xs, dict):
         raise StackerTypeError(not_a_sequence_message(word))
+    if isinstance(xs, Symbol):
+        raise StackerTypeError(symbol_as_value_message(word, xs.name))
+    if not isinstance(xs, (list, tuple, str)):
+        raise StackerTypeError(f"`{word}` expects a list, an array or a string, got {plain_text(xs)}")
     return xs
 
 

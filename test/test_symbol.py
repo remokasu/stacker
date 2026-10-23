@@ -269,7 +269,7 @@ class TestDisplay:
 
 
 class TestDollarSyntax:
-    @pytest.mark.parametrize("token", [":1", ":{x}", ':"x"', ":[1 2]", ":", "::x", ":x:", ":true", "$x", "$1"])
+    @pytest.mark.parametrize("token", [":1", ":{x}", ':"x"', ":[1 2]", ":", "::x", ":x:", "$x", "$1"])
     def test_dollar_must_be_followed_by_a_name(self, token):
         with pytest.raises(StackerSyntaxError) as info:
             run(token)
@@ -296,10 +296,15 @@ class TestKeywordLiterals:
         assert run("[true None null]") == [[True, None, None]]
         assert run("{true false} all") == [False]
 
-    @pytest.mark.parametrize("program", ["5 true set", "5 false set", "5 null set", "5 True set", "5 :true set"])
+    @pytest.mark.parametrize("program", ["5 true set", "5 false set", "5 null set", "5 True set", "5 :true set", "5 :null global", "{} {1} :null defun"])
     def test_cannot_be_bound(self, program):
         with pytest.raises(StackerSyntaxError):
             run(program)
+
+    def test_the_name_of_a_literal_is_a_symbol(self):
+        assert run(":null :true :false") == [Symbol("null"), Symbol("true"), Symbol("false")]
+        assert run("null type :null ==") == [True]
+        assert run('"null" symbol :null ==') == [True]
 
     def test_other_constants_are_still_variables(self):
         assert run("5 :pi set pi") == [5]
@@ -377,7 +382,7 @@ class TestSymbolWord:
 
     @pytest.mark.parametrize(
         "program",
-        ['"1" symbol', '"a b" symbol', '"" symbol', '"$x" symbol', '"{x}" symbol', '"true" symbol',
+        ['"1" symbol', '"a b" symbol', '"" symbol', '"$x" symbol', '"{x}" symbol',
          '{"x"} symbol', "{x y} symbol", "5 symbol", "[1] symbol"],
     )
     def test_rejects_what_cannot_be_a_name(self, program):
@@ -463,9 +468,8 @@ class TestEdgeCasesNotCoveredElsewhere:
         assert run("[true None]") == [[True, None]]
 
     @pytest.mark.parametrize("token", [":null", ":false", ":None", ":True"])
-    def test_keyword_literals_cannot_follow_a_dollar(self, token):
-        with pytest.raises(StackerSyntaxError):
-            run(token)
+    def test_keyword_literals_can_follow_the_prefix_as_symbols(self, token):
+        assert run(token) == [Symbol(token[1:])]
 
     def test_keyword_literal_is_not_an_argument_name(self):
         with pytest.raises(StackerSyntaxError):

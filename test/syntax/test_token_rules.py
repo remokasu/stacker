@@ -65,7 +65,7 @@ def test_is_code_block(token, expected):
         ('$"x"', False),
         ("$[1 2]", False),
         ("$(x)", False),
-        (":true", False),
+        (":true", True),  # the literal's name is a symbol; the bare word is the value
         ("x", False),
         (String(":x"), False),
         (5, False),
@@ -168,8 +168,8 @@ def test_parser_reexports_the_predicates():
         ("a(b", False),
         ("a#b", False),
         ("a;b", False),
-        ("true", False),
-        ("None", False),
+        ("true", True),  # `:true` is a symbol (the name of a literal)
+        ("None", True),
         (String("x"), False),
         (5, False),
         (None, False),
@@ -194,8 +194,8 @@ def test_keyword_literals_are_values_not_names():
         "None": None,
     }
     for word in token_rules.KEYWORD_LITERALS:
-        assert not is_bare_name(word)
-        assert not is_symbol(":" + word)
+        assert not is_bare_name(word)  # the bare word is the value
+        assert is_symbol(":" + word)  # its name is a symbol (`null type` is `:null`)
 
 
 def test_not_a_symbol_message_quotes_the_token():
