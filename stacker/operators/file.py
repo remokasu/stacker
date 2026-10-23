@@ -11,7 +11,7 @@ from stacker.util.disp import display_text, plain_text
 
 def _write(content: object, filename: Path | str) -> None:
     filename = Path(filename).resolve()
-    with open(filename, "w") as f:
+    with open(filename, "w", encoding="utf-8") as f:
         f.write(content)
 
 
@@ -21,7 +21,7 @@ def _read(filename: Path | str) -> str | None:
         raise FileNotFoundError(f"File {filename} not found.")
     if not filename.exists():
         raise FileNotFoundError(f"File {filename} does not exist.")
-    with open(filename, "r") as f:
+    with open(filename, "r", encoding="utf-8") as f:
         return f.read()
 
 
@@ -81,7 +81,7 @@ def write_to_file(data: object, filename: object) -> None:
     """Writes ``data`` to a file, as the text `str` gives, replacing what the file held."""
     filename = file_name_argument("write-to-file", filename)
     try:
-        with open(filename, "w") as f:
+        with open(filename, "w", encoding="utf-8") as f:
             f.write(display_text(data))
     except OSError as error:
         raise cannot_open_error("write-to-file", filename, error) from error
@@ -91,7 +91,7 @@ def read_from_file(filename: object) -> str:
     """Reads the whole content of a file as one string."""
     filename = file_name_argument("read-from-file", filename)
     try:
-        with open(filename, "r") as f:
+        with open(filename, "r", encoding="utf-8") as f:
             return f.read()
     except OSError as error:
         raise cannot_open_error("read-from-file", filename, error) from error
@@ -103,7 +103,7 @@ def append_to_file(data: object, filename: object) -> None:
     """Appends ``data`` to a file, as the text `str` gives."""
     filename = file_name_argument("append-to-file", filename)
     try:
-        with open(filename, "a") as f:
+        with open(filename, "a", encoding="utf-8") as f:
             f.write(display_text(data))
     except OSError as error:
         raise cannot_open_error("append-to-file", filename, error) from error
@@ -113,7 +113,7 @@ def read_lines_from_file(filename: object) -> list[str]:
     """Reads a file as a list of its lines, line breaks removed."""
     filename = file_name_argument("read-lines", filename)
     try:
-        with open(filename, "r") as f:
+        with open(filename, "r", encoding="utf-8") as f:
             return [line.rstrip("\n") for line in f]
     except OSError as error:
         raise cannot_open_error("read-lines", filename, error) from error
