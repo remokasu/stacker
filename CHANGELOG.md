@@ -1,5 +1,17 @@
 # CHANGE LOG
 
+## [1.24.2] - 2026-10-24
+
+### Fixed
+
+- About fifty words that run no code of the program's own (`<`, `sin`, `asin`, `exp`, `round`, `comb`, `gcd`, `randint`, `nth`, `contains`, `parse`, `car` and the like) still leaked the host's error for a value of the wrong type or outside their range (`math domain error`, `'<' not supported between instances of 'int' and 'str'`, a bare `IndexError` from `nth`). The words that call a host function without running a block now report every host error as their own, in one place: a type error as `StackerTypeError`, a value out of range as `ValidationError`, an index past the end as `StackerIndexError`, each naming the word and showing its arguments (`` `asin` cannot use 5: math domain error ``). A lambda handed to a sequence word is refused by name like any other non-sequence. A test feeds every word every kind of value and fails if a host error ever gets out
+- `cbrt` gave a complex number for a negative number (`-8 cbrt`) and an inexact root for a perfect cube (`64 cbrt` was `3.9999999999999996`); it gives the real root, exact for perfect cubes. `lcm` divided by zero for `0 0 lcm` and kept the sign of the product (`-4 6 lcm` was `-12`); it is 0 or more, `0 0 lcm` being 0
+- `dupn`, `dropn`, `listn` and `subn` silently did nothing for a negative count; a count must be 0 or more. `comb`, `perm`, `ncr`, `npr`, `randint` and `dice` truncated a fraction to an integer (`5 2.9 comb` was 10); they take integers only. `roundn` with a digit count in the millions never finished; the count is limited to 1000 places either side
+- A block handed to an operator as an argument that left two or more values spread them over the stack, so `10 {1 2} -` computed `1 - 2` and left the 10, while `{1 2} 10 -` left a 1 behind. An argument must be one value; a block that leaves more is an error that shows them
+- Scripts and the file words were read and written in the encoding of the host's locale, so a script with a Japanese comment could not be read where that was not UTF-8, and a UTF-8 file starting with a byte order mark had the mark glued to its first word. Scripts are read as UTF-8 with the mark skipped (a file that is not UTF-8 is refused with its line), and the file words read and write UTF-8
+- A value nested about 1500 levels deep (a linked list of pairs) could not be shown by `echo`, `str` or the stack display and stopped with the host's recursion error; it is reported as a value too deep to show, by name
+- `-inf` and `+inf` (and `-nan`) are read as numbers, as `inf` and `nan` are, at the top level, inside a block and inside a list literal (`[inf -inf]`)
+
 ## [1.24.1] - 2026-10-23
 
 ### Fixed

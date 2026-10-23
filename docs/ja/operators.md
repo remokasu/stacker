@@ -102,7 +102,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 |---|---|---|
 | `abs` | 絶対値 | `-3 abs` |
 | `sqrt` | 平方根。負の数はエラー | `9 sqrt` |
-| `cbrt` | 立方根 | `27 cbrt` |
+| `cbrt` | 実数の立方根。負の数は負（`-8 cbrt` は `-2.0`） | `27 cbrt` |
 | `exp` | e の累乗 | `3 exp` |
 | `real` | 実部。実数はそのまま | `3+4j real` |
 | `imag` | 虚部。実数は 0 | `3+4j imag` |
@@ -128,9 +128,9 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `ceil` | 切り上げ（整数） | `3.2 ceil` |
 | `floor` | 切り捨て（整数） | `3.8 floor` |
 | `round` | 最も近い整数へ丸める。ちょうど半分は偶数側（`2.5` は `2`） | `3.5 round` |
-| `roundn` | 小数 n 桁に丸める。`x n roundn` | `3.51 1 roundn` |
+| `roundn` | 小数 n 桁に丸める。`x n roundn`（n は ±1000 まで） | `3.51 1 roundn` |
 | `gcd` | 最大公約数 | `12 18 gcd` |
-| `lcm` | 最小公倍数 | `4 6 lcm` |
+| `lcm` | 最小公倍数（0 以上。`0 0 lcm` は 0） | `4 6 lcm` |
 | `!` | 階乗。後置: `4 !` | `4 !` |
 | `comb`, `ncr` | 組み合わせの数。`n k comb` は nCk | `5 2 comb`, `5 2 ncr` |
 | `perm`, `npr` | 順列の数。`n k perm` は nPk | `5 2 perm`, `5 2 npr` |
@@ -280,7 +280,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `dupn` | 上から n 個をそのまま複製。`n dupn` | `2 dupn` |
 | `over` | 上から 2 番目をもう一度一番上に積む（配列・辞書なら同じ実体） | `over` |
 | `swap` | 上から 2 つを入れ替える | `swap` |
-| `pick` | 上から n 番目をもう一度一番上に積む。`n pick`（`1 pick` は `dup` と同じ） | `3 pick` |
+| `pick` | 上から n 番目をもう一度一番上に積む。`n pick`（`1 pick` は `dup` と同じ）。負の n は底から数える（`-1 pick` は一番底） | `3 pick` |
 | `roll` | 上から n 番目を一番上へ移動（コピーではない）。`n roll` | `3 roll` |
 | `rot` | 上から 3 番目を一番上へ移動（`a b c` が `b c a` になる） | `rot` |
 | `unrot` | 一番上を 3 番目の位置へ移動（`a b c` が `c a b` になる） | `unrot` |
@@ -306,7 +306,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `cond` | `{c1} {r1} {c2} {r2} ... n cond` は n 組の条件と結果を順に調べ、最初に条件が真になった組の結果を実行 | `5 :x set {x 0 >} {"pos"} {true} {"other"} 2 cond` |
 | `do` | `start end :name {body} do` は start から end まで（両端を含む）の整数を name に束縛して body を実行 | `1 5 :i {i echo} do` |
 | `dolist` | `list :name {body} dolist` は各要素を name に束縛して body を実行 | `[1 2 3] :x {x echo} dolist` |
-| `times` | `{body} n times` は body を n 回実行 | `{dup ++} 3 times` |
+| `times` | `{body} n times` は body を n 回実行。n が小数なら切り上げた回数（`2.4 times` は 3 回） | `{dup ++} 3 times` |
 | `while` | `{cond} {body} while` は cond が真の間 body を繰り返す | `0 :i set {i 3 <} {i ++ :i set} while` |
 | `loop` | `{body} loop` は `break` が実行されるまで body を繰り返す | `0 {1 + dup 10 > {break} if} loop` |
 | `break` | 最も内側のループを抜ける。ループの外ではエラー | `0 {1 + dup 3 > {break} if} loop` |
