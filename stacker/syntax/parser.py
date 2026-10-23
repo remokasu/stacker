@@ -14,6 +14,7 @@ from stacker.syntax.lexer import (
 from stacker.error import StackerSyntaxError, word_in_list_literal_message
 from stacker.engine.data_type import String
 from stacker.syntax.token_rules import (  # noqa: F401 -- is_code_block / is_list / is_symbol are re-exported
+    SIGNED_SPECIAL_FLOATS,
     count_outside_strings,
     decode_string_token,
     is_code_block,
@@ -100,6 +101,8 @@ class Parser:
         elif token.type == TokenType.COMPLEX_NUMBER:
             return ast.literal_eval(token.value)
         elif token.type == TokenType.NUMBER:
+            if token.value in SIGNED_SPECIAL_FLOATS:
+                return SIGNED_SPECIAL_FLOATS[token.value]
             return ast.literal_eval(token.value)
         elif token.type == TokenType.STRING:
             return String(decode_string_token(token.value))  # a String: never a name

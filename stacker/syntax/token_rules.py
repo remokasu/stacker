@@ -206,6 +206,14 @@ KEYWORD_LITERALS: dict[str, object] = {
     "None": None,
 }
 
+#: Signed spellings of the two special floats; `inf` and `nan` themselves are constants (variables)
+SIGNED_SPECIAL_FLOATS: dict[str, float] = {
+    "-inf": float("-inf"),
+    "+inf": float("inf"),
+    "-nan": float("nan"),
+    "+nan": float("nan"),
+}
+
 
 def is_list(expression: object) -> bool:
     """Return True if ``expression`` is a list-literal token (``[...]``).
@@ -372,6 +380,8 @@ def cached_literal_eval(token: str) -> object:
     """
     if token in KEYWORD_LITERALS:
         return KEYWORD_LITERALS[token]
+    if token in SIGNED_SPECIAL_FLOATS:
+        return SIGNED_SPECIAL_FLOATS[token]
     try:
         value = ast.literal_eval(token)
     except (ValueError, TypeError, SyntaxError):
