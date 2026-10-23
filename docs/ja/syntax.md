@@ -285,7 +285,7 @@ stacker:1> #| 外側 #| 内側 |# まだ外側 |# 3
 
 - 文字列リテラルの値は `str` を継承した `String` 型です。`type`（`:str`）や `str?` からは同じ文字列に見えるので、普段は区別する必要がありません。
 - ブロックは `type` などの演算子に渡すと評価されるため、`{1} type` は `:int` になります。ブロックの種類を調べることはできません。
-- Symbol は名前そのものを表す値です。詳しくは [名前とシンボル](names-and-symbols.md) を参照してください。
+- Symbol は名前そのものを表す値です。`:null` `:true` `:false` もシンボルです（`null type` は `:null` を返します）。ただし `null` などの裸の語は常に値なので、その名前に `set` することはできません。詳しくは [名前とシンボル](names-and-symbols.md) を参照してください。
 - `lambda` で作る無名関数も値の一種で、`λa.{a}` のように表示されます。
 
 型の確認には `int?`、`float?`、`complex?`、`str?`、`list?`、`array?`、`dict?`、`bool?`、`number?`、`symbol?`、`null?` を使います。`int?` と `number?` は `bool` に対して `false` を返します。

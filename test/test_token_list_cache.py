@@ -75,7 +75,7 @@ class TestSymbolClassification(unittest.TestCase):
         self.assertEqual([e[2] for e in entries], [Symbol("x"), Symbol("+")])
 
     def test_invalid_dollar_token_is_classified_with_its_message(self):
-        entries = TokenList([":1", ":", "::x", ":true", "$x"]).classification()
+        entries = TokenList([":1", ":", "::x", ":x:", "$x"]).classification()
         self.assertEqual({e[0] for e in entries}, {K_INVALID})
         self.assertIn("`:1` is not a symbol", entries[0][2])
         self.assertIn("written `:x`", entries[4][2])

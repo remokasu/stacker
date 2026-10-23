@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from fractions import Fraction
 from functools import partial
 import copy
 import logging
@@ -809,7 +810,9 @@ class StackerCore:
             if str(e) not in _EMPTY_STACK_MESSAGES:
                 raise
             arg_count = self._get_operator_arg_count(token)
-            raise StackUnderflowError(token, arg_count) from e
+            what = "Function" if token in self.sfunctions else "Operator"
+            plural = "" if arg_count == 1 else "s"
+            raise StackUnderflowError(token, arg_count, f"{what} `{token}` requires {arg_count} argument{plural}.") from e
         except TypeError as e:
             # Provide more helpful type error messages
             error_msg = str(e)
@@ -1206,6 +1209,11 @@ class StackerCore:
             raise StackerTypeError(
                 "`split` cannot split with an empty separator; `array` gives the characters and `words` the words"
             )
+        if not isinstance(word, str) or not isinstance(sep, str):
+            bad = sep if isinstance(word, str) else word
+            if isinstance(bad, Symbol):
+                raise StackerTypeError(symbol_as_value_message("split", bad.name))
+            raise StackerTypeError(f"`split` expects a string and a separator string, got {plain_text(bad)}")
         try:
             parts = word.split(sep)  # type: ignore[union-attr]
         except (TypeError, AttributeError) as error:
@@ -1456,6 +1464,10 @@ class StackerCore:
             return list(value)
         if isinstance(value, dict):
             raise StackerTypeError(not_a_sequence_message(word))
+        if isinstance(value, Symbol):
+            raise StackerTypeError(symbol_as_value_message(word, value.name))
+        if value is None or isinstance(value, (bool, int, float, complex, Fraction)):
+            raise StackerTypeError(f"`{word}` expects a list, an array, a string or a block, got {plain_text(value)}")
         return value
 
     def _push_like(self, source: object, result: object, stack: stack_data[object]) -> None:
@@ -1502,6 +1514,10 @@ class StackerCore:
             agg_args = [self._block_token_value(t) for t in agg_args.tokens]
         elif isinstance(agg_args, dict) and token not in ("len", "empty?"):
             raise StackerTypeError(not_a_sequence_message(token))  # `len` and `empty?` count a dictionary's keys
+        elif isinstance(agg_args, Symbol):
+            raise StackerTypeError(symbol_as_value_message(token, agg_args.name))
+        elif token != "empty?" and (agg_args is None or isinstance(agg_args, (bool, int, float, complex, Fraction))):
+            raise StackerTypeError(f"`{token}` expects a list, an array, a string or a block, got {plain_text(agg_args)}")  # (`empty?` has its own wording)
         try:
             if op["push_result_to_stack"]:
                 result = op["func"](agg_args)  # type: ignore[operator]
@@ -1590,6 +1606,10 @@ class StackerCore:
         """
         name = _name_in(symbol)
         if name is not None:
+            if name in KEYWORD_LITERALS:
+                # `:null` is a symbol (the name of the literal), but the bare word
+                # is always the value, so a variable of that name could never be read
+                raise StackerSyntaxError(f"`{word}` cannot bind `{name}`: it is a literal, not a variable")
             return name
         # A one-token block that is not a name: pull a string literal out of
         # it (`{"x"}`) so the message below says it is a string, not a block.

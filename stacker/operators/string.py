@@ -122,6 +122,10 @@ def _contains(container: object, value: object) -> bool:
     """``c v contains``: whether a string or a sequence holds ``v``."""
     if isinstance(container, dict):
         raise StackerTypeError("`contains` cannot look through a dictionary; ask for a key with `has?`, or look through its keys")
+    if isinstance(container, Symbol):
+        raise StackerTypeError(symbol_as_value_message("contains", container.name))
+    if not isinstance(container, (str, list, tuple)):
+        raise StackerTypeError(f"`contains` expects a string, a list or an array to look through, got {plain_text(container)}")
     try:
         return value in container  # type: ignore[operator]
     except RecursionError:
@@ -221,6 +225,19 @@ def _decode(value: object, encoding: object) -> str:
         raise StackerRuntimeError(f"`decode` cannot read the bytes as {codec}: {error.reason}") from error
 
 
+
+def _concat(a: object, b: object) -> object:
+    """``a b concat``: two strings, or two lists, joined; anything else is refused by name."""
+    for value in (a, b):
+        if isinstance(value, Symbol):
+            raise StackerTypeError(symbol_as_value_message("concat", value.name))
+    if isinstance(a, str) and isinstance(b, str):
+        return a + b
+    if isinstance(a, list) and isinstance(b, list):
+        return a + b
+    raise StackerTypeError(f"`concat` expects two strings or two lists, got {plain_text(a)} and {plain_text(b)}")
+
+
 string_operators = {
     "asc": {
         "func": _asc,
@@ -235,7 +252,7 @@ string_operators = {
         "desc": "Returns the character that matches the specified ASCII value.",
     },
     "concat": {
-        "func": (lambda value1, value2: value1 + value2),
+        "func": _concat,
         "arg_count": 2,
         "push_result_to_stack": True,
         "desc": "Concatenate two strings.",
