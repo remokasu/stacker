@@ -254,6 +254,14 @@ Stacker が意図して出すエラーは、すべて `stacker.error.StackerErro
 | `ResultCountError` | `map` / `filter` の関数や `reduce` / `fold` の本体が、要素ごとに 2 つ以上の値を残した |
 | `StackerRecursionError` | 再帰の上限を超えた。`name`・`limit`・`kind` 属性を持つ |
 | `IncludeError` | `include` / `require` に失敗した（見つからない、`.stk` でない、循環） |
+| `ValidationError` | 値が語の範囲の外（`-1 sqrt`、`-1 5 array-of`、`0 trailing-zeros`、ホストが値を断った場合） |
+| `StackerRuntimeError` | 実行環境の問題（開けないファイル、深すぎて表示できない値など） |
+| `NoValueProducedError` | 値を残さなければならないブロックが何も残さなかった |
+| `UserError` | `throw` で投げたエラー。`kind` 属性がそのまま表示される |
+| `ScriptReadError` | スクリプトが読めない（`.stk` でない、UTF-8 でない） |
+| `DupError` `DropError` `PickError` `RollError` `InsertError` | スタック操作の語が空のスタックや範囲外の位置を扱った |
+
+語が利用者のコードを走らせずにホストの関数を呼ぶとき、ホストが出す `TypeError` は `StackerTypeError`、`ValueError` / `OverflowError` は `ValidationError`、`IndexError` は `StackerIndexError` として、語の名前と値つきで言い直されます。`ZeroDivisionError` と、`map` などの本体の中で起きたエラーは、そのまま伝わります。
 
 ```python
 from stacker.error import StackerError, UndefinedSymbolError
@@ -274,10 +282,10 @@ UndefinedSymbolError: `foo` is not defined.
 StackUnderflowError: Operator `+` requires 2 arguments.
 UnterminatedTokenError: Unterminated list starting at line 1
 (Python) ZeroDivisionError: division by zero
-(Python) TypeError: can only concatenate str (not "int") to str
+StackerTypeError: `+` cannot use 'a' and 1 together; to join text, make both values strings with `str`
 ```
 
-0 による除算や、文字列と数の足し算のように、Python の演算がそのまま失敗した場合は、`ZeroDivisionError` や `TypeError` といった Python の例外がそのまま出ます。`StackerError` だけを捕まえると取りこぼすので、必要なら `Exception` も捕まえてください。
+0 による除算（`ZeroDivisionError`）と、`map` などの本体の中でプラグインの関数が出した例外は、Python の例外のまま出ます。`StackerError` だけを捕まえると取りこぼすので、必要なら `Exception` も捕まえてください。
 
 ### 再帰の上限
 
