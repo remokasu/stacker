@@ -31,7 +31,8 @@ Conditionals:
   cond {true-branch} if
   cond {true-branch} {false-branch} ifelse
   {c1} {r1} {c2} {r2} 2 cond
-  {try} {catch} iferror       {try} {handler} try  (handler gets {'kind' 'message'})
+  {try} {catch} iferror       {try} {handler} try  (handler gets {'kind' 'message' 'stack'})
+                              (a caught error puts the stack back as it was)
   "MyError" "what went wrong" throw
 
 Loops:

@@ -1,5 +1,19 @@
 # CHANGE LOG
 
+## [1.24.0] - 2026-10-23
+
+### Breaking Changes
+
+- **`try` and `iferror` put the stack back as it was when an error is caught.** What the failing block pushed is dropped and what it took is back, so the handler, or the dictionary `try` pushes, sits on exactly the stack the word began with. Until now the block's partial work stayed: `{d "price" get int d "qty" get int *} {e} {0} lambda try` left the price under the handler's 0 when the quantity could not be read, and a sum that meant to count the order as 0 was silently wrong. What was left also depended on where the block failed and whether the failing word had taken its arguments, and a function failing in the same way left nothing, so a block and a function behaved differently. What a block changed in place (an array, a dictionary, a variable) stays changed. `break` is not an error and leaves the stack as the block left it
+
+### Migration
+
+- A handler that read the values the failing block had pushed so far reads them from the error dictionary instead: `try` gives them under the key `"stack"` (`e "stack" get`), a copy of the stack as it was at the failure
+
+### Added
+
+- The error dictionary of `try` has a third key, `"stack"`: what the stack held when the error was raised. Entering `try` or `iferror` copies the stack, which costs in proportion to its depth
+
 ## [1.23.0] - 2026-10-23
 
 ### Added
