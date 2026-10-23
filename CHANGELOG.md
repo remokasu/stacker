@@ -1,5 +1,16 @@
 # CHANGE LOG
 
+## [1.24.1] - 2026-10-23
+
+### Fixed
+
+- The string `";"` inside a list literal was taken for the row separator: `["x" ";" "y"]` became `[['x'] ['y']]` and `[";"]` an empty list, with no error. A string is text; only a bare `;` splits rows
+- A `{` or `}` (or `(` / `)`) inside a string literal inside a block was counted as structure, so `{"{" echo}` was not a block (a function with such a body could not be defined, `{"a{b"} eval` pushed a value only the host has, a set). Brackets inside strings do not count, and a token that reads only as a host-only value (a set, a tuple) is a name, never that value
+- `dolist`, `map`, `filter`, `reduce`, `fold`, `zip`, `sum`, `len`, `any`, `all`, `enumerate`, `list`, `reversed`, `car`, `cdr`, `contains`, `split` and `concat` leaked the host's message when given a number, a boolean or null in a sequence's place (`'int' object is not iterable`); each names itself and shows the value
+- A function whose body nests blocks deeply (`ifelse` inside `ifelse` five or more levels) hit the host's own call-depth limit before the recursion guard, reported as a bare host error that `try` could not tell from any other. The innermost call reports it as the usual recursion error, naming the function and the depth reached, and says why it came before the limit
+- `null type` gave the symbol `:null`, which could not be written in source or made with `symbol`; `:null`, `:true` and `:false` are symbols now (the bare word stays the value), so `x type :null ==` works. They still cannot be bound: `5 :null set` is refused
+- A function short of arguments was reported as "Operator `g` requires 2 arguments."; it is "Function `g` ...", and one argument is "1 argument"
+
 ## [1.24.0] - 2026-10-23
 
 ### Breaking Changes
