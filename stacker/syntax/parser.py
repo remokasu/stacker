@@ -14,6 +14,7 @@ from stacker.syntax.lexer import (
 from stacker.error import StackerSyntaxError, word_in_list_literal_message
 from stacker.engine.data_type import String
 from stacker.syntax.token_rules import (  # noqa: F401 -- is_code_block / is_list / is_symbol are re-exported
+    count_outside_strings,
     decode_string_token,
     is_code_block,
     is_list,
@@ -23,6 +24,9 @@ from stacker.syntax.token_rules import (  # noqa: F401 -- is_code_block / is_lis
 )
 
 __transpose_symbol__ = "^T"
+
+#: The `;` between the rows of a list literal; its own object, so the string ";" is never taken for it
+_ROW_SEPARATOR = object()
 
 
 class Parser:
@@ -76,7 +80,7 @@ class Parser:
 
         self.next_token()  # consume closing bracket/paren
 
-        if ";" in elements:
+        if any(item is _ROW_SEPARATOR for item in elements):
             return node_class(self._split_by_semicolon(elements, node_class))
         return node_class(elements)
 
@@ -106,7 +110,7 @@ class Parser:
                 raise StackerSyntaxError(not_a_symbol_message(token.value))
             return Identifier(token.value)  # formatted as ':name', a symbol element
         elif token.type == TokenType.SEMICOLON:
-            return ";"
+            return _ROW_SEPARATOR
         elif token.type == TokenType.COMMA:
             raise StackerSyntaxError(
                 "Commas are not used in Stacker lists; "
@@ -131,7 +135,7 @@ class Parser:
         current = []
 
         for item in elements:
-            if item == ";":
+            if item is _ROW_SEPARATOR:
                 if current:
                     result.append(node_class(current))
                     current = []
@@ -216,14 +220,14 @@ def remove_start_end_quotes(expression: str) -> str:
 
 
 def is_balanced(expression: str, open_char: str, close_char: str) -> bool:
-    return expression.count(open_char) == expression.count(close_char)
+    return count_outside_strings(expression, open_char) == count_outside_strings(expression, close_char)
 
 
 def is_single(expression: str, open_char: str, close_char: str) -> bool:
     return (
         is_balanced(expression, open_char, close_char)
-        and expression.count(open_char) == 1
-        and expression.count(close_char) == 1
+        and count_outside_strings(expression, open_char) == 1
+        and count_outside_strings(expression, close_char) == 1
     )
 
 
@@ -284,7 +288,7 @@ def is_block(expression: str) -> bool:
     """
     if not isinstance(expression, str):
         return False
-    return expression.count("{") == expression.count("}") > 0
+    return count_outside_strings(expression, "{") == count_outside_strings(expression, "}") > 0
 
 
 def is_string(expression: str) -> bool:
