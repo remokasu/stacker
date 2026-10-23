@@ -221,11 +221,51 @@ def is_list(expression: object) -> bool:
     return expression.startswith("[") and expression.endswith("]")
 
 
+def count_outside_strings(text: str, char: str) -> int:
+    """Counts ``char`` in ``text``, skipping the inside of string literals (escapes and triple quotes included).
+
+    Args:
+        text: A token's text.
+        char: The character to count.
+
+    Returns:
+        How many times ``char`` appears outside quotes.
+    """
+    if '"' not in text and "'" not in text:
+        return text.count(char)  # no string literal to skip: the host's count is far faster
+    count = 0
+    i = 0
+    n = len(text)
+    quote: str | None = None
+    while i < n:
+        ch = text[i]
+        if quote is not None:
+            if ch == "\\":
+                i += 2
+                continue
+            if text.startswith(quote, i):
+                i += len(quote)
+                quote = None
+                continue
+            i += 1
+            continue
+        if ch in ("'", '"'):
+            triple = ch * 3
+            quote = triple if text.startswith(triple, i) else ch
+            i += len(quote)
+            continue
+        if ch == char:
+            count += 1
+        i += 1
+    return count
+
+
 def is_code_block(expression: object) -> bool:
     """Return True if ``expression`` is a code-block token (``{...}`` or ``(...)``).
 
     Both delimiters are equivalent and create a substack. Only the outer
-    delimiters and the brace balance are checked.
+    delimiters and the brace balance are checked; a bracket inside a
+    string literal does not count.
 
     Args:
         expression: Token value.
@@ -247,10 +287,11 @@ def is_code_block(expression: object) -> bool:
         return False
     first_char = expression[0]
     last_char = expression[-1]
+    # A bracket inside a string literal is text, not structure
     if first_char == "{" and last_char == "}":
-        return expression.count("{") == expression.count("}")
+        return count_outside_strings(expression, "{") == count_outside_strings(expression, "}")
     elif first_char == "(" and last_char == ")":
-        return expression.count("(") == expression.count(")")
+        return count_outside_strings(expression, "(") == count_outside_strings(expression, ")")
     return False
 
 
@@ -290,8 +331,9 @@ def is_symbol(expression: object) -> bool:
 def is_symbol_name(name: object) -> bool:
     """Return True if ``name`` can be the name of a symbol (written back as ``:name``).
 
-    Same as :func:`is_bare_name`: the public name for the check that a
-    string value, which may hold anything, can become a symbol.
+    A bare name (:func:`is_bare_name`), or the name of a literal: ``:null``,
+    ``:true`` and ``:false`` are symbols (the value `type` gives for null is
+    `:null`), while the bare word is the value.
 
     Args:
         name: The candidate name.
@@ -299,7 +341,7 @@ def is_symbol_name(name: object) -> bool:
     Returns:
         True if ``:name`` would be one symbol token.
     """
-    return is_bare_name(name)
+    return is_bare_name(name) or name in KEYWORD_LITERALS  # `:null` is the name, `null` the value
 
 
 def not_a_symbol_message(token: str) -> str:
@@ -331,9 +373,12 @@ def cached_literal_eval(token: str) -> object:
     if token in KEYWORD_LITERALS:
         return KEYWORD_LITERALS[token]
     try:
-        return ast.literal_eval(token)
+        value = ast.literal_eval(token)
     except (ValueError, TypeError, SyntaxError):
         return token
+    if isinstance(value, (set, frozenset, tuple, dict, bytes)):
+        return token  # a value only the host has (`{1, 2}`): the token is a name, not that value
+    return value
 
 
 def reads_as_name(token: str) -> bool:
