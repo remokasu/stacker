@@ -22,7 +22,6 @@ from stacker.version import __version__
 # Import parser utility functions (not lexer components)
 # Lexer components (TokenType, UnifiedLexer, etc.) are in stacker.syntax.lexer
 from stacker.syntax.lexer import analyze_terminals
-from stacker.syntax.parser import is_array
 
 
 class ReplMode(ExecutionMode):
@@ -215,59 +214,28 @@ class ReplMode(ExecutionMode):
                 # REPL input is human-typed and bounded, so re-scanning
                 # the whole expression per line is fine here; only the
                 # script line loop needs the incremental TerminalScanner
-                aborted = False
-                if is_array(expression):
-                    # """
-                    #     # List: rows are joined with ";"
-                    #     stacker:0> [1 2 3
-                    #                 3 4 5]
-                    #     [1 2 3; 3 4 5]
-                    # """
-                    while not (terminal := analyze_terminals(expression)).complete:
-                        prompt_text = (
-                            " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> "
-                        )
-                        next_line = self.get_input(prompt_text, multiline=False)
-                        if next_line.lower() == "end":
-                            aborted = True
-                            break
-                        if terminal.open_construct in {
-                            "string",
-                            "block comment",
-                        }:
-                            # Inside a string/comment spanning rows: keep
-                            # the raw line, no row separator
-                            expression += "\n" + next_line
-                            continue
-                        if next_line in {"]", ")"}:
-                            expression += next_line
-                            if analyze_terminals(expression).complete:
-                                break
-                            continue
-                        # Join with "\n" (not " ") so a trailing '#'
-                        # comment on the previous line cannot swallow
-                        # the row separator or this line
-                        if not expression.endswith(";"):
-                            expression += ";\n" + next_line
-                        else:
-                            expression += "\n" + next_line
-
-                # Generic continuation for any construct still open —
-                # blocks, strings, and block comments (subsumes the
-                # former `{`-specific loop):
+                # A construct still open -- a block, a list, a string or a
+                # block comment -- takes the following lines as written,
+                # joined with the line break (not " ", so a trailing `#`
+                # comment cannot swallow the next line), so the REPL reads
+                # what a script reads: a list spanning lines is one row,
+                # and rows are written with `;`. `end` on a line of its
+                # own inside an open list gives the list up; it is then
+                # reported as the unterminated list it is.
                 # """
                 #     stacker:0> {1
                 #             > 3
                 #             > +}
                 #     {1 3 +}
                 # """
-                if not aborted:
-                    while not analyze_terminals(expression).complete:
-                        prompt_text = (
-                            " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> "
-                        )
-                        next_line = self.get_input(prompt_text, multiline=False)
-                        expression += "\n" + next_line
+                while not (terminal := analyze_terminals(expression)).complete:
+                    prompt_text = (
+                        " " * (len(f"stacker:{line_count}> ") - len("> ")) + "> "
+                    )
+                    next_line = self.get_input(prompt_text, multiline=False)
+                    if terminal.open_construct == "list" and next_line.lower() == "end":
+                        break
+                    expression += "\n" + next_line
 
                 logging.debug("input expression: %s", expression)
 
