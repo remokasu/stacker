@@ -38,4 +38,6 @@ packages = [
 ]
 package-data = {"stacker" = [
     "data/*",
+], "stacker.slib" = [
+    "*.stk",
 ]}
