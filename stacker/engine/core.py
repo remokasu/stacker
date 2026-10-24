@@ -312,6 +312,17 @@ def _compile_list_template(token: str) -> list[object]:
     return _template_from_node(parsed if isinstance(parsed, ListNode) else ListNode([parsed]))
 
 
+def _holds_a_name(template: list[object]) -> bool:
+    """Whether a compiled list template refers to a name anywhere (a plain ``str`` element, at any depth)."""
+    for element in template:
+        if isinstance(element, list):
+            if _holds_a_name(element):
+                return True
+        elif type(element) is str:
+            return True
+    return False
+
+
 def _template_from_node(node: ListNode | TupleNode) -> list[object]:
     """Turns the parser's tree of one list literal into a template, element by element."""
     compiled: list[object] = []
@@ -392,6 +403,11 @@ class StackerCore:
         self.arguments: list[str] = []
         # The absolute path of the script the command line ran (`main-script-path`); set by script mode
         self.main_script: str | None = None
+        # Integers have no size limit, so neither has their text: the host's
+        # limit on digits (a defence for tools that read numbers from outside)
+        # would stop `2000 !` from being shown, written or read back
+        if hasattr(sys, "set_int_max_str_digits"):
+            sys.set_int_max_str_digits(0)
 
         # Macro expansion state: set only on the throwaway core that runs a
         # macro body. `_interp_scope` is the expansion scope whose own
@@ -1321,30 +1337,55 @@ class StackerCore:
         left = self._pop_and_resolve(stack)
         stack.append(isinstance(left, StackerCore) and isinstance(right, StackerCore) and self._same_code(left, right))
 
-    @classmethod
-    def _same_code(cls, left: StackerCore, right: StackerCore) -> bool:
+    def _same_code(self, left: StackerCore, right: StackerCore) -> bool:
         """Whether two blocks hold the same tokens, each of the same kind.
 
         Stricter than ``==``, which lets a string literal equal a bare name
         of the same text, ``1`` equal ``1.0`` and ``0.0`` equal ``-0.0``:
         here a literal and a name differ, as they do when the code runs,
         and a number is the same only when written the same. The bracket
-        type does not count: ``{1 2}`` and ``(1 2)`` are the same code.
+        type does not count: ``{1 2}`` and ``(1 2)`` are the same code. A
+        value a macro or `subn` put into a block (a list, an infinity) is
+        the same code as the literal that reads as it (`[1 2 3]`, `inf`):
+        the two are told apart only by the text they are shown as.
         """
         if len(left.tokens) != len(right.tokens):
             return False
         for a, b in zip(left.tokens, right.tokens):
             if isinstance(a, StackerCore) and isinstance(b, StackerCore):
-                if not cls._same_code(a, b):
+                if not self._same_code(a, b):
                     return False
             elif type(a) is not type(b):
-                return False
+                if isinstance(a, StackerCore) or isinstance(b, StackerCore):
+                    return False
+                if not self._same_token_text(a, b):
+                    return False
             elif isinstance(a, (float, complex)):
                 if repr(a) != repr(b):  # tells 0.0 from -0.0, and nan from itself not
                     return False
             elif a != b:
                 return False
         return True
+
+    def _same_token_text(self, a: object, b: object) -> bool:
+        """Whether two tokens of different kinds stand for the same code: a list literal and the list it builds, `inf` and the float.
+
+        A constant list literal is built and shown next to the list value; a
+        literal holding a name (`[x]`) is never the same as a value, since
+        the comparison looks nothing up. Any other pair is compared by the
+        text each is shown as (so the name `nan` and a float nan are the
+        same code, although two float nans are not).
+        """
+        for token, value in ((a, b), (b, a)):
+            if isinstance(token, str) and not isinstance(token, String) and is_list(token) and isinstance(value, list):
+                try:
+                    template = _compile_list_template(token)
+                except StackerError:
+                    return False
+                if _holds_a_name(template):
+                    return False  # `[x]` stands for whatever x is when it runs: not a constant
+                return plain_text(self._build_list(template)) == plain_text(value)
+        return str(self._block_of([a])) == str(self._block_of([b]))
 
     def _prio_code_p(self, op, stack) -> None:
         """``x code?`` -- whether the value is a code block (a lambda is not)."""
