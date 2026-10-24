@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
+from typing import TextIO
 
 from stacker.error import StackerRuntimeError
 from stacker.operators.arguments import byte_values
@@ -40,28 +42,59 @@ def _read_stdin_bytes() -> list[int]:
         raise _cannot_read("read-stdin-bytes", error) from error
 
 
+#: The two output streams a word can write to, by the name a message calls them
+STDOUT = "standard output"
+STDERR = "standard error"
+
+
+def _stream(name: str) -> TextIO:
+    """The stream called ``name``, looked up when the word runs so a redirected stream is honoured."""
+    return sys.stderr if name == STDERR else sys.stdout
+
+
+def _write_bytes(word: str, stream_name: str, data: object) -> None:
+    """Writes the bytes ``data`` holds to the stream called ``stream_name``, as they are, for ``word``."""
+    content = byte_values(word, data)
+    stream = _stream(stream_name)
+    try:
+        stream.flush()
+        stream.buffer.write(content)
+        stream.buffer.flush()
+    except AttributeError as error:
+        raise StackerRuntimeError(f"`{word}` needs a {stream_name} that takes bytes; this one is text only") from error
+    except (OSError, ValueError) as error:
+        raise StackerRuntimeError(f"`{word}` cannot write to {stream_name}: {error}") from error
+
+
 def _write_stdout_bytes(data: object) -> None:
     """``bytes write-stdout-bytes``: writes the bytes to standard output, as they are."""
-    content = byte_values("write-stdout-bytes", data)
-    try:
-        sys.stdout.flush()
-        sys.stdout.buffer.write(content)
-        sys.stdout.buffer.flush()
-    except AttributeError as error:
-        raise StackerRuntimeError("`write-stdout-bytes` needs a standard output that takes bytes; this one is text only") from error
-    except (OSError, ValueError) as error:
-        raise StackerRuntimeError(f"`write-stdout-bytes` cannot write to standard output: {error}") from error
+    _write_bytes("write-stdout-bytes", STDOUT, data)
 
 
-def write_text(text: str, end: str = "\n") -> None:
-    """Prints ``text``; a character the standard output cannot carry is the output's fault, not the value's."""
+def _write_stderr_bytes(data: object) -> None:
+    """``bytes write-stderr-bytes``: writes the bytes to standard error, as they are."""
+    _write_bytes("write-stderr-bytes", STDERR, data)
+
+
+def write_text(text: str, end: str = "\n", stream_name: str = STDOUT) -> None:
+    """Prints ``text`` to the stream called ``stream_name``; a character the stream cannot carry is the output's fault, not the value's."""
+    stream = _stream(stream_name)
     try:
-        print(text, end=end)
+        print(text, end=end, file=stream)
     except UnicodeEncodeError as error:
-        encoding = getattr(sys.stdout, "encoding", None) or "the host's"
+        encoding = getattr(stream, "encoding", None) or "the host's"
         raise StackerRuntimeError(
-            f"cannot write {text[error.start:error.end]!r} to standard output, whose encoding is {encoding}"
+            f"cannot write {text[error.start:error.end]!r} to {stream_name}, whose encoding is {encoding}"
         ) from error
+
+
+def _printer(stream_name: str, end: str = "\n") -> Callable[[object], None]:
+    """The function behind ``echo`` and its kin: shows a value as ``echo`` does, on the stream called ``stream_name``, followed by ``end``."""
+
+    def show(content: object) -> None:
+        write_text(display_text(content), end=end, stream_name=stream_name)
+
+    return show
 
 
 def _read_line() -> str | None:
@@ -92,19 +125,19 @@ def _read_stdin() -> str:
 
 io_operators = {
     "echo": {
-        "func": (lambda content: write_text(display_text(content))),
+        "func": _printer(STDOUT),
         "arg_count": 1,
         "push_result_to_stack": False,
         "desc": "Prints the specified content to the console.",
     },
     "print": {
-        "func": (lambda content: write_text(display_text(content))),
+        "func": _printer(STDOUT),
         "arg_count": 1,
         "push_result_to_stack": False,
         "desc": "Prints the specified content to the console.",
     },
     "printc": {
-        "func": (lambda content: write_text(display_text(content), end="")),
+        "func": _printer(STDOUT, end=""),
         "arg_count": 1,
         "push_result_to_stack": False,
         "desc": "Prints the specified content to the console without a newline.",
@@ -138,5 +171,29 @@ io_operators = {
         "arg_count": 1,
         "push_result_to_stack": False,
         "desc": "bytes write-stdout-bytes: writes a list or an array of bytes (integers 0 to 255) to standard output",
+    },
+    "echo-err": {
+        "func": _printer(STDERR),
+        "arg_count": 1,
+        "push_result_to_stack": False,
+        "desc": "Prints the specified content to standard error, shown as echo shows it (warnings, errors and progress stay out of the output)",
+    },
+    "print-err": {
+        "func": _printer(STDERR),
+        "arg_count": 1,
+        "push_result_to_stack": False,
+        "desc": "Prints the specified content to standard error, shown as echo shows it",
+    },
+    "printc-err": {
+        "func": _printer(STDERR, end=""),
+        "arg_count": 1,
+        "push_result_to_stack": False,
+        "desc": "Prints the specified content to standard error without a newline",
+    },
+    "write-stderr-bytes": {
+        "func": _write_stderr_bytes,
+        "arg_count": 1,
+        "push_result_to_stack": False,
+        "desc": "bytes write-stderr-bytes: writes a list or an array of bytes (integers 0 to 255) to standard error",
     },
 }
