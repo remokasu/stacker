@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from stacker.operators.file import cannot_open_error, file_name_argument, not_text_error
+from stacker.operators.io import write_text
 
 
 def _ls() -> list[str]:
@@ -56,7 +57,7 @@ def _cat(filename: object) -> None:
     filename = file_name_argument("cat", filename)
     try:
         with open(filename, "r", encoding="utf-8-sig") as f:
-            print(f.read())
+            write_text(f.read())
     except OSError as error:
         raise cannot_open_error("cat", filename, error) from error
     except UnicodeDecodeError as error:
