@@ -6,8 +6,8 @@ from stacker.error import StackerRuntimeError
 from stacker.operators.arguments import byte_values
 from stacker.util.disp import display_text
 
-#: Text read from standard input is decoded with this when the host does not say
-_DEFAULT_STDIN_ENCODING = "utf-8"
+#: Standard input is read as UTF-8, as scripts and files are, whatever the host's locale says
+STDIN_ENCODING = "utf-8"
 
 
 def _stdin_bytes() -> object | None:
@@ -16,10 +16,9 @@ def _stdin_bytes() -> object | None:
 
 
 def _stdin_text(word: str, raw: bytes) -> str:
-    """Decodes bytes read from standard input, naming ``word`` when they are not text."""
-    encoding = getattr(sys.stdin, "encoding", None) or _DEFAULT_STDIN_ENCODING
+    """Decodes bytes read from standard input as UTF-8 (as scripts and files are), naming ``word`` when they are not text."""
     try:
-        return raw.decode(encoding)
+        return raw.decode(STDIN_ENCODING)
     except UnicodeDecodeError as error:
         raise StackerRuntimeError(f"`{word}` cannot read standard input as text: {error.reason}") from error
 
@@ -54,6 +53,17 @@ def _write_stdout_bytes(data: object) -> None:
         raise StackerRuntimeError(f"`write-stdout-bytes` cannot write to standard output: {error}") from error
 
 
+def write_text(text: str, end: str = "\n") -> None:
+    """Prints ``text``; a character the standard output cannot carry is the output's fault, not the value's."""
+    try:
+        print(text, end=end)
+    except UnicodeEncodeError as error:
+        encoding = getattr(sys.stdout, "encoding", None) or "the host's"
+        raise StackerRuntimeError(
+            f"cannot write {text[error.start:error.end]!r} to standard output, whose encoding is {encoding}"
+        ) from error
+
+
 def _read_line() -> str | None:
     """``read-line``: one line of standard input without its line break, or null at the end.
 
@@ -74,26 +84,27 @@ def _read_stdin() -> str:
     """``read-stdin``: the rest of standard input as one string (empty at the end)."""
     buffer = _stdin_bytes()
     try:
-        return _stdin_text("read-stdin", buffer.read()) if buffer is not None else sys.stdin.read()
+        text = _stdin_text("read-stdin", buffer.read()) if buffer is not None else sys.stdin.read()
+        return text.replace("\r\n", "\n").replace("\r", "\n")  # line ends as a file read gives them
     except (OSError, ValueError) as error:
         raise StackerRuntimeError(f"`read-stdin` cannot read standard input: {error}") from error
 
 
 io_operators = {
     "echo": {
-        "func": (lambda content: print(display_text(content))),
+        "func": (lambda content: write_text(display_text(content))),
         "arg_count": 1,
         "push_result_to_stack": False,
         "desc": "Prints the specified content to the console.",
     },
     "print": {
-        "func": (lambda content: print(display_text(content))),
+        "func": (lambda content: write_text(display_text(content))),
         "arg_count": 1,
         "push_result_to_stack": False,
         "desc": "Prints the specified content to the console.",
     },
     "printc": {
-        "func": (lambda content: print(display_text(content), end="")),
+        "func": (lambda content: write_text(display_text(content), end="")),
         "arg_count": 1,
         "push_result_to_stack": False,
         "desc": "Prints the specified content to the console without a newline.",

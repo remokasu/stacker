@@ -139,6 +139,13 @@ def main() -> None:
         copy_plugin_to_install_dir(argv.addplugin, argv.debug)
         return
 
+    # Scripts and files are UTF-8; so are the standard streams, whatever the
+    # host's locale says (a console is written through the host's own path)
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+
     if argv.debug:
         logging.basicConfig(level=logging.DEBUG)
     else:
