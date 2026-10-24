@@ -1,5 +1,13 @@
 # CHANGE LOG
 
+## [1.25.1] - 2026-10-24
+
+### Fixed
+
+- An integer of more than 4300 digits could be computed (`2000 !`) but not shown, written to a file, formatted, turned to another base or read from source: the host limits the digits it converts between an integer and text, and the limit got out as the host's error; a script that only left such a number on its stack ended in error. An interpreter lifts the limit when it is made, so an integer of any size reads and shows, and `bin`, `oct` and `hex` convert an integer directly instead of through its decimal text
+- The package did not ship the prelude (`stacker/slib/*.stk`), so `stacker` installed from the wheel stopped at start with `Failed to load prelude file`; the files are package data now, and a test checks that every file the interpreter reads at run time ships
+- `code=` told a value that a macro or `subn` had put into a block apart from the literal that reads as it, so `[1 2 3] {mlen} macroexpand {[1 2 3] len} code=` was false while `code-text` gave the same text for both. A token and a value that are shown as the same text are the same code (a literal holding a name, `[x]`, is not compared with a value: `code=` looks nothing up)
+
 ## [1.25.0] - 2026-10-24
 
 ### Breaking Changes
