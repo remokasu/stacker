@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import codecs
+import string
 
 from stacker.engine.data_type import Symbol
 from stacker.error import (
@@ -69,6 +70,11 @@ def _format(template: object, value: object) -> str:
         The formatted string.
     """
     text = _require_str("format", template, "a format string")
+    for _literal, field, _spec, _conversion in string.Formatter().parse(text):
+        if field is not None and not (field == "" or field.isdigit()):
+            raise StackerTypeError(
+                f"`format` fields are `{{}}` or `{{0}}` with a format spec (`{{:.2f}}`); {{{field}}} reaches into the value"
+            )
     try:
         return text.format(_format_value(value))
     except (IndexError, KeyError) as error:
