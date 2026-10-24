@@ -104,6 +104,12 @@ _DISPLAY_ESCAPES: dict[str, str] = {
     "\0": "\\0",
 }
 
+#: Characters that show as nothing and so pass for a missing character: the byte
+#: order mark, the zero-width space and word joiner, and the bidirectional
+#: controls. (A joiner that shapes text, such as the one inside a family emoji,
+#: and the soft hyphen are left as they are.)
+INVISIBLE_CHARACTERS = frozenset("\ufeff\u200b\u2060\u180e\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
+
 #: Code points below this are control characters, shown as ``\xNN`` unless named above.
 _CONTROL_LIMIT = 0x20
 _DELETE = 0x7F
@@ -185,6 +191,8 @@ def escape_for_display(text: str, quote: str | None = None) -> str:
             out.append("\\" + ch)
         elif ord(ch) < _CONTROL_LIMIT or ord(ch) == _DELETE:
             out.append(f"\\x{ord(ch):02x}")
+        elif ch in INVISIBLE_CHARACTERS:
+            out.append(f"\\u{ord(ch):04x}")  # a character that shows as nothing (a byte order mark, a zero-width space)
         else:
             out.append(ch)
     return "".join(out)
