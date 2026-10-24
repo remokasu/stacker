@@ -1,5 +1,18 @@
 # CHANGE LOG
 
+## [1.25.0] - 2026-10-24
+
+### Breaking Changes
+
+- **A list typed over several lines in the REPL is one list, as it is in a script.** `[1 2` and `3 4]` on two lines gave `[[1 2] [3 4]]`: the REPL put a row separator at every line break, so a table copied from a script into the REPL silently changed shape. The line break is a space there too now, and rows are written with `;` (`[1 2; 3 4]`), the same in both. `end` on a line of its own still gives up an open list
+
+### Added
+
+- **`echo-err`, `print-err`, `printc-err`, `write-stderr-bytes`**: what `echo`, `print`, `printc` and `write-stdout-bytes` write to standard output, written to standard error, so a program's warnings, progress and error reports stay out of its output (a test that compares the two streams, an interpreter that must report its errors on standard error) without appending to `/dev/stderr`, which only some hosts have
+- **`code-text`, `code=`, `code?`**: a block as a value, without running it. Most words run a block handed to them, so `{1 2 +} {3} ==` was true and `{"hi" echo} echo` printed `hi` and then complained. `code-text` gives the text the stack shows (`"{1 2 +}"`; `parse eval` reads it back), `code=` tells whether two blocks are the same code, token by token (a string literal and a bare name of the same text differ; `{1 2}` and `(1 2)` do not), and `code?` whether a value is a block (a lambda is not). A test of a macro can compare what `macroexpand` leaves with the code it expects
+- `defun` and `defmacro` log it when they redefine a word of the program's own that another file defined (`redefining word '__call' (defined at parser.stk:62) at interp.stk:84`): a program split over files has no name spaces, so two helpers of one name silently became one, and the error showed far from either definition. A word defined again in its own file, or twice in the REPL, is left alone; a definition made in the REPL or with `-e` is reported as made outside any file
+- A macro whose body sets a variable named like a built-in or prelude word logs it once (`macro 'm5' replaces the built-in word 'len' in the code it generates (its body binds a variable 'len')`): a working variable `len` in the body turned the `len` of the generated code into its value, and nothing said so where the macro was called. A parameter of such a name is left alone, since replacing it is what the template is for
+
 ## [1.24.3] - 2026-10-24
 
 ### Fixed

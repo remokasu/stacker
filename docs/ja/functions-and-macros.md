@@ -217,6 +217,8 @@ not positive
 
 本体に書いた `:名前` も、`名前` が束縛されていれば、その値が表す名前のシンボルに置き換わります（`:t` は `gensym` の名前に、`:double` は `{double}` の `double` に）。生成コードの中で名前を束縛するときの書き方です。値が名前でなければ（数や文字列など）、展開時にエラーになります。置き換えたあとのコードは、もう一度は走査されません。文字列リテラル、リストリテラル、束縛されていない `:名前` は置き換えの対象外です。
 
+置き換えは、ラムダや `defun` の仮引数のブロック（`{x}`）の中でも起こります。引数 `x` に `:k` を渡すと、生成コードの `{x} {x k +} lambda` は `{k} {k k +} lambda` になり、呼び出し側の `k` が仮引数に隠れます。生成コードの中で使う名前は `gensym` で作るか、引数と重ならない名前にしてください。本体で `=` や `set` により束縛した名前が組み込みの語や prelude の語と同じなら（作業用の変数を `len` と名付けた、など）、生成コードのその語が値に置き換わってしまうので、展開のときに 1 回だけ `WARNING:stacker:macro 'm5' replaces the built-in word 'len' in the code it generates (its body binds a variable 'len')` と知らせます。
+
 ### 本体が残す値
 
 本体は専用のスタックと、引数を束縛した専用のスコープで実行され、値をちょうど 1 つ残さなければなりません。残した値がブロックなら呼び出し側で実行され、ブロック以外なら、その値がスタックに積まれます。本体の中での代入は、マクロの中だけで有効で、呼び出し側の変数は変わりません。
@@ -280,6 +282,20 @@ stacker> {3 4 +} {double!} macroexpand
 [{{3 4 +} eval :__g1 set __g1 __g1 +}]
 ```
 
+展開結果はブロックなので、`echo` や `==` に渡すとほかのブロックと同じく実行されてしまいます。見るには `code-text`、期待するコードと比べるには `code=` を使います。どちらもブロックを実行しません。
+
+```
+stacker:0> {cond body} { {cond eval not {body eval} if} } {unless} defmacro
+[]
+stacker:0> {0 >} {"neg" echo} {unless} macroexpand
+[{{0 >} eval not {{"neg" echo} eval} if}]
+stacker:1> dup code-text echo
+{{0 >} eval not {{"neg" echo} eval} if}
+[{{0 >} eval not {{"neg" echo} eval} if}]
+stacker:1> {{0 >} eval not {{"neg" echo} eval} if} code=
+[true]
+```
+
 ## コードを組み立てる語
 
 マクロの本体や、コードを値として扱うときに使う語です。
@@ -292,6 +308,9 @@ stacker> {3 4 +} {double!} macroexpand
 | `subn` | 一番上の n 個の値を、1 つのブロックに包む |
 | `parse` | 文字列をコードのブロックに変換する |
 | `eval` | ブロックやラムダを実行する |
+| `code-text` | ブロックを実行せずに、スタックの表示と同じ文字列にする（`parse eval` で読み直せる） |
+| `code=` | 2 つのブロックが同じコードか、実行せずにトークンごとに比べる |
+| `code?` | 値がブロックかどうかを、実行せずに調べる |
 
 ```
 stacker:0> {a b} {c} concat-block

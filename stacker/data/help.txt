@@ -50,6 +50,11 @@ Macros:
   {args} {body} :name defmacro  the body runs at expansion time and returns code
   {2 *} {double} alias          names a code snippet
   gensym, macroexpand, concat-block, expand, sub, parse
+  {1 2 +} code-text -> "{1 2 +}"   a block as text, not run; a b code= compares code; x code? tells a block
+
+Output:
+  3 echo       "x" printc (no line break)   [72 105 10] write-stdout-bytes
+  3 echo-err   "x" printc-err               [72 105 10] write-stderr-bytes   (to standard error)
 
 Arrays and dictionaries (words that change them end in !):
   a i at    v a i at!    v a append!    a pop!    n x array-of
