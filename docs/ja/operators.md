@@ -190,7 +190,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `rstrip` | 末尾の空白を除く | `"  hi  " rstrip` |
 | `asc` | 1 文字の文字コード | `"A" asc` |
 | `chr` | 文字コードに対応する 1 文字 | `65 chr` |
-| `format` | `template value format` は `template` の `{}` に value を埋め込む（Python の `str.format`） | `"x={}" 3 format`, `"{:.2f}" 3.14159 format` |
+| `format` | `template value format` は `template` の `{}` に value を埋め込む。書式の指定（`{:>5}` `{:.2f}` `{:g}`）が使える。フィールドは空か `0` だけで、`{0.x}` のように値の中へは入れない | `"x={}" 3 format`, `"{:.2f}" 3.14159 format` |
 | `subseq` | `s a b subseq` は s の a 番目から b 番目の手前までの部分文字列（文字列専用の `slice`） | `"hello" 1 3 subseq` |
 | `words` | 空白（スペース・タブ・改行）で区切った語のリスト。空の文字列は入らない | `"  a b  c " words` |
 | `starts-with?` | `s p starts-with?` は s が p で始まるか | `"hello" "he" starts-with?` |
@@ -348,7 +348,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `newline` | 改行を出力 | `newline` |
 | `read` | 標準入力から 1 行読み、コードブロックとして積む（`parse` と同じ解析）。文字列として読むには `read-line` | `read` |
 | `read-line` | 標準入力から 1 行を文字列で積む（末尾の改行は除く）。入力の終わりなら `null` | `read-line` |
-| `read-stdin` | 標準入力の残り全部を 1 つの文字列で積む。入力の終わりなら `""` | `read-stdin` |
+| `read-stdin` | 標準入力の残り全部を 1 つの文字列で積む（改行は `\n` にそろえる）。入力の終わりなら `""` | `read-stdin` |
 | `read-stdin-bytes` | 標準入力の残り全部を、バイト（0〜255 の整数）のリストで積む。`read-line` / `read-stdin` と同じ位置から続けて読める | `read-stdin-bytes` |
 | `write-stdout-bytes` | `bytes write-stdout-bytes` はバイトのリスト（配列でも）を標準出力にそのまま書く | `[72 105 10] write-stdout-bytes` |
 
@@ -361,7 +361,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `read-from-file` | ファイルの内容全体を 1 つの文字列として積む | `"input.txt" read-from-file` |
 | `read-bytes` | ファイル全体をバイト（0〜255 の整数）のリストで積む | `"image.png" read-bytes` |
 | `write-bytes` | `bytes path write-bytes` はバイトのリスト（配列でも）をファイルに書く（置き換え）。0〜255 の整数以外の要素はエラー | `[72 105] "out.bin" write-bytes` |
-| `read-lines` | ファイルの全行を、文字列のリストとして積む | `"input.txt" read-lines` |
+| `read-lines` | ファイルの全行を、文字列のリストとして積む。UTF-8 として読み、先頭の BOM は読み飛ばす | `"input.txt" read-lines` |
 | `file-exists` | ファイルが存在するか | `"file.txt" file-exists` |
 
 ## OS

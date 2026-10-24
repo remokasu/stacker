@@ -63,6 +63,19 @@ def _replace(text: object, old: object, new: object) -> str:
     )
 
 
+def _check_format_fields(text: str) -> None:
+    """Refuses a format field that is not `{}` or `{0}`, in the template and inside every format spec.
+
+    A field such as ``{0.__class__}`` or ``{0[0]}`` would reach into the
+    value, and a nested one (``{0:{0.real}}``) the same way.
+    """
+    for _literal, field, spec, _conversion in string.Formatter().parse(text):
+        if field is not None and not (field == "" or field.isdigit()):
+            raise StackerTypeError(f"`format` fields are `{{}}` or `{{0}}` (with a format spec such as `{{:.2f}}`); `{{{field}}}` is not one")
+        if spec:
+            _check_format_fields(spec)
+
+
 def _format(template: object, value: object) -> str:
     """``template value format``: the template with ``value`` filled in.
 
@@ -70,11 +83,7 @@ def _format(template: object, value: object) -> str:
         The formatted string.
     """
     text = _require_str("format", template, "a format string")
-    for _literal, field, _spec, _conversion in string.Formatter().parse(text):
-        if field is not None and not (field == "" or field.isdigit()):
-            raise StackerTypeError(
-                f"`format` fields are `{{}}` or `{{0}}` with a format spec (`{{:.2f}}`); {{{field}}} reaches into the value"
-            )
+    _check_format_fields(text)
     try:
         return text.format(_format_value(value))
     except (IndexError, KeyError) as error:
