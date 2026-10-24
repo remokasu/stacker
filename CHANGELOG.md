@@ -1,5 +1,13 @@
 # CHANGE LOG
 
+## [1.24.3] - 2026-10-24
+
+### Fixed
+
+- `read-from-file`, `read-lines` and `cat` kept the byte order mark a file may start with (a spreadsheet's "CSV UTF-8" does), so the first heading carried an invisible character and `row "id" has?` was silently false. The mark is skipped, as it is for scripts; the stack display shows a character that shows as nothing (the byte order mark, a zero-width space, a bidirectional control) as its escape (`'\ufeffid'`) so such a difference is visible
+- Standard output and input used the host's locale while scripts and files were UTF-8, so a non-ASCII value could not be printed where the locale was not UTF-8, and the error blamed the value (`` `echo` cannot use '...' ``). Both streams are UTF-8 from the command line; through the Python API, a character the output cannot carry is reported as the output's fault, naming its encoding. `read-stdin` gives line ends as a file read does (`\r\n` as `\n`)
+- A `format` field could reach into the value (`"{0.__class__}" 5 format` showed the host's class). A field is `{}` or `{0}` with a format spec; a path into the value is refused by name
+
 ## [1.24.2] - 2026-10-24
 
 ### Fixed
