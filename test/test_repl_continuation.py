@@ -54,9 +54,30 @@ def test_block_continuation(monkeypatch):
     assert list(stacker.stack) == [4]
 
 
-def test_array_rows_joined_with_semicolon(monkeypatch):
+def test_a_list_spanning_lines_is_what_a_script_reads(monkeypatch):
+    # The line break is a space, as in a script; rows are written with `;`
     stacker = _run_repl(monkeypatch, ["[1 2 3", "4 5 6]"])
-    assert list(stacker.stack) == [[[1, 2, 3], [4, 5, 6]]]
+    assert list(stacker.stack) == [[1, 2, 3, 4, 5, 6]]
+
+
+def test_nested_lists_on_separate_lines_stay_one_list(monkeypatch):
+    stacker = _run_repl(monkeypatch, ["[[1 2]", " [3 4]]"])
+    assert list(stacker.stack) == [[[1, 2], [3, 4]]]
+
+
+def test_rows_are_written_with_a_semicolon(monkeypatch):
+    stacker = _run_repl(monkeypatch, ["[1 2;", "3 4]"])
+    assert list(stacker.stack) == [[[1, 2], [3, 4]]]
+
+
+def test_a_string_inside_a_list_keeps_its_line_break(monkeypatch):
+    stacker = _run_repl(monkeypatch, ['["a', 'b"]'])
+    assert list(stacker.stack) == [["a\nb"]]
+
+
+def test_a_trailing_comment_does_not_swallow_the_next_line(monkeypatch):
+    stacker = _run_repl(monkeypatch, ["[1 2 # two", "3]"])
+    assert list(stacker.stack) == [[1, 2, 3]]
 
 
 def test_array_continuation_end_escape(monkeypatch):
@@ -64,3 +85,8 @@ def test_array_continuation_end_escape(monkeypatch):
     # as an error (printed by the REPL loop) instead of hanging
     stacker = _run_repl(monkeypatch, ["[1 2", "end"])
     assert len(stacker.stack) == 0
+
+
+def test_end_inside_a_string_in_a_list_is_text(monkeypatch):
+    stacker = _run_repl(monkeypatch, ['["x', "end", 'y"]'])
+    assert list(stacker.stack) == [["x\nend\ny"]]
