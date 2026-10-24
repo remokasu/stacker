@@ -21,7 +21,7 @@ def _read(filename: Path | str) -> str | None:
         raise FileNotFoundError(f"File {filename} not found.")
     if not filename.exists():
         raise FileNotFoundError(f"File {filename} does not exist.")
-    with open(filename, "r", encoding="utf-8") as f:
+    with open(filename, "r", encoding="utf-8-sig") as f:
         return f.read()
 
 
@@ -91,7 +91,7 @@ def read_from_file(filename: object) -> str:
     """Reads the whole content of a file as one string."""
     filename = file_name_argument("read-from-file", filename)
     try:
-        with open(filename, "r", encoding="utf-8") as f:
+        with open(filename, "r", encoding="utf-8-sig") as f:
             return f.read()
     except OSError as error:
         raise cannot_open_error("read-from-file", filename, error) from error
@@ -113,7 +113,7 @@ def read_lines_from_file(filename: object) -> list[str]:
     """Reads a file as a list of its lines, line breaks removed."""
     filename = file_name_argument("read-lines", filename)
     try:
-        with open(filename, "r", encoding="utf-8") as f:
+        with open(filename, "r", encoding="utf-8-sig") as f:
             return [line.rstrip("\n") for line in f]
     except OSError as error:
         raise cannot_open_error("read-lines", filename, error) from error

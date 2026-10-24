@@ -55,7 +55,7 @@ def _cat(filename: object) -> None:
     """``path cat``: prints the text of a file; a path must be a string."""
     filename = file_name_argument("cat", filename)
     try:
-        with open(filename, "r", encoding="utf-8") as f:
+        with open(filename, "r", encoding="utf-8-sig") as f:
             print(f.read())
     except OSError as error:
         raise cannot_open_error("cat", filename, error) from error
