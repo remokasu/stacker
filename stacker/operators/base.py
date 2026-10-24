@@ -13,6 +13,9 @@ def _convert_to_base(word: str, value: object, base: int) -> str | int:
         raise StackerTypeError(symbol_as_value_message(word, value.name))
     if isinstance(value, bool) or not isinstance(value, (int, str)):
         raise StackerTypeError(f'`{word}` expects an integer or a string such as "0b101", got {plain_text(value)}')
+    if isinstance(value, int):
+        # an integer goes straight to its base; no detour through its decimal text
+        return {2: bin, 8: oct, 10: int, 16: hex}[base](value)
     shown = value
     value = str(value)
 
