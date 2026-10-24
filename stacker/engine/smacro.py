@@ -27,12 +27,21 @@ class StackerMacro:
     bound in that scope interpolated when they are pushed.
     """
 
-    def __init__(self, name: str, args: list[str], body: Stacker, is_prelude: bool = False) -> None:
+    def __init__(
+        self,
+        name: str,
+        args: list[str],
+        body: Stacker,
+        is_prelude: bool = False,
+        defined_at: tuple[str | None, int | None] | None = None,
+    ) -> None:
         self.name: str = name
         self.args: list[str] = list(args)
         self.body: Stacker = body
         self.arg_count: int = len(self.args)
         self.is_prelude: bool = is_prelude
+        #: The file and line that defined it (None in the REPL), shown when another file redefines it
+        self.defined_at: tuple[str | None, int | None] | None = defined_at
 
     def __repr__(self) -> str:
         return f"{{{' '.join(self.args)}}} {self.body}"

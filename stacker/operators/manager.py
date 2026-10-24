@@ -140,6 +140,24 @@ special_operators = {
         "push_result_to_stack": True,
         "desc": "Pushes a macro's expansion without evaluating it: <args> {name} macroexpand",
     },
+    "code-text": {
+        "func": None,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "The text of a code block without running it, as the stack shows it (parse eval reads it back): {1 2 +} code-text -> \"{1 2 +}\"",
+    },
+    "code=": {
+        "func": None,
+        "arg_count": 2,
+        "push_result_to_stack": True,
+        "desc": "Whether two code blocks are the same code, token by token, without running them; false when either is not a block: {1 2 +} {3} code= -> false",
+    },
+    "code?": {
+        "func": None,
+        "arg_count": 1,
+        "push_result_to_stack": True,
+        "desc": "Whether the value is a code block, without running it (a lambda is not): {1} code? -> true",
+    },
     "concat-block": {
         "func": None,
         "arg_count": 2,

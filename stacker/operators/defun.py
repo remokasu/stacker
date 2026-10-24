@@ -14,7 +14,11 @@ def defun_sfunction(
     function = StackerFunction(fargs, body, name=func_name)
     args_count = len(fargs)
     stacker.register_sfunction(
-        func_name, function, args_count, push_result_to_stack=True
+        func_name,
+        function,
+        args_count,
+        push_result_to_stack=True,
+        defined_at=(stacker.current_file, stacker.current_line),
     )
 
 

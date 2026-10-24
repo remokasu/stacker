@@ -6,6 +6,7 @@ import copy
 import logging
 import sys
 from collections.abc import Callable, Iterator, Sequence
+from pathlib import Path
 from typing import NoReturn
 from stacker.constant import constants
 from stacker.error import (
@@ -394,8 +395,11 @@ class StackerCore:
 
         # Macro expansion state: set only on the throwaway core that runs a
         # macro body. `_interp_scope` is the expansion scope whose own
-        # bindings get interpolated into block literals.
+        # bindings get interpolated into block literals; `_interp_name` is
+        # the macro's name, for the warning a template may log.
         self._interp_scope: ScopedVariables | None = None
+        self._interp_name: str | None = None
+        self._interp_params: frozenset[str] = frozenset()  # the macro's parameters, which a template is meant to replace
 
         if self.parent is not None:  # it is a substack of a parent stacker
             self.operator_manager = self.parent.operator_manager
@@ -406,6 +410,7 @@ class StackerCore:
             self.labels = self.parent.labels
             self._prelude = self.parent._prelude
             self._includes = self.parent._includes
+            self._warned = self.parent._warned
             # Share source location tracking with parent
             self.current_file = self.parent.current_file
             self.current_line = self.parent.current_line
@@ -441,6 +446,9 @@ class StackerCore:
         # The files being and already included, shared by reference with
         # every child core (see stacker.include.include)
         self._includes = IncludeState()
+        # The (macro, word) pairs already warned about by a macro template
+        # replacing a word (_warn_template_replaces_word): once per program
+        self._warned: set[tuple[str, str]] = set()
 
     def _block_token_format(self, token: str) -> object:
         """Converts one source token of a block into its stored form.
@@ -1052,11 +1060,61 @@ class StackerCore:
         elif name in self.operator_manager.dispatch_table or name in self.plugins:
             _LOGGER.warning("redefining built-in word '%s'", name)
 
+    @staticmethod
+    def _defined_where(location: tuple[str | None, int | None] | None) -> str:
+        """Where a definition was made, for a message.
+
+        ``at parser.stk:62`` for a file; ``outside any file`` for the REPL
+        or ``-e``, whose input has a line but no file; ``by the host
+        program`` for a word registered through the API, which has no
+        location at all.
+        """
+        if location is None:
+            return "by the host program"
+        file, line = location
+        if file is None:
+            return "outside any file"
+        name = Path(file).name
+        return f"at {name}" if line is None else f"at {name}:{line}"
+
+    def _warn_user_redefinition(self, name: str) -> None:
+        """Logs a warning when ``defun`` / ``defmacro`` redefines a word of the program's own that another file defined.
+
+        A word defined again in the file that defined it (a REPL session
+        rewriting a function, a script with two definitions) is left alone:
+        that is how a definition is corrected. A prelude word is reported by
+        ``_warn_builtin_redefinition`` instead. The file is the one whose
+        code runs the defining word, so a function body that defines a word
+        counts as the file the body was written in.
+
+        Args:
+            name: The word being defined.
+        """
+        if self._prelude["loading"] or name in self._prelude["names"]:
+            return
+        previous = self.sfunctions.get(name)
+        if previous is not None:
+            before = previous.get("defined_at")  # type: ignore[attr-defined]
+        else:
+            macro = self.macros.get(name)
+            if macro is None:
+                return
+            before = getattr(macro, "defined_at", None)
+        if before is not None and before[0] == self.current_file:
+            return  # a word the host registered has no place of its own, so any redefinition is reported
+        _LOGGER.warning(
+            "redefining word '%s' (defined %s) %s",
+            name,
+            self._defined_where(before),
+            self._defined_where((self.current_file, self.current_line)),
+        )
+
     def _prio_defun(self, op, stack) -> None:
         """``{args} {body} :name defun`` -- the argument list is validated like ``defmacro``'s."""
         symbol = stack.pop()
         name = self._name_of(symbol, "defun")
         self._warn_builtin_redefinition(name)
+        self._warn_user_redefinition(name)
         body = stack.pop()
         fargs = self._parse_arg_names(stack.pop(), "defun")
         op["func"](self, name, fargs, body)
@@ -1077,6 +1135,7 @@ class StackerCore:
             )
         args = self._parse_arg_names(fargs, "defmacro")
         self._warn_builtin_redefinition(name)
+        self._warn_user_redefinition(name)
         op["func"](self, name, args, body)
 
     def _prio_macroexpand(self, op, stack) -> None:
@@ -1246,6 +1305,51 @@ class StackerCore:
         elms.reverse()
         stack.append(elms)
 
+    # `code-text`, `code=` and `code?` take a block as it is, without running
+    # it, so a program can look at code (a macro's expansion) as a value
+
+    def _prio_code_text(self, op, stack) -> None:
+        """``{1 2 +} code-text`` -- the text of a block, as the stack shows it; ``parse eval`` reads it back."""
+        block = self._pop_and_resolve(stack)
+        if not isinstance(block, StackerCore):
+            raise StackerTypeError(f"`code-text` expects a code block, got {plain_text(block)}")
+        stack.append(str(block))
+
+    def _prio_code_eq(self, op, stack) -> None:
+        """``a b code=`` -- whether two blocks are the same code, token by token; false when either is not a block."""
+        right = self._pop_and_resolve(stack)
+        left = self._pop_and_resolve(stack)
+        stack.append(isinstance(left, StackerCore) and isinstance(right, StackerCore) and self._same_code(left, right))
+
+    @classmethod
+    def _same_code(cls, left: StackerCore, right: StackerCore) -> bool:
+        """Whether two blocks hold the same tokens, each of the same kind.
+
+        Stricter than ``==``, which lets a string literal equal a bare name
+        of the same text, ``1`` equal ``1.0`` and ``0.0`` equal ``-0.0``:
+        here a literal and a name differ, as they do when the code runs,
+        and a number is the same only when written the same. The bracket
+        type does not count: ``{1 2}`` and ``(1 2)`` are the same code.
+        """
+        if len(left.tokens) != len(right.tokens):
+            return False
+        for a, b in zip(left.tokens, right.tokens):
+            if isinstance(a, StackerCore) and isinstance(b, StackerCore):
+                if not cls._same_code(a, b):
+                    return False
+            elif type(a) is not type(b):
+                return False
+            elif isinstance(a, (float, complex)):
+                if repr(a) != repr(b):  # tells 0.0 from -0.0, and nan from itself not
+                    return False
+            elif a != b:
+                return False
+        return True
+
+    def _prio_code_p(self, op, stack) -> None:
+        """``x code?`` -- whether the value is a code block (a lambda is not)."""
+        stack.append(isinstance(self._pop_and_resolve(stack), StackerCore))
+
     def _prio_parse(self, op, stack) -> None:
         text = stack.pop()
         if isinstance(text, Symbol):
@@ -1391,6 +1495,9 @@ class StackerCore:
         "sub": _prio_sub,
         "subn": _prio_subn,
         "listn": _prio_listn,
+        "code-text": _prio_code_text,
+        "code=": _prio_code_eq,
+        "code?": _prio_code_p,
         "parse": _prio_parse,
         "read": _prio_read,
         "split": _prio_split,
@@ -1837,6 +1944,7 @@ class StackerCore:
                 return SYMBOL_PREFIX + self._template_name(name, bindings[name])
             if token not in bindings:
                 return token
+            self._warn_template_replaces_word(token)
             # A symbol becomes a bare name, a string a string literal,
             # anything else is spliced as a value (see engine/boundary.py).
             return value_to_token(bindings[token])
@@ -1852,6 +1960,37 @@ class StackerCore:
             return copy_core
 
         return build(block)
+
+    def _warn_template_replaces_word(self, name: str) -> None:
+        """Logs, once per macro and name, that a template replaces a built-in or prelude word in the code it generates.
+
+        A variable the macro body sets is replaced wherever it stands in a
+        block literal, so a working variable called ``len`` turns the
+        ``len`` of the generated code into its value, and the mistake shows
+        at the call site. A parameter is not reported, whatever its name:
+        replacing it is what the template is for. Nor is a word of the
+        program's own: a variable holding a function's name is a usual way
+        to generate a call to it.
+
+        Args:
+            name: The bare name being replaced.
+        """
+        if name in self._interp_params:
+            return
+        if name in self._prelude["names"]:
+            kind = "prelude"
+        elif name in self.operator_manager.dispatch_table or name in self.plugins:
+            kind = "built-in"
+        else:
+            return
+        macro = self._interp_name or ""
+        if (macro, name) in self._warned:
+            return
+        self._warned.add((macro, name))
+        _LOGGER.warning(
+            "macro '%s' replaces the %s word '%s' in the code it generates (its body binds a variable '%s')",
+            macro, kind, name, name,
+        )
 
     @staticmethod
     def _template_name(name: str, value: object) -> str:
@@ -1913,6 +2052,8 @@ class StackerCore:
             expander.bracket_type = macro.body.bracket_type
             expander.variables = scope
             expander._interp_scope = scope
+            expander._interp_name = name
+            expander._interp_params = frozenset(macro.args)
             expansion_stack: stack_data[object] = stack_data()
             try:
                 expander._evaluate(expander.tokens, stack=expansion_stack)

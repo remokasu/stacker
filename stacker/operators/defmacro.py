@@ -17,7 +17,13 @@ def define_macro(stacker: Stacker, name: str, args: list[str], body: Stacker) ->
         args: Argument names, bound in the expansion scope.
         body: Code block run at expansion time.
     """
-    macro = StackerMacro(name, args, body, is_prelude=stacker._prelude["loading"])
+    macro = StackerMacro(
+        name,
+        args,
+        body,
+        is_prelude=stacker._prelude["loading"],
+        defined_at=(stacker.current_file, stacker.current_line),
+    )
     stacker.register_macro(name, macro)
 
 
