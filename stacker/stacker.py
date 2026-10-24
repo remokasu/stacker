@@ -152,12 +152,26 @@ class Stacker(StackerCore):
         arg_count: int,
         push_result_to_stack: bool = True,
         desc: str | None = None,
+        defined_at: tuple[str | None, int | None] | None = None,
     ) -> None:
+        """Registers a word that runs ``sfunction_func``.
+
+        Args:
+            sfunction_name: The word.
+            sfunction_func: What it runs.
+            arg_count: How many values it takes from the stack.
+            push_result_to_stack: Whether what it returns is pushed.
+            desc: Its line in the word listings.
+            defined_at: The file and line that defined it (None for a word
+                defined from the host, or in the REPL), shown when another
+                file redefines it.
+        """
         self.sfunctions[sfunction_name] = {
             "func": sfunction_func,
             "arg_count": arg_count,
             "push_result_to_stack": push_result_to_stack,
             "desc": desc,
+            "defined_at": defined_at,
         }
 
     def register_macro(self, macro_name: str, macro_body: object) -> None:
