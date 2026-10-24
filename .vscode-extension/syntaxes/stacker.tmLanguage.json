@@ -209,7 +209,11 @@
       "patterns": [
         {
           "name": "keyword.operator.code.stacker",
-          "match": "(?<![\\w?!-])(concat\\-block|macroexpand|collect|include|require|expand|gensym|symbol|apply|parse|eval|subn|sub)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(concat\\-block|macroexpand|code\\-text|collect|include|require|expand|gensym|symbol|apply|code\\?|parse|eval|subn|sub)(?![\\w?!-])"
+        },
+        {
+          "name": "keyword.operator.code.stacker",
+          "match": "(?<![^\\s\\[\\]{}()])(code=)(?![^\\s\\[\\]{}()])"
         }
       ]
     },
@@ -309,7 +313,7 @@
       "patterns": [
         {
           "name": "keyword.operator.io.stacker",
-          "match": "(?<![\\w?!-])(write\\-stdout\\-bytes|read\\-stdin\\-bytes|append\\-to\\-file|read\\-from\\-file|write\\-to\\-file|file\\-exists|write\\-bytes|read\\-bytes|read\\-lines|read\\-stdin|path\\-base|path\\-join|read\\-line|list\\-dir|path\\-dir|newline|printc|print|echo|read|time|cat|pwd|cd|ls)(?![\\w?!-])"
+          "match": "(?<![\\w?!-])(write\\-stderr\\-bytes|write\\-stdout\\-bytes|read\\-stdin\\-bytes|append\\-to\\-file|read\\-from\\-file|write\\-to\\-file|file\\-exists|write\\-bytes|printc\\-err|read\\-bytes|read\\-lines|read\\-stdin|path\\-base|path\\-join|print\\-err|read\\-line|echo\\-err|list\\-dir|path\\-dir|newline|printc|print|echo|read|time|cat|pwd|cd|ls)(?![\\w?!-])"
         }
       ]
     },

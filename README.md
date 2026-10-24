@@ -169,7 +169,8 @@ Stacker allows for straightforward RPN input. For example:
       `[1 2 3] 0 :acc :x {acc x +} reduce`. Written bare, `3 x set` looks `x` up and stops with "`x` is not
       defined", and `3 dup set` runs `dup` and then `set` complains that it got `3` instead of a name. The
       same spelling rebinds any name, a built-in word's included (`3 :dup set`), and redefining a prelude
-      word such as `alias` logs a warning. A bare name that holds a name binds that name: after `:y :x set`,
+      word such as `alias` logs a warning, as does a `defun` that redefines a word of your own from another
+      file. A bare name that holds a name binds that name: after `:y :x set`,
       `7 x set` binds `y`. A literal is never a name (`5 3 set` and `5 true set` are errors) and neither is
       a string (`5 "x" set` is an error too).
 
@@ -891,6 +892,8 @@ print(stacker.eval("3 4 +"))
 | alias    | Name a code snippet (prelude)                         | `{2 ^ 3 * 5 +} {calculatePowerAndAdd} alias` |
 | defmacro | Define a macro                                        | `{c b} {{c eval not {b eval} if}} {unless} defmacro` |
 | macroexpand | Push a macro's expansion without running it        | `{0 >} {"neg" echo} {unless} macroexpand` |
+| code-text | The text of a block, without running it (`parse eval` reads it back) | `{1 2 +} code-text` |
+| code=    | Whether two blocks are the same code, token by token, without running them | `{1 2 +} {3} code=` |
 | gensym   | Push a fresh unique name for macro temporaries        | `gensym :t =`               |
 | symbol   | Make a symbol from a string or a quoted name          | `"x" symbol`               |
 | lambda   | Create a lambda function                              | `{x y} {x y *} lambda`    |
@@ -956,6 +959,7 @@ Note: Blocks, lambdas and functions passed to `map` and `filter` must leave exac
 | list?    | Returns true if the value is a list (an array is not) | `[1 2 3] list?`            |
 | array?   | Returns true if the value is an array                 | `[1 2 3] array array?`     |
 | dict?    | Returns true if the value is a dictionary             | `dict dict?`               |
+| code?    | Returns true if the value is a code block, without running it (a lambda is not) | `{1 2 +} code?` |
 | null?    | Returns true if the value is null (an empty list is not) | `null null?`           |
 | empty?   | Returns true if a list, an array, a string or a dictionary has no elements | `[] empty?` |
 | number?  | Returns true if the value is a number (int, float, or complex) | `42 number?`    |
@@ -971,6 +975,9 @@ Note: Blocks, lambdas and functions passed to `map` and `filter` must leave exac
 | require  | Run another script once per interpreter               | `"file.stk" require`       |
 | eval     | Run a code block, a symbol or a lambda (text: `parse` first) | `{3 5 +} eval`, `'3 5 +' parse eval` |
 | echo     | Print the specified value to stdout without adding it to the stack | `3 4 + echo`  |
+| echo-err | Print the specified value to standard error, shown as `echo` shows it | `"warning" echo-err` |
+| print-err | The same as `echo-err`                               | `"warning" print-err`      |
+| printc-err | Print the specified value to standard error without a newline | `"." printc-err` |
 | read     | Read one line from the console and push it as a code block | `read`                |
 | read-line | Read one line of standard input as a string (null at the end) | `read-line`        |
 | read-stdin | Read the rest of standard input as one string | `read-stdin`                 |
@@ -981,6 +988,7 @@ Note: Blocks, lambdas and functions passed to `map` and `filter` must leave exac
 | main?    | Whether the running code is that script (false inside an included file) | `main?`       |
 | read-stdin-bytes | The rest of standard input as a list of bytes (0 to 255) | `read-stdin-bytes`  |
 | write-stdout-bytes | Write a list of bytes to standard output | `[72 105 10] write-stdout-bytes` |
+| write-stderr-bytes | Write a list of bytes to standard error | `[72 105 10] write-stderr-bytes` |
 | write-to-file | Write the top element of the stack to a file       | `3 "output.txt" write-to-file` |
 | append-to-file | Append the top element of the stack to a file      | `3 "output.txt" append-to-file` |
 | read-from-file | Read the contents of a file and push it to the stack | `"input.txt" read-from-file` |

@@ -156,7 +156,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `str` | 文字列に変換 | `42 str` |
 | `bool` | 真偽値に変換（`0`, 空文字列, 空リストは `false`） | `1 bool` |
 | `complex` | 複素数に変換 | `3 complex` |
-| `type` | 値の種類をシンボルで積む: `:int` `:float` `:complex` `:fraction` `:bool` `:str` `:list` `:array` `:dict` `:symbol` `:lambda` `:null`（ブロックは引数として評価されるので、その結果の種類になる。プラグインが積んだ値はそのクラス名）。`x type :array ==` のように比べる | `42 type` |
+| `type` | 値の種類をシンボルで積む: `:int` `:float` `:complex` `:fraction` `:bool` `:str` `:list` `:array` `:dict` `:symbol` `:lambda` `:null`（ブロックは引数として評価されるので、その結果の種類になる。ブロックかどうかは `code?` で調べる。プラグインが積んだ値はそのクラス名）。`x type :array ==` のように比べる | `42 type` |
 | `int?` | 整数か。`bool` は整数ではない | `42 int?` |
 | `float?` | float か | `3.14 float?` |
 | `str?` | 文字列か | `"hello" str?` |
@@ -165,6 +165,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `list?` | リストか。配列は `false` | `[1 2 3] list?` |
 | `array?` | 配列か | `[1 2 3] array array?` |
 | `dict?` | 辞書か | `dict dict?` |
+| `code?` | コードブロックか。ブロックを実行せずに調べる（ラムダは `false`） | `{1 2 +} code?` |
 | `same?` | `a b same?` は、配列・辞書なら同じ実体か。それ以外の値は `==` と同じ | `dict dup same?` |
 | `number?` | 数値（整数・float・複素数）か | `42 number?` |
 | `symbol?` | シンボルか。`:x` はシンボル | `:x symbol?` |
@@ -336,6 +337,8 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `symbol` | 文字列または引用された名前からシンボルを作る | `"x" symbol` |
 | `gensym` | 重複しない新しいシンボルを積む（マクロが生成するコードの一時変数用） | `gensym` |
 | `macroexpand` | マクロを実行せず、展開結果を積む。`args... {name} macroexpand` | `{0 >} {"neg" echo} {unless} macroexpand` |
+| `code-text` | ブロックを実行せずに、スタックの表示と同じ文字列にする。`parse eval` で読み直せる | `{1 2 +} code-text` |
+| `code=` | 2 つのブロックが同じコードか。トークンごとに比べ、実行しない。片方でもブロック以外なら `false`。`{1 2}` と `(1 2)` は同じ | `{1 2 +} {3} code=` |
 | `include` | 別の Stacker スクリプトを、その場のスコープで実行する（毎回。[スクリプトとファイルの取り込み](scripts.md)） | `"file.stk" include` |
 | `require` | 同じファイルをインタプリタごとに 1 回だけ実行する。2 回目以降は何もしない | `"file.stk" require` |
 
@@ -351,6 +354,9 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 | `read-stdin` | 標準入力の残り全部を 1 つの文字列で積む（改行は `\n` にそろえる）。入力の終わりなら `""` | `read-stdin` |
 | `read-stdin-bytes` | 標準入力の残り全部を、バイト（0〜255 の整数）のリストで積む。`read-line` / `read-stdin` と同じ位置から続けて読める | `read-stdin-bytes` |
 | `write-stdout-bytes` | `bytes write-stdout-bytes` はバイトのリスト（配列でも）を標準出力にそのまま書く | `[72 105 10] write-stdout-bytes` |
+| `echo-err`, `print-err` | 値を標準エラーに出力して改行する（表示は `echo` と同じ）。警告・進み具合・エラーの報告を、標準出力の内容と混ぜずに出す | `"warning" echo-err` |
+| `printc-err` | 値を改行なしで標準エラーに出力 | `"." printc-err` |
+| `write-stderr-bytes` | `bytes write-stderr-bytes` はバイトのリスト（配列でも）を標準エラーにそのまま書く | `[72 105 10] write-stderr-bytes` |
 
 ## ファイル
 
