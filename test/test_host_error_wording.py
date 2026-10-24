@@ -137,11 +137,9 @@ class TestFormat:
         assert "positional" not in str(info.value)
 
     def test_a_template_with_a_name_names_format(self):
-        from stacker.error import StackerIndexError
-
-        with pytest.raises(StackerIndexError) as info:
+        with pytest.raises(StackerTypeError) as info:
             run('"x={a}" 1 format')
-        assert "`format`" in str(info.value)
+        assert "`format` fields are" in str(info.value)
 
 
 class TestWordsInsideAListLiteral:
