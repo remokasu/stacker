@@ -9,9 +9,9 @@
 | 値 | 判定 |
 |----|------|
 | `false` | 偽 |
-| `0`、`0.0`、`0+0j`（数値のゼロ） | 偽 |
+| `0`、`0.0`、`0+0j`、`0 1 frac`（数値のゼロ） | 偽 |
 | `null` | 偽 |
-| `[]`（空のリスト） | 偽 |
+| `[]`（空のリスト）、`[] array`（空の配列）、`dict`（空の辞書） | 偽 |
 | `""`（空の文字列） | 偽 |
 | `true`、`1`、`-1` など、ゼロでない数 | 真 |
 | `[0]` のように要素のあるリスト | 真 |
@@ -24,13 +24,13 @@
 stacker:0> 0 {"真" echo} {"偽" echo} ifelse
 偽
 []
-stacker:1> [] {"真" echo} {"偽" echo} ifelse
+stacker:0> [] {"真" echo} {"偽" echo} ifelse
 偽
 []
-stacker:2> "false" {"真" echo} {"偽" echo} ifelse
+stacker:0> "false" {"真" echo} {"偽" echo} ifelse
 真
 []
-stacker:3> :x {"真" echo} {"偽" echo} ifelse
+stacker:0> :x {"真" echo} {"偽" echo} ifelse
 真
 []
 ```
@@ -40,10 +40,10 @@ stacker:3> :x {"真" echo} {"偽" echo} ifelse
 ```
 stacker:0> 5 :x set
 []
-stacker:1> x 0 > {"正" echo} if
+stacker:0> x 0 > {"正" echo} if
 正
 []
-stacker:2> {x 0 >} {"正" echo} if
+stacker:0> {x 0 >} {"正" echo} if
 正
 []
 ```
@@ -82,12 +82,12 @@ stacker:0> -2 {"負" echo} {"0 以上" echo} ifelse
 []
 ```
 
-選ばれたブロックは、呼び出し側のスタックと変数をそのまま使います。結果を値として残すこともできます。
+選ばれたブロックは、呼び出し側のスタックの上で実行されます。変数は、ブロックが書かれた場所のものが見えます（その場に書いたブロックなら呼び出し側の変数です。[名前とシンボル](names-and-symbols.md#ブロックとスコープ) を参照）。結果を値として残すこともできます。
 
 ```
 stacker:0> 7 :n set
 []
-stacker:1> n 5 > {"大"} {"小"} ifelse
+stacker:0> n 5 > {"大"} {"小"} ifelse
 ['大']
 ```
 
@@ -115,7 +115,7 @@ stacker:0> 9 {dup 1 ==} {"one"} {true} {"other"} 2 cond
 
 ## iferror
 
-`iferror` は、最初のブロックを実行し、エラーが起きたら 2 つ目のブロックを実行します。他の言語の try / catch に相当します。
+`iferror` は、最初のブロックを実行し、エラーが起きたら 2 つ目のブロックを実行します。エラーを捕まえて、別の処理に切り替える語です。
 
 ```
 {try} {catch} iferror
@@ -125,7 +125,7 @@ stacker:0> 9 {dup 1 ==} {"one"} {true} {"other"} 2 cond
 stacker:0> {1 0 /} {"ゼロ除算" echo} iferror
 ゼロ除算
 []
-stacker:1> {1 2 +} {"エラー" echo} iferror
+stacker:0> {1 2 +} {"エラー" echo} iferror
 [3]
 ```
 
@@ -135,7 +135,7 @@ catch ブロックにはエラーの内容は渡されません（渡してほ�
 stacker:0> 1 2 {3 0 /} {"エラー" echo} iferror
 エラー
 [1 2]
-stacker:1> {+ 1 0 /} {"エラー" echo} iferror
+stacker:2> {+ 1 0 /} {"エラー" echo} iferror
 エラー
 [1 2]
 ```
@@ -166,15 +166,15 @@ stacker: error: row 5 is outside 0..4
 ```
 stacker:0> {"E" "boom" throw} {:e set e "kind" get e "message" get} try
 ['E' 'boom']
-stacker:1> {1 0 /} {"kind" get} try
+stacker:2> {1 0 /} {"kind" get} try
 ['E' 'boom' 'ZeroDivisionError']
-stacker:2> {1 2 +} {drop "never" echo} try
+stacker:3> {1 2 +} {drop "never" echo} try
 ['E' 'boom' 'ZeroDivisionError' 3]
 ```
 
 `if` / `ifelse` / `iferror` / `try` / `times` / `cond` のブロックの位置にラムダやシンボルを書くと、`eval` と同じように実行されます（ラムダは引数をスタックから取り、シンボルはその名前を実行）。数や文字列などの値はそのまま積まれるので、`true 1 2 ifelse` は値を選びます。シンボルそのものを選びたいときは `true {:a} {:b} ifelse` と書きます。
 
-handler はラムダでも書けます。エラーの辞書がスタックにあるので、引数を 1 つ取るラムダがそれを受け取ります（`{try} {e} {e "kind" get echo} lambda try`）。`if` や `times` などブロックを実行する語はどれも、ラムダとシンボルを `eval` と同じように実行します。
+handler はラムダでも書けます。エラーの辞書がスタックにあるので、引数を 1 つ取るラムダがそれを受け取ります（`{try} {e} {e "kind" get echo} lambda try`）。`while` の本体も同じです。一方、`do`、`dolist`、`loop` の本体はブロックでなければならず、ラムダやシンボルを書くとエラーになります。
 
 エラーをそのまま投げ直すには、辞書の 2 つの値で `throw` します（`e "kind" get e "message" get throw`）。`iferror` と同じく、`break` と `exit` は捕まえません。投げ直したエラーは、戻ったスタックのまま外側に伝わります。
 
@@ -188,7 +188,7 @@ handler はラムダでも書けます。エラーの辞書がスタックにあ
 開始 終了 :変数 {本体} do
 ```
 
-終了値を含みます。変数の名前は、そのまま（裸の名前）で書きます。ループの外では参照できません。
+終了値を含みます。ループ変数の名前は `:変数` で渡し、本体の中では裸の名前（`i`）で参照します。ループの外では参照できません。
 
 ```
 stacker:0> 1 3 :i {i echo} do
@@ -196,7 +196,7 @@ stacker:0> 1 3 :i {i echo} do
 2
 3
 []
-stacker:1> 1 3 :i {i} do
+stacker:0> 1 3 :i {i} do
 [1 2 3]
 ```
 
@@ -250,7 +250,7 @@ hi
 ```
 stacker:0> 3 :n set
 []
-stacker:1> {n 0 >} {n echo n 1 - :n set} while
+stacker:0> {n 0 >} {n echo n 1 - :n set} while
 3
 2
 1
@@ -264,9 +264,9 @@ stacker:1> {n 0 >} {n echo n 1 - :n set} while
 ```
 stacker:0> 0 :n set
 []
-stacker:1> {n 1 + :n set n 3 == {break} if} loop
+stacker:0> {n 1 + :n set n 3 == {break} if} loop
 []
-stacker:2> n
+stacker:0> n
 [3]
 ```
 
@@ -286,9 +286,9 @@ stacker:0> 1 5 :i {i 3 == {break} if i echo} do
 ```
 stacker:0> 0 :n set
 []
-stacker:1> 1 3 :i {1 3 :j {n 1 + :n set j 2 == {break} if} do} do
+stacker:0> 1 3 :i {1 3 :j {n 1 + :n set j 2 == {break} if} do} do
 []
-stacker:2> n
+stacker:0> n
 [6]
 ```
 
@@ -302,11 +302,14 @@ stacker: error: `break` can only be used inside a loop
 
 ## map・filter・reduce とループの使い分け
 
-`map`、`filter`、`reduce`（`fold` も同じ）に渡すブロックは、スタックに値をちょうど 1 つ残さなければなりません。`map` と `filter` はブロックの実行前にスタックへ要素を積み、ブロックが残した値を結果に使います。ブロックは呼び出し側の変数をそのまま使うので、ブロックの中の `set` はループのあとも残ります。
+`map`、`filter`、`reduce`（`fold` も同じ）に渡すブロックは、スタックに値をちょうど 1 つ残さなければなりません。`map` と `filter` は、要素 1 つだけを置いた新しいスタックの上でブロックを実行し、ブロックが残した値を結果に使います（呼び出し側のスタックにある値は見えません）。変数はブロックが書かれた場所のものが見えるので、ブロックの中の `set` はループのあとも残ります。
 
 ```
 stacker:0> [1 2 3] {2 *} map
 [[2 4 6]]
+```
+
+```
 stacker:0> [1 2 3 4] {2 % 0 ==} filter
 [[2 4]]
 ```

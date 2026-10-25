@@ -5,6 +5,8 @@
 
 Stacker is a powerful Reverse Polish Notation (RPN) calculator built with Python, featuring basic mathematical operations and extensibility through plugins.
 
+The user manual lives in [docs/](docs/README.md) (Japanese; it covers the syntax, every built-in word, scripts, the REPL and the plugin API).
+
 ## Table of Contents
 
 - [Installation](#installation)
