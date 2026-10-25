@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from stacker.include.stk_file_read import readtxt
 from stacker.stacker import Stacker
 
-from stacker.error import UnterminatedTokenError, UserError, include_location_of
+from stacker.error import UnterminatedTokenError, UserError, attach_include_location, error_kind, include_location_of
+from stacker.error_formatter import ErrorFormatter
 from stacker.include.include import pop_entry_file, push_entry_file
 from stacker.syntax.parser import remove_start_end_quotes
 from stacker.syntax.script import iter_expressions
@@ -230,12 +232,62 @@ class ExecutionMode:
                 calculator.current_line = line_number
                 if not (stackerrc and self._run_stackerrc_command(expression)):
                     calculator.process_expression(expression)
+        except Exception as error:
+            if stackerrc:
+                # The rc's position is put back below; the report needs it
+                # (an error inside a file the rc includes keeps its own).
+                # The rc is the outermost file, so there are no including frames
+                attach_include_location(
+                    error,
+                    calculator.current_file or str(path.resolve()),
+                    calculator.current_line,
+                    calculator.source_lines.get(calculator.current_line or 0),
+                    [],
+                )
+            raise
         finally:
             pop_entry_file(calculator)
             if stackerrc:
                 calculator.current_file, calculator.current_line, source_lines = before
                 calculator.source_lines.clear()
                 calculator.source_lines.update(source_lines)
+
+    def run_stackerrc(self, path: str | Path) -> None:
+        """Runs ~/.stackerrc before the REPL, ``-e`` or a script.
+
+        An error in it is reported on standard error the way a script's
+        is (the file, the line, the kind, a hint) and ends the run with
+        status 1: the definitions the rc was to make are missing, so what
+        follows would fail further on, in stranger ways.
+
+        Args:
+            path: The rc file.
+
+        Raises:
+            SystemExit: With status 1, after reporting an error the rc raised.
+        """
+        try:
+            self.execute_stacker_dotfile(path, stackerrc=True)
+        except Exception as error:
+            filename: str | None = str(Path(path).resolve())
+            line_number: int | None = None
+            source_line: str | None = None
+            frames: list[str] = []
+            location = self._error_location(error)
+            if location is not None:
+                filename, line_number, source_line, frames = location
+            formatted_error = ErrorFormatter.format_error(
+                filename=filename,
+                line_number=line_number,
+                column=None,
+                error_type=error_kind(error),
+                message=str(error),
+                source_line=source_line,
+                hint=self._get_error_hint(error),
+                frames=frames,
+            )
+            print(formatted_error, file=sys.stderr)
+            sys.exit(1)
 
     def _error_location(
         self, error: BaseException
