@@ -1,6 +1,6 @@
 # 名前とシンボル
 
-変数・関数・マクロには名前が付きます。Stacker では、名前を **値として参照する** のか、**名前そのものを指す** のかを書き分けます。このページでは、その書き分け（裸名、`:x`、`{x}`）、名前を表す型 Symbol、変数の束縛とスコープを説明します。数値・文字列・ブロックなどの基本的な書き方は [構文と値](syntax.md) を参照してください。
+変数・関数・マクロには名前が付きます。Stacker では、名前を **値として参照する** のか、**名前そのものを指す** のかを書き分けます。このページでは、その書き分け（裸の名前、`:x`、`{x}`）、名前を表す型 Symbol、変数の束縛とスコープを説明します。数値・文字列・ブロックなどの基本的な書き方は [構文と値](syntax.md) を参照してください。
 
 ## 名前の 3 つの書き方
 
@@ -8,13 +8,13 @@
 
 | 書き方 | 意味 |
 | --- | --- |
-| `x`（裸名） | 参照。`x` が表すものを使う |
+| `x`（裸の名前） | 参照。`x` が表すものを使う |
 | `:x` | シンボル。名前 `x` そのものを値としてスタックに積む |
 | `{x}` | 名前 `x` だけを入れたブロック。「名前そのもの」を表す書き方 |
 
-### 裸名は参照
+### 裸の名前は参照
 
-裸名を書くと、その名前が次の順に調べられます。
+裸の名前を書くと、その名前が次の順に調べられます。
 
 1. マクロなら、展開される
 2. 変数なら、その値がスタックに積まれる
@@ -24,9 +24,10 @@
 
 ```
 stacker:0> 3 :x set
-stacker:1> x
+[]
+stacker:0> x
 [3]
-stacker:2> x 2 *
+stacker:1> x 2 *
 [3 6]
 ```
 
@@ -36,19 +37,21 @@ stacker:2> x 2 *
 
 ```
 stacker:0> 3 :x set
-stacker:1> :x
+[]
+stacker:0> :x
 [x]
-stacker:2> x
+stacker:1> x
 [x 3]
 ```
 
-`{x}` は、名前 1 つだけを含むブロックです。名前を受け取る場所（`set` の名前など）では `:x` と同じく名前として扱われます。コードとして実行したときも `:x` と同じ意味になり、`:x eval` も `{x} eval` も、`x` と書いたときと同じ結果になります（変数 `x` の値が積まれます）。`{x}` のように名前 1 つだけのブロックを **quote 済みシンボル** と呼ぶことがあります。
+`{x}` は、名前 1 つだけを含むブロックです。名前を受け取る場所（`set` の名前など）では `:x` と同じく名前として扱われます。コードとして実行したときも `:x` と同じ意味になり、`:x eval` も `{x} eval` も、`x` と書いたときと同じ結果になります（変数 `x` の値が積まれます）。
 
 ```
 stacker:0> 5 :x set
-stacker:1> :x eval
+[]
+stacker:0> :x eval
 [5]
-stacker:2> {x} eval
+stacker:1> {x} eval
 [5 5]
 ```
 
@@ -69,11 +72,11 @@ stacker:2> "x" str?
 [x true true]
 ```
 
-Symbol に関する語は次の 3 つです。
+Symbol に関する基本の語は次の 3 つです。
 
 - `symbol?` は、値が Symbol なら `true` を返します。文字列や、変数の値は Symbol ではありません
 - `str` は、Symbol の名前を文字列にします
-- `symbol` は、文字列を Symbol にします
+- `symbol` は、文字列か `{x}` を Symbol にします（`"x" symbol` も `{x} symbol` も `:x`）。重複しない新しい Symbol を作る `gensym` は [関数・ラムダ・マクロ](functions-and-macros.md) を参照してください
 
 ```
 stacker:0> :x str
@@ -100,7 +103,8 @@ StackerSyntaxError: `set` expects a name, got the string 'x'. Write :x or {x}, o
 
 ```
 stacker:0> 5 "x" symbol set
-stacker:1> x
+[]
+stacker:0> x
 [5]
 ```
 
@@ -113,7 +117,7 @@ stacker:0> [:a :b]
 
 ## 名前を受け取る語には `:name` を渡す
 
-Stacker はトークンを左から右へ 1 つずつ読み、後ろのトークンを見ることはありません。だから裸名は、**どこに書いても参照**です。`set` の直前でも例外ではありません。名前を受け取る語には、名前そのものを `:name`（または `{name}`）で渡します。
+Stacker はトークンを左から右へ 1 つずつ読み、後ろのトークンを見ることはありません。だから裸の名前は、**どこに書いても参照**です。`set` の直前でも例外ではありません。名前を受け取る語には、名前そのものを `:name`（または `{name}`）で渡します。
 
 | 語 | 書き方 |
 | --- | --- |
@@ -121,9 +125,9 @@ Stacker はトークンを左から右へ 1 つずつ読み、後ろのトーク
 | `defun`、`defmacro`、`macroexpand` | `{a} {a 1 +} :inc defun`、`:inc macroexpand` |
 | `do` / `dolist` のループ変数 | `0 10 :i {i echo} do`、`[1 2 3] :x {x echo} dolist` |
 | `reduce` / `fold` のブロックの前にある 2 つの名前 | `[1 2 3] 0 :acc :x {acc x +} reduce` |
-| `alias`、マクロの引数 | `{2 *} :double alias`、`:n incr!` |
+| `alias`、マクロの引数 | `{2 *} :double alias`、`:n incr!`（`incr!` は自作のマクロ） |
 
-裸名で `3 x set` と書くと、`x` の参照が先に評価されます。`x` が未定義なら、その場で止まります。
+裸の名前で `3 x set` と書くと、`x` の参照が先に評価されます。`x` が未定義なら、その場で止まります。
 
 ```text
 3 x set
@@ -149,8 +153,10 @@ stacker:1> x
 
 ```
 stacker:0> 3 :x set
-stacker:1> 5 :y =
-stacker:2> 0 3 :i {i echo} do
+[]
+stacker:0> 5 :y =
+[]
+stacker:0> 0 3 :i {i echo} do
 0
 1
 2
@@ -164,7 +170,7 @@ stacker:0> [1 2 3] :x {x echo} dolist
 2
 3
 []
-stacker:1> [1 2 3] 0 :acc :x {acc x +} reduce
+stacker:0> [1 2 3] 0 :acc :x {acc x +} reduce
 [6]
 ```
 
@@ -182,8 +188,10 @@ stacker:1> [1 2 3] 0 :acc :x {acc x +} reduce
 
 ```
 stacker:0> 3 :x set
-stacker:1> 5 :y =
-stacker:2> x y +
+[]
+stacker:0> 5 :y =
+[]
+stacker:0> x y +
 [8]
 ```
 
@@ -191,8 +199,10 @@ stacker:2> x y +
 
 ```
 stacker:0> 5 :x set
-stacker:1> 7 :x set
-stacker:2> x
+[]
+stacker:0> 7 :x set
+[]
+stacker:0> x
 [7]
 ```
 
@@ -206,10 +216,14 @@ stacker:2> x
 
 ```
 stacker:0> {a} {5 :tmp set} :f defun
-stacker:1> 1 f
-stacker:2> {a} {7 :total global} :g defun
-stacker:3> 1 g
-stacker:4> total
+[]
+stacker:0> 1 f
+[]
+stacker:0> {a} {7 :total global} :g defun
+[]
+stacker:0> 1 g
+[]
+stacker:0> total
 [7]
 ```
 
@@ -235,9 +249,10 @@ stacker:0> 1 3 :i {i :last set} do last
 
 ```
 stacker:0> {x} {{x 100 +}} :mk defun
-stacker:1> 5 mk eval
+[]
+stacker:0> 5 mk eval
 [105]
-stacker:2> 1 3 :i {{i}} do 3 listn {eval} map
+stacker:1> 1 3 :i {{i}} do 3 listn {eval} map
 [105 [1 2 3]]
 ```
 
@@ -252,6 +267,7 @@ stacker:2> 1 3 :i {{i}} do 3 listn {eval} map
 ```text
 1 zzz 2
 UndefinedSymbolError: `zzz` is not defined.
+hint: To use the name itself, write `:zzz` or `{zzz}`
 ```
 
 この例ではスタックに `1` が残り、`2` は積まれません。関数の本体は、定義時ではなく **呼び出したとき** に評価されるので、本体の中の未定義名は呼び出し時にエラーになります。
@@ -265,22 +281,26 @@ UndefinedSymbolError: `zzz` is not defined.
 StackerSyntaxError: `set` expects a name, got 3. A bare name pushes what it refers to; write the name itself as `:name` or `{name}`.
 ```
 
-組み込みの語を束縛するときも、他の名前と同じく `:name` か `{name}` と書きます。特別な保護はありません。
+組み込みの語を束縛するときも、他の名前と同じく `:name` か `{name}` と書きます。束縛を妨げる保護はなく、警告が出るだけです（後述）。
 
 ```
 stacker:0> 3 :dup set
-stacker:1> dup
+[]
+stacker:0> dup
 [3]
-stacker:2> 3 {dup} set
+stacker:1> 3 {dup} set
+[3]
 ```
 
 変数・関数・マクロの名前は、同じ書き方で何度でも再定義できます。ループ変数や `reduce` の変数には、組み込みの語と同じ名前（`:e`、`:dup` など）も使えます。
 
-`alias` のように、起動時に Stacker 自身が用意している語（prelude の語）を再定義すると、警告が出ます。
+組み込みの語、プラグインの語、`alias` のように起動時に Stacker 自身が用意している語（prelude の語）の名前を、新しいグローバル変数・`defun`・`defmacro` に使うと、標準エラーに警告が出ます。すでにある変数への再代入と、関数やループの中のローカル変数には出ません。
 
 ```text
+3 :dup set
+WARNING:stacker:redefining built-in word 'dup'
 {1} :alias set
-redefining prelude word 'alias'
+WARNING:stacker:redefining prelude word 'alias'
 ```
 
 ## ブロックを束縛すると評価せずに保存される
@@ -289,10 +309,12 @@ redefining prelude word 'alias'
 
 ```
 stacker:0> 3 :x set
-stacker:1> {x 1 +} :y set
-stacker:2> y
+[]
+stacker:0> {x 1 +} :y set
+[]
+stacker:0> y
 [{x 1 +}]
-stacker:3> eval
+stacker:1> eval
 [4]
 ```
 
@@ -300,9 +322,12 @@ stacker:3> eval
 
 ```
 stacker:0> 3 :x set
-stacker:1> {x 1 +} :y set
-stacker:2> 10 :x set
-stacker:3> y eval
+[]
+stacker:0> {x 1 +} :y set
+[]
+stacker:0> 10 :x set
+[]
+stacker:0> y eval
 [11]
 ```
 
@@ -310,7 +335,8 @@ stacker:3> y eval
 
 ```
 stacker:0> {n} {n eval 1 +} :f defun
-stacker:1> {3 4 +} f
+[]
+stacker:0> {3 4 +} f
 [8]
 ```
 

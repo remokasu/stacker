@@ -9,15 +9,15 @@
 ```
 stacker:0> [1 2 3] array :a set
 []
-stacker:1> 9 a 0 at!
+stacker:0> 9 a 0 at!
 []
-stacker:2> 4 a append!
+stacker:0> 4 a append!
 []
-stacker:3> a
+stacker:0> a
 [[9 2 3 4]]
-stacker:4> a pop!
+stacker:1> a pop!
 [[9 2 3] 4]
-stacker:5> clear 3 0 array-of
+stacker:2> clear 3 0 array-of
 [[0 0 0]]
 ```
 
@@ -35,16 +35,16 @@ stacker:5> clear 3 0 array-of
 
 ## 辞書
 
-`dict` で空の辞書を作ります。キーは文字列・数値・シンボルです（`true` / `null` / リスト / 配列はキーにできません）。文字列 `"a"` とシンボル `:a` は別のキー、`1` と `1.0` は同じキーです。
+`dict` で空の辞書を作ります。キーは文字列・数値（`nan` を除く）・シンボルです（`true` / `null` / リスト / 配列はキーにできません）。文字列 `"a"` とシンボル `:a` は別のキー、`1` と `1.0` は同じキーです。
 
 ```
 stacker:0> dict :d set
 []
-stacker:1> 1 d "a" put!  2 d :b put!
+stacker:0> 1 d "a" put!  2 d :b put!
 []
-stacker:2> d
+stacker:0> d
 [{'a' 1 b 2}]
-stacker:3> d "a" get  d "z" get  d :b has?
+stacker:1> d "a" get  d "z" get  d :b has?
 [{'a' 1 b 2} 1 null true]
 stacker:4> clear d keys
 [['a' b]]
@@ -77,7 +77,7 @@ stacker:1> clear [a 1] :p set  9 a 0 at!  p
 ```
 stacker:0> 0 2 seq {drop 3 0 array-of} map array :g set
 []
-stacker:1> 5 g 1 at 2 at!  g
+stacker:0> 5 g 1 at 2 at!  g
 [[[0 0 0] [0 0 5] [0 0 0]]]
 ```
 
@@ -94,7 +94,7 @@ stacker:0> [1 2] array [1 2] array ==  [1 2] array [1 2] ==  [1 2] array dup sam
 
 ## 既存の語との関係
 
-読むだけの語（`len` `nth` `dolist` `map` `filter` `reduce` `sorted` `reversed` `sum` `cdr` `contains` `expand` …）は、配列をリストと同じように受け取ります。新しい並びを返す語（`map` `sorted` `cdr` …）が返すのは**リスト**です。配列に戻すには `array` を付けます。`dolist` や `map` は、始めた時点の要素を回します。本体で同じ配列に `append!` しても、回る回数は変わりません。
+読むだけの語（`len` `nth` `dolist` `map` `filter` `reduce` `sorted` `reversed` `sum` `cdr` `contains` `expand` …）は、配列をリストと同じように受け取ります。新しい並びを返す語（`map` `sorted` `cdr` …）が返すのは**リスト**です。配列に戻すには `array` を、配列をリストにするには `list` を付けます（`a list`）。`dolist` や `map` は、始めた時点の要素を回します。本体で同じ配列に `append!` しても、回る回数は変わりません。
 
 辞書は列ではありません。`dolist` / `map` / `sorted` / `sum` / `list` などに渡すとエラーになります。`keys` や `values` のリストを回してください。`len` は辞書のキーの数を返します。
 

@@ -3,8 +3,12 @@
 Two kinds of examples are checked:
 
 * REPL transcripts (``stacker:N> expression`` followed by the displayed
-  stack ``[...]`` and/or printed output). Each fenced block is one session;
-  a prompt numbered ``0`` starts a fresh interpreter.
+  stack ``[...]`` and/or printed output). In the manual under docs/ each
+  fenced block is one session on a fresh interpreter and ``N`` is what the
+  REPL shows, the number of values on the stack before the input, so a
+  transcript there reads as the REPL would have printed it. The README's
+  snippets are illustrative: a prompt numbered ``0`` starts a fresh
+  interpreter and the numbers are not checked.
 * The ``Example`` column (``例`` in Japanese) of the operator tables, which
   only has to run without raising. Every row of such a table must be
   ``| word | description | `example` |``.
@@ -170,6 +174,7 @@ def _transcript_cases() -> list[pytest.param]:
 @pytest.mark.parametrize("steps", _transcript_cases())
 def test_repl_transcript(steps: list[Step]) -> None:
     stacker = Stacker()
+    faithful = steps[0].source.startswith("docs/")  # the manual shows real sessions
     for step in steps:
         # Later steps depend on the skipped one, so the rest of the block is
         # skipped too; the message names the line so the gap is visible.
@@ -177,8 +182,12 @@ def test_repl_transcript(steps: list[Step]) -> None:
             pytest.skip(f"{step.where}: {SKIP[step.expression]}")
         if step.expression in REPL_COMMANDS:
             pytest.skip(f"{step.where}: REPL-only command")
-        if step.prompt_number == 0 and step is not steps[0]:
-            stacker = Stacker()  # a prompt numbered 0 starts a new session
+        if faithful:
+            assert step.prompt_number == len(stacker.stack), (
+                f"{step.where}: the prompt says {step.prompt_number} but the stack holds {len(stacker.stack)}"
+            )
+        elif step.prompt_number == 0 and step is not steps[0]:
+            stacker = Stacker()  # a prompt numbered 0 starts a new snippet
         buffer = io.StringIO()
         with redirect_stdout(buffer):
             stacker.process_expression(step.expression)

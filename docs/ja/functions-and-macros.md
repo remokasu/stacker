@@ -20,7 +20,7 @@
 ```
 stacker:0> {a b} {a b -} :sub2 defun
 []
-stacker:1> 10 3 sub2
+stacker:0> 10 3 sub2
 [7]
 ```
 
@@ -29,7 +29,7 @@ stacker:1> 10 3 sub2
 ```
 stacker:0> {a b} {b a} :swap2 defun
 []
-stacker:1> 1 2 swap2
+stacker:0> 1 2 swap2
 [2 1]
 ```
 
@@ -38,7 +38,7 @@ stacker:1> 1 2 swap2
 ```
 stacker:0> {x y} {x y +} :add defun
 []
-stacker:1> 3 4 5 add
+stacker:0> 3 4 5 add
 [3 9]
 ```
 
@@ -56,9 +56,9 @@ StackerSyntaxError: `defun` argument names must be bare names, got 1
 ```
 stacker:0> 10 :k set
 []
-stacker:1> {a} {a k +} :addk defun
+stacker:0> {a} {a k +} :addk defun
 []
-stacker:2> 1 addk
+stacker:0> 1 addk
 [11]
 ```
 
@@ -67,9 +67,9 @@ stacker:2> 1 addk
 ```
 stacker:0> {a} {a 1 + :z global} :g defun
 []
-stacker:1> 1 g
+stacker:0> 1 g
 []
-stacker:2> z
+stacker:0> z
 [2]
 ```
 
@@ -80,11 +80,13 @@ stacker:2> z
 ```
 stacker:0> {n} {n 1 <= {1} {n n 1 - fact *} ifelse} :fact defun
 []
-stacker:1> 10 fact
+stacker:0> 10 fact
 [3628800]
 ```
 
 再帰の深さの上限は [スクリプトとファイルの取り込み](scripts.md) を参照してください。
+
+組み込みの語や prelude の語と同じ名前で `defun` や `defmacro` をすると、`WARNING:stacker:redefining built-in word 'len'`、`WARNING:stacker:redefining prelude word 'mean'` のように警告が出ます（定義はそのまま使われ、新しい方が勝ちます）。別のファイルで定義した自分の語を定義し直したときの警告は [スクリプトとファイルの取り込み](scripts.md) を参照してください。
 
 ## lambda
 
@@ -106,11 +108,11 @@ stacker:0> {x y} {x y *} lambda
 ```
 stacker:0> {x y} {x y *} lambda :mul set
 []
-stacker:1> 3 4 mul
+stacker:0> 3 4 mul
 [3 4 λxλy.{x y *}]
-stacker:2> eval
+stacker:3> eval
 [12]
-stacker:3> 5 6 mul eval
+stacker:1> 5 6 mul eval
 [12 30]
 ```
 
@@ -123,7 +125,7 @@ stacker:0> 5 {x} {x x} lambda eval
 
 ### 高階関数に渡す
 
-`map` などは、ブロックのかわりにラムダを受け取れます。`map` と `filter` に渡す関数（ブロック・ラムダ・名前）は、要素ごとに値をちょうど 1 つ残さなければなりません。複数の値を返す関数は、`listn` で 1 つにまとめてから渡します。
+`map` などは、ブロックのかわりにラムダを受け取れます。`map` と `filter` に渡す関数（ブロック・ラムダ・名前）は、要素ごとに値をちょうど 1 つ残さなければなりません。ラムダは引数を 1 つ取るものに限ります（要素がその引数になります）。複数の値を返す関数は、`listn` で 1 つにまとめてから渡します。
 
 ```
 stacker:0> [1 2 3] {x} {x x *} lambda map
@@ -137,9 +139,9 @@ stacker:0> [1 2 3] {x} {x x *} lambda map
 ```
 stacker:0> {n} {{x} {x n +} lambda} :adder defun
 []
-stacker:1> 10 adder :add10 set
+stacker:0> 10 adder :add10 set
 []
-stacker:2> 5 add10 eval
+stacker:0> 5 add10 eval
 [15]
 ```
 
@@ -163,7 +165,7 @@ stacker:0> 1 3 :i {{} {i} lambda} do 3 listn {eval} map
 ```
 stacker:0> {2 ^ 3 * 5 +} {calculatePowerAndAdd} alias
 []
-stacker:1> 5 calculatePowerAndAdd
+stacker:0> 5 calculatePowerAndAdd
 [80]
 ```
 
@@ -172,15 +174,15 @@ stacker:1> 5 calculatePowerAndAdd
 ```
 stacker:0> {y 1 +} {incy} alias
 []
-stacker:1> 3 :y set
+stacker:0> 3 :y set
 []
-stacker:2> incy
+stacker:0> incy
 [4]
 ```
 
 名前は `{名前}` か `:名前` で書きます。
 
-`alias` 自体も、Stacker で書かれた語です。インタプリタを起動するたびに自動で読み込まれる、Stacker で書かれた定義の集まりを prelude と呼びます。`alias` はその一つで、引数のない `defmacro` として定義されています。
+`alias` 自体も、Stacker で書かれた語です。インタプリタを起動するたびに自動で読み込まれる、Stacker で書かれた定義の集まりを prelude と呼びます。`alias` はその一つで、本体と名前の 2 つを引数に取るマクロとして定義されています。展開すると、引数のない `defmacro` を生成します。
 
 ## defmacro
 
@@ -188,7 +190,7 @@ stacker:2> incy
 {引数1 引数2 ...} {本体} :名前 defmacro
 ```
 
-マクロは、引数を値ではなくコード（ブロックやシンボル）のまま受け取ります。本体は呼び出されるたびに「展開時」に一度実行され、実際に動かすコードを作ります。そのコードが、呼び出した場所のスタックの上で実行されます。新しい制御構文を Stacker 自身で書くのに使います。
+マクロは、引数を値ではなくコード（ブロックやシンボル）のまま受け取ります。本体は呼び出されるたびに「展開時」に一度実行され、実際に動かすコードを作ります。そのコードが、呼び出した場所のスタックの上で実行されます。新しい制御構文を Stacker 自身で書くのに使います。引数名は `defun` と同じく、重複しない裸の名前でなければなりません。
 
 ### 例 unless
 
@@ -197,7 +199,7 @@ stacker:2> incy
 ```
 stacker:0> {cond body} { {cond eval not {body eval} if} } {unless} defmacro
 []
-stacker:1> -3 {0 >} {"not positive" echo} unless
+stacker:0> -3 {0 >} {"not positive" echo} unless
 not positive
 []
 ```
@@ -226,7 +228,7 @@ not positive
 ```
 stacker:0> {n} {n 1 +} :inc defmacro
 []
-stacker:1> 3 inc
+stacker:0> 3 inc
 [4]
 ```
 
@@ -245,7 +247,7 @@ MacroExpansionError: Macro `two` must leave exactly one value as its expansion, 
 ```
 stacker:0> {x} {{x eval x eval *}} :sq defmacro
 []
-stacker:1> {"eval" echo 3} sq
+stacker:0> {"eval" echo 3} sq
 eval
 eval
 [9]
@@ -256,7 +258,7 @@ eval
 ```
 stacker:0> {x} { gensym :t = { x eval :t set t t + } } {double!} defmacro
 []
-stacker:1> {3 4 +} double!
+stacker:0> {3 4 +} double!
 [14]
 ```
 
@@ -269,7 +271,7 @@ stacker:1> {3 4 +} double!
 ```
 stacker:0> {cond body} { {cond eval not {body eval} if} } {unless} defmacro
 []
-stacker:1> {0 >} {"neg" echo} {unless} macroexpand
+stacker:0> {0 >} {"neg" echo} {unless} macroexpand
 [{{0 >} eval not {{"neg" echo} eval} if}]
 ```
 
@@ -338,7 +340,7 @@ stacker:2> 1 2 2 subn
 ```
 stacker:0> {n} {n sub {2 *} concat-block} :times2 defmacro
 []
-stacker:1> 3 times2
+stacker:0> 3 times2
 [6]
 ```
 
@@ -351,7 +353,7 @@ stacker:0> "3 4 +" parse
 [{3 4 +}]
 stacker:1> eval
 [7]
-stacker:2> "3 " "4 +" + parse eval
+stacker:1> "3 " "4 +" + parse eval
 [7 7]
 ```
 
@@ -376,19 +378,19 @@ stacker:1> 5 eval
 ```
 stacker:0> {x} {x 2 *} :dbl defun
 []
-stacker:1> funcs
+stacker:0> funcs
 mean: args=['xs'], body={xs sum xs len /} (prelude)
 dbl: args=['x'], body={x 2 *}
 []
-stacker:2> {2 *} {twice} alias
+stacker:0> {2 *} {twice} alias
 []
-stacker:3> macros
+stacker:0> macros
 alias: {body name} {{{} {body} :name defmacro}} (prelude)
 twice: {} {{2 *}}
 []
-stacker:4> 1 :q set
+stacker:0> 1 :q set
 []
-stacker:5> vars
+stacker:0> vars
 e = 2.718281828459045
 pi = 3.141592653589793
 phi = 1.618033988749895

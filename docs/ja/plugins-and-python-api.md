@@ -40,7 +40,7 @@ def setup(stacker):
 ```stk
 3 4 hypot echo
 "hello" shout
-1 2 3 stack-summary
+1 2 3 stack-summary 3 dropn
 golden 2 * echo
 [3 4 5] {dup hypot} map echo
 ```
@@ -54,7 +54,7 @@ stacker demo.stk
 HELLO!
 depth=3
 3.23606797749979
-[4.242640687119285, 5.656854249492381, 7.0710678118654755]
+[4.242640687119285 5.656854249492381 7.0710678118654755]
 ```
 
 プラグインの語は組み込みの演算子と同じように使えます。引数は Python 関数の引数の数だけスタックから取られ（`hypot` なら 2 つ）、`{dup hypot} map` のようにブロックの中でも使えます。
@@ -88,13 +88,13 @@ Python から `Stacker()` を直接作る場合は、プラグインは自動で
 ### register_plugin
 
 ```python
-stacker.register_plugin(name, func, push_result_to_stack=True, pass_core=False, desc=None)
+stacker.register_plugin(operator_name, operator_func, push_result_to_stack=True, pass_core=False, desc=None)
 ```
 
 | 引数 | 意味 |
 |---|---|
-| `name` | Stacker で使う語の名前。`stack-summary` のようにハイフンも使える |
-| `func` | 呼び出される Python 関数。スタックから取る引数の数は、`func` の引数の数で決まる（`pass_core=True` のときは先頭の 1 つを除く） |
+| `operator_name` | Stacker で使う語の名前。`stack-summary` のようにハイフンも使える |
+| `operator_func` | 呼び出される Python 関数。スタックから取る引数の数は、`operator_func` の引数の数で決まる（`pass_core=True` のときは先頭の 1 つを除く） |
 | `push_result_to_stack` | `True` なら戻り値をスタックに積む。`False` なら戻り値を捨てる。`None` を返す関数でも `True` なら `null` が積まれるので、何も積まない語は `False` にする |
 | `pass_core` | `True` なら、`func` の第 1 引数として `Stacker` のインスタンスが渡される。変数やスタックを直接読み書きする語に使う |
 | `desc` | REPL の `help` に表示される説明。省略できる |
@@ -124,7 +124,7 @@ stacker.register_parameter(name, value)
 from stacker import Stacker
 ```
 
-`stacker` パッケージが公開しているのは、`Stacker`（インタプリタ）、`Symbol`（後述）、`error`（例外クラス）、`constant`、`include` です。
+`stacker` パッケージが公開しているのは、`Stacker`（インタプリタ）、`Symbol`（後述）、`Array`（後述）、`__version__`、`error`（例外クラス）、`constant`、`include` です。
 
 ### eval と process_expression と stack
 

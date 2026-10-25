@@ -10,7 +10,7 @@ REPL で試したコードは、`.stk` ファイルに書いて保存すれば�
 stacker fact.stk
 ```
 
-リポジトリを clone しただけでインストールしていない場合は、`python -m stacker fact.stk` で同じことができます。拡張子が `.stk` でないファイル、存在しないファイルを指定すると `ScriptReadError` で終了します。
+リポジトリを clone しただけでインストールしていない場合は、`python -m stacker fact.stk` で同じことができます。拡張子が `.stk` でないファイル、存在しないファイルを指定すると `ScriptReadError` で終了します。スクリプトは UTF-8 として読まれ、先頭の BOM は読み飛ばします。UTF-8 でないファイルは `sjis.stk is not UTF-8 text at line 2: invalid start byte` のように、行番号付きの `ScriptReadError` で終了します。
 
 `fact.stk` の例です。
 
@@ -39,7 +39,7 @@ stacker fact.stk
 15
 ```
 
-スクリプトの実行では、REPL と違って終了時のスタックは表示されません。結果を見たい値は `echo` で出力してください。スタックは行をまたいで引き継がれるので、`1 2` の次の行に `+ echo` と書いても動きます。
+スクリプトの実行では、REPL と違って終了時のスタックは表示されません。結果を見たい値は `echo` で出力してください。終了時にスタックに値が残っていると、標準エラーに警告が出ます（下の「探索の順序」の後の段落を参照）。スタックは行をまたいで引き継がれるので、`1 2` の次の行に `+ echo` と書いても動きます。
 
 ### コメント
 
@@ -129,9 +129,9 @@ stacker main.stk
 
 絶対パスはそのまま使われます。REPL と `-e` にはファイルの位置がないので、カレントディレクトリだけが探されます。ファイル名の拡張子は `.stk` でなければなりません。
 
-スクリプトや取り込んだファイルが終わったときにスタックに値が残っていると、標準エラーに `WARNING:stacker:1 value left on the stack at the end of main.stk: 3` のように知らせます（引数を 1 つ多く積んだ、結果を使い忘れた、という間違いの印です。REPL と `-e` では出ません）。組み込みの語と同じ名前のグローバル変数を作ったときも、`defun` と同じ警告が出ます。`defun` や `defmacro` が、別のファイルで定義した自分の語を定義し直したときは、`redefining word '__call' (defined at parser.stk:62) at interp.stk:84` のように両方の場所を知らせます（同じファイルの中での定義し直しには出ません）。
+スクリプトや取り込んだファイルが終わったときにスタックに値が残っていると、標準エラーに `WARNING:stacker:1 value left on the stack at the end of main.stk: 3` のように知らせます（引数を 1 つ多く積んだ、結果を使い忘れた、という間違いの印です。REPL と `-e` では出ません）。組み込みの語と同じ名前で `defun` / `defmacro` をしたり、新しいグローバル変数を作ったりすると、`WARNING:stacker:redefining built-in word 'len'` と警告します。`defun` や `defmacro` が、別のファイルで定義した自分の語を定義し直したときは、`redefining word '__call' (defined at parser.stk:62) at interp.stk:84` のように両方の場所を知らせます（同じファイルの中での定義し直しには出ません）。
 
-モジュールの末尾に、コマンドラインから実行されたときだけ動くクライアントを書くには `main?` を使います（`main? {args 0 at int run} if`）。`require` で取り込まれたときは偽になります。
+モジュールの末尾に、コマンドラインから実行されたときだけ動くクライアントを書くには `main?` を使います（`main? {args 0 at int run} if`）。`include` や `require` で取り込まれたときは偽になります。
 
 実行中のファイルの位置は語 `script-path`（絶対パス）と `script-dir`（そのディレクトリ）で読めます。取り込まれたファイルの中ではそのファイル自身、REPL と `-e` では `null` です。`read-lines` などのファイルの語の相対パスはカレントディレクトリ基準なので、スクリプトの隣のデータを読むときは `script-dir` から組み立てます（`script-dir "data.txt" path-join read-lines`）。
 
@@ -203,9 +203,9 @@ Stacker は起動するたびに、Stacker 自身のコードで書かれた定�
 ```
 stacker:0> {dup *} {sq} alias
 []
-stacker:1> 5 sq
+stacker:0> 5 sq
 [25]
-stacker:2> [1 2 3 4] mean
+stacker:1> [1 2 3 4] mean
 [25 2.5]
 ```
 
@@ -230,7 +230,7 @@ Python から使うときは `Stacker(prelude=False)` で prelude を読み込�
 stacker --recursion-limit 1800 deep.stk
 ```
 
-数えているのは、実行中の関数呼び出し（入れ子の深さ）です。呼び出しが終わった関数は数えません。上限が 1500 のとき、深さ 1500 までは動き、1501 段目の呼び出しで止まります。
+数えているのは、実行中の関数呼び出し（入れ子の深さ）です。呼び出しが終わった関数は数えません。上限が 1500 のとき、深さ 1500 までは動き、1501 段目の呼び出しで止まります。本体の中で `if` や `ifelse` のブロックが深く入れ子になっている関数は、入れ子のブロックも深さを消費するため、上限より手前で `Maximum recursion depth exceeded in function `f` at 1394 calls, before the limit (1500): ...` という文言で止まることがあります。
 
 止まったときの表示です（`{n} {n f} :f defun` のあとに `3 f` を実行した場合）。
 

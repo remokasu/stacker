@@ -151,7 +151,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 
 | 演算子 | 説明 | 例 |
 |---|---|---|
-| `int` | 整数に変換（小数は切り捨て、文字列は解析） | `3.7 int` |
+| `int` | 整数に変換（小数は切り捨て。文字列は `"42"` のような整数の表記だけ解析でき、`"3.7"` はエラー） | `3.7 int` |
 | `float` | 浮動小数点数に変換 | `3 float` |
 | `str` | 文字列に変換 | `42 str` |
 | `bool` | 真偽値に変換（`0`, 空文字列, 空リストは `false`） | `1 bool` |
@@ -301,7 +301,7 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 |---|---|---|
 | `if` | `cond {body} if` は cond が真なら body を実行 | `true {"yes" echo} if` |
 | `ifelse` | `cond {then} {else} ifelse` は cond に応じて then か else を実行 | `true {"yes"} {"no"} ifelse` |
-| `iferror` | `{try} {handler} iferror` は try がエラーを起こしたら、スタックを入ったときの状態に戻して handler を実行 | `{1 0 /} {"caught"} iferror` |
+| `iferror` | `{try} {catch} iferror` は try がエラーを起こしたら、スタックを入ったときの状態に戻して catch を実行 | `{1 0 /} {"caught"} iferror` |
 | `try` | `{try} {handler} try` は try がエラーを起こしたら、スタックを入ったときの状態に戻し、エラーの辞書（`"kind"` `"message"` `"stack"`）を積んでから handler を実行 | `{1 0 /} {"kind" get} try` |
 | `throw` | `kind message throw` は自分のエラーを起こす。kind は文字列かシンボル、message は文字列 | `{"E" "boom" throw} {"message" get} try` |
 | `cond` | `{c1} {r1} {c2} {r2} ... n cond` は n 組の条件と結果を順に調べ、最初に条件が真になった組の結果を実行 | `5 :x set {x 0 >} {"pos"} {true} {"other"} 2 cond` |
@@ -364,20 +364,20 @@ Stacker が標準で持つ語（演算子・prelude・定数・リテラル）�
 |---|---|---|
 | `write-to-file` | `data path write-to-file` はファイルに書き込む（既存の内容は置き換わる） | `3 "output.txt" write-to-file` |
 | `append-to-file` | `data path append-to-file` はファイルの末尾に追記 | `3 "output.txt" append-to-file` |
-| `read-from-file` | ファイルの内容全体を 1 つの文字列として積む | `"input.txt" read-from-file` |
+| `read-from-file` | ファイルの内容全体を 1 つの文字列として積む。UTF-8 として読み、先頭の BOM は読み飛ばす | `"input.txt" read-from-file` |
 | `read-bytes` | ファイル全体をバイト（0〜255 の整数）のリストで積む | `"image.png" read-bytes` |
 | `write-bytes` | `bytes path write-bytes` はバイトのリスト（配列でも）をファイルに書く（置き換え）。0〜255 の整数以外の要素はエラー | `[72 105] "out.bin" write-bytes` |
 | `read-lines` | ファイルの全行を、文字列のリストとして積む。UTF-8 として読み、先頭の BOM は読み飛ばす | `"input.txt" read-lines` |
-| `file-exists` | ファイルが存在するか | `"file.txt" file-exists` |
+| `file-exists` | ファイル（またはディレクトリ）が存在するか | `"file.txt" file-exists` |
 
 ## OS
 
 | 演算子 | 説明 | 例 |
 |---|---|---|
-| `ls` | カレントディレクトリのファイル名のリストを積む | `ls` |
+| `ls` | カレントディレクトリにある名前（ディレクトリも含む）のリストを積む。順序は不定。名前順に欲しいときは `"." list-dir` | `ls` |
 | `cd` | `path cd` はカレントディレクトリを変更 | `".." cd` |
 | `pwd` | カレントディレクトリのパスを積む | `pwd` |
-| `cat` | `path cat` はファイルの内容を出力（スタックには積まない） | `"file.txt" cat` |
+| `cat` | `path cat` はファイルの内容を出力（スタックには積まない）。UTF-8 として読み、先頭の BOM は読み飛ばす | `"file.txt" cat` |
 | `path-join` | `a b path-join` は区切りを補ってつなぐ。右がリストなら順につなぐ（`script-dir ["data" "in.txt"] path-join`） | `"data" ["in" "x.txt"] path-join` |
 | `list-dir` | ディレクトリの中の名前のリスト（名前順） | `"." list-dir` |
 | `path-base` | パスの最後の要素（ファイル名） | `"a/b/c.txt" path-base` |
