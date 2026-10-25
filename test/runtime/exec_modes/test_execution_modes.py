@@ -268,9 +268,9 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 STACKERRC = "disable_disp_logo\nenable_disp_ans\n{x} {x x *} :sq defun\n"
 
 
-def _run_with_stackerrc(tmp_path, *args):
-    """Runs the CLI with ``STACKERRC`` as ~/.stackerrc."""
-    (tmp_path / ".stackerrc").write_text(STACKERRC)
+def _run_with_stackerrc(tmp_path, *args, rc=STACKERRC, stdin=""):
+    """Runs the CLI with ``rc`` (``STACKERRC`` unless given) as ~/.stackerrc."""
+    (tmp_path / ".stackerrc").write_text(rc)
     # A new home would hide the user site-packages, so pass this sys.path on
     paths = [str(REPO_ROOT), *(path for path in sys.path if path)]
     env = dict(
@@ -278,7 +278,7 @@ def _run_with_stackerrc(tmp_path, *args):
     )
     return subprocess.run(
         [sys.executable, "-m", "stacker", *args],
-        capture_output=True, text=True, timeout=60, cwd=tmp_path, env=env, check=False,
+        capture_output=True, text=True, timeout=60, cwd=tmp_path, env=env, check=False, input=stdin,
     )
 
 
@@ -346,6 +346,36 @@ def test_disp_ans_shows_the_value_like_the_stack_display(expression, shown, caps
     ExecutionMode(stacker).disp_ans()
     assert capsys.readouterr().out == shown + "\n"
 
+
+
+
+@pytest.mark.parametrize("mode", ["-e", "script", "repl"])
+def test_an_error_in_stackerrc_is_reported_like_a_scripts_and_ends_the_run(tmp_path, mode):
+    # The rc file is a script: its error names the file and the line, not a host traceback
+    (tmp_path / "s.stk").write_text("1 echo\n")
+    args = {"-e": ["-e", "1 echo"], "script": ["s.stk"], "repl": []}[mode]
+    result = _run_with_stackerrc(tmp_path, *args, rc="1 2 +\n1 0 /\n")
+    rc = (tmp_path / ".stackerrc").resolve()
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "Traceback" not in result.stderr
+    lines = result.stderr.splitlines()
+    assert lines[0] == f"{rc}:2: error: division by zero"
+    assert lines[1] == "  [ZeroDivisionError]"
+
+
+def test_run_stackerrc_shows_the_line_and_a_hint_then_exits_with_status_1(tmp_path, capsys):
+    rc = tmp_path / ".stackerrc"
+    rc.write_text("1 2 +\n1 0 /\n")
+    with pytest.raises(SystemExit) as info:
+        CommandLineMode(Stacker()).run_stackerrc(rc)
+    err = capsys.readouterr().err
+    assert info.value.code == 1
+    lines = err.splitlines()
+    assert lines[0] == f"{rc.resolve()}:2: error: division by zero"
+    assert lines[1] == "  [ZeroDivisionError]"
+    assert "2 | 1 0 /" in err
+    assert "hint: Cannot divide by zero" in err
 
 if __name__ == "__main__":
     unittest.main()
