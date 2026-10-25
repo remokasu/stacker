@@ -245,7 +245,7 @@ Note: This change is not backwards compatible with previous versions.
 
 ## [1.16.1] - 2026-10-17
 
-Bug fixes found while solving a problem set in Stacker. Some fixes change what existing code does; they are bugs, not new behavior, and are listed under Breaking Changes as well.
+Some fixes change what existing code does; they are bugs, not new behavior, and are listed under Breaking Changes as well.
 
 ### Breaking Changes
 
