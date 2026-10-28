@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from stacker.engine.boundary import token_to_value
 from stacker.engine.data_type import VOID, Array, String, Symbol
+from stacker.engine.display import plain_text
 from stacker.error import (
     KeyNotFoundError,
     StackerIndexError,
@@ -17,7 +18,6 @@ from stacker.error import (
     symbol_as_value_message,
 )
 from stacker.operators.arguments import integer_argument
-from stacker.engine.display import plain_text
 
 
 def _is_block(value: object) -> bool:

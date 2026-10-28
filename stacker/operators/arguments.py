@@ -5,8 +5,8 @@ from __future__ import annotations
 import operator
 
 from stacker.engine.data_type import Symbol
-from stacker.error import StackerTypeError, ValidationError, symbol_as_value_message
 from stacker.engine.display import plain_text
+from stacker.error import StackerTypeError, ValidationError, symbol_as_value_message
 
 
 def integer_argument(word: str, value: object) -> int:

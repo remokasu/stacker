@@ -7,10 +7,10 @@ from fractions import Fraction
 from typing import Callable
 
 from stacker.engine.data_type import Symbol
+from stacker.engine.display import plain_text
 from stacker.error import StackerTypeError, ValidationError, symbol_as_value_message
 from stacker.operators.arguments import integer_argument
 from stacker.operators.arith import checked_binary
-from stacker.engine.display import plain_text
 
 
 def _real_number(word: str, x: object) -> numbers.Real:

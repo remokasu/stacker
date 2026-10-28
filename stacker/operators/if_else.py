@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from stacker.engine.data_type import Symbol
-from stacker.error import StackerTypeError, UserError, error_kind
 from stacker.engine.display import plain_text
+from stacker.error import StackerTypeError, UserError, error_kind
 
 if TYPE_CHECKING:
     from stacker.stacker import Stacker

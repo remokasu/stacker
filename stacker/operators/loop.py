@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from stacker.engine.data_type import Symbol
+from stacker.engine.display import plain_text
 from stacker.engine.scope import ScopedVariables
 from stacker.error import BreakException, StackerSyntaxError, StackerTypeError
 from stacker.operators.arguments import integer_argument
-from stacker.engine.display import plain_text
 
 if TYPE_CHECKING:
     from stacker.stacker import Stacker

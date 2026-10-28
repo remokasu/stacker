@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 
 from stacker.engine.data_type import Symbol
-from stacker.error import StackerTypeError, symbol_as_value_message
 from stacker.engine.display import plain_text
+from stacker.error import StackerTypeError, symbol_as_value_message
 
 
 def _convert_to_base(word: str, value: object, base: int) -> str | int:

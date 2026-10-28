@@ -3,9 +3,9 @@ from __future__ import annotations
 from fractions import Fraction
 
 from stacker.engine.data_type import Array, Symbol
+from stacker.engine.display import display_text, plain_text
 from stacker.engine.slambda import StackerLambda
 from stacker.error import StackerTypeError, symbol_as_value_message
-from stacker.engine.display import display_text, plain_text
 
 #: The name `type` gives each kind of value, in the order the kinds are told apart
 #: (a bool before an int, an array before a list, a string literal with any string).
