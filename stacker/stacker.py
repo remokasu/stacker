@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 
+from stacker.engine.console import DEFAULT_CONSOLE, Console, activate, deactivate
 from stacker.engine.core import StackerCore
 from stacker.engine.scope import ScopedVariables
 from stacker.error import (
@@ -36,6 +37,7 @@ class Stacker(StackerCore):
         expression: str | None = None,
         parent: StackerCore | None = None,
         prelude: bool = True,
+        console: Console | None = None,
     ) -> None:
         """Creates an interpreter.
 
@@ -44,8 +46,18 @@ class Stacker(StackerCore):
             parent: Enclosing core when this is a code block's substack.
             prelude: Whether a root interpreter loads the prelude (the
                 Stacker-written standard words). Ignored for child cores.
+            console: Where the words that print and read go: `echo`,
+                `disp`, `vars`, `read`, `read-line` and their kin. The
+                default writes to and reads from ``sys.stdout``,
+                ``sys.stderr`` and ``sys.stdin`` as they are when the word
+                runs. A ``Console`` or a subclass of it; a copy of the
+                interpreter shares it. It is in effect while ``eval``,
+                ``process_expression``, ``run_file``, ``include`` or
+                ``require`` runs. A child core takes its parent's.
         """
         super().__init__(expression, parent)
+        # Set before the prelude loads, so the prelude runs under it too
+        self.console: Console = console if console is not None else getattr(parent, "console", DEFAULT_CONSOLE)
         self.trace: list[object] = []
         self.plugin_descriptions: dict[str, str | None] = {}
         if parent is None:
@@ -78,10 +90,13 @@ class Stacker(StackerCore):
     def _include(self, filename: str, once: bool) -> None:
         from stacker.include.include import include_file
 
+        token = activate(self.console)
         try:
             include_file(self, filename, once=once)
         except BreakException as error:
             raise _break_outside_a_loop(error) from None
+        finally:
+            deactivate(token)
 
     def run_file(
         self,
@@ -93,8 +108,9 @@ class Stacker(StackerCore):
     ) -> None:
         """Runs a script file expression by expression on the root stack.
 
-        Each expression is evaluated as a line typed at the prompt is: what
-        it leaves stays on the stack, and `ans` sees it. While the file
+        Each expression is evaluated as a line typed at the prompt is (by
+        ``process_expression``, under this interpreter's console): what it
+        leaves stays on the stack, and `ans` sees it. While the file
         runs it is the current file (`script-path`, relative includes, and
         where a function it defines says it was defined), its lines are
         kept for error reports, and it is the outermost frame of the
@@ -185,8 +201,17 @@ class Stacker(StackerCore):
         return self.stack.pop()
 
     def process_expression(self, expression: str) -> None:
-        tokens = parse_expression(expression)
-        self._evaluate_outside_loops(tokens, self.stack)
+        """Evaluates ``expression`` on the interpreter's own stack, as a line typed at the prompt is.
+
+        Args:
+            expression: Stacker source.
+        """
+        token = activate(self.console)
+        try:
+            tokens = parse_expression(expression)
+            self._evaluate_outside_loops(tokens, self.stack)
+        finally:
+            deactivate(token)
 
     def _evaluate_outside_loops(
         self, tokens: list[object], stack: stack_data[object] | None
@@ -215,8 +240,9 @@ class Stacker(StackerCore):
         Returns the result of the evaluation.
 
         Not an entry point: a ``break`` with no loop around it escapes as
-        ``BreakException``. Run top-level code with ``eval`` or
-        ``process_expression``.
+        ``BreakException``, and the words print and read through the
+        console of the caller, not this interpreter's. Run top-level code
+        with ``eval`` or ``process_expression``.
         """
         if stack is None:
             stack = stack_data()
@@ -400,5 +426,9 @@ class Stacker(StackerCore):
         and = stacker.eval("1 2 +")
         ```
         """
-        tokens = parse_expression(expression)
-        return self._evaluate_outside_loops(tokens, stack)
+        token = activate(self.console)
+        try:
+            tokens = parse_expression(expression)
+            return self._evaluate_outside_loops(tokens, stack)
+        finally:
+            deactivate(token)

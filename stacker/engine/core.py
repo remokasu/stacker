@@ -51,7 +51,7 @@ from stacker.syntax.token_rules import (
 from stacker.engine.sfunction import StackerFunction
 from stacker.engine.slambda import StackerLambda
 from stacker.engine.scope import ScopedVariables
-from stacker.engine import recursion
+from stacker.engine import console, recursion
 from stacker.engine.smacro import StackerMacro, gensym
 from stacker.operators.arguments import count_argument, integer_argument
 from stacker.operators.manager import OperatorManager
@@ -1401,7 +1401,7 @@ class StackerCore:
         self._substack_with_expression(str(text), stack)
 
     def _prio_read(self, op, stack) -> None:
-        self._substack_with_expression(input(), stack)
+        self._substack_with_expression(console.input_line(), stack)
 
     def _prio_split(self, op, stack) -> None:
         sep = stack.pop()

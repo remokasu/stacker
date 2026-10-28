@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from stacker.engine import console
+
 if TYPE_CHECKING:
     from stacker.stacker import Stacker
 
@@ -10,7 +12,7 @@ def _disable_plugin(stacker: Stacker, operator_name: str) -> None:
     if operator_name in stacker.plugins:
         del stacker.plugins[operator_name]
     else:
-        print(f"Plugin '{operator_name}' is not registered.")
+        print(f"Plugin '{operator_name}' is not registered.", file=console.stdout())
 
 
 def _disable_all_plugins(stacker: Stacker) -> None:

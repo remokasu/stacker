@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable
 from typing import TextIO
 
+from stacker.engine import console
+from stacker.engine.display import display_text
 from stacker.error import StackerRuntimeError
 from stacker.operators.arguments import byte_values
-from stacker.engine.display import display_text
 
 #: Standard input is read as UTF-8, as scripts and files are, whatever the host's locale says
 STDIN_ENCODING = "utf-8"
@@ -14,7 +14,7 @@ STDIN_ENCODING = "utf-8"
 
 def _stdin_bytes() -> object | None:
     """The byte layer of standard input, or None when there is none (a text-only stream)."""
-    return getattr(sys.stdin, "buffer", None)
+    return getattr(console.stdin(), "buffer", None)
 
 
 def _stdin_text(word: str, raw: bytes) -> str:
@@ -49,7 +49,7 @@ STDERR = "standard error"
 
 def _stream(name: str) -> TextIO:
     """The stream called ``name``, looked up when the word runs so a redirected stream is honoured."""
-    return sys.stderr if name == STDERR else sys.stdout
+    return console.stderr() if name == STDERR else console.stdout()
 
 
 def _write_bytes(word: str, stream_name: str, data: object) -> None:
@@ -105,7 +105,7 @@ def _read_line() -> str | None:
     """
     buffer = _stdin_bytes()
     try:
-        line = _stdin_text("read-line", buffer.readline()) if buffer is not None else sys.stdin.readline()
+        line = _stdin_text("read-line", buffer.readline()) if buffer is not None else console.stdin().readline()
     except (OSError, ValueError) as error:
         raise StackerRuntimeError(f"`read-line` cannot read standard input: {error}") from error
     if line == "":
@@ -117,7 +117,7 @@ def _read_stdin() -> str:
     """``read-stdin``: the rest of standard input as one string (empty at the end)."""
     buffer = _stdin_bytes()
     try:
-        text = _stdin_text("read-stdin", buffer.read()) if buffer is not None else sys.stdin.read()
+        text = _stdin_text("read-stdin", buffer.read()) if buffer is not None else console.stdin().read()
         return text.replace("\r\n", "\n").replace("\r", "\n")  # line ends as a file read gives them
     except (OSError, ValueError) as error:
         raise StackerRuntimeError(f"`read-stdin` cannot read standard input: {error}") from error
@@ -143,7 +143,7 @@ io_operators = {
         "desc": "Prints the specified content to the console without a newline.",
     },
     "newline": {
-        "func": (lambda: print("")),
+        "func": (lambda: print("", file=console.stdout())),
         "arg_count": 0,
         "push_result_to_stack": False,
         "desc": "Prints a newline to the console.",

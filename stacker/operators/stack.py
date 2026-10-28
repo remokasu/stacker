@@ -1,22 +1,22 @@
 from __future__ import annotations
 
 import itertools
-
 from collections import deque
+
+from stacker.engine import console
+from stacker.engine.display import disp_stack
 from stacker.error import (
     DropError,
     DupError,
+    InsertError,
+    NipError,
     OverError,
-    SwapError,
+    PickError,
     RollError,
     RotError,
-    PickError,
-    NipError,
-    InsertError,
+    SwapError,
 )
 from stacker.operators.arguments import count_argument, integer_argument
-from stacker.engine.display import disp_stack
-
 
 """
 Stack manipulation functions.
@@ -309,12 +309,7 @@ def _disp(stack: deque | list) -> None:
     """
     Prints the stack.
     """
-    if isinstance(stack, deque):
-        # print(list(stack))
-        disp_stack(list(stack))
-    else:
-        # print(stack)
-        disp_stack(stack)
+    disp_stack(list(stack) if isinstance(stack, deque) else stack, file=console.stdout())
 
 
 stack_operators = {

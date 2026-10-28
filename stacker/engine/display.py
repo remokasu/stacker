@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+from typing import TextIO
 
 from stacker.engine.data_type import Array, Symbol
 from stacker.error import StackerRuntimeError
@@ -344,9 +345,19 @@ def disp_default(stack_list: list[object]) -> str:
     return "[" + " ".join(plain_text(item) for item in stack_list) + "]"
 
 
-def disp_stack(stack_list: list[object], colored: bool = False) -> None:
+def disp_stack(stack_list: list[object], colored: bool = False, file: TextIO | None = None) -> None:
+    """Prints the stack as the REPL and `disp` show it.
+
+    Args:
+        stack_list: The values, bottom first.
+        colored: Whether to color the values by type.
+        file: The stream to print to; ``sys.stdout`` when None.
+
+    Raises:
+        StackerRuntimeError: A value is nested too deep to show.
+    """
     try:
         text = disp_colored(stack_list) if colored else disp_default(stack_list)
     except RecursionError:
         raise StackerRuntimeError(TOO_DEEP_TO_SHOW) from None
-    print(text)
+    print(text, file=file)

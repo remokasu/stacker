@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from stacker.engine import console
 from stacker.version import __version__
 
 if TYPE_CHECKING:
@@ -50,12 +51,13 @@ def _vars(core: StackerCore) -> None:
         x = 5
         y = 10
     """
+    out = console.stdout()
     variables = core.variables
     if len(variables) == 0:
-        print("No variables defined.")
+        print("No variables defined.", file=out)
         return
     for key, value in variables.items():
-        print(f"{key} = {value}")
+        print(f"{key} = {value}", file=out)
 
 
 def _funcs(core: StackerCore) -> None:
@@ -66,15 +68,16 @@ def _funcs(core: StackerCore) -> None:
         stacker> funcs
         square: {x} {x x *}
     """
+    out = console.stdout()
     functions = core.sfunctions
     if len(functions) == 0:
-        print("No functions defined.")
+        print("No functions defined.", file=out)
         return
     prelude_names = core._prelude["names"]
     for name, func_dict in functions.items():
         func = func_dict["func"]
         suffix = " (prelude)" if name in prelude_names else ""
-        print(f"{name}: args={func.args}, body={func.blockstack}{suffix}")
+        print(f"{name}: args={func.args}, body={func.blockstack}{suffix}", file=out)
 
 
 def _macros(core: StackerCore) -> None:
@@ -85,13 +88,14 @@ def _macros(core: StackerCore) -> None:
         stacker> macros
         square: {x} {{x x *}}
     """
+    out = console.stdout()
     macros = core.macros
     if len(macros) == 0:
-        print("No macros defined.")
+        print("No macros defined.", file=out)
         return
     for name, macro in macros.items():
         suffix = " (prelude)" if getattr(macro, "is_prelude", False) else ""
-        print(f"{name}: {macro!r}{suffix}")
+        print(f"{name}: {macro!r}{suffix}", file=out)
 
 
 def _operators(core: StackerCore) -> None:
@@ -107,12 +111,13 @@ def _operators(core: StackerCore) -> None:
           dup: Duplicate top of stack
           ...
     """
-    print("Regular operators:")
+    out = console.stdout()
+    print("Regular operators:", file=out)
     regular_ops = {}
     regular_ops.update(core.operator_manager.get_regular_descriptions())
     regular_ops.update(core.operator_manager.get_priority_descriptions())
     for name, desc in regular_ops.items():
-        print(f"  {name}: {desc}")
+        print(f"  {name}: {desc}", file=out)
 
     for title, descriptions in (
         ("Higher-order operators:", core.operator_manager.get_hof_descriptions()),
@@ -120,21 +125,21 @@ def _operators(core: StackerCore) -> None:
         ("Transform operators:", core.operator_manager.get_transform_descriptions()),
         ("Array and dictionary operators:", core.operator_manager.get_collection_descriptions()),
     ):
-        print(f"\n{title}")
+        print(f"\n{title}", file=out)
         for name, desc in descriptions.items():
-            print(f"  {name}: {desc}")
+            print(f"  {name}: {desc}", file=out)
 
-    print("\nStack operators:")
+    print("\nStack operators:", file=out)
     for name, desc in core.operator_manager.get_stack_descriptions().items():
-        print(f"  {name}: {desc}")
+        print(f"  {name}: {desc}", file=out)
 
-    print("\nSettings operators:")
+    print("\nSettings operators:", file=out)
     for name, desc in core.operator_manager.get_settings_descriptions().items():
-        print(f"  {name}: {desc}")
+        print(f"  {name}: {desc}", file=out)
 
-    print("\nSystem operators:")
+    print("\nSystem operators:", file=out)
     for name, desc in core.operator_manager.get_system_descriptions().items():
-        print(f"  {name}: {desc}")
+        print(f"  {name}: {desc}", file=out)
 
 
 # Export operators
