@@ -1,5 +1,16 @@
 # CHANGE LOG
 
+## [1.26.0] - 2026-10-29
+
+### Added
+
+- **`Stacker.run_file(path, *, main=True, restore_location=False, intercept=None)`**: runs a script file from Python as `stacker script.stk` does. Each expression is evaluated on the interpreter's own stack, so what the file leaves stays there and `ans` sees it; while the file runs it is the current file (`script-path`, relative includes, and where a function it defines says it was defined), and with `main` it is the main script (`main?`, `main-script-path`). `restore_location` puts the current file and line back once the file ends, and `intercept` skips the expressions it claims. The command line runs scripts and `~/.stackerrc` through it
+- **`Stacker(console=...)`, `Console`, `StreamConsole`**: where the words that print and read go (`echo`, `print`, `disp`, `vars`, `read`, `read-line`, `read-stdin` and their kin), per interpreter. The default is the standard streams as they are when a word runs, as before, so a redirect made after the interpreter was created still applies. `exit`, `abort` and `exit-code` still raise `SystemExit`
+
+### Changed
+
+- The language engine no longer depends on the command line's code. `stacker.util.disp` is now `stacker.engine.display` (the old name still imports the same module), the recursion limits live in `stacker.engine.recursion` and the script extension in `stacker.include.include`; both are still importable from `stacker.lib.config`. The language itself, its output and its error messages are unchanged
+
 ## [1.25.1] - 2026-10-24
 
 ### Fixed

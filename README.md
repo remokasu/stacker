@@ -766,6 +766,7 @@ stacker = Stacker()
 print(stacker.eval("3 4 +"))
 ```
 `Stacker()` loads the prelude like the command line does. Pass `Stacker(prelude=False)` for a bare interpreter.
+`stacker.run_file("script.stk")` runs a script file as the command line does, and `Stacker(console=StreamConsole(stdout=...))` sends what the words print and read elsewhere.
 
 ## Supported Operations
 

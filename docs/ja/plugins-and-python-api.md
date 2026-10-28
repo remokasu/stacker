@@ -124,7 +124,7 @@ stacker.register_parameter(name, value)
 from stacker import Stacker
 ```
 
-`stacker` パッケージが公開しているのは、`Stacker`（インタプリタ）、`Symbol`（後述）、`Array`（後述）、`__version__`、`error`（例外クラス）、`constant`、`include` です。
+`stacker` パッケージが公開しているのは、`Stacker`（インタプリタ）、`Symbol`（後述）、`Array`（後述）、`Console` と `StreamConsole`（後述）、`__version__`、`error`（例外クラス）、`constant`、`include` です。
 
 ### eval と process_expression と stack
 
@@ -211,6 +211,109 @@ deque([2.0])
 ```
 
 `include` / `require` したファイルは、そのインスタンスの中で評価されます。`prelude=False` のインスタンスなら、取り込んだファイルも prelude の語を使えません。Python からは `Stacker.include(path)` と `Stacker.require(path)` で同じことができます。
+
+### スクリプトファイルを走らせる
+
+`Stacker.run_file(path)` は、`stacker script.stk` と同じようにファイルを走らせます。式を 1 つずつ、`process_expression` と同じくインスタンスのスタックで評価するので、ファイルが残した値は `stack` に残り、`ans` でも読めます。走らせている間はそのファイルが今のファイルになり、`script-path`、相対パスの `include`、ファイルの中で定義した関数の定義場所は、そのファイルを指します。
+
+`tool.stk` が次の内容だとします。
+
+```text
+{x} {x 2 *} :double defun
+main? echo
+21 double
+```
+
+```python
+from pathlib import Path
+from stacker import Stacker
+
+s = Stacker()
+s.run_file("tool.stk")
+print(s.stack)
+print(Path(s.eval("script-path")[0]).name, s.eval("5 double"))
+```
+
+```text
+true
+deque([42])
+tool.stk deque([10])
+```
+
+| 引数 | 意味 |
+|---|---|
+| `main=True` | このファイルをメインのスクリプトにする。`main?` が真になり、`main-script-path` がこのファイルを返す。`False` なら変えない |
+| `restore_location=False` | `True` にすると、走らせ終えたあと（エラーで止まったときも）今のファイルと行を元に戻す。あとから走るコードに、このファイルを今のファイルとして見せたくないときに使う。このときエラーには、ファイルと行が付く |
+| `intercept=None` | 式の文字列を受け取る関数。真を返した式は評価しない |
+
+ファイルが閉じていない文字列・リスト・ブロックで終わるときは、その前までの式を走らせてから `UnterminatedTokenError` が出ます。
+
+### 出力と入力の行き先
+
+`echo`・`print`・`disp`・`vars` などの出力と、`read`・`read-line`・`read-stdin` などの入力は、既定では Python の `sys.stdout`・`sys.stderr`・`sys.stdin` を、語が動いた時点で使います。`Stacker()` を作ったあとで `sys.stdout` を差し替えても（`contextlib.redirect_stdout` など）、その差し替え先に書きます。
+
+行き先をインスタンスごとに変えるときは、`console=` に `StreamConsole` を渡します。渡さなかったストリームには `sys` のものを使います。
+
+```python
+import io
+from stacker import Stacker, StreamConsole
+
+out = io.StringIO()
+s = Stacker(console=StreamConsole(stdout=out, stdin=io.StringIO("3 4 *\n")))
+s.eval('"hi" echo 1 2 disp')
+print(repr(out.getvalue()))
+print(s.eval("read eval"))
+try:
+    s.eval("read")
+except EOFError:
+    print("EOFError")
+```
+
+```text
+'hi\n[1 2]\n'
+deque([12])
+EOFError
+```
+
+`read` は入力が終わると `EOFError` を出します。`StreamConsole` の `read` は、読む前に出力を flush し、行末の改行を落とします。ほかの行き先が必要なら `Console` を継承して `stdout()`・`stderr()`・`stdin()`・`input_line()` を上書きします。ストリームを返すメソッドは None を返してはいけません。`input_line()` は改行を落とした 1 行を返し、入力が終わったら `EOFError` を出します。
+
+行き先が使われるのは、そのインスタンスの `eval`・`process_expression`・`run_file`・`include`・`require` が動いている間です。プラグインの語の中から別のインスタンスを呼んでも、戻れば元の行き先に戻ります。`evaluate` はこの切り替えをしないので、呼んだ側の行き先のままです。新しいスレッドは既定の行き先から始まるので、別のスレッドで評価するときは、そのスレッドの中で `eval` などを呼んでください。
+
+プラグインの語が文字を出すときは、`print(..., file=console.stdout())` のように `stacker.engine.console` の `stdout()` に書くと、インスタンスの行き先に従います。
+
+```python
+from stacker.engine import console
+
+
+def hello():
+    print("hello", file=console.stdout())
+```
+
+`exit`・`abort`・`exit-code` は行き先に関係なく、Python の `SystemExit` を出します。`try` でも捕まりません。Python から使うときは `SystemExit` を捕まえてください。
+
+```python
+from stacker import Stacker
+
+try:
+    Stacker().eval("3 exit-code")
+except SystemExit as e:
+    print("exit code", e.code)
+```
+
+```text
+exit code 3
+```
+
+### コマンドラインと同じにする
+
+`stacker` コマンドは、`Stacker()` を作る前後に次の設定をしています。Python から使うインスタンスを同じ動きにしたいときは、同じことをしてください。
+
+| コマンドラインがすること | Python から |
+|---|---|
+| 標準出力と標準エラーを UTF-8 にし、表せない文字はエスケープして書く | `sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")`（`sys.stderr` も） |
+| 警告を `WARNING:stacker:...` の形で標準エラーに出す | `Stacker()` を作る前に `logging.basicConfig(level=logging.INFO)` |
+| 再帰の上限を設定する | 下の「再帰の上限」を参照 |
+| スクリプトをメインのスクリプトとして走らせる | `run_file(path)` |
 
 ### プラグインを Python から登録する
 
