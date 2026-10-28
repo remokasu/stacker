@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 
 from stacker.engine.core import StackerCore
 from stacker.engine.scope import ScopedVariables
-from stacker.error import BreakException, StackerSyntaxError, copy_include_location
+from stacker.error import (
+    BreakException,
+    StackerSyntaxError,
+    attach_include_location,
+    copy_include_location,
+)
 from stacker.slib import load_prelude
 from stacker.syntax.parser import parse_expression
 
@@ -76,6 +82,98 @@ class Stacker(StackerCore):
             include_file(self, filename, once=once)
         except BreakException as error:
             raise _break_outside_a_loop(error) from None
+
+    def run_file(
+        self,
+        path: str | Path,
+        *,
+        main: bool = True,
+        restore_location: bool = False,
+        intercept: Callable[[str], bool] | None = None,
+    ) -> None:
+        """Runs a script file expression by expression on the root stack.
+
+        Each expression is evaluated as a line typed at the prompt is: what
+        it leaves stays on the stack, and `ans` sees it. While the file
+        runs it is the current file (`script-path`, relative includes, and
+        where a function it defines says it was defined), its lines are
+        kept for error reports, and it is the outermost frame of the
+        include stack, so a file that includes it is caught as circular.
+
+        Args:
+            path: The file to run, as written (quotes around it are not
+                removed).
+            main: Whether the file is the main script: the one
+                `main-script-path` names and `main?` is true in.
+            restore_location: Whether to put the current file, line and
+                source lines back as they were once the file ends, as
+                ``~/.stackerrc`` does so that what runs after it does not
+                see it as its file. An error raised while the file runs
+                then carries the file's position, since the report cannot
+                read it back afterwards.
+            intercept: A predicate given each expression's text before it
+                is evaluated; an expression it returns True for is skipped.
+                The REPL passes the commands it handles itself.
+
+        Raises:
+            ScriptReadError: The file cannot be read as text. Nothing has
+                run and the current file is unchanged; with ``main`` the
+                file is already `main-script-path`.
+            OSError: The file cannot be opened (for example it does not
+                exist); the same holds.
+            UnterminatedTokenError: The file ends inside an open construct;
+                ``current_line`` names the line it started on. The
+                expressions before it have run.
+            StackerSyntaxError: The file has a `break` outside a loop.
+        """
+        # Imported here, not at the top: the include module needs this class
+        from stacker.include.include import (
+            expressions_of,
+            pop_entry_file,
+            push_entry_file,
+        )
+        from stacker.include.stk_file_read import readtxt
+
+        path = Path(path)
+        if main:
+            self.main_script = str(path.resolve())
+        code = readtxt(path)
+        before = (self.current_file, self.current_line, dict(self.source_lines)) if restore_location else None
+        # Set before anything runs: a block or function the file defines
+        # takes the current file as its own when it is made
+        self.current_file = str(path.resolve())
+        for line_number, text in enumerate(code.splitlines(), start=1):
+            self.source_lines[line_number] = text
+
+        def set_line(line: int | None) -> None:
+            self.current_line = line
+
+        push_entry_file(self, path)
+        try:
+            for expression in expressions_of(code, set_line):
+                if intercept is not None and intercept(expression):
+                    continue
+                self.process_expression(expression)
+        except Exception as error:
+            if restore_location:
+                # The position is put back below, and the report needs it;
+                # an error inside a file this one includes keeps its own
+                # (the first position attached wins). This is the outermost
+                # file, so there are no including frames
+                attach_include_location(
+                    error,
+                    self.current_file or str(path.resolve()),
+                    self.current_line,
+                    self.source_lines.get(self.current_line or 0),
+                    [],
+                )
+            raise
+        finally:
+            pop_entry_file(self)
+            if before is not None:
+                self.current_file, self.current_line, source_lines = before
+                self.source_lines.clear()
+                self.source_lines.update(source_lines)
 
     def push(self, value: object) -> None:  # TODO: remove
         self.stack.append(value)

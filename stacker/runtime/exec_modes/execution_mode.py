@@ -3,14 +3,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from stacker.include.stk_file_read import readtxt
 from stacker.stacker import Stacker
 
-from stacker.error import UnterminatedTokenError, UserError, attach_include_location, error_kind, include_location_of
+from stacker.error import UserError, error_kind, include_location_of
 from stacker.error_formatter import ErrorFormatter
-from stacker.include.include import pop_entry_file, push_entry_file
 from stacker.syntax.parser import remove_start_end_quotes
-from stacker.syntax.script import iter_expressions
 
 # from stacker.syntax.parser import is_string
 from stacker.util.disp import disp_stack, plain_text
@@ -200,57 +197,15 @@ class ExecutionMode:
                 ``current_line`` names the line it started on.
         """
         path = Path(remove_start_end_quotes(str(filename)))
-        code = readtxt(path)
-        calculator = self.rpn_calculator
         # ~/.stackerrc runs before the REPL, -e or the script: what it sets
         # as the current file must not outlive it (relative includes and
         # `script-path` would otherwise point at the rc file)
-        before = (calculator.current_file, calculator.current_line, dict(calculator.source_lines))
-
-        # Set source file and store all source lines for error reporting
-        calculator.current_file = str(path.resolve())
-        for line_num, line_text in enumerate(code.splitlines(), start=1):
-            calculator.source_lines[line_num] = line_text
-
-        # The script is the bottom frame of the include stack: a file that
-        # includes it is caught as circular, and an error inside an
-        # included file can name the line here that included it
-        push_entry_file(calculator, path)
-        expressions = iter_expressions(code)
-        try:
-            while True:
-                try:
-                    line_number, expression = next(expressions)
-                except StopIteration:
-                    break
-                except UnterminatedTokenError as error:
-                    # The file ends inside an open construct: report its line
-                    # (an unterminated text handed to `parse` keeps the
-                    # expression's own line)
-                    calculator.current_line = error.start_line
-                    raise
-                calculator.current_line = line_number
-                if not (stackerrc and self._run_stackerrc_command(expression)):
-                    calculator.process_expression(expression)
-        except Exception as error:
-            if stackerrc:
-                # The rc's position is put back below; the report needs it
-                # (an error inside a file the rc includes keeps its own).
-                # The rc is the outermost file, so there are no including frames
-                attach_include_location(
-                    error,
-                    calculator.current_file or str(path.resolve()),
-                    calculator.current_line,
-                    calculator.source_lines.get(calculator.current_line or 0),
-                    [],
-                )
-            raise
-        finally:
-            pop_entry_file(calculator)
-            if stackerrc:
-                calculator.current_file, calculator.current_line, source_lines = before
-                calculator.source_lines.clear()
-                calculator.source_lines.update(source_lines)
+        self.rpn_calculator.run_file(
+            path,
+            main=False,
+            restore_location=stackerrc,
+            intercept=self._run_stackerrc_command if stackerrc else None,
+        )
 
     def run_stackerrc(self, path: str | Path) -> None:
         """Runs ~/.stackerrc before the REPL, ``-e`` or a script.

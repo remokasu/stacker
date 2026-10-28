@@ -26,9 +26,7 @@ class ScriptMode(ExecutionMode):
                     f"Invalid file path or file type. Please provide a valid '{script_extension_name}' file."
                 )
 
-            self.rpn_calculator.main_script = str(path.resolve())
-            # Use the parent class's execute_stacker_dotfile which handles multi-line properly
-            self.execute_stacker_dotfile(path)
+            self.rpn_calculator.run_file(path, main=True)
             self.rpn_calculator.warn_values_left(path.name, self.rpn_calculator.stack)
         except Exception as e:
             # Format error using Clang-style formatter

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -120,6 +121,41 @@ def pop_entry_file(stacker: Stacker) -> None:
     stacker._includes.stack.pop()
 
 
+def expressions_of(code: str, set_line: Callable[[int | None], None]) -> Iterator[str]:
+    """Yields the expressions of ``code``, telling ``set_line`` each one's line first.
+
+    Every file the interpreter runs (a script, ``~/.stackerrc``, an
+    included file) reads its expressions through here. They are read
+    lazily, so what comes before an unterminated construct at the end of
+    the file runs before the error is raised, and the error is raised
+    after ``set_line`` was given the line the construct started on.
+
+    Args:
+        code: The file's text.
+        set_line: Called with the line an expression starts on, before the
+            expression is yielded, and with the start line of an
+            unterminated construct, before the error is raised.
+
+    Yields:
+        Each expression's text, in order.
+
+    Raises:
+        UnterminatedTokenError: The text ends inside a string, list, block
+            or block comment.
+    """
+    expressions = iter_expressions(code)
+    while True:
+        try:
+            line, expression = next(expressions)
+        except StopIteration:
+            return
+        except UnterminatedTokenError as error:
+            set_line(error.start_line)
+            raise
+        set_line(line)
+        yield expression
+
+
 def _already_read(target_name: str, base_dir: Path | None, loaded: set[Path]) -> bool:
     """Whether `require` of ``target_name`` has nothing to do: its file was run to its end.
 
@@ -188,18 +224,13 @@ def include_file(core: Stacker, filename: str, once: bool = False) -> None:
     frame = Frame(resolved, INCLUDE)
     state.stack.append(frame)
     file_stack: stack_data[object] = stack_data()
-    expressions = iter_expressions(code)
+
+    def set_line(line: int | None) -> None:
+        frame.line = line
+        runner.current_line = line
+
     try:
-        while True:
-            try:
-                line, expression = next(expressions)
-            except StopIteration:
-                break
-            except UnterminatedTokenError as error:
-                frame.line = error.start_line
-                raise
-            frame.line = line
-            runner.current_line = line
+        for expression in expressions_of(code, set_line):
             runner.evaluate(parse_expression(expression), stack=file_stack)
     except (Exception, BreakException) as error:  # a `break` is tagged too; SystemExit passes
         attach_include_location(error, str(resolved), frame.line, source_lines.get(frame.line or 0), frames)
