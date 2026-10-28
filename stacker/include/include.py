@@ -19,6 +19,8 @@ from stacker.syntax.script import iter_expressions
 if TYPE_CHECKING:
     from stacker.stacker import Stacker
 
+SCRIPT_EXTENSION = ".stk"  #: the suffix a script file has
+
 
 def candidate_paths(filename: str | Path, base_dir: Path | None = None) -> list[Path]:
     """The paths an include target may stand for, in search order.
@@ -63,7 +65,7 @@ def resolve_include_path(filename: str | Path, base_dir: Path | None = None) -> 
     candidates = candidate_paths(filename, base_dir)
     for candidate in candidates:
         if candidate.is_file():
-            if candidate.suffix != ".stk":
+            if candidate.suffix != SCRIPT_EXTENSION:
                 raise IncludeError(f"File {filename} is not a stacker script.")
             return candidate
 

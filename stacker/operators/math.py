@@ -10,7 +10,7 @@ from stacker.engine.data_type import Symbol
 from stacker.error import StackerTypeError, ValidationError, symbol_as_value_message
 from stacker.operators.arguments import integer_argument
 from stacker.operators.arith import checked_binary
-from stacker.util.disp import plain_text
+from stacker.engine.display import plain_text
 
 
 def _real_number(word: str, x: object) -> numbers.Real:

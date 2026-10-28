@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from stacker.engine.data_type import Symbol
 from stacker.error import StackerTypeError, symbol_as_value_message
-from stacker.util.disp import plain_text
+from stacker.engine.display import plain_text
 
 
 def checked_binary(word: str, operate: Callable[[object, object], object]) -> Callable[[object, object], object]:

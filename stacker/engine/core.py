@@ -31,7 +31,7 @@ from stacker.syntax.lexer import Identifier, ListNode, TupleNode
 from stacker.syntax.parser import Parser, parse_expression
 from stacker.error import BreakException
 from stacker.engine.boundary import token_to_value, value_to_token
-from stacker.util.disp import plain_text  # disp.py must not import core.py
+from stacker.engine.display import plain_text  # display.py must not import core.py
 from stacker.engine.data_type import Array, String, Symbol, stack_data, VOID
 from stacker.syntax.token_rules import (
     KEYWORD_LITERALS,
@@ -405,7 +405,8 @@ class StackerCore:
         self.main_script: str | None = None
         # Integers have no size limit, so neither has their text: the host's
         # limit on digits (a defence for tools that read numbers from outside)
-        # would stop `2000 !` from being shown, written or read back
+        # would stop `2000 !` from being shown, written or read back. This is
+        # the one process-wide setting the engine makes
         if hasattr(sys, "set_int_max_str_digits"):
             sys.set_int_max_str_digits(0)
 
@@ -669,7 +670,7 @@ class StackerCore:
         try:
             block._evaluate(block.tokens, stack=stack)
         except Exception:
-            self.trace = block.trace  # what the REPL's debug display shows
+            self.trace = block.trace  # the tokens of the innermost failing block, for diagnostics
             raise
 
     def _run_bound(self, block: StackerCore, scope: ScopedVariables, stack: stack_data[object]) -> None:
@@ -1501,9 +1502,8 @@ class StackerCore:
             raise StackerTypeError(f"`exit-code` expects an integer, got {plain_text(code)}")
         op["func"](code)
 
-    # Dispatch table for priority operators. `ans` is the only name absent
-    # here: the REPL handles it before evaluation, so it is a no-op (the
-    # test suite checks every other priority word has a handler).
+    # Dispatch table for priority operators (the test suite checks every
+    # priority word has a handler).
     _PRIORITY_HANDLERS = {
         "abort": _prio_abort,
         "exit-code": _prio_exit_code,

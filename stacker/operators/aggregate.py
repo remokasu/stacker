@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from stacker.error import StackerTypeError, ValidationError
-from stacker.util.disp import plain_text
+from stacker.engine.display import plain_text
 
 
 def _empty(xs: object) -> bool:

@@ -15,7 +15,7 @@ from stacker.error import (
     InsertError,
 )
 from stacker.operators.arguments import count_argument, integer_argument
-from stacker.util.disp import disp_stack
+from stacker.engine.display import disp_stack
 
 
 """

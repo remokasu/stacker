@@ -6,7 +6,7 @@ from stacker.engine.data_type import Symbol
 from stacker.engine.scope import ScopedVariables
 from stacker.error import BreakException, StackerSyntaxError, StackerTypeError
 from stacker.operators.arguments import integer_argument
-from stacker.util.disp import plain_text
+from stacker.engine.display import plain_text
 
 if TYPE_CHECKING:
     from stacker.stacker import Stacker

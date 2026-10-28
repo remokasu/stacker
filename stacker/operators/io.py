@@ -6,7 +6,7 @@ from typing import TextIO
 
 from stacker.error import StackerRuntimeError
 from stacker.operators.arguments import byte_values
-from stacker.util.disp import display_text
+from stacker.engine.display import display_text
 
 #: Standard input is read as UTF-8, as scripts and files are, whatever the host's locale says
 STDIN_ENCODING = "utf-8"

@@ -10,7 +10,7 @@ from stacker.error_formatter import ErrorFormatter
 from stacker.syntax.parser import remove_start_end_quotes
 
 # from stacker.syntax.parser import is_string
-from stacker.util.disp import disp_stack, plain_text
+from stacker.engine.display import disp_stack, plain_text
 
 # def simple_format(arr):
 #     """

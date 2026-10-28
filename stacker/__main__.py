@@ -11,15 +11,14 @@ import stacker
 from stacker.runtime.exec_modes import CommandLineMode, ReplMode, ScriptMode
 
 from stacker.engine import recursion
-from stacker.lib import disp_logo
-from stacker.lib.config import (
+from stacker.engine.recursion import (
     DEFAULT_RECURSION_LIMIT,
     MAX_RECURSION_LIMIT,
     RECURSION_BACKSTOP_MARGIN,
     RECURSION_FRAMES_PER_LEVEL,
-    plugins_dir_path,
-    stacker_dotfile_path,
 )
+from stacker.lib import disp_logo
+from stacker.lib.config import plugins_dir_path, stacker_dotfile_path
 from stacker.stacker import Stacker
 from stacker.util import colored
 from stacker.version import __version__
