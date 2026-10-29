@@ -1,5 +1,26 @@
 # CHANGE LOG
 
+## [1.28.0] - 2026-10-30
+
+### Breaking Changes
+
+- **The REPL's commands are reserved words.** `help`, `about`, `delete_history`, `enable_disp_stack`, `disable_disp_stack`, `enable_disp_logo`, `disable_disp_logo`, `enable_disp_ans` and `disable_disp_ans` were names a program could define, while the REPL took a line holding one of them as its own command first: after `{x} {x 100 +} :help defun`, `1 help` ran the function and a lone `help` showed the REPL's help. Naming anything after one is now a `ReservedWordError`, through every word that names something (`set`, `=`, `global`, `defun`, `defmacro`, `alias`, `do`, `dolist`, `reduce`, `fold`, and the argument names of functions, macros and lambdas) and through `register_sfunction`, `register_macro`, `register_parameter` and `register_plugin`. One written in a program, or after a value on the REPL's line, is a `ReservedWordError` saying it is a REPL command, where it was an undefined name
+- **A REPL command is its lowercase name.** The REPL and `~/.stackerrc` took the commands in any case (`HELP` showed the help); only the lowercase names are commands and reserved now, and `HELP` is an ordinary name. The REPL takes a command with spaces around it, as `~/.stackerrc` does
+
+### Migration
+
+- Rename a function, variable, macro, argument, loop variable or plugin word named after a REPL command, in scripts and in plugins alike (`register_plugin("help", ...)` fails to load now): `{} {...} :help defun` becomes `{} {...} :show-help defun`
+- Type the REPL's commands in lowercase: `HELP` becomes `help`
+- Write the commands in `~/.stackerrc` in lowercase too: a line such as `Disable_Disp_Logo` is now an ordinary name, an error when nothing is bound to it, and an error in the rc file stops Stacker before it starts
+
+### Added
+
+- **`ReservedWordError`**: raised for a reserved word as above; a `StackerSyntaxError`. `try` gives `ReservedWordError` as the kind
+
+### Fixed
+
+- The README listed the REPL's display settings among the words of the language, left out `enable_disp_logo` and said `disable_disp_stack` shows the latest value; the manual still said that a name defined at the prompt is not completed, which it is since 1.27.2. Both describe the REPL's commands as they are now
+
 ## [1.27.2] - 2026-10-29
 
 ### Fixed
