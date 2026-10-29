@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import ast
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -54,3 +57,62 @@ def test_the_limits_and_the_extension_are_still_importable_from_config():
 
     assert (config.DEFAULT_RECURSION_LIMIT, config.MAX_RECURSION_LIMIT) == (DEFAULT_RECURSION_LIMIT, MAX_RECURSION_LIMIT)
     assert config.script_extension_name == SCRIPT_EXTENSION == ".stk"
+
+
+#: The interpreter's own attributes the runtime (stacker/runtime/) reads
+#: through its public API instead (``location``, ``get_operator_groups``,
+#: ``get_plugin_descriptions``). The check goes by name only, whatever the
+#: object; the command line's entry point, which builds the interpreter,
+#: is not checked.
+ENGINE_INTERNALS = frozenset({"operator_manager", "current_line", "source_lines", "plugin_descriptions"})
+
+_ATTRIBUTE_FUNCTIONS = frozenset({"getattr", "hasattr", "setattr"})
+
+
+def _find_engine_internals(source: str) -> list[tuple[int, str]]:
+    """The line and name of every use in ``source`` of one of ``ENGINE_INTERNALS``.
+
+    An attribute (``x.name``) counts, and so does the name given as a
+    literal to ``getattr``, ``hasattr`` or ``setattr``; a name built at run
+    time does not.
+    """
+    found = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Attribute) and node.attr in ENGINE_INTERNALS:
+            found.append((node.lineno, node.attr))
+        elif (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id in _ATTRIBUTE_FUNCTIONS
+            and len(node.args) >= 2
+            and isinstance(node.args[1], ast.Constant)
+            and node.args[1].value in ENGINE_INTERNALS
+        ):
+            found.append((node.lineno, node.args[1].value))
+    return sorted(found)
+
+
+@pytest.mark.parametrize(
+    "source, expected",
+    [
+        ("x = core.operator_manager.get_groups()\n", [(1, "operator_manager")]),
+        ("self.current_line = 3\n", [(1, "current_line")]),
+        ('getattr(core, "source_lines")\n', [(1, "source_lines")]),
+        ('"""plugin_descriptions"""\nname = "operator_manager"\n', []),
+        ("x = core.location\n", []),
+    ],
+    ids=["attribute", "assignment", "getattr", "text only", "public api"],
+)
+def test_the_check_finds_the_engine_internals_and_nothing_else(source, expected):
+    assert _find_engine_internals(source) == expected
+
+
+def test_the_runtime_reads_the_interpreter_through_its_public_api():
+    paths = sorted((REPO_ROOT / "stacker" / "runtime").rglob("*.py"))
+    assert REPO_ROOT / "stacker" / "runtime" / "exec_modes" / "repl_mode.py" in paths
+    found = {
+        str(path.relative_to(REPO_ROOT)): hits
+        for path in paths
+        if (hits := _find_engine_internals(path.read_text(encoding="utf-8")))
+    }
+    assert found == {}
