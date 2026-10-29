@@ -1,5 +1,12 @@
 # CHANGE LOG
 
+## [1.26.2] - 2026-10-29
+
+### Fixed
+
+- A limit on the digits of an integer's text that a host put back after making an interpreter, as the Python chapter of the manual advises a host that reads untrusted input to do, did not stay: every block, function call, `map`, branch, macro or included file the interpreter ran lifted it again. An interpreter now lifts the limit once, when it is made. With the limit put back, showing or converting an integer longer than the limit raises the host's error
+- `register_operator` replacing a stack, higher-order, aggregate, transform, array and dictionary, settings or system word replaced it in the other interpreters of the same process too, not only in the one it was called on: in every one made afterwards, and in one made before as soon as it replaced a word itself. Each interpreter now has its own copy of those words, as it already had of the others
+
 ## [1.26.1] - 2026-10-29
 
 ### Fixed
