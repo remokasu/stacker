@@ -32,7 +32,7 @@ from __future__ import annotations
 import ast
 from functools import lru_cache
 
-from stacker.error import StackerSyntaxError
+from stacker.error import ReservedWordError, StackerSyntaxError
 
 
 def is_string_token(token) -> bool:
@@ -231,6 +231,31 @@ REPL_COMMAND_NAMES: frozenset[str] = frozenset(
         "disable_disp_ans",
     }
 )
+
+
+def refuse_reserved(name: str, word: str, role: str = "a name") -> None:
+    """Refuses a reserved name: a literal, or one of the REPL's commands.
+
+    The one rule for whatever names something: the language's binding
+    words and argument names.
+
+    Args:
+        name: The name about to be bound.
+        word: The word or registration binding it, for the message.
+        role: What the name would be, as the message says it.
+
+    Raises:
+        StackerSyntaxError: ``name`` is a literal (``true``, ``null``, ...),
+            which is always its value.
+        ReservedWordError: ``name`` is one of the REPL's commands.
+    """
+    if name in KEYWORD_LITERALS:
+        # `:null` is a symbol (the name of the literal), but the bare word
+        # is always the value, so a variable of that name could never be read
+        raise StackerSyntaxError(f"`{word}` cannot bind `{name}`: it is a literal, not a variable")
+    if name in REPL_COMMAND_NAMES:
+        raise ReservedWordError(f"`{word}` cannot use `{name}` as {role}: it is a reserved word, a REPL command")
+
 
 #: Signed spellings of the two special floats; `inf` and `nan` themselves are constants (variables)
 SIGNED_SPECIAL_FLOATS: dict[str, float] = {

@@ -49,6 +49,7 @@ from stacker.syntax.token_rules import (
     is_symbol,
     is_symbol_name,
     not_a_symbol_message,
+    refuse_reserved,
 )
 from stacker.engine.sfunction import StackerFunction
 from stacker.engine.slambda import StackerLambda
@@ -1832,12 +1833,7 @@ class StackerCore:
         """
         name = _name_in(symbol)
         if name is not None:
-            if name in KEYWORD_LITERALS:
-                # `:null` is a symbol (the name of the literal), but the bare word
-                # is always the value, so a variable of that name could never be read
-                raise StackerSyntaxError(f"`{word}` cannot bind `{name}`: it is a literal, not a variable")
-            if name in REPL_COMMAND_NAMES:
-                raise ReservedWordError(f"`{word}` cannot use `{name}` as a name: it is a reserved word, a REPL command")
+            refuse_reserved(name, word)
             return name
         # A one-token block that is not a name: pull a string literal out of
         # it (`{"x"}`) so the message below says it is a string, not a block.
@@ -1882,10 +1878,7 @@ class StackerCore:
         for token in fargs.tokens:
             if not is_bare_name(token):
                 raise StackerSyntaxError(f"`{word}` argument names must be bare names, got {token}")
-            if token in REPL_COMMAND_NAMES:
-                raise ReservedWordError(
-                    f"`{word}` cannot use `{token}` as an argument name: it is a reserved word, a REPL command"
-                )
+            refuse_reserved(token, word, "an argument name")
             names.append(token)
         if len(set(names)) != len(names):
             raise StackerSyntaxError(f"`{word}` argument names must be unique: {{{' '.join(names)}}}")
