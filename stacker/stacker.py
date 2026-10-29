@@ -417,6 +417,14 @@ class Stacker(StackerCore):
         return self.labels.copy()
 
     def get_all_keys_for_completer(self) -> list[str]:
+        """Every name a program can call or read now, once each, in no set order.
+
+        Returns:
+            The built-in words except the settings words (`disable_plugin`,
+            `disable_all_plugins`), the functions (the prelude's and the
+            program's), the plugin words, the macros and the variables
+            (constants such as `pi` among them).
+        """
         return list(
             set(
                 self.operator_manager.get_all_keys_for_completer()

@@ -41,26 +41,9 @@ class ReplMode(ExecutionMode):
         self.completer = WordCompleter(self.get_completer())
 
     def get_completer(self) -> list[str]:
-        """Get completion words for REPL prompt."""
-        _reserved_word = list(self.repl_commands)
-        _operator_key = list(self.rpn_calculator.get_all_keys_for_completer())
-        _priority_operators_key = list(
-            self.rpn_calculator.operator_manager.get_priority_keys()
-        )
-        _sfunctions_key = list(self.rpn_calculator.get_sfuntions_ref().keys())
-        _variable_key = list(self.rpn_calculator.get_variables_ref().keys())
-        _macro_key = list(self.rpn_calculator.get_macros_ref().keys())
-        _reserved_word = list(
-            set(
-                _reserved_word
-                + _operator_key
-                + _priority_operators_key
-                + _sfunctions_key
-                + _variable_key
-                + _macro_key
-            )
-        )
-        return _reserved_word
+        """The REPL's commands and every name the interpreter knows, for completion."""
+        words = self.repl_commands + self.rpn_calculator.get_all_keys_for_completer()
+        return list(set(words))
 
     def update_completer(self) -> None:
         self.completer = WordCompleter(self.get_completer())
