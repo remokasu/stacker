@@ -67,3 +67,9 @@ Scripts:
 
 Constants:
   pi  e  phi  tau  inf  nan
+
+REPL commands (typed alone on a line, in lowercase; reserved words, so no
+program can use these names):
+  help  about  delete_history
+  enable_disp_stack  disable_disp_stack  enable_disp_ans  disable_disp_ans
+  enable_disp_logo  disable_disp_logo

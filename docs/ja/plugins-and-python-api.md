@@ -93,7 +93,7 @@ stacker.register_plugin(operator_name, operator_func, push_result_to_stack=True,
 
 | 引数 | 意味 |
 |---|---|
-| `operator_name` | Stacker で使う語の名前。`stack-summary` のようにハイフンも使える |
+| `operator_name` | Stacker で使う語の名前。`stack-summary` のようにハイフンも使える。REPL のコマンドの名前（`help` など）は予約語なので使えない（`ReservedWordError`） |
 | `operator_func` | 呼び出される Python 関数。スタックから取る引数の数は、`operator_func` の引数の数で決まる（`pass_core=True` のときは先頭の 1 つを除く） |
 | `push_result_to_stack` | `True` なら戻り値をスタックに積む。`False` なら戻り値を捨てる。`None` を返す関数でも `True` なら `null` が積まれるので、何も積まない語は `False` にする |
 | `pass_core` | `True` なら、`func` の第 1 引数として `Stacker` のインスタンスが渡される。変数やスタックを直接読み書きする語に使う |
@@ -109,7 +109,7 @@ stacker.register_plugin(operator_name, operator_func, push_result_to_stack=True,
 stacker.register_parameter(name, value)
 ```
 
-`name` という変数を `value` で作ります。上の例の `golden` のように、スクリプトからは変数として読めます。`0.1 :golden =` のように、あとからスクリプトで書き換えることもできます。
+`name` という変数を `value` で作ります。REPL のコマンドの名前（`help` など）は予約語なので使えません（`ReservedWordError`）。上の例の `golden` のように、スクリプトからは変数として読めます。`0.1 :golden =` のように、あとからスクリプトで書き換えることもできます。
 
 ### プラグインの無効化
 
@@ -404,6 +404,7 @@ Stacker が意図して出すエラーは、すべて `stacker.error.StackerErro
 | `StackUnderflowError` | スタックの値が足りない |
 | `StackerSyntaxError` | 構文が不正（名前の位置に文字列を書いたなど） |
 | `UnterminatedTokenError` | 閉じていない文字列・リスト・ブロック・ブロックコメント。`StackerSyntaxError` の子クラス |
+| `ReservedWordError` | REPL のコマンドの名前（`help` など）に何かを束縛しようとした（`register_plugin`・`register_parameter` などを含む）、またはプログラムの中に書いた。`StackerSyntaxError` の子クラス |
 | `StackerTypeError` | 語に渡した値の型が違う。Python の `TypeError` も継承する |
 | `StackerIndexError` | `at` / `at!` の添字が範囲外、空の配列の `pop!`。Python の `IndexError` も継承する |
 | `KeyNotFoundError` | `del!` に無いキーを渡した |

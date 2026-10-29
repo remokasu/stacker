@@ -53,7 +53,7 @@ Type "help" to get more information.
 stacker:0>
 ```
 
-既定では、この前にロゴが表示されます（消し方は [設定の演算子](#設定の演算子) を参照）。
+既定では、この前にロゴが表示されます（消し方は [~/.stackerrc](#stackerrc) を参照）。
 
 プロンプトの `stacker:N>` の `N` は、入力前のスタックにある値の個数です。式を実行するたびに、結果のスタックが `[ ]` で表示されます。
 
@@ -90,7 +90,7 @@ stacker> [1 2
 
 ### 履歴と補完
 
-入力した式はホームディレクトリの `~/.stacker_history` に保存され、次回の起動でも上下キーで呼び出せます。Tab キーで、演算子、prelude の語、REPL 専用コマンドの名前を補完できます。セッション中や `~/.stackerrc` で定義した名前は補完の対象になりません。
+入力した式はホームディレクトリの `~/.stacker_history` に保存され、次回の起動でも上下キーで呼び出せます。Tab キーで、演算子、prelude の語、定義した関数・変数・マクロ、プラグインの語、REPL 専用コマンドの `help`・`about`・`delete_history` を補完できます。セッション中や `~/.stackerrc` で定義した名前も、定義した直後から補完の対象になります。
 
 ### エラー
 
@@ -105,7 +105,7 @@ hint: Cannot divide by zero. Check your divisor value
 
 ## REPL 専用コマンド
 
-次のコマンドは REPL だけで使えます。行全体がコマンド名だけ（前後に空白もない）のときに限り、REPL が処理します。他の式と同じ行には書けません。大文字と小文字は区別されません。スタックには影響しません。
+次のコマンドは REPL だけで使えます。行にコマンド名だけを打ったときに限り、REPL が処理します（前後の空白は無視します）。他の式と同じ行には書けません。名前は小文字だけで、`HELP` のように大文字を含むものはコマンドになりません。スタックには影響しません。
 
 ```text
 help                     使い方と、すべての演算子の一覧を表示します。
@@ -135,9 +135,25 @@ stacker> 5 *
 
 ロゴは起動時に表示されるだけなので、REPL の中で `disable_disp_logo` を入力しても、表示は変わりません。起動時のロゴを消すには、`~/.stackerrc` に書きます（次節）。
 
-これらの名前は REPL が処理するものであり、Stacker の式の中では使えません。`3 enable_disp_ans` のように他の式と同じ行に書くと、未定義のシンボルとしてエラーになります。
+これらの名前は言語の予約語です。`3 enable_disp_ans` のように他の式と同じ行に書いたり、スクリプトや `-e` の中に書いたりすると、`ReservedWordError` になります。関数の本体に書いたときは、未定義の名前と同じく、その関数を呼んだときにエラーになります。
 
-## 設定の演算子
+```text
+stacker> 3 enable_disp_ans
+stacker: error: `enable_disp_ans` is a REPL command: type it alone at the REPL's prompt
+  [ReservedWordError]
+```
+
+どの書き方でも、これらの名前を関数・変数・マクロ・引数・ループの変数の名前にはできません。Python から `register_plugin` などで登録することもできません。
+
+```text
+stacker> {x} {x} :help defun
+stacker: error: `defun` cannot use `help` as a name: it is a reserved word, a REPL command
+  [ReservedWordError]
+```
+
+予約されているのは小文字の名前だけです。`HELP` や `Help` は普通の名前として使えます。
+
+## プラグインを無効にする演算子
 
 プラグインを無効にする演算子は、通常の演算子なので、スクリプトや `-e` でも使えます。
 

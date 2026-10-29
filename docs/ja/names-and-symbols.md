@@ -281,7 +281,7 @@ hint: To use the name itself, write `:zzz` or `{zzz}`
 StackerSyntaxError: `set` expects a name, got 3. A bare name pushes what it refers to; write the name itself as `:name` or `{name}`.
 ```
 
-組み込みの語を束縛するときも、他の名前と同じく `:name` か `{name}` と書きます。束縛を妨げる保護はなく、警告が出るだけです（後述）。
+組み込みの語を束縛するときも、他の名前と同じく `:name` か `{name}` と書きます。束縛を妨げる保護はなく、警告が出るだけです（後述）。ただし、REPL のコマンドの名前（`help`、`about`、`delete_history` と表示設定の 6 つ）は予約語で、束縛すると `ReservedWordError` になります（[REPL 専用コマンド](repl-and-cli.md#repl-専用コマンド)）。
 
 ```
 stacker:0> 3 :dup set

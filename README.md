@@ -17,6 +17,7 @@ The user manual lives in [docs/](docs/README.md) (Japanese; it covers the syntax
 - [VSCode Syntax Highlighting](#vscode-syntax-highlighting)
 - [Command Line Execution](#command-line-execution)
 - [Settings](#settings)
+- [REPL commands](#repl-commands)
 - [Configuration File](#configuration-file)
 - [Creating Plugins](#creating-plugins)
 - [Running on Python](#running-on-python)
@@ -643,40 +644,29 @@ stacker -e "3 4 + echo"
   stacker:0> disable_all_plugins
   ```
 
-- enable_disp_ans
-  Enables the display of the last result (ans) at the end of the stack.
+## REPL commands
+These commands work only at the REPL's prompt, typed alone on a line in lowercase (spaces around them are ignored). They do not touch the stack.
+
+They are reserved words of the language: a program cannot name a function, variable, macro, argument or loop variable after them, and one written in a program, or after a value on the same line, raises `ReservedWordError`. Names with capitals, such as `HELP`, are ordinary names.
+
+- help
+  Shows how to use Stacker and lists every operator.
+- about
+  Introduces Stacker.
+- delete_history
+  Deletes the history file (~/.stacker_history).
+- enable_disp_stack / disable_disp_stack
+  Shows the stack after each input (the default) / does not.
+- enable_disp_ans / disable_disp_ans
+  Shows the top value (ans) on a line of its own after each input / does not (the default).
   ```bash
   stacker:0> enable_disp_ans
-  stacker:1> 3 4 +
+  stacker:0> 3 4 +
   7
   [7]
   ```
-
-- disable_disp_ans
-  Disables the display of the last result (ans) at the end of the stack.
-  ```bash
-  stacker:0> disable_disp_ans
-  stacker:1> 3 4 +
-  [7]
-  ```
-
-- enable_disp_stack
-  Enables the setting to display the stack contents each time. By default, this setting is already active.
-  ```bash
-  stacker:0> enable_disp_stack
-  ```
-
-- disable_disp_stack
-  Sets the display of stack contents to be disabled. When this setting is enabled, only the latest element of the stack is displayed.
-  ```bash
-  stacker:0> disable_disp_stack
-  ```
-
-- disable_disp_logo
-  Disables the display of the logo at startup.
-  ```bash
-  stacker:0> disable_disp_logo
-  ```
+- enable_disp_logo / disable_disp_logo
+  Shows the logo at startup (the default) / does not. The logo is shown before the first prompt, so write this one in ~/.stackerrc.
 
 
 
