@@ -37,7 +37,7 @@ import pytest
 from stacker.constant import constants
 from stacker.stacker import Stacker
 from stacker.syntax.lexer import analyze_terminals
-from stacker.syntax.token_rules import KEYWORD_LITERALS
+from stacker.syntax.token_rules import KEYWORD_LITERALS, REPL_COMMAND_NAMES
 from stacker.util.disp import disp_default
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -80,12 +80,7 @@ TABLE_STACK = "1 2 3 4 5"
 PROMPT = re.compile(r"^\s*stacker:(\d+)>\s?(.*)$")
 CONTINUATION = re.compile(r"^\s*(\.\.\.\s*)?>\s?")  # `... > more input`
 # Settings handled by the REPL itself, not by the interpreter.
-REPL_COMMANDS = {
-    "about", "delete_history", "end", "help",
-    "enable_disp_ans", "disable_disp_ans",
-    "enable_disp_logo", "disable_disp_logo",
-    "enable_disp_stack", "disable_disp_stack",
-}
+REPL_COMMANDS = REPL_COMMAND_NAMES | {"end"}
 STACK_LINE = re.compile(r"^\s*\[.*\]\s*$")
 # The last header cell of a three-column table whose rows are
 # `| word | description | `example` |`.

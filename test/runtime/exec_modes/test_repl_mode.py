@@ -2,10 +2,12 @@ import unittest
 from io import StringIO
 from unittest.mock import patch
 
+import pytest
 from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.document import Document
 
 from stacker.lib import disp_help
+from stacker.runtime.exec_modes.execution_mode import REPL_COMMANDS, REPL_SETTINGS
 from stacker.runtime.exec_modes.repl_mode import ReplMode
 from stacker.stacker import Stacker
 
@@ -289,6 +291,17 @@ def test_the_uppercase_name_is_an_ordinary_name_at_the_prompt(monkeypatch, capsy
     assert "`HELP` is not defined." in captured.err
     assert "mine" in captured.out
     assert "Supported operators and functions:" not in captured.out
+
+
+@pytest.mark.parametrize("name", sorted(REPL_COMMANDS))
+def test_every_repl_command_has_what_runs_it(name):
+    repl = ReplMode(Stacker())
+    if name in REPL_SETTINGS:
+        switch, setting = name.split("_", 1)
+        assert switch in ("enable", "disable")
+        assert isinstance(getattr(repl, f"{setting}_mode"), bool)
+    else:
+        assert callable(getattr(repl, f"_cmd_{name}"))
 
 
 if __name__ == "__main__":

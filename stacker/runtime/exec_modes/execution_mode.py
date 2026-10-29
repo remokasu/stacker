@@ -46,20 +46,15 @@ from stacker.engine.display import disp_stack, plain_text
 #     return format_recursive(arr)
 
 
-#: The REPL's display settings, which ~/.stackerrc may hold.
-REPL_SETTINGS = frozenset(
-    {
-        "enable_disp_stack",
-        "disable_disp_stack",
-        "enable_disp_logo",
-        "disable_disp_logo",
-        "enable_disp_ans",
-        "disable_disp_ans",
-    }
-)
 #: Every command the REPL handles itself (ReplMode._handle_repl_command): the
-#: language's reserved words, which no program can name anything after.
+#: language's reserved words, which no program can name anything after. The
+#: names are written only there; everything below is made from them.
 REPL_COMMANDS = REPL_COMMAND_NAMES
+#: The REPL's display settings, the ``enable_<x>`` / ``disable_<x>`` commands,
+#: which ~/.stackerrc may hold.
+REPL_SETTINGS = frozenset(
+    name for name in REPL_COMMANDS if name.startswith(("enable_", "disable_"))
+)
 
 
 class ExecutionMode:

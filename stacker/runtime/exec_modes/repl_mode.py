@@ -12,7 +12,7 @@ from prompt_toolkit import prompt
 from prompt_toolkit.completion import DynamicCompleter, WordCompleter
 from prompt_toolkit.history import FileHistory
 from stacker.runtime.exec_modes.error import create_error_message
-from stacker.runtime.exec_modes.execution_mode import REPL_SETTINGS, ExecutionMode
+from stacker.runtime.exec_modes.execution_mode import REPL_COMMANDS, REPL_SETTINGS, ExecutionMode
 from stacker.lib import delete_history, disp_about, disp_help
 from stacker.lib.config import history_file_path
 from stacker.error import error_kind
@@ -37,11 +37,7 @@ class ReplMode(ExecutionMode):
         self.disp_ans_mode = False
         # The commands the prompt completes; the display settings are not
         # offered (they are typed once, or kept in ~/.stackerrc)
-        self.repl_commands = [
-            "help",
-            "about",
-            "delete_history",
-        ]
+        self.repl_commands = sorted(REPL_COMMANDS - REPL_SETTINGS)
         # The words are gathered again each time the prompt completes, so a
         # name defined since the REPL started is offered too
         self.completer = DynamicCompleter(lambda: WordCompleter(self.get_completer()))
@@ -106,46 +102,25 @@ class ReplMode(ExecutionMode):
 
         A command is its lowercase name alone on the line; spaces around it
         do not count. The names are reserved words of the language, so no
-        program can define them (``HELP`` is an ordinary name). A new
-        command also goes into ``REPL_COMMAND_NAMES`` (stacker/syntax/token_rules.py).
+        program can define them (``HELP`` is an ordinary name). The names
+        are listed only in ``REPL_COMMAND_NAMES`` (stacker/syntax/token_rules.py):
+        a display setting is named ``enable_<x>`` / ``disable_<x>`` and turns
+        the attribute ``<x>_mode`` on or off; any other command runs the
+        method ``_cmd_<name>``.
 
         Returns:
             True if the line was a command and ran, False to evaluate it.
         """
         command = expression.strip()
-
-        # Simple command handlers
-        if command == "help":
-            self._cmd_help()
-            return True
-        if command == "about":
-            self._cmd_about()
-            return True
-        if command == "delete_history":
-            self._cmd_delete_history()
-            return True
-
-        # Display mode commands
-        if command == "enable_disp_stack":
-            self.disp_stack_mode = True
-            return True
-        if command == "disable_disp_stack":
-            self.disp_stack_mode = False
-            return True
-        if command == "enable_disp_logo":
-            self.disp_logo_mode = True
-            return True
-        if command == "disable_disp_logo":
-            self.disp_logo_mode = False
-            return True
-        if command == "enable_disp_ans":
-            self.disp_ans_mode = True
-            return True
-        if command == "disable_disp_ans":
-            self.disp_ans_mode = False
-            return True
-
-        return False
+        if command not in REPL_COMMANDS:
+            return False
+        if command in REPL_SETTINGS:
+            # enable_disp_stack turns disp_stack_mode on, disable_disp_stack off
+            switch, setting = command.split("_", 1)
+            setattr(self, f"{setting}_mode", switch == "enable")
+        else:
+            getattr(self, f"_cmd_{command}")()
+        return True
 
     def run(self) -> None:
         stacker_version = self.get_version()
