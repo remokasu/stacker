@@ -165,3 +165,38 @@ def test_the_python_api_refuses_every_repl_command(stacker, name):
         stacker.register_parameter(name, 1)
     with pytest.raises(ReservedWordError):
         stacker.register_plugin(name, lambda: 1)
+
+
+LITERALS = ["true", "false", "null", "True", "False", "None"]
+
+NAMED_REGISTRATIONS = [
+    pytest.param(
+        lambda stacker, name: stacker.register_sfunction(name, None, 0),
+        id="register_sfunction",
+    ),
+    pytest.param(
+        lambda stacker, name: stacker.register_macro(name, None), id="register_macro"
+    ),
+    pytest.param(
+        lambda stacker, name: stacker.register_parameter(name, 1),
+        id="register_parameter",
+    ),
+    pytest.param(
+        lambda stacker, name: stacker.register_plugin(name, lambda: 1),
+        id="register_plugin",
+    ),
+]
+
+
+@pytest.mark.parametrize("register", NAMED_REGISTRATIONS)
+@pytest.mark.parametrize("name", LITERALS)
+def test_the_python_api_cannot_name_anything_after_a_literal(stacker, name, register):
+    with pytest.raises(
+        StackerSyntaxError,
+        match=f"cannot bind `{name}`: it is a literal, not a variable",
+    ):
+        register(stacker, name)
+    assert name not in stacker.sfunctions
+    assert name not in stacker.macros
+    assert name not in stacker.plugins
+    assert name not in stacker.variables

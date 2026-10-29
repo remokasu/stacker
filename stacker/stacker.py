@@ -8,14 +8,13 @@ from stacker.engine.core import StackerCore
 from stacker.engine.scope import ScopedVariables
 from stacker.error import (
     BreakException,
-    ReservedWordError,
     StackerSyntaxError,
     attach_include_location,
     copy_include_location,
 )
 from stacker.slib import load_prelude
 from stacker.syntax.parser import parse_expression
-from stacker.syntax.token_rules import REPL_COMMAND_NAMES
+from stacker.syntax.token_rules import refuse_reserved
 
 if TYPE_CHECKING:
     from stacker.engine.sfunction import StackerFunction
@@ -31,12 +30,6 @@ def _break_outside_a_loop(error: BreakException) -> StackerSyntaxError:
     replacement = StackerSyntaxError("`break` can only be used inside a loop")
     copy_include_location(error, replacement)
     return replacement
-
-
-def _refuse_reserved(name: str, api: str) -> None:
-    """Raises ``ReservedWordError`` when the host names something after one of the REPL's commands."""
-    if name in REPL_COMMAND_NAMES:
-        raise ReservedWordError(f"`{api}` cannot use `{name}` as a name: it is a reserved word, a REPL command")
 
 
 class Stacker(StackerCore):
@@ -303,9 +296,10 @@ class Stacker(StackerCore):
                 file redefines it.
 
         Raises:
+            StackerSyntaxError: ``sfunction_name`` is a literal (``true``, ``null``, ...).
             ReservedWordError: ``sfunction_name`` is one of the REPL's commands.
         """
-        _refuse_reserved(sfunction_name, "register_sfunction")
+        refuse_reserved(sfunction_name, "register_sfunction")
         self.sfunctions[sfunction_name] = {
             "func": sfunction_func,
             "arg_count": arg_count,
@@ -322,9 +316,10 @@ class Stacker(StackerCore):
             macro_body: What it expands.
 
         Raises:
+            StackerSyntaxError: ``macro_name`` is a literal (``true``, ``null``, ...).
             ReservedWordError: ``macro_name`` is one of the REPL's commands.
         """
-        _refuse_reserved(macro_name, "register_macro")
+        refuse_reserved(macro_name, "register_macro")
         self.macros[macro_name] = macro_body
 
     def register_parameter(self, parameter_name: str, parameter_value: object) -> None:
@@ -335,9 +330,10 @@ class Stacker(StackerCore):
             parameter_value: Its value.
 
         Raises:
+            StackerSyntaxError: ``parameter_name`` is a literal (``true``, ``null``, ...).
             ReservedWordError: ``parameter_name`` is one of the REPL's commands.
         """
-        _refuse_reserved(parameter_name, "register_parameter")
+        refuse_reserved(parameter_name, "register_parameter")
         self.variables[parameter_name] = parameter_value
 
     def register_plugin(
@@ -359,9 +355,10 @@ class Stacker(StackerCore):
             desc: Its line in the REPL's help.
 
         Raises:
+            StackerSyntaxError: ``operator_name`` is a literal (``true``, ``null``, ...).
             ReservedWordError: ``operator_name`` is one of the REPL's commands.
         """
-        _refuse_reserved(operator_name, "register_plugin")
+        refuse_reserved(operator_name, "register_plugin")
         if pass_core:
             original_operator_func = operator_func
 

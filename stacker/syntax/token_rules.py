@@ -237,7 +237,7 @@ def refuse_reserved(name: str, word: str, role: str = "a name") -> None:
     """Refuses a reserved name: a literal, or one of the REPL's commands.
 
     The one rule for whatever names something: the language's binding
-    words and argument names.
+    words, argument names, and the host's registrations.
 
     Args:
         name: The name about to be bound.
