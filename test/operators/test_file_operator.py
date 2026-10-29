@@ -1,8 +1,13 @@
 """Tests for file operators (write-to-file, read-from-file, append-to-file, read-lines, file-exists)."""
 
-import unittest
-import tempfile
 import os
+import sys
+import tempfile
+import unittest
+
+import pytest
+
+from stacker.error import StackerError
 from stacker.stacker import Stacker
 
 
@@ -201,6 +206,35 @@ class TestFileOperators(unittest.TestCase):
 
         result = self.stacker.stack[-1]
         self.assertEqual(result, test_content)
+
+
+@pytest.fixture
+def text_that_cannot_be_written():
+    """A value whose text cannot be made: an integer longer than a digit limit the host put back."""
+    if not hasattr(sys, "set_int_max_str_digits"):
+        pytest.skip("the host has no limit on the digits of an integer's text")
+    stacker = Stacker()
+    before = sys.get_int_max_str_digits()
+    sys.set_int_max_str_digits(4300)
+    yield stacker, "2000 !"
+    sys.set_int_max_str_digits(before)
+
+
+def test_write_to_file_leaves_the_file_as_it_was_when_the_text_cannot_be_made(text_that_cannot_be_written, tmp_path):
+    stacker, value = text_that_cannot_be_written
+    path = tmp_path / "keep.txt"
+    path.write_text("kept\n", encoding="utf-8")
+    with pytest.raises((ValueError, StackerError)):
+        stacker.eval(f'{value} "{path}" write-to-file')
+    assert path.read_text(encoding="utf-8") == "kept\n"
+
+
+def test_append_to_file_creates_no_file_when_the_text_cannot_be_made(text_that_cannot_be_written, tmp_path):
+    stacker, value = text_that_cannot_be_written
+    path = tmp_path / "new.txt"
+    with pytest.raises((ValueError, StackerError)):
+        stacker.eval(f'{value} "{path}" append-to-file')
+    assert not path.exists()
 
 
 if __name__ == "__main__":

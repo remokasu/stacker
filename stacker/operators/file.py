@@ -80,9 +80,10 @@ def not_text_error(word: str, filename: str, error: UnicodeDecodeError) -> Stack
 def write_to_file(data: object, filename: object) -> None:
     """Writes ``data`` to a file, as the text `str` gives, replacing what the file held."""
     filename = file_name_argument("write-to-file", filename)
+    text = display_text(data)  # before the file is opened: a value without a text leaves it as it was
     try:
         with open(filename, "w", encoding="utf-8") as f:
-            f.write(display_text(data))
+            f.write(text)
     except OSError as error:
         raise cannot_open_error("write-to-file", filename, error) from error
 
@@ -102,9 +103,10 @@ def read_from_file(filename: object) -> str:
 def append_to_file(data: object, filename: object) -> None:
     """Appends ``data`` to a file, as the text `str` gives."""
     filename = file_name_argument("append-to-file", filename)
+    text = display_text(data)  # before the file is opened, as write_to_file does
     try:
         with open(filename, "a", encoding="utf-8") as f:
-            f.write(display_text(data))
+            f.write(text)
     except OSError as error:
         raise cannot_open_error("append-to-file", filename, error) from error
 
