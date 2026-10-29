@@ -4,6 +4,7 @@ import unittest
 from io import StringIO
 from unittest.mock import patch
 
+from stacker import StreamConsole
 from stacker.stacker import Stacker
 
 
@@ -196,3 +197,52 @@ class TestOperatorsListsEveryCategory(unittest.TestCase):
         for word in ("map", "filter", "reduce", "fold", "zip", "sum", "len", "sorted", "list"):
             self.assertIn(f"  {word}: ", output)
         self.assertIn("Higher-order operators:", output)
+
+
+def test_operators_lists_every_group_word_for_word():
+    out = StringIO()
+    stacker = Stacker(console=StreamConsole(stdout=out))
+    stacker.register_plugin("shout", lambda s: s.upper())
+    stacker.register_operator("dup", lambda x: x, 1, True, "replaced dup")
+    manager = stacker.operator_manager
+
+    def items(descriptions: dict) -> str:
+        return "".join(f"  {name}: {desc}\n" for name, desc in descriptions.items())
+
+    expected = "Regular operators:\n" + items(
+        {**manager.get_regular_descriptions(), **manager.get_priority_descriptions()}
+    )
+    for title, descriptions in (
+        ("Higher-order operators:", manager.get_hof_descriptions()),
+        ("Aggregate operators:", manager.get_aggregate_descriptions()),
+        ("Transform operators:", manager.get_transform_descriptions()),
+        ("Array and dictionary operators:", manager.get_collection_descriptions()),
+        ("Stack operators:", manager.get_stack_descriptions()),
+        ("Settings operators:", manager.get_settings_descriptions()),
+        ("System operators:", manager.get_system_descriptions()),
+    ):
+        expected += f"\n{title}\n" + items(descriptions)
+
+    stacker.eval("operators")
+
+    text = out.getvalue()
+    assert text == expected
+    assert "shout" not in text
+    assert "  dup: replaced dup\n" in text
+    assert [line for line in text.splitlines() if not line.startswith("  ")] == [
+        "Regular operators:",
+        "",
+        "Higher-order operators:",
+        "",
+        "Aggregate operators:",
+        "",
+        "Transform operators:",
+        "",
+        "Array and dictionary operators:",
+        "",
+        "Stack operators:",
+        "",
+        "Settings operators:",
+        "",
+        "System operators:",
+    ]

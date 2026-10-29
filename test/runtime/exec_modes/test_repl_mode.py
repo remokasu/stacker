@@ -1,6 +1,8 @@
 import unittest
 from io import StringIO
 from unittest.mock import patch
+
+from stacker.lib import disp_help
 from stacker.runtime.exec_modes.repl_mode import ReplMode
 from stacker.stacker import Stacker
 
@@ -145,6 +147,109 @@ class TestReplMode(unittest.TestCase):
             self.assertIn("funcs", output)
             self.assertIn("macros", output)
             self.assertIn("operators", output)
+
+
+def _with_listed_words(stacker: Stacker) -> Stacker:
+    """Adds a plugin with a description, one without, and a replaced built-in word."""
+    stacker.register_plugin("hyp", lambda a, b: (a * a + b * b) ** 0.5, desc="Length of the hypotenuse")
+    stacker.register_plugin("shout", lambda s: s.upper())
+    stacker.register_operator("dup", lambda x: x, 1, True, "replaced dup")
+    return stacker
+
+
+def _section(title: str, items: dict, separator: str) -> str:
+    return title + "\n" + "".join(f"  {name}{separator}{desc}\n" for name, desc in items.items())
+
+
+def test_help_lists_every_group_and_the_plugins_word_for_word(capsys):
+    stacker = _with_listed_words(Stacker())
+    manager = stacker.operator_manager
+    assert list(manager.get_stack_descriptions())[-1] == "dup"  # a replaced word moves to the end
+    disp_help()
+    help_text = capsys.readouterr().out
+    expected = help_text + "\n"
+    regular = {**manager.get_regular_descriptions(), **manager.get_priority_descriptions()}
+    expected += _section("Supported operators and functions:", regular, ":\t") + "\n"
+    for title, items in (
+        ("Higher-order operators:", manager.get_hof_descriptions()),
+        ("Aggregate operators:", manager.get_aggregate_descriptions()),
+        ("Transform operators:", manager.get_transform_descriptions()),
+        ("Array and dictionary operators:", manager.get_collection_descriptions()),
+        ("Stack operators:", manager.get_stack_descriptions()),
+        ("Settings operators:", manager.get_settings_descriptions()),
+        ("System operators:", manager.get_system_descriptions()),
+    ):
+        expected += _section(title, items, ":\t") + "\n"
+    expected += _section("Plugin commands:", stacker.get_plugin_descriptions(), ": ")
+
+    ReplMode(stacker)._cmd_help()
+
+    out = capsys.readouterr().out
+    assert out == expected
+    assert "  hyp: Length of the hypotenuse\n" in out
+    assert "  shout: None\n" in out
+    assert "  dup:\treplaced dup\n" in out
+    lists = out[len(help_text) :]
+    assert [line for line in lists.splitlines() if not line.startswith("  ")] == [
+        "",
+        "Supported operators and functions:",
+        "",
+        "Higher-order operators:",
+        "",
+        "Aggregate operators:",
+        "",
+        "Transform operators:",
+        "",
+        "Array and dictionary operators:",
+        "",
+        "Stack operators:",
+        "",
+        "Settings operators:",
+        "",
+        "System operators:",
+        "",
+        "Plugin commands:",
+    ]
+
+
+def test_help_ends_with_the_plugin_heading_when_there_is_no_plugin(capsys):
+    ReplMode(Stacker())._cmd_help()
+    assert capsys.readouterr().out.endswith("\n\nPlugin commands:\n")
+
+
+def test_help_lists_a_plugin_registered_after_the_repl_started(capsys):
+    stacker = Stacker()
+    repl = ReplMode(stacker)
+    stacker.register_plugin("later", lambda: 1, desc="Registered later")
+    repl._cmd_help()
+    assert capsys.readouterr().out.endswith("Plugin commands:\n  later: Registered later\n")
+
+
+def test_the_completer_offers_the_names_known_when_the_repl_starts():
+    stacker = _with_listed_words(Stacker())
+    stacker.eval("{x} {x} :early defun 5 :early-value set {n} {{n}} :early-macro defmacro")
+    repl = ReplMode(stacker)
+    stacker.eval("{x} {x} :defined-after-the-repl-started defun")
+    words = set(repl.completer.words)
+
+    names_known_at_start = (
+        set(repl.repl_commands)
+        | set(stacker.get_all_keys_for_completer())
+        | set(stacker.operator_manager.get_priority_keys())
+        | set(stacker.get_sfuntions_ref())
+        | set(stacker.get_variables_ref().keys())
+        | set(stacker.get_macros_ref())
+    ) - {"defined-after-the-repl-started"}
+    assert words == names_known_at_start
+    assert {
+        "help", "about", "delete_history", "+", "dup", "if", "defun", "times", "mean", "pi",
+        "hyp", "shout", "early", "early-value", "early-macro",
+    } <= words
+    assert "defined-after-the-repl-started" not in words
+    # The settings words and the REPL's display settings are not offered
+    assert "disable_plugin" not in words
+    assert "enable_disp_stack" not in words
+    assert set(repl.get_completer()) == names_known_at_start | {"defined-after-the-repl-started"}
 
 
 if __name__ == "__main__":
