@@ -35,7 +35,8 @@ class ReplMode(ExecutionMode):
         self.disp_stack_mode = True
         self.disp_logo_mode = True
         self.disp_ans_mode = False
-        # REPL-specific command list
+        # The commands the prompt completes; the display settings are not
+        # offered (they are typed once, or kept in ~/.stackerrc)
         self.repl_commands = [
             "help",
             "about",
@@ -96,46 +97,51 @@ class ReplMode(ExecutionMode):
         help, about and delete_history are skipped: they are not settings,
         and would otherwise run on every start.
         """
-        if expression.lower() in REPL_SETTINGS:
+        if expression in REPL_SETTINGS:
             return self._handle_repl_command(expression)
         return super()._run_stackerrc_command(expression)
 
     def _handle_repl_command(self, expression: str) -> bool:  # type: ignore[override]
+        """Runs a line that is one of the REPL's commands.
+
+        A command is its lowercase name alone on the line; spaces around it
+        do not count. The names are reserved words of the language, so no
+        program can define them (``HELP`` is an ordinary name). A new
+        command also goes into ``REPL_COMMAND_NAMES`` (stacker/syntax/token_rules.py).
+
+        Returns:
+            True if the line was a command and ran, False to evaluate it.
         """
-        Handle REPL-specific commands.
-        Returns True if command was handled, False otherwise.
-        A new command also goes into REPL_COMMANDS (execution_mode.py).
-        """
-        expr_lower = expression.lower()
+        command = expression.strip()
 
         # Simple command handlers
-        if expr_lower == "help":
+        if command == "help":
             self._cmd_help()
             return True
-        if expr_lower == "about":
+        if command == "about":
             self._cmd_about()
             return True
-        if expr_lower == "delete_history":
+        if command == "delete_history":
             self._cmd_delete_history()
             return True
 
         # Display mode commands
-        if expr_lower == "enable_disp_stack":
+        if command == "enable_disp_stack":
             self.disp_stack_mode = True
             return True
-        if expr_lower == "disable_disp_stack":
+        if command == "disable_disp_stack":
             self.disp_stack_mode = False
             return True
-        if expr_lower == "enable_disp_logo":
+        if command == "enable_disp_logo":
             self.disp_logo_mode = True
             return True
-        if expr_lower == "disable_disp_logo":
+        if command == "disable_disp_logo":
             self.disp_logo_mode = False
             return True
-        if expr_lower == "enable_disp_ans":
+        if command == "enable_disp_ans":
             self.disp_ans_mode = True
             return True
-        if expr_lower == "disable_disp_ans":
+        if command == "disable_disp_ans":
             self.disp_ans_mode = False
             return True
 

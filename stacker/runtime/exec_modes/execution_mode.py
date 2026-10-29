@@ -8,6 +8,7 @@ from stacker.stacker import Stacker
 from stacker.error import UserError, error_kind, include_location_of
 from stacker.error_formatter import ErrorFormatter
 from stacker.syntax.parser import remove_start_end_quotes
+from stacker.syntax.token_rules import REPL_COMMAND_NAMES
 
 # from stacker.syntax.parser import is_string
 from stacker.engine.display import disp_stack, plain_text
@@ -56,8 +57,9 @@ REPL_SETTINGS = frozenset(
         "disable_disp_ans",
     }
 )
-#: Every command the REPL handles itself (ReplMode._handle_repl_command).
-REPL_COMMANDS = REPL_SETTINGS | {"help", "about", "delete_history"}
+#: Every command the REPL handles itself (ReplMode._handle_repl_command): the
+#: language's reserved words, which no program can name anything after.
+REPL_COMMANDS = REPL_COMMAND_NAMES
 
 
 class ExecutionMode:
@@ -272,6 +274,8 @@ class ExecutionMode:
         The REPL applies the display settings (see ReplMode).
 
         Returns:
-            True if ``expression`` was a REPL command, False to evaluate it.
+            True if ``expression`` was a REPL command (its lowercase name;
+            the rc's expressions have no surrounding spaces), False to
+            evaluate it.
         """
-        return expression.lower() in REPL_COMMANDS
+        return expression in REPL_COMMANDS

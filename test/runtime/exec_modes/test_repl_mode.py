@@ -110,16 +110,16 @@ class TestReplMode(unittest.TestCase):
         self.assertTrue(result)
         self.assertFalse(self.repl_mode.disp_ans_mode)
 
-    def test_handle_repl_command_case_insensitive(self):
-        """Test that REPL commands are case-insensitive."""
+    def test_handle_repl_command_is_lowercase_only(self):
+        """A REPL command is its lowercase name: HELP is an ordinary name."""
         with patch("sys.stdout", new=StringIO()):
-            # Test uppercase
-            result1 = self.repl_mode._handle_repl_command("HELP")
-            self.assertTrue(result1)
+            self.assertFalse(self.repl_mode._handle_repl_command("HELP"))
+            self.assertFalse(self.repl_mode._handle_repl_command("HeLp"))
 
-            # Test mixed case
-            result2 = self.repl_mode._handle_repl_command("HeLp")
-            self.assertTrue(result2)
+    def test_handle_repl_command_ignores_surrounding_spaces(self):
+        with patch("sys.stdout", new=StringIO()):
+            self.assertTrue(self.repl_mode._handle_repl_command("  help  "))
+            self.assertTrue(self.repl_mode._handle_repl_command(" about"))
 
     def test_handle_repl_command_not_a_command(self):
         """Test that non-commands return False."""
@@ -255,6 +255,40 @@ def test_the_completer_offers_a_name_defined_after_the_repl_started():
     stacker.eval("{x} {x} :defined_after_start defun 1 :set_after_start set")
     assert _offered(repl, "defined_after") == {"defined_after_start"}
     assert _offered(repl, "set_after") == {"set_after_start"}
+
+
+def _run_lines(monkeypatch, capsys, lines):
+    """Runs the REPL over ``lines``, then ends it; gives what it printed."""
+    repl = ReplMode(Stacker())
+    remaining = list(lines)
+
+    def fake_input(prompt_text, multiline=False):
+        if not remaining:
+            raise EOFError
+        return remaining.pop(0)
+
+    monkeypatch.setattr(repl, "get_input", fake_input)
+    monkeypatch.setattr(repl, "disp", lambda: None)
+    repl.run()
+    return capsys.readouterr()
+
+
+def test_a_repl_command_after_a_value_is_reported_as_a_repl_command(monkeypatch, capsys):
+    err = _run_lines(monkeypatch, capsys, ["1 help"]).err
+    assert "error: `help` is a REPL command: type it alone at the REPL's prompt" in err
+    assert "[ReservedWordError]" in err
+
+
+def test_a_repl_command_cannot_be_defined_at_the_prompt(monkeypatch, capsys):
+    err = _run_lines(monkeypatch, capsys, ["{x} {x} :help defun"]).err
+    assert "`defun` cannot use `help` as a name: it is a reserved word, a REPL command" in err
+
+
+def test_the_uppercase_name_is_an_ordinary_name_at_the_prompt(monkeypatch, capsys):
+    captured = _run_lines(monkeypatch, capsys, ["HELP", '{} {"mine" echo} :HELP defun', "HELP"])
+    assert "`HELP` is not defined." in captured.err
+    assert "mine" in captured.out
+    assert "Supported operators and functions:" not in captured.out
 
 
 if __name__ == "__main__":

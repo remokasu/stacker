@@ -13,7 +13,7 @@ import pytest
 
 from stacker.stacker import Stacker
 from stacker.runtime.exec_modes import ExecutionMode, ReplMode, ScriptMode, CommandLineMode
-from stacker.runtime.exec_modes.execution_mode import REPL_COMMANDS
+from stacker.runtime.exec_modes.execution_mode import REPL_COMMANDS, REPL_SETTINGS
 
 
 class TestExecutionMode(unittest.TestCase):
@@ -376,6 +376,22 @@ def test_run_stackerrc_shows_the_line_and_a_hint_then_exits_with_status_1(tmp_pa
     assert lines[1] == "  [ZeroDivisionError]"
     assert "2 | 1 0 /" in err
     assert "hint: Cannot divide by zero" in err
+
+def test_the_repl_commands_are_the_reserved_words():
+    from stacker.syntax.token_rules import REPL_COMMAND_NAMES
+
+    assert REPL_COMMANDS == REPL_COMMAND_NAMES
+    assert REPL_COMMANDS - REPL_SETTINGS == {"help", "about", "delete_history"}
+
+
+@pytest.mark.parametrize("mode_class", [ExecutionMode, ReplMode])
+def test_the_rc_takes_only_the_lowercase_commands(mode_class):
+    mode = mode_class(Stacker())
+    with patch("sys.stdout", new=StringIO()):
+        assert mode._run_stackerrc_command("enable_disp_stack") is True
+        assert mode._run_stackerrc_command("ENABLE_DISP_STACK") is False
+        assert mode._run_stackerrc_command("Help") is False
+
 
 if __name__ == "__main__":
     unittest.main()
