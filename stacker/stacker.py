@@ -59,7 +59,11 @@ class Stacker(StackerCore):
         # Set before the prelude loads, so the prelude runs under it too
         self.console: Console = console if console is not None else getattr(parent, "console", DEFAULT_CONSOLE)
         self.trace: list[object] = []
-        self.plugin_descriptions: dict[str, str | None] = {}
+        # Shared with the parent, as the plugin table is: a word that removes a
+        # plugin inside a block removes its description too
+        self.plugin_descriptions: dict[str, str | None] = (
+            getattr(parent, "plugin_descriptions", {}) if parent is not None else {}
+        )
         if parent is None:
             self._prelude["enabled"] = prelude
             if prelude:

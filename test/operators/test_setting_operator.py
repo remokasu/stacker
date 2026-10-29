@@ -139,5 +139,25 @@ def test_disable_all_plugins_leaves_a_copy_alone(with_plugin):
     assert list(twin.eval("3 twice")) == [6]
 
 
+@pytest.mark.parametrize(
+    "code",
+    ['"twice" disable_plugin', '{"twice" disable_plugin} eval', "disable_all_plugins", "{disable_all_plugins} eval"],
+    ids=["disable_plugin", "disable_plugin in a block", "disable_all_plugins", "disable_all_plugins in a block"],
+)
+def test_a_disabled_plugin_is_no_longer_described(code):
+    stacker = Stacker()
+    stacker.register_plugin("twice", lambda x: x * 2, desc="Doubles a number")
+    stacker.eval(code)
+    assert "twice" not in stacker.get_plugin_descriptions()
+
+
+def test_disabling_one_plugin_keeps_the_others_described():
+    stacker = Stacker()
+    stacker.register_plugin("twice", lambda x: x * 2, desc="Doubles a number")
+    stacker.register_plugin("thrice", lambda x: x * 3, desc="Triples a number")
+    stacker.eval('"twice" disable_plugin')
+    assert stacker.get_plugin_descriptions() == {"thrice": "Triples a number"}
+
+
 if __name__ == "__main__":
     unittest.main()

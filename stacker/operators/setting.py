@@ -11,14 +11,17 @@ if TYPE_CHECKING:
 def _disable_plugin(stacker: Stacker, operator_name: str) -> None:
     if operator_name in stacker.plugins:
         del stacker.plugins[operator_name]
+        # A bare StackerCore keeps no descriptions; a Stacker shares them with its cores
+        getattr(stacker, "plugin_descriptions", {}).pop(operator_name, None)
     else:
         print(f"Plugin '{operator_name}' is not registered.", file=console.stdout())
 
 
 def _disable_all_plugins(stacker: Stacker) -> None:
     # Emptied in place: every child core (a block, a function body, an
-    # included file) shares this table with the root
+    # included file) shares these tables with the root
     stacker.plugins.clear()
+    getattr(stacker, "plugin_descriptions", {}).clear()
 
 
 settings_operators = {
