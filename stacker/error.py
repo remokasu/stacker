@@ -248,6 +248,16 @@ class UndefinedVariableError(StackerError):
         super().__init__(message)
 
 
+class ReservedWordError(StackerSyntaxError):
+    """Raised when a program names something after a reserved word, or runs one.
+
+    The reserved words are the REPL's commands (``help``, ``about``, the
+    display settings): they work only typed alone at the REPL's prompt.
+    Naming something after one fails when the naming word runs; writing one
+    in code fails when that code runs, as an undefined name does.
+    """
+
+
 class UndefinedSymbolError(StackerError):
     """Undefined symbol error"""
 

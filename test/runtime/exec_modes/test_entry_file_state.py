@@ -11,6 +11,7 @@ from __future__ import annotations
 import pytest
 
 from stacker.error import (
+    ReservedWordError,
     UndefinedSymbolError,
     UnterminatedTokenError,
     include_location_of,
@@ -88,10 +89,10 @@ def test_a_function_the_rc_defined_keeps_the_rc_as_its_file(mode, rc):
     assert calc.stack[-1] == str(rc.resolve())
 
 
-def test_a_repl_command_line_is_a_word_outside_the_rc(mode, tmp_path):
+def test_a_repl_command_line_is_an_error_outside_the_rc(mode, tmp_path):
     script = tmp_path / "s.stk"
     script.write_text("help\n", encoding="utf-8")
-    with pytest.raises(UndefinedSymbolError):
+    with pytest.raises(ReservedWordError):
         mode.execute_stacker_dotfile(script)
 
 

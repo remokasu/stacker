@@ -12,6 +12,7 @@ from stacker.constant import constants
 from stacker.error import (
     MacroExpansionError,
     NoValueProducedError,
+    ReservedWordError,
     ResultCountError,
     StackUnderflowError,
     StackerError,
@@ -36,6 +37,7 @@ from stacker.engine.data_type import Array, String, Symbol, stack_data, VOID
 from stacker.syntax.token_rules import (
     KEYWORD_LITERALS,
     OLD_SYMBOL_PREFIX,
+    REPL_COMMAND_NAMES,
     SYMBOL_PREFIX,
     cached_literal_eval,
     decode_string_token,
@@ -85,6 +87,18 @@ def _empty_stack_messages() -> frozenset[str]:
 
 
 _EMPTY_STACK_MESSAGES = _empty_stack_messages()
+
+
+def _name_not_found(name: str) -> StackerError:
+    """The error for a name that is bound to nothing.
+
+    A reserved word is never bound (the REPL's commands; see
+    ``REPL_COMMAND_NAMES``), so it is not called undefined: the error says
+    where it works instead.
+    """
+    if name in REPL_COMMAND_NAMES:
+        return ReservedWordError(f"`{name}` is a REPL command: type it alone at the REPL's prompt")
+    return UndefinedSymbolError(name)
 
 
 def _name_in(value: object) -> str | None:
@@ -775,7 +789,7 @@ class StackerCore:
                     # other name is undefined, and that is an error here.
                     evaluated = cached_literal_eval(token)
                     if isinstance(evaluated, str):
-                        raise UndefinedSymbolError(token)
+                        raise _name_not_found(token)
                     stack.append(evaluated)
             elif kind == K_LIST:
                 if payload is None:
@@ -812,6 +826,7 @@ class StackerCore:
             StackerSyntaxError: ``name`` is a word, not a variable: a list
                 literal holds values only, and the message says how to build
                 the list on the stack instead.
+            ReservedWordError: ``name`` is one of the REPL's commands.
             UndefinedSymbolError: ``name`` is nothing at all.
         """
         value = self.variables.get(name, _MISSING)
@@ -824,7 +839,7 @@ class StackerCore:
             or name in self.operator_manager.built_in_operators
         ):
             raise StackerSyntaxError(word_in_list_literal_message(name))
-        raise UndefinedSymbolError(name)
+        raise _name_not_found(name)
 
     def _execute(self, token: str, stack: stack_data[object]) -> None:
         """Applies the word ``token`` to the stack, in place.
@@ -1812,6 +1827,7 @@ class StackerCore:
             The bare name, the key used in the variable scopes.
 
         Raises:
+            ReservedWordError: If the name is one of the REPL's commands.
             StackerSyntaxError: If ``symbol`` cannot denote a name.
         """
         name = _name_in(symbol)
@@ -1820,6 +1836,8 @@ class StackerCore:
                 # `:null` is a symbol (the name of the literal), but the bare word
                 # is always the value, so a variable of that name could never be read
                 raise StackerSyntaxError(f"`{word}` cannot bind `{name}`: it is a literal, not a variable")
+            if name in REPL_COMMAND_NAMES:
+                raise ReservedWordError(f"`{word}` cannot use `{name}` as a name: it is a reserved word, a REPL command")
             return name
         # A one-token block that is not a name: pull a string literal out of
         # it (`{"x"}`) so the message below says it is a string, not a block.
@@ -1852,6 +1870,7 @@ class StackerCore:
             The argument names in order.
 
         Raises:
+            ReservedWordError: If an argument is named after one of the REPL's commands.
             StackerSyntaxError: If ``fargs`` is not a valid argument list.
         """
         if not isinstance(fargs, StackerCore):
@@ -1863,6 +1882,10 @@ class StackerCore:
         for token in fargs.tokens:
             if not is_bare_name(token):
                 raise StackerSyntaxError(f"`{word}` argument names must be bare names, got {token}")
+            if token in REPL_COMMAND_NAMES:
+                raise ReservedWordError(
+                    f"`{word}` cannot use `{token}` as an argument name: it is a reserved word, a REPL command"
+                )
             names.append(token)
         if len(set(names)) != len(names):
             raise StackerSyntaxError(f"`{word}` argument names must be unique: {{{' '.join(names)}}}")
@@ -1932,10 +1955,10 @@ class StackerCore:
         raise StackerTypeError(self._function_spec_message(word, spec))
 
     def _lookup_name(self, name: str) -> object:
-        """Returns the value bound to ``name``, or raises ``UndefinedSymbolError``."""
+        """Returns the value bound to ``name``; a name bound to nothing raises ``_name_not_found``'s error."""
         value = self.variables.get(name, _MISSING)
         if value is _MISSING:
-            raise UndefinedSymbolError(name)
+            raise _name_not_found(name)
         return value
 
     def _block_token_value(self, token: object) -> object:

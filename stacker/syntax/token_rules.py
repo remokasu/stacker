@@ -214,6 +214,24 @@ KEYWORD_LITERALS: dict[str, object] = {
     "None": None,
 }
 
+#: The REPL's commands. They are reserved words: no program can name
+#: anything after them, and they work only typed alone at the REPL's
+#: prompt; written anywhere else they are an error. Lowercase only: names
+#: are case-sensitive, so ``HELP`` is an ordinary name.
+REPL_COMMAND_NAMES: frozenset[str] = frozenset(
+    {
+        "help",
+        "about",
+        "delete_history",
+        "enable_disp_stack",
+        "disable_disp_stack",
+        "enable_disp_logo",
+        "disable_disp_logo",
+        "enable_disp_ans",
+        "disable_disp_ans",
+    }
+)
+
 #: Signed spellings of the two special floats; `inf` and `nan` themselves are constants (variables)
 SIGNED_SPECIAL_FLOATS: dict[str, float] = {
     "-inf": float("-inf"),
