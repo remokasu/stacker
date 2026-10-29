@@ -181,6 +181,20 @@ special_operators = {
 }
 
 
+#: The groups the word lists show (the `operators` word, the REPL's help),
+#: in order: a key, the heading, and the tables whose words the group holds.
+OPERATOR_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("regular", "Regular operators:", ("regular", "priority")),
+    ("hof", "Higher-order operators:", ("hof",)),
+    ("aggregate", "Aggregate operators:", ("aggregate",)),
+    ("transform", "Transform operators:", ("transform",)),
+    ("collection", "Array and dictionary operators:", ("collection",)),
+    ("stack", "Stack operators:", ("stack",)),
+    ("settings", "Settings operators:", ("settings",)),
+    ("system", "System operators:", ("system",)),
+)
+
+
 # Category lookup order for the unified dispatch table. Must mirror the
 # elif order of the dispatch chain in StackerCore._execute.
 _DISPATCH_ORDER = (
@@ -505,6 +519,23 @@ class OperatorManager:
         descriptions.update(self.get_regular_descriptions())
         descriptions.update(self.get_priority_descriptions())
         return descriptions
+
+    def get_groups(self) -> list[tuple[str, str, dict[str, object]]]:
+        """The words of every group the word lists show, read from the live tables.
+
+        Returns:
+            One ``(key, heading, {name: description})`` per group, in the
+            order of ``OPERATOR_GROUPS``; a group of several tables has
+            their words table by table, each in its table's order.
+        """
+        groups: list[tuple[str, str, dict[str, object]]] = []
+        for key, heading, tables in OPERATOR_GROUPS:
+            descriptions: dict[str, object] = {}
+            for table in tables:
+                for name, definition in self.operators[table].items():
+                    descriptions[name] = definition["desc"]
+            groups.append((key, heading, descriptions))
+        return groups
 
     ############################
     # Register

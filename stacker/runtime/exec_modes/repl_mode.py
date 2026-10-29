@@ -24,6 +24,10 @@ from stacker.version import __version__
 from stacker.syntax.lexer import analyze_terminals
 
 
+#: The heading help gives the group `operators` calls "Regular operators:"
+HELP_REGULAR_HEADING = "Supported operators and functions:"
+
+
 class ReplMode(ExecutionMode):
     def __init__(self, rpn_calculator: Stacker) -> None:
         super().__init__(rpn_calculator)
@@ -68,58 +72,14 @@ class ReplMode(ExecutionMode):
         """Handle 'help' command."""
         disp_help()
         print("")
-        print("Supported operators and functions:")
-        regular_operator_descriptions = {}
-        regular_operator_descriptions.update(
-            self.rpn_calculator.operator_manager.get_regular_descriptions()
-        )
-        regular_operator_descriptions.update(
-            self.rpn_calculator.operator_manager.get_priority_descriptions()
-        )
-        for (
-            operator_name,
-            operator_descriptions,
-        ) in regular_operator_descriptions.items():
-            print(f"  {operator_name}:\t{operator_descriptions}")
-        print("")
-        manager = self.rpn_calculator.operator_manager
-        for title, descriptions in (
-            ("Higher-order operators:", manager.get_hof_descriptions()),
-            ("Aggregate operators:", manager.get_aggregate_descriptions()),
-            ("Transform operators:", manager.get_transform_descriptions()),
-            ("Array and dictionary operators:", manager.get_collection_descriptions()),
-        ):
-            print(title)
-            for operator_name, operator_descriptions in descriptions.items():
-                print(f"  {operator_name}:\t{operator_descriptions}")
-            print()
-        print("Stack operators:")
-        for (
-            operator_name,
-            operator_descriptions,
-        ) in self.rpn_calculator.operator_manager.get_stack_descriptions().items():
-            print(f"  {operator_name}:\t{operator_descriptions}")
-        print("")
-        print("Settings operators:")
-        for (
-            operator_name,
-            operator_descriptions,
-        ) in self.rpn_calculator.operator_manager.get_settings_descriptions().items():
-            print(f"  {operator_name}:\t{operator_descriptions}")
-        print("")
-        print("System operators:")
-        for (
-            operator_name,
-            operator_descriptions,
-        ) in self.rpn_calculator.operator_manager.get_system_descriptions().items():
-            print(f"  {operator_name}:\t{operator_descriptions}")
-        print("")
+        for key, heading, descriptions in self.rpn_calculator.get_operator_groups():
+            print(HELP_REGULAR_HEADING if key == "regular" else heading)
+            for name, desc in descriptions.items():
+                print(f"  {name}:\t{desc}")
+            print("")
         print("Plugin commands:")
-        for (
-            plugin_name,
-            plugin_descriptions,
-        ) in self.rpn_calculator.plugin_descriptions.items():
-            print(f"  {plugin_name}: {plugin_descriptions}")
+        for name, desc in self.rpn_calculator.get_plugin_descriptions().items():
+            print(f"  {name}: {desc}")
 
     def _cmd_about(self) -> None:
         """Handle 'about' command."""

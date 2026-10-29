@@ -435,6 +435,21 @@ class Stacker(StackerCore):
             )
         )
 
+    def get_operator_groups(self) -> list[tuple[str, str, dict[str, object]]]:
+        """The built-in words with their descriptions, grouped as `operators` lists them.
+
+        Built when called, so a word replaced with ``register_operator`` is
+        listed with its new description, at the end of its group. Plugin
+        words are not among them: ``get_plugin_descriptions`` lists those.
+
+        Returns:
+            One ``(key, heading, {name: description})`` per group, in the
+            order `operators` shows them: ``regular`` (the regular and the
+            priority words), ``hof``, ``aggregate``, ``transform``,
+            ``collection``, ``stack``, ``settings`` and ``system``.
+        """
+        return self.operator_manager.get_groups()
+
     def get_plugin_descriptions(self) -> dict[str, str | None]:
         return self.plugin_descriptions
 

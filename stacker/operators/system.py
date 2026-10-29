@@ -112,34 +112,11 @@ def _operators(core: StackerCore) -> None:
           ...
     """
     out = console.stdout()
-    print("Regular operators:", file=out)
-    regular_ops = {}
-    regular_ops.update(core.operator_manager.get_regular_descriptions())
-    regular_ops.update(core.operator_manager.get_priority_descriptions())
-    for name, desc in regular_ops.items():
-        print(f"  {name}: {desc}", file=out)
-
-    for title, descriptions in (
-        ("Higher-order operators:", core.operator_manager.get_hof_descriptions()),
-        ("Aggregate operators:", core.operator_manager.get_aggregate_descriptions()),
-        ("Transform operators:", core.operator_manager.get_transform_descriptions()),
-        ("Array and dictionary operators:", core.operator_manager.get_collection_descriptions()),
-    ):
-        print(f"\n{title}", file=out)
+    for index, (_, heading, descriptions) in enumerate(core.operator_manager.get_groups()):
+        # A blank line between groups, none before the first
+        print(heading if index == 0 else f"\n{heading}", file=out)
         for name, desc in descriptions.items():
             print(f"  {name}: {desc}", file=out)
-
-    print("\nStack operators:", file=out)
-    for name, desc in core.operator_manager.get_stack_descriptions().items():
-        print(f"  {name}: {desc}", file=out)
-
-    print("\nSettings operators:", file=out)
-    for name, desc in core.operator_manager.get_settings_descriptions().items():
-        print(f"  {name}: {desc}", file=out)
-
-    print("\nSystem operators:", file=out)
-    for name, desc in core.operator_manager.get_system_descriptions().items():
-        print(f"  {name}: {desc}", file=out)
 
 
 # Export operators
