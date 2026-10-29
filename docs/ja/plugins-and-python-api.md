@@ -248,6 +248,35 @@ tool.stk deque([10])
 
 ファイルが閉じていない文字列・リスト・ブロックで終わるときは、その前までの式を走らせてから `UnterminatedTokenError` が出ます。
 
+止まった場所は `location` で読めます。`(ファイル, 行, その行の文字列)` の組です。エラーで止まったときはその式が始まる行、閉じていない文字列・リスト・ブロックで止まったときはそれが始まった行、最後まで走ったときは最後の式の行を指します。何も走らせていなければ `(None, None, None)` です。
+
+`broken.stk` が次の内容だとします。
+
+```text
+1 drop
+{
+  nope
+} eval
+```
+
+```python
+from pathlib import Path
+from stacker import Stacker
+
+s = Stacker()
+try:
+    s.run_file("broken.stk")
+except Exception as error:
+    file, line, text = s.location
+    print(type(error).__name__, Path(file).name, line, text)
+```
+
+```text
+UndefinedSymbolError broken.stk 2 {
+```
+
+`include` したファイルの中でエラーが起きたときは、`location` は `include` を書いた行を指します。`restore_location=True` で走らせたときは、`location` も走らせる前に戻ります。
+
 ### 出力と入力の行き先
 
 `echo`・`print`・`disp`・`vars` などの出力と、`read`・`read-line`・`read-stdin` などの入力は、既定では Python の `sys.stdout`・`sys.stderr`・`sys.stdin` を、語が動いた時点で使います。`Stacker()` を作ったあとで `sys.stdout` を差し替えても（`contextlib.redirect_stdout` など）、その差し替え先に書きます。
@@ -314,6 +343,7 @@ exit code 3
 | 警告を `WARNING:stacker:...` の形で標準エラーに出す | `Stacker()` を作る前に `logging.basicConfig(level=logging.INFO)` |
 | 再帰の上限を設定する | 下の「再帰の上限」を参照 |
 | スクリプトをメインのスクリプトとして走らせる | `run_file(path)` |
+| スクリプトの後ろの引数を、`args` の語が返す文字列のリストにする | `s.arguments = ["in.txt", "3"]` |
 
 ### プラグインを Python から登録する
 
@@ -339,6 +369,25 @@ print(s.eval("[1 2 3] {triple} map"))
 deque([5.0])
 {'hypot': 'Length of the hypotenuse', 'shout': None, 'stack-summary': None}
 deque([[3, 6, 9]])
+```
+
+### 語の一覧
+
+`get_operator_groups()` は、組み込みの語を `operators` と同じ群・同じ順で返します。群ごとに `(キー, 見出し, {語: 説明})` の組です。呼ぶたびに作り直すので、`register_operator` で置き換えた語は新しい説明で、その群の最後に並びます。プラグインの語は入りません。プラグインの説明は `get_plugin_descriptions()` で読めます。
+
+```python
+from stacker import Stacker
+
+s = Stacker()
+groups = s.get_operator_groups()
+print([key for key, heading, words in groups])
+stack = {key: words for key, heading, words in groups}["stack"]
+print(stack["swap"])
+```
+
+```text
+['regular', 'hof', 'aggregate', 'transform', 'collection', 'stack', 'settings', 'system']
+Swaps the top two elements of the stack.
 ```
 
 ### 整数の桁数

@@ -1,5 +1,12 @@
 # CHANGE LOG
 
+## [1.27.0] - 2026-10-29
+
+### Added
+
+- **`Stacker.location`**: the file, the line and that line's text the interpreter is on, so a host can tell where `run_file` stopped: the line of the expression that failed, or the line an unterminated construct started on. Example: `file, line, text = s.location`. The command line reads a failing script's line through it, and reports it as before
+- **`Stacker.get_operator_groups()`**: the built-in words with their descriptions, in the groups and the order `operators` lists them, as `(key, heading, words)`; a word replaced with `register_operator` is listed with its new description. `operators` and the REPL's `help` are built from it and print what they printed before
+
 ## [1.26.2] - 2026-10-29
 
 ### Fixed
