@@ -1,5 +1,11 @@
 # CHANGE LOG
 
+## [1.26.1] - 2026-10-29
+
+### Fixed
+
+- `disable_all_plugins` turned no plugin off when it ran inside a block, a function body, a branch of `ifelse` or an included file, and a function or a block made before it ran could still call the plugins. It replaced the plugin table of the part of the program it ran in with a new empty one instead of emptying the table the whole program shares. It now empties the shared table, as `disable_plugin` already did for one plugin, so `{} {disable_all_plugins} :plugins-off defun plugins-off` turns every plugin off
+
 ## [1.26.0] - 2026-10-29
 
 ### Added
