@@ -128,3 +128,13 @@ def test_a_script_given_by_a_relative_path_is_reported_by_its_absolute_path(
     assert capsys.readouterr().err.startswith(
         f"{directory}/main.stk:2: error: `foo` is not defined.\n"
     )
+
+
+def test_a_script_that_changes_directory_is_reported_by_its_own_path(tmp_path, capsys, monkeypatch):
+    directory = tmp_path.resolve()
+    (directory / "sub").mkdir()
+    (directory / "main.stk").write_text('"sub" cd\n1 2 +\nfoo\n', encoding="utf-8")
+    monkeypatch.chdir(directory)
+    with pytest.raises(SystemExit):
+        ScriptMode(Stacker()).run("main.stk")
+    assert capsys.readouterr().err.startswith(f"{directory}/main.stk:3: error: `foo` is not defined.\n")

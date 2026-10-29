@@ -19,6 +19,9 @@ class ScriptMode(ExecutionMode):
         super().__init__(rpn_calculator)
 
     def run(self, file_path: str) -> None:
+        # Resolved before the script runs: a script that changes directory
+        # is still reported by its own path
+        filename = str(Path(file_path).resolve())
         try:
             path = Path(file_path)
             if not path.is_file() or not path.suffix == script_extension_name:
@@ -34,9 +37,6 @@ class ScriptMode(ExecutionMode):
             message = str(e)
 
             # Get line number and source line from tracked information
-            # The file is named from the path given, resolved now (not from
-            # ``location``, whose file was resolved before the script ran)
-            filename = str(Path(file_path).resolve())
             _, line_number, source_line = self.rpn_calculator.location
             frames: list[str] = []
             # An error inside an included file is reported at its own line
