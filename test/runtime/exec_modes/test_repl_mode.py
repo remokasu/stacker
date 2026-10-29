@@ -2,6 +2,9 @@ import unittest
 from io import StringIO
 from unittest.mock import patch
 
+from prompt_toolkit.completion import CompleteEvent
+from prompt_toolkit.document import Document
+
 from stacker.lib import disp_help
 from stacker.runtime.exec_modes.repl_mode import ReplMode
 from stacker.stacker import Stacker
@@ -225,31 +228,33 @@ def test_help_lists_a_plugin_registered_after_the_repl_started(capsys):
     assert capsys.readouterr().out.endswith("Plugin commands:\n  later: Registered later\n")
 
 
-def test_the_completer_offers_the_names_known_when_the_repl_starts():
+def test_the_completer_offers_every_name_the_interpreter_knows():
     stacker = _with_listed_words(Stacker())
     stacker.eval("{x} {x} :early defun 5 :early-value set {n} {{n}} :early-macro defmacro")
     repl = ReplMode(stacker)
-    stacker.eval("{x} {x} :defined-after-the-repl-started defun")
-    words = set(repl.completer.words)
+    words = _offered(repl, "")
 
-    names_known_at_start = (
-        set(repl.repl_commands)
-        | set(stacker.get_all_keys_for_completer())
-        | set(stacker.operator_manager.get_priority_keys())
-        | set(stacker.get_sfuntions_ref())
-        | set(stacker.get_variables_ref().keys())
-        | set(stacker.get_macros_ref())
-    ) - {"defined-after-the-repl-started"}
-    assert words == names_known_at_start
+    assert words == set(repl.repl_commands) | set(stacker.get_all_keys_for_completer())
     assert {
         "help", "about", "delete_history", "+", "dup", "if", "defun", "times", "mean", "pi",
         "hyp", "shout", "early", "early-value", "early-macro",
     } <= words
-    assert "defined-after-the-repl-started" not in words
     # The settings words and the REPL's display settings are not offered
     assert "disable_plugin" not in words
     assert "enable_disp_stack" not in words
-    assert set(repl.get_completer()) == names_known_at_start | {"defined-after-the-repl-started"}
+
+
+def _offered(repl: ReplMode, text: str) -> set[str]:
+    """The words the REPL's prompt offers to complete ``text``."""
+    return {completion.text for completion in repl.completer.get_completions(Document(text), CompleteEvent())}
+
+
+def test_the_completer_offers_a_name_defined_after_the_repl_started():
+    stacker = Stacker()
+    repl = ReplMode(stacker)
+    stacker.eval("{x} {x} :defined_after_start defun 1 :set_after_start set")
+    assert _offered(repl, "defined_after") == {"defined_after_start"}
+    assert _offered(repl, "set_after") == {"set_after_start"}
 
 
 if __name__ == "__main__":

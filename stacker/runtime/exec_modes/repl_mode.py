@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from stacker.stacker import Stacker
 
 from prompt_toolkit import prompt
-from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.completion import DynamicCompleter, WordCompleter
 from prompt_toolkit.history import FileHistory
 from stacker.runtime.exec_modes.error import create_error_message
 from stacker.runtime.exec_modes.execution_mode import REPL_SETTINGS, ExecutionMode
@@ -41,8 +41,9 @@ class ReplMode(ExecutionMode):
             "about",
             "delete_history",
         ]
-        # Initialize completer
-        self.completer = WordCompleter(self.get_completer())
+        # The words are gathered again each time the prompt completes, so a
+        # name defined since the REPL started is offered too
+        self.completer = DynamicCompleter(lambda: WordCompleter(self.get_completer()))
 
     def get_completer(self) -> list[str]:
         """The REPL's commands and every name the interpreter knows, for completion."""
@@ -50,7 +51,7 @@ class ReplMode(ExecutionMode):
         return list(set(words))
 
     def update_completer(self) -> None:
-        self.completer = WordCompleter(self.get_completer())
+        """Does nothing: the completer gathers the words anew each time it completes."""
 
     def get_input(self, prompt_text: str, multiline: bool) -> str:
         try:
