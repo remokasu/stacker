@@ -1,5 +1,14 @@
 # CHANGE LOG
 
+## [1.27.2] - 2026-10-29
+
+### Fixed
+
+- Errors were colored when standard output was a terminal, whatever standard error was: `stacker script.stk 2> errors.txt` typed at a terminal wrote color codes into the file, and an error shown on a terminal while the output went to a file had none. Colors now follow standard error, where the errors are written
+- `write-to-file` emptied the file, and `append-to-file` created a missing one, when the value could not be turned into text: they opened the file first. The text is now made before the file is opened, so the file is left as it was
+- `disable_plugin` and `disable_all_plugins` left the plugins' descriptions behind, so the REPL's `help` still listed the plugins they had turned off. They remove the descriptions too now, also when they run inside a block, a function body or an included file
+- The REPL completed only the names it knew when it started: a function, a variable or a macro defined at the prompt was not offered. It now offers every name it knows when it completes
+
 ## [1.27.1] - 2026-10-29
 
 ### Fixed
