@@ -403,13 +403,6 @@ class StackerCore:
         self.arguments: list[str] = []
         # The absolute path of the script the command line ran (`main-script-path`); set by script mode
         self.main_script: str | None = None
-        # Integers have no size limit, so neither has their text: the host's
-        # limit on digits (a defence for tools that read numbers from outside)
-        # would stop `2000 !` from being shown, written or read back. This is
-        # the one process-wide setting the engine makes
-        if hasattr(sys, "set_int_max_str_digits"):
-            sys.set_int_max_str_digits(0)
-
         # Macro expansion state: set only on the throwaway core that runs a
         # macro body. `_interp_scope` is the expansion scope whose own
         # bindings get interpolated into block literals; `_interp_name` is
@@ -440,6 +433,15 @@ class StackerCore:
 
         if expression is not None and self.parent is None:
             raise NotImplementedError
+
+        # Integers have no size limit, so neither has their text: the host's
+        # limit on digits (a defence for tools that read numbers from outside)
+        # would stop `2000 !` from being shown, written or read back. This is
+        # the one process-wide setting the engine makes, and it is made once,
+        # when an interpreter is made: a limit the host puts back afterwards
+        # stays while the interpreter runs
+        if hasattr(sys, "set_int_max_str_digits"):
+            sys.set_int_max_str_digits(0)
 
         self.operator_manager: OperatorManager = OperatorManager()
         # Use ScopedVariables for efficient variable scoping
