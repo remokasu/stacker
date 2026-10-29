@@ -138,7 +138,7 @@ class Stacker(StackerCore):
             OSError: The file cannot be opened (for example it does not
                 exist); the same holds.
             UnterminatedTokenError: The file ends inside an open construct;
-                ``current_line`` names the line it started on. The
+                ``location`` names the line it started on. The
                 expressions before it have run.
             StackerSyntaxError: The file has a `break` outside a loop.
         """
@@ -342,6 +342,31 @@ class Stacker(StackerCore):
     # ========================
     # Getter
     # ========================
+
+    @property
+    def location(self) -> tuple[str | None, int | None, str | None]:
+        """Where the interpreter is: the file, the line and that line's text.
+
+        After ``run_file`` fails this is where the file stopped: the line of
+        the expression that raised, or the line an unterminated construct
+        started on. After it succeeds, the line of its last expression.
+        A file run with ``restore_location`` puts back the location it
+        found, whether it succeeds or fails; its error carries the file's
+        position instead, as an error raised inside an included file does
+        (``stacker.error.include_location_of``). Expressions evaluated
+        outside a file (the REPL, ``eval``) leave the location as it is.
+
+        Read it on the interpreter the host made: the cores it makes for
+        blocks, functions and included files keep their own copy.
+
+        Returns:
+            ``(file, line, source_line)``: the absolute path of the file
+            being run or last run, None when no file has run (the REPL,
+            ``eval``); the line of the expression, None before any; and
+            the text of that line, None when the line is not known.
+        """
+        line = self.current_line
+        return self.current_file, line, None if line is None else self.source_lines.get(line)
 
     def get_stack_ref(self) -> stack_data[object]:
         return self.stack

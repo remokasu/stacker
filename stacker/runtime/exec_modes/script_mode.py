@@ -34,11 +34,10 @@ class ScriptMode(ExecutionMode):
             message = str(e)
 
             # Get line number and source line from tracked information
+            # The file is named from the path given, resolved now (not from
+            # ``location``, whose file was resolved before the script ran)
             filename = str(Path(file_path).resolve())
-            line_number = self.rpn_calculator.current_line
-            source_line = None
-            if line_number is not None and line_number in self.rpn_calculator.source_lines:
-                source_line = self.rpn_calculator.source_lines[line_number]
+            _, line_number, source_line = self.rpn_calculator.location
             frames: list[str] = []
             # An error inside an included file is reported at its own line
             location = self._error_location(e)

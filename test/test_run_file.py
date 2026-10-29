@@ -221,3 +221,54 @@ class TestExpressionsOf:
         with pytest.raises(UnterminatedTokenError):
             next(expressions)
         assert lines == [1, 2]
+
+
+class TestLocation:
+    """``Stacker.location``: the file, line and line text the interpreter is on."""
+
+    def test_is_empty_before_anything_ran(self, stacker):
+        assert stacker.location == (None, None, None)
+
+    def test_names_the_last_expression_after_a_script_ran(self, stacker, tmp_path):
+        script = _write(tmp_path, "s.stk", "1\n\n2 drop\n")
+        stacker.run_file(script)
+        assert stacker.location == (str(script.resolve()), 3, "2 drop")
+
+    def test_names_the_line_a_script_failed_on(self, stacker, tmp_path):
+        script = _write(tmp_path, "s.stk", "1\n{\n  foo\n} eval\n")
+        with pytest.raises(UndefinedSymbolError):
+            stacker.run_file(script)
+        assert stacker.location == (str(script.resolve()), 2, "{")
+
+    def test_names_the_line_an_unterminated_construct_started_on(self, stacker, tmp_path):
+        script = _write(tmp_path, "s.stk", '"a" drop\n{1 2\n3\n')
+        with pytest.raises(UnterminatedTokenError):
+            stacker.run_file(script)
+        assert stacker.location == (str(script.resolve()), 2, "{1 2")
+
+    def test_is_put_back_when_the_location_is_restored(self, stacker, tmp_path):
+        first = _write(tmp_path, "first.stk", "1 drop\n2 drop\n")
+        rc = _write(tmp_path, "rc.stk", "3 drop\n")
+        stacker.run_file(first)
+        stacker.run_file(rc, main=False, restore_location=True)
+        assert stacker.location == (str(first.resolve()), 2, "2 drop")
+
+    def test_is_put_back_when_a_file_run_with_the_location_restored_fails(self, stacker, tmp_path):
+        first = _write(tmp_path, "first.stk", "1 drop\n2 drop\n")
+        rc = _write(tmp_path, "rc.stk", "3 drop\nfoo\n")
+        stacker.run_file(first)
+        with pytest.raises(UndefinedSymbolError):
+            stacker.run_file(rc, main=False, restore_location=True)
+        assert stacker.location == (str(first.resolve()), 2, "2 drop")
+
+    def test_names_the_including_line_when_an_included_file_fails(self, stacker, tmp_path):
+        _write(tmp_path, "inc.stk", "1 drop\nbar\n")
+        script = _write(tmp_path, "main.stk", '1 drop\n"inc.stk" include\n')
+        with pytest.raises(UndefinedSymbolError) as info:
+            stacker.run_file(script)
+        assert stacker.location == (str(script.resolve()), 2, '"inc.stk" include')
+        assert include_location_of(info.value)[0] == (str((tmp_path / "inc.stk").resolve()), 2, "bar")
+
+    def test_cannot_be_assigned(self, stacker):
+        with pytest.raises(AttributeError):
+            stacker.location = ("x", 1, "y")
