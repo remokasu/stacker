@@ -1,5 +1,15 @@
 # CHANGE LOG
 
+## [1.28.1] - 2026-10-30
+
+### Fixed
+
+- `register_sfunction`, `register_macro`, `register_parameter` and `register_plugin` accepted `true`, `false`, `null`, `True`, `False` and `None` as names, and what they registered could never be read: a program always reads these as values. They raise the `StackerSyntaxError` that `set` raises now, naming the registration (`` `register_parameter` cannot bind `true`: it is a literal, not a variable ``)
+
+### Changed
+
+- Removed the module `stacker.reserved`, which held one constant that nothing read
+
 ## [1.28.0] - 2026-10-30
 
 ### Breaking Changes
