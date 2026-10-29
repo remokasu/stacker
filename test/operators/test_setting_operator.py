@@ -3,6 +3,10 @@
 import unittest
 from io import StringIO
 from unittest.mock import patch
+
+import pytest
+
+from stacker.error import UndefinedSymbolError
 from stacker.stacker import Stacker
 
 
@@ -74,6 +78,65 @@ class TestSettingsOperators(unittest.TestCase):
 
         # Stack should be unchanged
         self.assertEqual(list(self.stacker.stack), initial_stack)
+
+
+@pytest.fixture
+def with_plugin() -> Stacker:
+    """An interpreter with one plugin word, `twice`."""
+    stacker = Stacker()
+    stacker.register_plugin("twice", lambda x: x * 2)
+    return stacker
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "disable_all_plugins",
+        "{disable_all_plugins} eval",
+        "{} {disable_all_plugins} :plugins-off defun plugins-off",
+        "true {disable_all_plugins} {} ifelse",
+    ],
+    ids=["top level", "block", "function body", "if branch"],
+)
+def test_disable_all_plugins_takes_effect_wherever_it_is_written(with_plugin, code):
+    with_plugin.eval(code)
+    with pytest.raises(UndefinedSymbolError):
+        with_plugin.eval("3 twice")
+
+
+def test_disable_all_plugins_takes_effect_from_an_included_file(with_plugin, tmp_path):
+    script = tmp_path / "plugins_off.stk"
+    script.write_text("disable_all_plugins\n")
+    with_plugin.eval(f'"{script}" include')
+    with pytest.raises(UndefinedSymbolError):
+        with_plugin.eval("3 twice")
+
+
+@pytest.mark.parametrize(
+    "definition, call",
+    [("{} {3 twice} :f defun", "f"), ("{3 twice} :blk set", "blk eval")],
+    ids=["function", "stored block"],
+)
+def test_disable_all_plugins_reaches_code_defined_before_it(
+    with_plugin, definition, call
+):
+    with_plugin.eval(definition)
+    with_plugin.eval("disable_all_plugins")
+    with pytest.raises(UndefinedSymbolError):
+        with_plugin.eval(call)
+
+
+def test_disable_all_plugins_leaves_another_interpreter_alone(with_plugin):
+    other = Stacker()
+    other.register_plugin("twice", lambda x: x * 2)
+    with_plugin.eval("disable_all_plugins")
+    assert list(other.eval("3 twice")) == [6]
+
+
+def test_disable_all_plugins_leaves_a_copy_alone(with_plugin):
+    twin = with_plugin.copy()
+    with_plugin.eval("disable_all_plugins")
+    assert list(twin.eval("3 twice")) == [6]
 
 
 if __name__ == "__main__":

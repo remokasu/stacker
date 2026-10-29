@@ -16,7 +16,9 @@ def _disable_plugin(stacker: Stacker, operator_name: str) -> None:
 
 
 def _disable_all_plugins(stacker: Stacker) -> None:
-    stacker.plugins = {}
+    # Emptied in place: every child core (a block, a function body, an
+    # included file) shares this table with the root
+    stacker.plugins.clear()
 
 
 settings_operators = {
