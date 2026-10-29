@@ -227,14 +227,16 @@ class OperatorManager:
         self._priority_operators.update(lambda_operators)
         self._priority_operators.update(exit_operators)
 
-        self._collection_operators = collection_operators
-        self._file_operators = file_operators
-        self._hof_operators = hof_operators
-        self._aggregate_operators = aggregate_operators
-        self._transform_operators = transform_operators
-        self._stack_operators = stack_operators
-        self._settings_operators = settings_operators
-        self._system_operators = system_operators
+        # Each interpreter has its own tables: register_operator replaces a
+        # word in them, which must not reach another interpreter
+        self._collection_operators = dict(collection_operators)
+        self._file_operators = dict(file_operators)
+        self._hof_operators = dict(hof_operators)
+        self._aggregate_operators = dict(aggregate_operators)
+        self._transform_operators = dict(transform_operators)
+        self._stack_operators = dict(stack_operators)
+        self._settings_operators = dict(settings_operators)
+        self._system_operators = dict(system_operators)
 
         self.operators = {
             "priority": self._priority_operators,
@@ -296,20 +298,20 @@ class OperatorManager:
             return self._regular_operators[operator]["arg_count"]
         if operator in special_operators:
             return special_operators[operator]["arg_count"]
-        if operator in hof_operators:
-            return hof_operators[operator]["arg_count"]
-        if operator in aggregate_operators:
-            return aggregate_operators[operator]["arg_count"]
-        if operator in transform_operators:
-            return transform_operators[operator]["arg_count"]
-        if operator in stack_operators:
-            return stack_operators[operator]["arg_count"]
-        if operator in file_operators:
-            return file_operators[operator]["arg_count"]
-        if operator in settings_operators:
-            return settings_operators[operator]["arg_count"]
-        if operator in system_operators:
-            return system_operators[operator]["arg_count"]
+        if operator in self._hof_operators:
+            return self._hof_operators[operator]["arg_count"]
+        if operator in self._aggregate_operators:
+            return self._aggregate_operators[operator]["arg_count"]
+        if operator in self._transform_operators:
+            return self._transform_operators[operator]["arg_count"]
+        if operator in self._stack_operators:
+            return self._stack_operators[operator]["arg_count"]
+        if operator in self._file_operators:
+            return self._file_operators[operator]["arg_count"]
+        if operator in self._settings_operators:
+            return self._settings_operators[operator]["arg_count"]
+        if operator in self._system_operators:
+            return self._system_operators[operator]["arg_count"]
         raise StackerSyntaxError(f"Unknown operator '{operator}'")
 
     ############################
