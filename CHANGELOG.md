@@ -1,5 +1,11 @@
 # CHANGE LOG
 
+## [1.27.1] - 2026-10-29
+
+### Fixed
+
+- A script given by a relative path that changed directory with `cd` and then failed was reported by a path that does not exist, the new directory joined with the script's name (`sub/main.stk:3: error: ...`). The path is now resolved before the script runs, so the report names the script itself
+
 ## [1.27.0] - 2026-10-29
 
 ### Added
