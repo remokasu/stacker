@@ -1,6 +1,11 @@
 """Tests for the error formatter."""
 
+import io
+import sys
 import unittest
+
+import pytest
+
 from stacker.error_formatter import ErrorFormatter, StackerErrorWithContext
 
 
@@ -134,6 +139,31 @@ class TestErrorFormatter(unittest.TestCase):
         self.assertIn("^", result)
         self.assertIn("hint:", result)
         self.assertIn("StackUnderflowError", result)
+
+
+class _Stream(io.StringIO):
+    """A text stream that says whether it is a terminal."""
+
+    def __init__(self, terminal: bool) -> None:
+        super().__init__()
+        self._terminal = terminal
+
+    def isatty(self) -> bool:
+        return self._terminal
+
+
+@pytest.mark.parametrize(
+    "stdout_is_terminal, stderr_is_terminal, colored",
+    [(True, False, False), (False, True, True)],
+    ids=["errors written to a file", "errors written to a terminal"],
+)
+def test_an_error_is_colored_only_when_standard_error_is_a_terminal(
+    stdout_is_terminal, stderr_is_terminal, colored, monkeypatch
+):
+    monkeypatch.setattr(sys, "stdout", _Stream(stdout_is_terminal))
+    monkeypatch.setattr(sys, "stderr", _Stream(stderr_is_terminal))
+    text = ErrorFormatter.format_error("main.stk", 3, None, "UndefinedSymbolError", "`foo` is not defined.")
+    assert ("\033[" in text) is colored
 
 
 if __name__ == "__main__":

@@ -30,8 +30,8 @@ class ErrorFormatter:
 
     @staticmethod
     def _supports_color() -> bool:
-        """Check if the terminal supports color output."""
-        return hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
+        """Whether standard error, where the errors are written, is a terminal."""
+        return hasattr(sys.stderr, 'isatty') and sys.stderr.isatty()
 
     @classmethod
     def format_error(
