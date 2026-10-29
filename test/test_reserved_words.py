@@ -124,3 +124,44 @@ def test_the_reservation_is_for_the_lowercase_names_only(stacker):
 def test_an_unknown_name_is_still_undefined(stacker):
     with pytest.raises(UndefinedSymbolError):
         stacker.eval("helpme")
+
+
+REGISTRATIONS = [
+    pytest.param(
+        lambda stacker: stacker.register_sfunction("help", None, 0),
+        id="register_sfunction",
+    ),
+    pytest.param(
+        lambda stacker: stacker.register_macro("help", None), id="register_macro"
+    ),
+    pytest.param(
+        lambda stacker: stacker.register_parameter("help", 1), id="register_parameter"
+    ),
+    pytest.param(
+        lambda stacker: stacker.register_plugin("help", lambda: 1), id="register_plugin"
+    ),
+]
+
+
+@pytest.mark.parametrize("register", REGISTRATIONS)
+def test_the_python_api_cannot_name_anything_after_a_reserved_word(stacker, register):
+    with pytest.raises(ReservedWordError, match="`help`.*REPL command"):
+        register(stacker)
+    assert "help" not in stacker.sfunctions
+    assert "help" not in stacker.macros
+    assert "help" not in stacker.plugins
+    assert "help" not in stacker.variables
+
+
+def test_the_python_api_can_use_the_uppercase_name(stacker):
+    stacker.register_plugin("HELP", lambda: "plugin")
+    stacker.register_parameter("Help", "parameter")
+    assert list(stacker.eval("HELP Help")) == ["plugin", "parameter"]
+
+
+@pytest.mark.parametrize("name", sorted(THE_REPL_COMMANDS))
+def test_the_python_api_refuses_every_repl_command(stacker, name):
+    with pytest.raises(ReservedWordError):
+        stacker.register_parameter(name, 1)
+    with pytest.raises(ReservedWordError):
+        stacker.register_plugin(name, lambda: 1)
