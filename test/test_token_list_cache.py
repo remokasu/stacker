@@ -1,14 +1,9 @@
 """Regression tests pinning the TokenList classification-cache contract.
 
-TokenList.classification() (stacker/engine/core.py) only recomputes its
-cached entries when the list LENGTH changes. This length guard relies on
-a codebase-wide invariant: every in-place mutation of a block's .tokens
-goes through insert() (lambda/reduce argument binding), which always
-changes the length; wholesale replacements create a fresh TokenList.
-
-If a same-length in-place mutation (e.g. ``tokens[i] = x``) is ever
-introduced, the cache MUST be invalidated explicitly — the stale-cache
-test below documents what silently goes wrong otherwise.
+TokenList.classification() (stacker/engine/core.py) recomputes its cached
+entries after any in-place change of the list: every mutating method of
+the list drops the cache (``_changed``), whether or not the length
+changes; wholesale replacements create a fresh TokenList.
 """
 
 import copy
@@ -37,17 +32,34 @@ class TestTokenListClassificationCache(unittest.TestCase):
         self.assertEqual(len(after), 4)
         self.assertEqual([entry[1] for entry in after][0], "5")
 
-    def test_same_length_mutation_returns_stale_classification(self):
-        # KNOWN LIMITATION of the length guard, pinned as a contract:
-        # a same-length in-place rewrite is NOT detected, so the stale
-        # classification (still referencing the old token) is returned.
-        # Anyone adding such a mutation must invalidate the cache
-        # explicitly (or make this test obsolete by improving the guard).
+    def test_same_length_mutation_refreshes_the_classification(self):
         tokens = TokenList(["1", "2", "+"])
         stale = tokens.classification()
-        tokens[0] = "9"  # Same length: invisible to the length guard
-        self.assertIs(tokens.classification(), stale)
-        self.assertEqual(tokens.classification()[0][1], "1")
+        tokens[0] = "9"  # the same length: the change itself drops the cache
+        self.assertIsNot(tokens.classification(), stale)
+        self.assertEqual(tokens.classification()[0][1], "9")
+
+    def test_every_mutating_method_refreshes_the_classification(self):
+        for change in (
+            lambda t: t.append("3"),
+            lambda t: t.extend(["3"]),
+            lambda t: t.insert(0, "3"),
+            lambda t: t.__setitem__(slice(0, 1), ["3", "4"]),
+            lambda t: t.__delitem__(0),
+            lambda t: t.pop(),
+            lambda t: t.remove("+"),
+            lambda t: t.clear(),
+            lambda t: t.sort(),
+            lambda t: t.reverse(),
+            lambda t: t.__iadd__(["3"]),
+            lambda t: t.__imul__(2),
+        ):
+            tokens = TokenList(["1", "2", "+"])
+            before = tokens.classification()
+            change(tokens)
+            after = tokens.classification()
+            self.assertIsNot(after, before)
+            self.assertEqual([entry[1] for entry in after], list(tokens))
 
     def test_deepcopy_drops_cache(self):
         tokens = TokenList(["1", "2", "+"])

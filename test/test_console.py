@@ -170,6 +170,14 @@ def test_a_child_core_takes_its_parents_console():
     assert Stacker(parent=stacker).console is con
 
 
+def test_a_block_in_a_block_takes_the_interpreters_console():
+    # the inner block is built while the outer one is, before the outer has all its attributes
+    con = _console()
+    stacker = Stacker(console=con)
+    inner = stacker.eval("{ { 1 } }")[-1].tokens[0]
+    assert inner.console is con
+
+
 def test_a_stream_console_falls_back_to_sys_for_streams_not_given(monkeypatch):
     out = io.StringIO()
     monkeypatch.setattr("sys.stdout", out)

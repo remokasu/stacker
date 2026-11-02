@@ -29,6 +29,11 @@ parser.add_argument(
 )
 parser.add_argument("--version", action="version", version=f"Stacker {__version__}")
 parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+parser.add_argument(
+    "--no-compile",
+    action="store_true",
+    help="Do not compile the blocks that run often; run every block in the interpreter.",
+)
 parser.add_argument("-e", default=None, help="Execute the given command.")
 parser.add_argument(
     "--recursion-limit",
@@ -150,7 +155,7 @@ def main() -> None:
     else:
         logging.basicConfig(level=logging.INFO)
 
-    rpn_calculator = Stacker()
+    rpn_calculator = Stacker(compile=not argv.no_compile)
     rpn_calculator.arguments = list(argv.args)
 
     # load plugins from the Stacker's installation directory

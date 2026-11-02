@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from stacker.engine import generation
 from stacker.engine.data_type import Symbol
 from stacker.engine.display import plain_text
 from stacker.engine.scope import ScopedVariables
@@ -38,11 +39,33 @@ def _loop(body: object, parent: Stacker, stack: stack_data[object]) -> None:
     """
     if not isinstance(body, type(parent)):
         raise StackerSyntaxError(f"`loop` expects a code block, got {body}")
+    trusted = None  # (the body's unit, once an iteration ran it to its end: see stacker.engine.inline)
     while True:
         try:
-            parent._run_block(body, stack)
+            trusted = parent._run_block(body, stack, trusted)
         except BreakException:
             break
+
+
+def check_times_count(n_times: object) -> None:
+    """Refuses a count of `times` that is not a number.
+
+    A symbol is let through: the caller reports it as a type error, like
+    any symbol where a value is needed. Anything else that is not a number
+    is the block and the count written the wrong way round. The word and a
+    compiled `times` both check the count here.
+
+    Args:
+        n_times: The value in the count's place.
+
+    Raises:
+        StackerSyntaxError: The value is neither a number nor a symbol.
+    """
+    if not isinstance(n_times, (int, float, Symbol)):
+        raise StackerSyntaxError(
+            f"`times` expects a number of repetitions on top, got {plain_text(n_times)}: "
+            "write `{body} n times`"
+        )
 
 
 def _times(
@@ -57,18 +80,12 @@ def _times(
         StackerSyntaxError: If ``n_times`` is not a number, which is what
             the block and the count written the wrong way round gives.
     """
-    # A symbol here is reported by the caller as a type error, like any
-    # symbol where a value is needed; anything else that is not a number is
-    # the block and the count written the wrong way round
-    if not isinstance(n_times, (int, float, Symbol)):
-        raise StackerSyntaxError(
-            f"`times` expects a number of repetitions on top, got {plain_text(n_times)}: "
-            "write `{body} n times`"
-        )
+    check_times_count(n_times)
     count = 0
+    trusted = None
     while count < n_times:  # a comparison, not range(): non-integer counts keep working
         try:
-            parent._run_block(block, stack)
+            trusted = parent._run_block(block, stack, trusted)
         except BreakException:
             return
         count += 1
@@ -86,14 +103,29 @@ def _do(
     # a child of the body's own scope: a lambda or block kept from one
     # iteration sees that iteration's value, and a name the body is first
     # to set goes to the body's scope (see loop_scope)
-    start_value = integer_argument("do", start_value)
-    end_value = integer_argument("do", end_value)
+    values = do_range(start_value, end_value)
     body_scope = _body_scope("do", block, parent)
-    for i in range(start_value, end_value + 1):
+    trusted = None
+    for i in values:
         try:
-            parent._run_bound(block, ScopedVariables.loop_scope(body_scope, {symbol: i}), stack)
+            trusted = parent._run_bound(block, ScopedVariables.loop_scope(body_scope, {symbol: i}), stack, trusted)
         except BreakException:
             break
+
+
+def do_range(start_value: object, end_value: object) -> range:
+    """The integers a `do` runs over, first to last inclusive; the two bounds are checked as integers, first one first.
+
+    The word and a compiled `do` both take their range here.
+
+    Args:
+        start_value: The first value, as written.
+        end_value: The last value, as written.
+
+    Raises:
+        StackerTypeError: A bound is not an integer (a symbol is reported by the caller).
+    """
+    return range(integer_argument("do", start_value), integer_argument("do", end_value) + 1)
 
 
 def _while(
@@ -110,13 +142,22 @@ def _while(
     """
     if not isinstance(condition, type(parent)):
         raise StackerSyntaxError(f"`while` expects a condition block, got {condition}")
+    # each block's unit is trusted only while the other block changed nothing in the process
+    trusted_condition = trusted_body = None
     while True:
-        if not parent._condition_of(condition, stack, "while"):
+        epoch = generation.epoch
+        trusted_condition = parent._run_block(condition, stack, trusted_condition)
+        if generation.epoch != epoch:
+            trusted_body = None
+        if not parent._condition_left(stack, "while"):
             break
+        epoch = generation.epoch
         try:
-            parent._run_block(body, stack)
+            trusted_body = parent._run_block(body, stack, trusted_body)
         except BreakException:
             break
+        if generation.epoch != epoch:
+            trusted_condition = None
 
 
 def _dolist(
@@ -129,9 +170,10 @@ def _dolist(
     # Each iteration runs in a scope of its own holding the loop variable,
     # a child of the body's own scope (see _do)
     body_scope = _body_scope("dolist", block, parent)
+    trusted = None
     for i in lst:
         try:
-            parent._run_bound(block, ScopedVariables.loop_scope(body_scope, {symbol: i}), stack)
+            trusted = parent._run_bound(block, ScopedVariables.loop_scope(body_scope, {symbol: i}), stack, trusted)
         except BreakException:
             break
 

@@ -39,6 +39,7 @@ class Stacker(StackerCore):
         parent: StackerCore | None = None,
         prelude: bool = True,
         console: Console | None = None,
+        compile: bool = True,
     ) -> None:
         """Creates an interpreter.
 
@@ -55,16 +56,25 @@ class Stacker(StackerCore):
                 interpreter shares it. It is in effect while ``eval``,
                 ``process_expression``, ``run_file``, ``include`` or
                 ``require`` runs. A child core takes its parent's.
+            compile: Whether blocks that run often are compiled into a
+                faster form. A program's result is the same either way;
+                ``False`` runs everything by the interpreter, to compare
+                or to work around a problem. Ignored for child cores,
+                which take their parent's. The command line's
+                ``--no-compile`` passes ``False``.
         """
-        super().__init__(expression, parent)
-        # Set before the prelude loads, so the prelude runs under it too
+        # Both are set before super().__init__(), which builds this block's
+        # nested blocks: each of them reads its console and plugin descriptions
+        # from this core, and would get fresh, unshared ones if they were not
+        # there yet. The descriptions are shared with the parent, as the plugin
+        # table is: a word that removes a plugin inside a block removes its
+        # description too
         self.console: Console = console if console is not None else getattr(parent, "console", DEFAULT_CONSOLE)
-        self.trace: list[object] = []
-        # Shared with the parent, as the plugin table is: a word that removes a
-        # plugin inside a block removes its description too
         self.plugin_descriptions: dict[str, str | None] = (
             getattr(parent, "plugin_descriptions", {}) if parent is not None else {}
         )
+        super().__init__(expression, parent, compile=compile)
+        self.trace: list[object] = []
         if parent is None:
             self._prelude["enabled"] = prelude
             if prelude:
@@ -307,6 +317,7 @@ class Stacker(StackerCore):
             "desc": desc,
             "defined_at": defined_at,
         }
+        self.operator_manager.words_changed()
 
     def register_macro(self, macro_name: str, macro_body: object) -> None:
         """Registers a macro.
@@ -321,6 +332,7 @@ class Stacker(StackerCore):
         """
         refuse_reserved(macro_name, "register_macro")
         self.macros[macro_name] = macro_body
+        self.operator_manager.words_changed()
 
     def register_parameter(self, parameter_name: str, parameter_value: object) -> None:
         """Binds a variable in the current scope.
@@ -381,6 +393,7 @@ class Stacker(StackerCore):
             "push_result_to_stack": push_result_to_stack,
             "desc": desc,
         }
+        self.operator_manager.words_changed()
         self.plugin_descriptions[operator_name] = desc
 
     def register_label(self, label_name: str, index: int) -> None:
@@ -425,6 +438,7 @@ class Stacker(StackerCore):
         return list(self.stack.copy())
 
     def get_macros_ref(self) -> dict[str, object]:
+        """The macro table itself; a write to it does not advance the word tables' generation."""
         return self.macros
 
     def get_macros_copy(self) -> dict[str, object]:
@@ -437,12 +451,14 @@ class Stacker(StackerCore):
         return self.variables.copy()
 
     def get_sfuntions_ref(self) -> dict[str, object]:
+        """The function table itself; a write to it does not advance the word tables' generation."""
         return self.sfunctions
 
     def get_sfuntions_copy(self) -> dict[str, object]:
         return self.sfunctions.copy()
 
     def get_plugins_ref(self) -> dict[str, object]:
+        """The plugin table itself; a write to it does not advance the word tables' generation."""
         return self.plugins
 
     def get_plugins_copy(self) -> dict[str, object]:

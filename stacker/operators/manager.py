@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Callable
 
 from stacker.error import StackerSyntaxError
+from stacker.engine import generation
 
 
 from stacker.operators.algebra import alge_operators
@@ -196,7 +197,7 @@ OPERATOR_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
 
 
 # Category lookup order for the unified dispatch table. Must mirror the
-# elif order of the dispatch chain in StackerCore._execute.
+# elif order of the dispatch chain in StackerCore._lookup_word.
 _DISPATCH_ORDER = (
     "priority",
     "stack",
@@ -213,6 +214,8 @@ _DISPATCH_ORDER = (
 
 class OperatorManager:
     def __init__(self) -> None:
+        #: Advances whenever a word table of this interpreter changes (see words_changed)
+        self.generation = 0
         self._regular_operators = {}
         self._regular_operators.update(alge_operators)
         self._regular_operators.update(arith_operators)
@@ -276,7 +279,7 @@ class OperatorManager:
 
         Maps each operator name to its ``(category, definition)`` pair.
         Categories are visited in the same order as the dispatch chain in
-        ``StackerCore._execute``; first match wins, so a name present
+        ``StackerCore._lookup_word``; first match wins, so a name present
         in several categories (e.g. file operators, which are also merged
         into ``regular``) resolves to the same category as before.
 
@@ -540,6 +543,20 @@ class OperatorManager:
     ############################
     # Register
     ############################
+    def words_changed(self) -> None:
+        """Records that a word table of this interpreter changed.
+
+        A compiled block keeps what its names resolved to and compares
+        ``generation`` with the value it saw: a macro, function or plugin
+        defined or removed, or an operator replaced, makes it resolve again.
+        Every writer of the macro, function, plugin and operator tables
+        calls this; a write through a raw table (``get_*_ref``) does not.
+        The process-wide ``generation.epoch`` advances too, so a running
+        block notices the change with the one comparison it makes anyway.
+        """
+        self.generation += 1
+        generation.words_changed()
+
     def register_operator(
         self,
         operator_name: str,
@@ -560,5 +577,6 @@ class OperatorManager:
                 # The definition dict is replaced (not mutated), so the
                 # dispatch table must be rebuilt to point at the new one.
                 self._rebuild_dispatch_table()
+                self.words_changed()
                 return
         return

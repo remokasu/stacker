@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import copy
 from typing import TYPE_CHECKING
 
-from stacker.engine import recursion
+from stacker.engine import copier, recursion
 from stacker.engine.data_type import stack_data
 from stacker.error import StackerRecursionError, StackerTypeError
 
@@ -54,12 +53,10 @@ class StackerLambda:
             # The body keeps the scope it was made in; each call runs in a
             # child of that scope, with its own stack. A block written inside
             # the body is bound to the call's scope when the body pushes it.
-            blockstack = copy.copy(self.blockstack)
-            blockstack.variables = self.blockstack.variables.create_child_scope()
+            blockstack = copier.shallow_copy(self.blockstack)
+            # The arguments are the new scope's names from its birth
+            blockstack.variables = self.blockstack.variables.create_child_scope(dict(zip(self.args, values_list)))
             blockstack.stack = stack_data()
-
-            for arg, value in zip(self.args, values_list):
-                blockstack.variables[arg] = value
             blockstack._evaluate(blockstack.tokens, stack=blockstack.stack)
             return list(blockstack.stack)
 

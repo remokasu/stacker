@@ -145,7 +145,7 @@ class TestFunctionSpecifiers:
         assert run("{x} {x 1 +} :f defun {1 2} 0 :acc :x {acc x + f} reduce") == [5]
 
     def test_block_element_is_evaluated_before_a_host_word(self):
-        # The shortcut prepares the element exactly as `_execute` would.
+        # The shortcut prepares the element exactly as `_run_word` would.
         assert run("{1 2 +} 1 listn :sqrt map") == [[3 ** 0.5]]
 
 

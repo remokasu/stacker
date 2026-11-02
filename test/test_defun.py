@@ -1,5 +1,9 @@
+import logging
 import unittest
 
+import pytest
+
+from stacker.error import StackerSyntaxError
 from stacker.stacker import Stacker
 
 
@@ -35,3 +39,24 @@ class TestStacker(unittest.TestCase):
         self.stacker.eval("{xs} {xs sum} :test_sum defun")
         ans = self.stacker.eval("(7 8 9) test_sum")
         self.assertEqual(ans[-1], 24)
+
+
+@pytest.mark.parametrize("body", ["5", '"abc"', "[1 2]", ":sym", "{x} {x} lambda"])
+def test_defun_refuses_a_body_that_is_not_a_code_block(body):
+    stacker = Stacker()
+    with pytest.raises(StackerSyntaxError, match="`defun` expects a code block as the function body, got "):
+        stacker.eval(f"{{x}} {body} :f defun")
+    assert "f" not in stacker.sfunctions
+
+
+@pytest.mark.parametrize("program", ["{x} 5 :dup defun", "5 {x} :dup defun"])
+def test_a_definition_with_a_bad_part_is_refused_before_the_redefinition_warning(program, caplog):
+    stacker = Stacker()
+    with caplog.at_level(logging.WARNING, logger="stacker"), pytest.raises(StackerSyntaxError):
+        stacker.eval(program)
+    assert caplog.records == []
+
+
+def test_try_sees_the_refused_body_as_a_syntax_error():
+    stacker = Stacker()
+    assert list(stacker.eval('{{x} 5 :f defun} {"kind" get} try')) == ["StackerSyntaxError"]

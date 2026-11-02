@@ -5,8 +5,6 @@
 
 Stacker is a powerful Reverse Polish Notation (RPN) calculator built with Python, featuring basic mathematical operations and extensibility through plugins.
 
-The user manual lives in [docs/](docs/README.md) (Japanese; it covers the syntax, every built-in word, scripts, the REPL and the plugin API).
-
 ## Table of Contents
 
 - [Installation](#installation)
@@ -16,6 +14,7 @@ The user manual lives in [docs/](docs/README.md) (Japanese; it covers the syntax
 - [Running Scripts](#running-scripts)
 - [VSCode Syntax Highlighting](#vscode-syntax-highlighting)
 - [Command Line Execution](#command-line-execution)
+  - [Command Line Options](#command-line-options)
 - [Settings](#settings)
 - [REPL commands](#repl-commands)
 - [Configuration File](#configuration-file)
@@ -628,6 +627,32 @@ You can directly execute a specified RPN expression from the command line.
 stacker -e "3 4 + echo"
 ```
 
+### Command Line Options
+
+```text
+stacker [-h] [--addplugin path] [--version] [--debug] [--no-compile] [-e E] [--recursion-limit N] [script [arg ...]]
+```
+
+`python -m stacker` takes the same options as `stacker`. With neither `script` nor `-e`, the REPL starts. Put the options before the first positional argument (the script name, or the first argument with `-e`); everything after it belongs to the script.
+
+| Option | Description |
+| --- | --- |
+| `script [arg ...]` | The `.stk` file to run. Stacker runs it and exits without opening the REPL; the arguments after the file name are what the word `args` reads inside the script. |
+| `-e E` | Runs the expression `E` and exits. Every positional argument becomes one of `args`. |
+| `--debug` | Debug mode: logs at the DEBUG level, and the REPL and scripts print Python's traceback with an error. With `-e`, only the log level changes. |
+| `--recursion-limit N` | The depth to which a function written in Stacker may recurse, from 1 to 1800; 1500 when omitted. |
+| `--no-compile` | Runs every block in the interpreter instead of compiling the ones that run often. The result is the same; use it to compare the two or to narrow a problem down. |
+| `--addplugin path` | Copies the plugin file to the plugin directory of the installed Stacker and exits. |
+| `--version` | Prints the version, in the form `Stacker X.Y.Z`, and exits. A script reads it with the word `version`. |
+| `-h`, `--help` | Prints the help and exits. |
+
+```bash
+stacker script.stk 200 100         # args is ['200' '100'] inside the script
+stacker script.stk -x              # an argument after the file name is passed through, even one starting with -
+stacker -e "args echo" -- -x       # with -e, write -- before an argument that starts with -
+stacker --recursion-limit 1800 deep.stk
+```
+
 
 ## Settings
 - disable_plugin
@@ -756,6 +781,7 @@ stacker = Stacker()
 print(stacker.eval("3 4 +"))
 ```
 `Stacker()` loads the prelude like the command line does. Pass `Stacker(prelude=False)` for a bare interpreter.
+`Stacker(compile=False)` runs every block in the interpreter instead of compiling the ones that run often, as `--no-compile` does on the command line; the result is the same.
 `stacker.run_file("script.stk")` runs a script file as the command line does, and `Stacker(console=StreamConsole(stdout=...))` sends what the words print and read elsewhere.
 
 ## Supported Operations

@@ -1,5 +1,8 @@
 import unittest
 
+import pytest
+
+from stacker.error import StackerSyntaxError
 from stacker.stacker import Stacker
 
 
@@ -47,3 +50,10 @@ class TestLambdaStackAccumulation(unittest.TestCase):
         self.assertEqual(list(stacker.stack), [5, 5])
         stacker.process_expression("3 dupfn eval")
         self.assertEqual(list(stacker.stack), [5, 5, 3, 3])
+
+
+@pytest.mark.parametrize("body", ["5", '"abc"', "[1 2]", ":sym", "{y} {y} lambda"])
+def test_lambda_refuses_a_body_that_is_not_a_code_block(body):
+    stacker = Stacker()
+    with pytest.raises(StackerSyntaxError, match="`lambda` expects a code block as the body, got "):
+        stacker.eval(f"{{x}} {body} lambda")

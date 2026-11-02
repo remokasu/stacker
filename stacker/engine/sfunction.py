@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import copy
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from stacker.engine.core import StackerCore
 
-from stacker.engine import recursion
+from stacker.engine import copier, recursion
 from stacker.engine.data_type import stack_data
 from stacker.error import StackerRecursionError, StackerTypeError
 
@@ -56,14 +55,12 @@ class StackerFunction:
             # call's own scope and stack. A block written inside the body is
             # bound to this scope when the body pushes it (StackerCore._evaluate),
             # so a lambda made here keeps this call's variables.
-            new_blockstack = copy.copy(self.blockstack)
-            new_blockstack.variables = self.blockstack.variables.create_child_scope()
+            new_blockstack = copier.shallow_copy(self.blockstack)
+            # The arguments are the new scope's names from its birth
+            new_blockstack.variables = self.blockstack.variables.create_child_scope(
+                dict(zip(self.args, values_list))
+            )
             new_blockstack.stack = stack_data()  # Each call needs its own stack
-
-            # Set function arguments in the new child scope
-            for arg, value in zip(self.args, values_list):
-                new_blockstack.variables[arg] = value
-
             new_blockstack._evaluate(new_blockstack.tokens, stack=new_blockstack.stack)
             return list(new_blockstack.stack)
 

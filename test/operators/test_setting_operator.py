@@ -159,5 +159,23 @@ def test_disabling_one_plugin_keeps_the_others_described():
     assert stacker.get_plugin_descriptions() == {"thrice": "Triples a number"}
 
 
+@pytest.mark.parametrize(
+    "code",
+    [
+        '{ { "twice" disable_plugin } eval } eval',
+        '{ { { "twice" disable_plugin } eval } eval } eval',
+        "{ { disable_all_plugins } eval } eval",
+        '{} { { "twice" disable_plugin } eval } :off defun off',
+    ],
+    ids=["two blocks deep", "three blocks deep", "all plugins, two deep", "a block inside a function body"],
+)
+def test_a_plugin_disabled_from_a_nested_block_is_no_longer_described(code):
+    stacker = Stacker()
+    stacker.register_plugin("twice", lambda x: x * 2, desc="Doubles a number")
+    stacker.eval(code)
+    assert "twice" not in stacker.plugins
+    assert "twice" not in stacker.get_plugin_descriptions()
+
+
 if __name__ == "__main__":
     unittest.main()

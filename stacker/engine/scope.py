@@ -9,6 +9,8 @@ correct scoping semantics.
 from __future__ import annotations
 from typing import Iterator
 
+from stacker.engine import generation
+
 
 class ScopedVariables:
     """
@@ -91,6 +93,8 @@ class ScopedVariables:
         if self._transparent and self._parent is not None:
             self._parent[key] = value
             return
+        if key not in self._local:
+            generation.bindings_changed()
         self._local[key] = value
 
     def bind(self, key: str, value: object) -> None:
@@ -100,6 +104,8 @@ class ScopedVariables:
             key: Variable name
             value: Variable value
         """
+        if key not in self._local:
+            generation.bindings_changed()
         self._local[key] = value
 
     @classmethod
@@ -133,9 +139,33 @@ class ScopedVariables:
         """Returns this scope's own bindings (parents excluded), by reference.
 
         Returns:
-            The local name-to-value mapping. Callers must not mutate it.
+            The local name-to-value mapping. Callers must not mutate it: a
+            name added or removed through it does not advance
+            ``generation.bindings``.
         """
         return self._local
+
+    def hides_any(self, names: frozenset[str]) -> bool:
+        """Whether a scope in this chain, up to the root, binds one of ``names``.
+
+        A compiled block asks this for the names it took for words: one of
+        them bound anywhere the block runs would be a variable hiding the
+        word.
+
+        Args:
+            names: The names to look for.
+
+        Returns:
+            True when some scope of the chain holds one of them.
+        """
+        if not names:
+            return False
+        scope: ScopedVariables | None = self
+        while scope is not None:
+            if not scope._local.keys().isdisjoint(names):  # walks the smaller of the two
+                return True
+            scope = scope._parent
+        return False
 
     def set_global(self, key: str, value: object) -> None:
         """
@@ -150,6 +180,8 @@ class ScopedVariables:
         scope = self
         while scope._parent is not None:
             scope = scope._parent
+        if key not in scope._local:
+            generation.bindings_changed()
         scope._local[key] = value
 
     def update_existing(self, key: str, value: object) -> bool:
@@ -187,6 +219,7 @@ class ScopedVariables:
             KeyError: If variable is not in local scope
         """
         del self._local[key]
+        generation.bindings_changed()
 
     def __contains__(self, key: str) -> bool:
         """
@@ -235,6 +268,8 @@ class ScopedVariables:
         Returns:
             Variable value or default
         """
+        if key in self._local:
+            generation.bindings_changed()
         return self._local.pop(key, default)
 
     def keys(self) -> Iterator[str]:
@@ -276,7 +311,12 @@ class ScopedVariables:
         Args:
             other: Dictionary of variables to add
         """
-        self._local.update(other)
+        before = len(self._local)
+        try:
+            self._local.update(other)
+        finally:
+            if len(self._local) != before:  # a name was added; update never removes one
+                generation.bindings_changed()
 
     def __len__(self) -> int:
         """
@@ -300,14 +340,20 @@ class ScopedVariables:
             scope = scope._parent
         return scope
 
-    def create_child_scope(self) -> ScopedVariables:
+    def create_child_scope(self, local_vars: dict[str, object] | None = None) -> ScopedVariables:
         """
         Create a new child scope with this scope as parent.
+
+        Args:
+            local_vars: The names the new scope starts with (a call's
+                arguments), given here rather than set one by one: a scope
+                that is born with its names has not changed. The scope keeps
+                the dict itself; do not write to it afterwards
 
         Returns:
             New child scope
         """
-        return ScopedVariables(parent=self)
+        return ScopedVariables(parent=self, local_vars=local_vars)
 
     def copy(self) -> ScopedVariables:
         """

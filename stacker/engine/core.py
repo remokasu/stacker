@@ -54,7 +54,7 @@ from stacker.syntax.token_rules import (
 from stacker.engine.sfunction import StackerFunction
 from stacker.engine.slambda import StackerLambda
 from stacker.engine.scope import ScopedVariables
-from stacker.engine import console, recursion
+from stacker.engine import compiler, console, copier, recursion
 from stacker.engine.smacro import StackerMacro, gensym
 from stacker.operators.arguments import count_argument, integer_argument
 from stacker.operators.manager import OperatorManager
@@ -74,6 +74,10 @@ _DEFMACRO_USAGE = (
 
 # Sentinel for single-lookup scope reads (None is a valid variable value)
 _MISSING = object()
+
+# What _lookup_word says a word is, besides an operator category
+WORD_FUNCTION = "function"
+WORD_PLUGIN = "plugin"
 
 
 def _empty_stack_messages() -> frozenset[str]:
@@ -177,6 +181,26 @@ def _host_error_as_the_words(word: str, args: object, error: Exception) -> NoRet
     if isinstance(error, (ValueError, OverflowError)):
         raise ValidationError(f"`{word}` cannot use{where}: {reason}") from error
     raise StackerTypeError(f"`{word}` cannot use{where}: {reason}") from error
+
+
+def _reword_type_error(token: str, error: TypeError) -> NoReturn:
+    """Re-raises a type error that reached the word ``token``, naming the word when the host's message does not.
+
+    A Stacker error is re-raised as it is (a word already said what went
+    wrong); a host's "unsupported operand type" is prefixed with the word.
+
+    Args:
+        token: The word that was running.
+        error: The error.
+    """
+    if isinstance(error, StackerError):
+        raise error
+    error_msg = str(error)
+    if "unsupported operand type" in error_msg and not error_msg.startswith("Operator `"):
+        raise TypeError(  # the include position, if any, stays readable through __cause__
+            f"Operator `{token}` received incompatible types. {error_msg}"
+        ) from error
+    raise error
 
 
 def _reraise_type_error(word: str, args: object, error: Exception) -> NoReturn:
@@ -365,20 +389,85 @@ def _template_from_node(node: ListNode | TupleNode) -> list[object]:
 class TokenList(list):
     """Token list carrying a lazily computed classification cache.
 
-    The cache is invalidated by a length guard: every in-place tokens
-    mutation in the codebase changes the list's length (lambda/reduce
-    ``insert`` calls), and wholesale replacements create a fresh
-    ``TokenList``. ``deepcopy`` intentionally drops the cache so copies
-    reclassify after their own mutations.
+    Every method that changes the list in place is overridden to call
+    ``_changed``, which drops the cache and the compiled unit: a token list
+    is read again as it is now, whether it grew, shrank or was rewritten at
+    the same length. ``deepcopy`` drops them too, so copies reclassify
+    after their own mutations.
+
+    The list also counts how often it has run and keeps the unit the
+    compiler made of it (``stacker.engine.compiler``); both start over in a
+    copy, with the cache.
     """
 
+    _cls_entries = None  # the classification, until the tokens change
+    _runs = 0  # how often this list has run, until it is compiled
+    _unit = None  # the compiled unit, or compiler.UNCOMPILABLE
+    _drops = 0  # how often a unit of this list was dropped
+
+    def _changed(self) -> None:
+        """A change of the tokens: their classification and the unit made of them are forgotten, and they are counted anew."""
+        self._cls_entries = None
+        self._unit = None
+        self._runs = 0
+
+    def append(self, item: object) -> None:
+        super().append(item)
+        self._changed()
+
+    def extend(self, items: object) -> None:
+        super().extend(items)
+        self._changed()
+
+    def insert(self, index: int, item: object) -> None:
+        super().insert(index, item)
+        self._changed()
+
+    def __setitem__(self, index: object, item: object) -> None:
+        super().__setitem__(index, item)
+        self._changed()
+
+    def __delitem__(self, index: object) -> None:
+        super().__delitem__(index)
+        self._changed()
+
+    def pop(self, index: int = -1) -> object:
+        item = super().pop(index)
+        self._changed()
+        return item
+
+    def remove(self, item: object) -> None:
+        super().remove(item)
+        self._changed()
+
+    def clear(self) -> None:
+        super().clear()
+        self._changed()
+
+    def sort(self, *, key: object = None, reverse: bool = False) -> None:
+        super().sort(key=key, reverse=reverse)  # type: ignore[arg-type]
+        self._changed()
+
+    def reverse(self) -> None:
+        super().reverse()
+        self._changed()
+
+    def __iadd__(self, items: object) -> TokenList:  # noqa: PYI034  (`Self` needs Python 3.11)
+        result = super().__iadd__(items)  # type: ignore[arg-type]
+        self._changed()
+        return result  # type: ignore[return-value]
+
+    def __imul__(self, times: int) -> TokenList:  # noqa: PYI034
+        result = super().__imul__(times)
+        self._changed()
+        return result  # type: ignore[return-value]
+
     def classification(self) -> list[tuple[int, object, object]]:
-        """Return cached classification entries, recomputing when stale."""
-        entries = getattr(self, "_cls_entries", None)
-        if entries is None or self._cls_len != len(self):
+        """Return cached classification entries, recomputing after a change."""
+        entries = self._cls_entries
+        if entries is None:
             entries = _classify_tokens(self)
             self._cls_entries = entries
-            self._cls_len = len(self)
         return entries
 
     def __deepcopy__(self, memo: dict[int, object]) -> "TokenList":
@@ -392,9 +481,13 @@ class StackerCore:
     """A class for evaluating RPN expressions."""
 
     def __init__(
-        self, expression: str | None = None, parent: StackerCore | None = None
+        self, expression: str | None = None, parent: StackerCore | None = None, compile: bool = True
     ) -> None:
         self.parent = parent
+        # Whether blocks that run often are compiled. Set first: parsing the
+        # body below builds its nested blocks, which take this core's choice
+        # (a child takes its parent's, whatever it is told)
+        self._compiles: bool = compile if parent is None else parent._compiles
         self.child: StackerCore | None = None
         self.trace: list[object] = []  # for error trace
         self.stack: stack_data[object] = stack_data()
@@ -458,10 +551,12 @@ class StackerCore:
         if hasattr(sys, "set_int_max_str_digits"):
             sys.set_int_max_str_digits(0)
 
+        # A core has 29 attributes, root and child alike. Keep it under 30: with
+        # more, CPython stops sharing the attribute keys between instances and
+        # every attribute access of every block slows down by a tenth or more
         self.operator_manager: OperatorManager = OperatorManager()
         # Use ScopedVariables for efficient variable scoping
         self.variables: ScopedVariables = ScopedVariables(local_vars=dict(constants))
-        self.sfunc_args: dict[str, list[str]] = {}
         self.macros: dict[str, object] = {}
         self.plugins: dict[str, object] = {}
         self.sfunctions: dict[str, object] = {}
@@ -658,7 +753,9 @@ class StackerCore:
         """
         return stack.pop()
 
-    def _run_block(self, block: object, stack: stack_data[object]) -> None:
+    def _run_block(
+        self, block: object, stack: stack_data[object], trusted: compiler.Unit | None = None
+    ) -> compiler.Unit | None:
         """Runs ``block`` on ``stack``, in the scope the block is bound to.
 
         Every word that runs a block goes through here (or ``_run_bound``),
@@ -675,6 +772,12 @@ class StackerCore:
         Args:
             block: The code block, a lambda, a symbol, or any other value.
             stack: The stack the block runs on.
+            trusted: What this call returned last time, for a loop running
+                the same block again (see ``stacker.engine.inline.run_body``).
+
+        Returns:
+            The block's compiled unit when it ran the block to its end, for
+            a loop to pass back as ``trusted``; None otherwise.
         """
         if not isinstance(block, StackerCore):
             if isinstance(block, StackerLambda):
@@ -683,27 +786,43 @@ class StackerCore:
                 self._evaluate([block.name], stack=stack)
             else:
                 stack.append(block)
-            return
+            return None
+        tokens = block.tokens
+        unit = tokens._unit
         try:
-            block._evaluate(block.tokens, stack=stack)
+            block._evaluate(tokens, stack=stack, trusted=trusted)
         except Exception:
             self.trace = block.trace  # the tokens of the innermost failing block, for diagnostics
             raise
+        # the unit that was there before and is still there ran the block to its end (one that gave up in
+        # mid-run, or was found stale, is gone from the tokens); a unit made during this run is not trusted yet
+        return unit if type(unit) is compiler.Unit and tokens._unit is unit else None
 
-    def _run_bound(self, block: StackerCore, scope: ScopedVariables, stack: stack_data[object]) -> None:
+    def _run_bound(
+        self, block: StackerCore, scope: ScopedVariables, stack: stack_data[object], trusted: compiler.Unit | None = None
+    ) -> compiler.Unit | None:
         """Runs ``block`` on ``stack`` with ``scope`` as its scope: a loop iteration's scope, a child of the block's own.
 
         Args:
             block: The code block.
             scope: The scope to run in (a loop scope whose parent is ``block.variables``).
             stack: The stack the block runs on.
+            trusted: What this call returned last time, for a loop running
+                the same block again (see ``stacker.engine.inline.run_body``).
+
+        Returns:
+            The block's compiled unit when it ran the block to its end, for
+            a loop to pass back as ``trusted``; None otherwise.
         """
         bound = block._bound_to(scope)
+        tokens = bound.tokens
+        unit = tokens._unit
         try:
-            bound._evaluate(bound.tokens, stack=stack)
+            bound._evaluate(tokens, stack=stack, trusted=trusted)
         except Exception:
             self.trace = bound.trace
             raise
+        return unit if type(unit) is compiler.Unit and tokens._unit is unit else None  # (as _run_block)
 
     def _condition_of(self, condition: object, stack: stack_data[object], word: str) -> object:
         """Returns the value a condition stands for: a block is run on ``stack`` and its top taken, a value is itself.
@@ -723,26 +842,70 @@ class StackerCore:
         """
         if isinstance(condition, StackerCore):
             self._run_block(condition, stack)
-            if not stack:
-                raise NoValueProducedError(
-                    word, f"The condition block of `{word}` left nothing on the stack to test."
-                )
-            return stack.pop()
+            return self._condition_left(stack, word)
         return condition
 
-    def _evaluate(self, tokens: list[object], stack: stack_data[object] | None = None) -> stack_data[object]:
+    def _condition_left(self, stack: stack_data[object], word: str) -> object:
+        """The value a condition block left on top of ``stack``, taken off it.
+
+        Args:
+            stack: The stack the condition block ran on.
+            word: The word testing the condition (for the error).
+
+        Raises:
+            NoValueProducedError: The block left nothing.
+        """
+        if not stack:
+            raise NoValueProducedError(word, f"The condition block of `{word}` left nothing on the stack to test.")
+        return stack.pop()
+
+    def _evaluate(
+        self,
+        tokens: list[object],
+        stack: stack_data[object] | None = None,
+        *,
+        trace: bool = True,
+        trusted: compiler.Unit | None = None,
+    ) -> stack_data[object]:
         """
         Evaluates a given RPN expression.
         Returns the result of the evaluation.
+
+        Args:
+            tokens: The tokens to run; a block's own ``TokenList`` is counted
+                and, run often, compiled (``stacker.engine.compiler``).
+            stack: The stack to run on; a new one when None.
+            trace: Whether ``self.trace`` becomes ``tokens``. False for the
+                rest of a block the compiler hands back, whose trace is the
+                whole block.
+            trusted: A unit of ``tokens`` that ran it to its end just before,
+                for a loop running the block again: it is admitted without
+                the checks made on entry (see ``stacker.engine.inline``).
         """
         if stack is None:
             stack = stack_data()
-        self.trace = tokens
+        if trace:
+            self.trace = tokens
 
         # Block/function bodies hold long-lived TokenLists whose
         # classification is computed once; top-level token lists are fresh
         # per call and classified in a single throwaway pass.
         if isinstance(tokens, TokenList):
+            # A block that has run often is compiled and run by its unit
+            # (stacker.engine.compiler); a macro body being expanded is not
+            if self._compiles and self._interp_scope is None:
+                unit = tokens._unit
+                if unit is None and compiler.THRESHOLD is not None:
+                    runs = tokens._runs + 1
+                    tokens._runs = runs
+                    if runs >= compiler.THRESHOLD:
+                        unit = compiler.compile_block(self, tokens, tokens.classification())
+                if (
+                    unit is not None
+                    and unit is not compiler.UNCOMPILABLE
+                    and compiler.run(unit, self, tokens, stack, unit is trusted)
+                ):
+                    return stack
             entries = tokens.classification()
         else:
             entries = _classify_tokens(tokens)
@@ -778,12 +941,14 @@ class StackerCore:
                     # A variable reference pushes the value, whatever it is:
                     # a lambda is a value too and is called with `eval`.
                     stack.append(value)
-                elif (
-                    token in self.operator_manager.built_in_operators
-                    or token in self.sfunctions
-                    or token in self.plugins
-                ):
-                    self._execute(token, stack)
+                # The lookup of _lookup_word, inline: a function, a plugin word,
+                # an operator, in that order (the compiler takes the function)
+                elif token in self.sfunctions:
+                    self._run_word(token, WORD_FUNCTION, self.sfunctions[token], stack)
+                elif token in self.plugins:
+                    self._run_word(token, WORD_PLUGIN, self.plugins[token], stack)
+                elif (entry := self.operator_manager.dispatch_table.get(token)) is not None:
+                    self._run_word(token, entry[0], entry[1], stack)
                 else:
                     # A literal (classified as a name only when the literal
                     # check was skipped or deferred) pushes its value; any
@@ -842,18 +1007,46 @@ class StackerCore:
             raise StackerSyntaxError(word_in_list_literal_message(name))
         raise _name_not_found(name)
 
-    def _execute(self, token: str, stack: stack_data[object]) -> None:
-        """Applies the word ``token`` to the stack, in place.
+    def _lookup_word(self, token: str) -> tuple[str, object]:
+        """What the word ``token`` is now: WORD_FUNCTION, WORD_PLUGIN or an operator category, with its entry.
 
-        A function, a plugin word or an operator, in that order of lookup. A
-        pop past the bottom of the stack is reported as a stack underflow,
+        Args:
+            token: The word's name.
+
+        Returns:
+            The kind and the entry ``_run_word`` runs it by.
+
+        Raises:
+            StackerSyntaxError: No word of that name exists.
+        """
+        if token in self.sfunctions:
+            return WORD_FUNCTION, self.sfunctions[token]
+        if token in self.plugins:
+            return WORD_PLUGIN, self.plugins[token]
+        entry = self.operator_manager.dispatch_table.get(token)
+        if entry is None:
+            raise StackerSyntaxError(f"Unknown operator '{token}'")
+        return entry
+
+    def _run_word(self, token: str, kind: str, op: object, stack: stack_data[object]) -> None:
+        """Runs the word ``token``, looked up as ``kind`` and ``op`` (see ``_lookup_word``), on the stack.
+
+        A pop past the bottom of the stack is reported as a stack underflow,
         and an operand type error the host raised is attributed to the word
-        (once: an enclosing word leaves the message as it is).
+        (once: an enclosing word leaves the message as it is). A compiled
+        block calls this with the lookup it did once, for as long as the
+        word tables stand.
+
+        Args:
+            token: The word's name, for the messages.
+            kind: WORD_FUNCTION, WORD_PLUGIN or an operator category.
+            op: The entry ``_lookup_word`` found under that kind.
+            stack: The stack the word runs on.
         """
         try:
-            if token in self.sfunctions:  # sfunctions
+            if kind == WORD_FUNCTION:
                 args: list[object] = []
-                sfunc = self.sfunctions[token]
+                sfunc = op
                 for _ in range(sfunc["arg_count"]):  # type: ignore[index]
                     # Parameters are binding forms: block arguments bind
                     # raw (code is data)
@@ -867,9 +1060,8 @@ class StackerCore:
                     result = func(*args)
                     if sfunc["push_result_to_stack"] and result is not VOID:  # type: ignore[index]
                         stack.append(result)  # a host function registered as a word: one value
-            elif token in self.plugins:
+            elif kind == WORD_PLUGIN:
                 args = []
-                op = self.plugins[token]
                 for _ in range(op["arg_count"]):  # type: ignore[index]
                     args.insert(0, self._pop_arg(stack, token))
                 try:
@@ -881,39 +1073,39 @@ class StackerCore:
                         op["func"](*args)  # type: ignore[index]
                 except (TypeError, AttributeError) as error:
                     _reraise_type_error(token, args, error)
+            elif kind == "priority":
+                # Some priority operators (e.g. `ans`) have no handler;
+                # they fall through silently, as the former elif chain did
+                handler = self._PRIORITY_HANDLERS.get(token)
+                if handler is not None:
+                    handler(self, op, stack)
             else:
-                entry = self.operator_manager.dispatch_table.get(token)
-                if entry is None:
-                    raise StackerSyntaxError(f"Unknown operator '{token}'")
-                category, op = entry
-                if category == "priority":
-                    # Some priority operators (e.g. `ans`) have no handler;
-                    # they fall through silently, as the former elif chain did
-                    handler = self._PRIORITY_HANDLERS.get(token)
-                    if handler is not None:
-                        handler(self, op, stack)
-                else:
-                    self._CATEGORY_EXECUTORS[category](self, token, op, stack)
+                self._CATEGORY_EXECUTORS[kind](self, token, op, stack)
         except IndexError as e:
-            # Only a pop or peek past the bottom of a stack means the operator
-            # ran out of arguments. A list, string or format index out of
-            # range is the operator's own error and stays as is.
-            if str(e) not in _EMPTY_STACK_MESSAGES:
-                raise
-            arg_count = self._get_operator_arg_count(token)
-            what = "Function" if token in self.sfunctions else "Operator"
-            plural = "" if arg_count == 1 else "s"
-            raise StackUnderflowError(token, arg_count, f"{what} `{token}` requires {arg_count} argument{plural}.") from e
+            self._report_underflow(token, e)
         except TypeError as e:
-            if isinstance(e, StackerError):
-                raise  # a word already said what went wrong
-            # Provide more helpful type error messages
-            error_msg = str(e)
-            if "unsupported operand type" in error_msg and not error_msg.startswith("Operator `"):
-                raise TypeError(  # the include position, if any, stays readable through __cause__
-                    f"Operator `{token}` received incompatible types. {error_msg}"
-                ) from e
-            raise
+            _reword_type_error(token, e)
+
+    def _report_underflow(self, token: str, error: IndexError) -> NoReturn:
+        """Re-raises an index error that reached the word ``token``: as too few values when a stack ran out.
+
+        Only a pop or peek past the bottom of a stack means the word ran
+        out of arguments; a list, string or format index out of range is
+        the word's own error and stays as it is. The word runner and a
+        compiled call share this.
+
+        Args:
+            token: The word that was running.
+            error: The error.
+        """
+        if str(error) not in _EMPTY_STACK_MESSAGES:
+            raise error
+        arg_count = self._get_operator_arg_count(token)
+        what = "Function" if token in self.sfunctions else "Operator"
+        plural = "" if arg_count == 1 else "s"
+        raise StackUnderflowError(
+            token, arg_count, f"{what} `{token}` requires {arg_count} argument{plural}."
+        ) from error
 
     def _get_operator_arg_count(self, token: str) -> int:
         """Get the argument count for an operator."""
@@ -938,26 +1130,89 @@ class StackerCore:
 
     def _prio_do(self, op, stack) -> None:
         body = stack.pop()
-        symbol = stack.pop()
-        end_value = self._pop_arg(stack, "do")
-        start_value = self._pop_arg(stack, "do")
-        name = self._name_of(symbol, "do")
+        start_value, end_value, name = self._do_arguments(stack)
         try:
             op["func"](start_value, end_value, name, body, self, stack)
         except (TypeError, AttributeError) as error:
             _reraise_type_error("do", [start_value, end_value], error)
 
+    def _do_arguments(self, stack: stack_data[object]) -> tuple[object, object, str]:
+        """Takes what `do` reads after its body: the loop variable's symbol, the last value, the first value.
+
+        The word's own handler and a compiled `do` both read the arguments here.
+
+        Args:
+            stack: The stack, with the body already taken.
+
+        Returns:
+            The first value, the last value (both as `_pop_arg` reads them) and the loop variable's name.
+
+        Raises:
+            IndexError: The stack ran out (the word's runner reports it as too few values).
+            NoValueProducedError: A block in a value's place left nothing.
+            ReservedWordError: The name is reserved (after the values were taken).
+            StackerSyntaxError: The symbol's place holds no name (after the values were taken).
+        """
+        symbol = stack.pop()
+        end_value = self._pop_arg(stack, "do")
+        start_value = self._pop_arg(stack, "do")
+        return start_value, end_value, self._name_of(symbol, "do")
+
     def _prio_dolist(self, op, stack) -> None:
         body = stack.pop()
-        symbol = stack.pop()
-        lst = self._data_items(self._pop_arg(stack, "dolist"), "dolist")
-        name = self._name_of(symbol, "dolist")
+        lst, name = self._dolist_arguments(stack)
         try:
             op["func"](name, lst, body, self, stack)
         except (TypeError, AttributeError) as error:
             _reraise_type_error("dolist", [lst], error)
 
+    def _dolist_arguments(self, stack: stack_data[object]) -> tuple[object, str]:
+        """Takes what `dolist` reads after its body: the loop variable's symbol and the items.
+
+        The word's own handler and a compiled `dolist` both read the arguments here.
+
+        Args:
+            stack: The stack, with the body already taken.
+
+        Returns:
+            The items as ``_data_items`` gives them (a list, or another iterable as it is) and
+            the loop variable's name.
+
+        Raises:
+            IndexError: The stack ran out (the word's runner reports it as too few values).
+            NoValueProducedError: A block in the items' place left nothing.
+            StackerTypeError: The items' place holds something that is not iterated.
+            ReservedWordError: The name is reserved (after the items were taken).
+            StackerSyntaxError: The symbol's place holds no name (after the items were taken).
+        """
+        symbol = stack.pop()
+        lst = self._data_items(self._pop_arg(stack, "dolist"), "dolist")
+        return lst, self._name_of(symbol, "dolist")
+
     def _prio_times(self, op, stack) -> None:
+        n_times = self._times_count(stack)
+        body = stack.pop()
+        try:
+            op["func"](n_times, body, self, stack)
+        except (TypeError, AttributeError) as error:
+            _reraise_type_error("times", [n_times], error)
+
+    def _times_count(self, stack: stack_data[object]) -> object:
+        """Takes the count `times` reads from the top, before its body: a block there is run for its value.
+
+        The word's own handler and a compiled `times` both read the count here.
+
+        Args:
+            stack: The stack, with the count on top of the body.
+
+        Returns:
+            The count as written, or as the block left it (checked by the word itself).
+
+        Raises:
+            IndexError: The stack is empty (the word's runner reports it as too few values).
+            StackerSyntaxError: The count was a block that left nothing.
+            StackerError: The count block failed, with its own error.
+        """
         n_times = self._pop_and_eval(stack)
         if n_times is VOID:
             # The body and the count written the wrong way round, with a
@@ -967,11 +1222,7 @@ class StackerCore:
                 "`times` expects a number of repetitions on top, got a block that leaves nothing: "
                 "write `{body} n times`"
             )
-        body = stack.pop()
-        try:
-            op["func"](n_times, body, self, stack)
-        except (TypeError, AttributeError) as error:
-            _reraise_type_error("times", [n_times], error)
+        return n_times
 
     def _prio_while(self, op, stack) -> None:
         body = stack.pop()
@@ -1033,9 +1284,17 @@ class StackerCore:
     def _prio_set(self, op, stack) -> None:
         symbol = stack.pop()
         name = self._name_of(symbol, "set")
-        value = self._pop_and_resolve(stack)
-        # Try to update existing variable in scope chain
-        # If not found, create in local scope
+        self._set_variable(name, self._pop_and_resolve(stack))
+
+    def _set_variable(self, name: str, value: object) -> None:
+        """Binds ``name`` to ``value`` as `set` does: updates the variable where it is, or makes it here.
+
+        The word's own handler and a compiled `set` both bind here.
+
+        Args:
+            name: The variable's name (already checked as a name).
+            value: The value.
+        """
         if not self.variables.update_existing(name, value):
             if self.variables.binds_globally():
                 # A global variable hides a word of its name everywhere, a
@@ -1145,13 +1404,17 @@ class StackerCore:
         )
 
     def _prio_defun(self, op, stack) -> None:
-        """``{args} {body} :name defun`` -- the argument list is validated like ``defmacro``'s."""
+        """``{args} {body} :name defun`` -- the three parts are validated like ``defmacro``'s before anything is said or done."""
         symbol = stack.pop()
         name = self._name_of(symbol, "defun")
-        self._warn_builtin_redefinition(name)
-        self._warn_user_redefinition(name)
         body = stack.pop()
         fargs = self._parse_arg_names(stack.pop(), "defun")
+        if not isinstance(body, StackerCore):
+            raise StackerSyntaxError(
+                f"`defun` expects a code block as the function body, got {body}. Write {{args}} {{body}} :name defun"
+            )
+        self._warn_builtin_redefinition(name)
+        self._warn_user_redefinition(name)
         op["func"](self, name, fargs, body)
 
     def _prio_defmacro(self, op, stack) -> None:
@@ -1221,9 +1484,13 @@ class StackerCore:
         self._substack_with_tokens(list(first.tokens) + list(second.tokens), stack)
 
     def _prio_lambda(self, op, stack) -> None:
-        """``{args} {body} lambda`` -- the argument list is validated like ``defmacro``'s."""
+        """``{args} {body} lambda`` -- the body and the argument list are validated like ``defmacro``'s."""
         body = stack.pop()
         fargs = self._parse_arg_names(stack.pop(), "lambda")
+        if not isinstance(body, StackerCore):
+            raise StackerSyntaxError(
+                f"`lambda` expects a code block as the body, got {body}. Write {{args}} {{body}} lambda"
+            )
         if op["push_result_to_stack"]:
             result = op["func"](fargs, body)
             if result is not VOID:
@@ -1934,9 +2201,9 @@ class StackerCore:
                     func = host["func"]  # type: ignore[index]
 
                     def call(element: object) -> object:
-                        # The element is prepared as `_execute` would (a block
+                        # The element is prepared as `_run_word` would (a block
                         # is evaluated, a String literal is unwrapped), and a
-                        # type error names the word, as `_execute` would.
+                        # type error names the word, as `_run_word` would.
                         try:
                             return func(self._pop_arg(stack_data([element]), name))
                         except (TypeError, AttributeError) as error:
@@ -2018,7 +2285,11 @@ class StackerCore:
             copy_core.variables = self.variables
             return copy_core
 
-        return build(block)
+        expansion = build(block)
+        # the expansion itself runs once: counting its runs would be wasted (a block written inside it,
+        # a loop body the macro generates, runs as often as the program says, and is counted as any other)
+        expansion.tokens._unit = compiler.UNCOMPILABLE
+        return expansion
 
     def _warn_template_replaces_word(self, name: str) -> None:
         """Logs, once per macro and name, that a template replaces a built-in or prelude word in the code it generates.
@@ -2101,10 +2372,8 @@ class StackerCore:
                 except IndexError:
                     raise StackUnderflowError(name, macro.arg_count) from None
 
-            scope = self.variables.create_child_scope()
+            scope = self.variables.create_child_scope(dict(zip(macro.args, args)))
             scope._write_barrier = True
-            for arg_name, value in zip(macro.args, args):
-                scope[arg_name] = value
 
             expander = type(self)(parent=self)
             expander.tokens = macro.body.tokens  # shared, read-only
@@ -2219,8 +2488,7 @@ class StackerCore:
                     bound.stack = stack_data()
                 self._bound_cache = (scope, bound)
                 return bound
-        bound = object.__new__(type(self))  # a shallow copy, without copy.copy's overhead
-        bound.__dict__.update(self.__dict__)
+        bound = copier.shallow_copy(self)
         bound.variables = scope
         bound.stack = stack_data()
         bound._bound_cache = None

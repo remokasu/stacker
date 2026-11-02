@@ -1,5 +1,31 @@
 # CHANGE LOG
 
+## [1.29.0] - 2026-11-02
+
+### Added
+
+- **`--no-compile` and `Stacker(compile=False)`**: run every block in the interpreter instead of compiling the ones that run often (below). The result is the same either way; the switch is for comparing the two and for narrowing a problem down
+
+### Changed
+
+- **A block that runs often runs compiled.** On its eighth run, a block (a loop body, the body of a function or a lambda, a block literal before a control word) is translated once into instructions in which every name is already resolved, and runs from them from then on. What a program leaves behind is unchanged: the stack, what it printed, the errors and their messages, the trace, `vars`, `break` and the recursion limit. A compiled block notices a word defined, redefined, aliased or disabled, and a variable created with a word's name, and goes back to the interpreter for that run. Measured against 1.28.1 with the same programs on one machine (min of 7 runs): on CPython 3.13, loops take 30 to 36% less time (`0 :acc set 1 100000 :i {acc i + :acc set} do acc` 343 → 221 ms), recursion 43% less (`20 fib` 254 → 144 ms), a function or lambda called in a loop 33 to 38% less, `map` and `reduce` 17% less, and the examples run one after another 42% less; on CPython 3.10, 13 to 39% less across the same programs; on PyPy 3.11, loops, recursion and calls run 11 to 21 times faster (881 → 56 ms, 531 → 35 ms, 748 → 66 ms), `while` takes 45% less time and the examples run 5 times faster. A loop whose body is one aliased word is 6 to 10% slower on CPython, and `append!` in a loop 4 to 9% slower; startup time is unchanged
+  - Writing into the dictionaries that `get_macros_ref()`, `get_sfuntions_ref()` and `get_plugins_ref()` return, or into the `macros`, `sfunctions` and `plugins` attributes, does not reach a compiled block. Use `register_sfunction`, `register_macro`, `register_plugin` and `register_operator`, or pass `compile=False`
+  - With `--no-compile` or `compile=False`, a recursion through `if` or `ifelse` reaches the host's own depth limit about a quarter earlier than in 1.28.1 (the `StackerRecursionError` raised `at N calls, before the limit` says 124 instead of 163 under a host limit of 1000); compiled, it stops where it did. The command line raises the host's depth, so there Stacker's own limit (`--recursion-limit`, 1500 by default) stops the recursion first, as before
+- **Faster blocks, function calls and lambda calls.** Running a block in another scope, calling a function and calling a lambda each copy the block's interpreter state, and the copy is now made the way the host runs it fastest. Startup time is unchanged
+
+### Breaking Changes
+
+- **`Stacker.sfunc_args` is removed.** The attribute was a dictionary that nothing ever filled; reading it now raises `AttributeError`. A function's argument names are `stacker.sfunctions[name]["func"].args`
+
+### Removed
+
+- **The manual under `docs/` is withdrawn**: it is not ready to be read. The README is the reference
+
+### Fixed
+
+- A block nested inside a block literal kept plugin descriptions of its own, so `{ { "twice" disable_plugin } eval } eval` removed the plugin but `help` still listed its description. Nested blocks share the interpreter's descriptions now, at any depth
+- `defun` and `lambda` accepted a body that is not a code block (`{x} 5 :f defun`), and calling the function leaked the host's error (`'int' object has no attribute 'variables'`). They refuse such a body when it is defined, as `defmacro` does: `` `defun` expects a code block as the function body, got 5. Write {args} {body} :name defun `` and `` `lambda` expects a code block as the body, got 5. Write {args} {body} lambda ``, each a `StackerSyntaxError`. `defun` warns of a redefinition only once its name, argument list and body are valid
+
 ## [1.28.1] - 2026-10-30
 
 ### Fixed
@@ -29,7 +55,7 @@
 
 ### Fixed
 
-- The README listed the REPL's display settings among the words of the language, left out `enable_disp_logo` and said `disable_disp_stack` shows the latest value; the manual still said that a name defined at the prompt is not completed, which it is since 1.27.2. Both describe the REPL's commands as they are now
+- The README listed the REPL's display settings among the words of the language, left out `enable_disp_logo` and said `disable_disp_stack` shows the latest value. It describes the REPL's commands as they are now
 
 ## [1.27.2] - 2026-10-29
 
@@ -57,7 +83,7 @@
 
 ### Fixed
 
-- A limit on the digits of an integer's text that a host put back after making an interpreter, as the Python chapter of the manual advises a host that reads untrusted input to do, did not stay: every block, function call, `map`, branch, macro or included file the interpreter ran lifted it again. An interpreter now lifts the limit once, when it is made. With the limit put back, showing or converting an integer longer than the limit raises the host's error
+- A limit on the digits of an integer's text that a host put back after making an interpreter, as a host that reads untrusted input is advised to do, did not stay: every block, function call, `map`, branch, macro or included file the interpreter ran lifted it again. An interpreter now lifts the limit once, when it is made. With the limit put back, showing or converting an integer longer than the limit raises the host's error
 - `register_operator` replacing a stack, higher-order, aggregate, transform, array and dictionary, settings or system word replaced it in the other interpreters of the same process too, not only in the one it was called on: in every one made afterwards, and in one made before as soon as it replaced a word itself. Each interpreter now has its own copy of those words, as it already had of the others
 
 ## [1.26.1] - 2026-10-29
