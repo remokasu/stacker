@@ -181,6 +181,14 @@ class ReplMode(ExecutionMode):
                 #         print(self.rpn_calculator.get_stack_copy_as_list())
                 self.rpn_calculator.clear_trace()
 
+            except KeyboardInterrupt:
+                # Ctrl-C cancels what is being typed or run and the prompt
+                # comes back; the stack stays as it is, as after an error
+                print("\nKeyboardInterrupt", file=sys.stderr)
+                if self.debug:
+                    traceback.print_exc()
+                self.rpn_calculator.clear_trace()
+
             except EOFError:
                 print("\nSee you!")
                 break

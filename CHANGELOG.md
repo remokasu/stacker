@@ -1,5 +1,12 @@
 # CHANGE LOG
 
+## [1.29.1] - 2026-11-04
+
+### Fixed
+
+- Ctrl-C ended the REPL with the host's traceback, and the stack, the variables and the definitions were lost with it. It now cancels what is being typed or run and the prompt comes back, with everything kept, including what the interrupted line had already left on the stack. Ctrl-D and `exit` end the REPL as before
+- Ctrl-C printed the host's traceback when it stopped a script or `-e`. It now prints nothing; with `--debug` the traceback is still printed. The process ends the same way as before: a shell sees status 130, and a shell loop around the program stops
+
 ## [1.29.0] - 2026-11-02
 
 ### Added

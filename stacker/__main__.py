@@ -6,6 +6,8 @@ import shutil
 import sys
 import traceback
 from pathlib import Path
+from types import TracebackType
+from collections.abc import Callable
 import stacker
 
 from stacker.runtime.exec_modes import CommandLineMode, ReplMode, ScriptMode
@@ -136,8 +138,33 @@ def copy_plugin_to_install_dir(plugin_path: str, debug_mode: bool) -> None:
             traceback.print_exc()
 
 
+def silent_on_interrupt(report: Callable[[type[BaseException], BaseException, TracebackType | None], object]) -> Callable:
+    """Wraps an exception hook so that it says nothing for Ctrl-C.
+
+    The host still flushes the streams and ends the process by the signal,
+    so a shell loop around the program stops too; exiting with a code of
+    its own would let the loop go on to its next round.
+
+    Args:
+        report: The hook in place, called for every other exception.
+
+    Returns:
+        The hook to install with ``sys.excepthook``.
+    """
+
+    def hook(kind: type[BaseException], value: BaseException, tb: TracebackType | None) -> None:
+        if not issubclass(kind, KeyboardInterrupt):
+            report(kind, value, tb)
+
+    return hook
+
+
 def main() -> None:
     """Main entry point for the Stacker CLI."""
+    # With --debug, the traceback of Ctrl-C shows where the program was
+    if not argv.debug:
+        sys.excepthook = silent_on_interrupt(sys.excepthook)
+
     # add plugin
     if argv.addplugin:
         copy_plugin_to_install_dir(argv.addplugin, argv.debug)
