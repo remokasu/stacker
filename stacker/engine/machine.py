@@ -120,7 +120,6 @@ from stacker.error import (
     StackerSyntaxError,
     StackerTypeError,
     StackUnderflowError,
-    attach_include_location,
     attach_macro_context,
     error_kind,
 )
@@ -2111,67 +2110,35 @@ def _args_next(control: Frame, ended: Frame | None) -> Frame | None:
 
 
 def _include(frame: Frame, name: str, entry: dict, stack: stack_data[object]) -> Frame | None:
-    """`include` / `require`: starts running the file, expression by expression (``include_file``)."""
+    """`include` / `require`: starts running the file, expression by expression, by the rule of ``start_include``."""
     filename = stack.pop()
     if not isinstance(filename, str):
         raise StackerTypeError(
             f'`{name}` expects the file path as a string, e.g. "lib.stk" {name}; got {_core.plain_text(filename)}'
         )
-    once = name == "require"
-    core = _view(frame)  # where relative paths resolve from, and the runner's parent
-    base_dir = _include_module.Path(core.current_file).parent if core.current_file else None
-    target_name = _include_module.remove_start_end_quotes(filename)
-    state = core._includes
-    if once and _include_module._already_read(target_name, base_dir, state.loaded):
+    # the view is where relative paths resolve from, and the runner's parent
+    started = _include_module.start_include(_view(frame), filename, name == "require")
+    if started is None:
         return None
-    found = _include_module.resolve_include_path(target_name, base_dir)
-    resolved = found.resolve()
-    if any(running.path == resolved for running in state.stack):
-        raise _include_module.IncludeError(f"Circular include detected: {filename}")
-    code = _include_module.readtxt(found)
-    # The entry script's line is the expression the script runner is on (the line that includes, or that
-    # calls the function that includes). It is recorded now, before a nested include moves the root's line on
-    if state.stack and state.stack[-1].kind == _include_module.ENTRY:
-        root = core
-        while root.parent is not None:
-            root = root.parent
-        state.stack[-1].line = root.current_line
-    frames = [(str(running.path), running.line) for running in reversed(state.stack)]
-    # A child core runs the file: it carries the file's own position, and `require` gives it the root scope
-    # wherever the word is written
-    runner = type(core)(parent=core)
-    if once:
-        runner.variables = core.variables.root()
-    runner.current_file = str(resolved)
-    source_lines = dict(enumerate(code.splitlines(), start=1))
-    runner.source_lines = source_lines
     control = Frame(INCLUDE, frame)  # (made before the file is marked as running: a depth error here leaves no mark)
-    running = _include_module.Frame(resolved, _include_module.INCLUDE)
-    state.stack.append(running)
-
-    def set_line(line: int | None) -> None:
-        running.line = line
-        runner.current_line = line
-
+    started.begin()
     control.word = name
     control.stack = stack_data()  # the file starts with an empty stack; what it leaves there is dropped
-    # state: the expressions (read as they come), the runner, the include state, its frame, the path, the file's
-    # lines, the including frames for the error's position
-    control.state = [_include_module.expressions_of(code, set_line), runner, state, running, resolved, source_lines, frames]
+    control.state = started
     return control
 
 
 def _include_next(control: Frame, ended: Frame | None) -> Frame:
     """An expression of the included file ran (None: the file starts): the next one runs, or the file is done."""
-    expressions, runner, state, _running, resolved, _source_lines, _frames = control.state
+    started = control.state
     try:
-        expression = next(expressions)
+        expression = next(started.expressions)
     except StopIteration:
-        state.stack.pop()
-        runner.warn_values_left(resolved.name, control.stack)  # what a file leaves is dropped; it is named first
-        state.loaded.add(resolved)
+        started.stop()
+        started.end(control.stack)
         return _resume(control.parent)
     tokens = parse_expression(expression)
+    runner = started.runner
     child = Frame(BLOCK, control)  # (an error inside it hands its trace to the including code, as `evaluate` did)
     child.template = runner
     child.core = runner
@@ -2676,9 +2643,8 @@ def _unwind(frame: Frame, error: BaseException, is_break: bool) -> Frame | None:
                     stack[-i] = stack[-i].value
         elif kind == INCLUDE:
             # the error (a `break` too) is tagged with the file's position, and the file is no longer running
-            _expressions, _runner, state, running, resolved, source_lines, frames = frame.state
-            attach_include_location(error, str(resolved), running.line, source_lines.get(running.line or 0), frames)
-            state.stack.pop()
+            frame.state.tag(error)
+            frame.state.stop()
         elif kind == MAP:
             frame.state[7] = None  # (the element's activation, let go either way)
             if not is_break:

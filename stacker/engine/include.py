@@ -170,23 +170,64 @@ def _already_read(target_name: str, base_dir: Path | None, loaded: set[Path]) ->
     return any(candidate.resolve() in loaded for candidate in candidates)
 
 
-def include_file(core: StackerCore, filename: str, once: bool = False) -> None:
-    """Runs a script here, in ``core``'s interpreter: the `include` and `require` words.
+@dataclass
+class Started:
+    """A file the rule let through, about to run: what ``include_file`` and the machine's `include` do alike.
 
-    The file is read expression by expression, as a script is, and each
-    expression is evaluated by a child core of ``core``: in ``core``'s
-    scope for `include`, in the root scope for `require`. Nothing is
-    copied. The file starts with an empty stack and what it leaves there
-    is dropped. While it runs, relative paths resolve against its own
-    directory and an error raised inside it is tagged with its file and
-    line (see ``attach_include_location``).
+    ``start_include`` applies the rule and makes one. The caller marks the
+    file as running with ``begin``, runs ``expressions`` one by one on
+    ``runner``, and when the file is over calls ``stop``, then ``end`` if it
+    ran to its end or ``tag`` on the error that stopped it.
+    """
+
+    runner: StackerCore  #: the child core the file's expressions run on
+    expressions: Iterator[str]  #: the file's expressions, read as they come (each one's line is set first)
+    resolved: Path  #: the file's resolved path
+    source_lines: dict[int, str]  #: the file's lines, for the error report
+    frames: list[tuple[str, int | None]]  #: the files that included it, innermost first, with their lines
+    state: IncludeState  #: the interpreter's include state
+    running: Frame  #: the file's frame on the include stack
+
+    def begin(self) -> None:
+        """Puts the file on the include stack: it is running, and a file that includes it again is circular."""
+        self.state.stack.append(self.running)
+
+    def stop(self) -> None:
+        """Takes the file off the include stack: it is no longer running, however it ended."""
+        self.state.stack.pop()
+
+    def end(self, file_stack: stack_data[object]) -> None:
+        """The file ran to its end: what it left is dropped and named, and `require` remembers it."""
+        self.runner.warn_values_left(self.resolved.name, file_stack)  # what a file leaves is dropped; it is named first
+        self.state.loaded.add(self.resolved)
+
+    def tag(self, error: BaseException) -> None:
+        """Records on ``error`` (a `break` too) where in the file it was raised."""
+        attach_include_location(
+            error, str(self.resolved), self.running.line, self.source_lines.get(self.running.line or 0), self.frames
+        )
+
+
+def start_include(core: StackerCore, filename: str, once: bool) -> Started | None:
+    """Applies the rule of `include` and `require` to ``filename`` and prepares the file to run.
+
+    The one place the rule is written: the path is resolved from the
+    including file's directory, then the current directory; a file already
+    running is circular; a `require` of a file run to its end has nothing
+    to do; the entry script's line is recorded for the error report; and a
+    child core of ``core`` is made to run the file, in ``core``'s scope for
+    `include` and in the root scope for `require`, carrying the file's own
+    position.
 
     Args:
         core: The core that executed the word (its ``current_file`` is
             where relative paths resolve from).
         filename: The path as written in the script.
-        once: True for `require`: a file already run to its end in this
-            interpreter is not run again, nor even opened.
+        once: True for `require`.
+
+    Returns:
+        The file, ready to run; None when `require` has nothing to do (the
+        file is not even opened).
 
     Raises:
         IncludeError: The file is not found, is not a ``.stk`` file, or is
@@ -196,7 +237,7 @@ def include_file(core: StackerCore, filename: str, once: bool = False) -> None:
     target_name = remove_start_end_quotes(filename)
     state: IncludeState = core._includes
     if once and _already_read(target_name, base_dir, state.loaded):
-        return
+        return None
     found = resolve_include_path(target_name, base_dir)
     resolved = found.resolve()
     if any(frame.path == resolved for frame in state.stack):
@@ -209,7 +250,7 @@ def include_file(core: StackerCore, filename: str, once: bool = False) -> None:
     if state.stack and state.stack[-1].kind == ENTRY:
         root = core
         while root.parent is not None:
-            root = root.parent  # type: ignore[assignment]
+            root = root.parent
         state.stack[-1].line = root.current_line
     frames = [(str(frame.path), frame.line) for frame in reversed(state.stack)]
 
@@ -221,22 +262,48 @@ def include_file(core: StackerCore, filename: str, once: bool = False) -> None:
     runner.current_file = str(resolved)
     source_lines = dict(enumerate(code.splitlines(), start=1))
     runner.source_lines = source_lines
-    frame = Frame(resolved, INCLUDE)
-    state.stack.append(frame)
-    file_stack: stack_data[object] = stack_data()
+    running = Frame(resolved, INCLUDE)
 
     def set_line(line: int | None) -> None:
-        frame.line = line
+        running.line = line
         runner.current_line = line
 
+    return Started(runner, expressions_of(code, set_line), resolved, source_lines, frames, state, running)
+
+
+def include_file(core: StackerCore, filename: str, once: bool = False) -> None:
+    """Runs a script here, in ``core``'s interpreter: the `include` and `require` words.
+
+    The file is read expression by expression, as a script is, and each
+    expression is evaluated by a child core of ``core``: in ``core``'s
+    scope for `include`, in the root scope for `require`. Nothing is
+    copied. The file starts with an empty stack and what it leaves there
+    is dropped. While it runs, relative paths resolve against its own
+    directory and an error raised inside it is tagged with its file and
+    line (see ``attach_include_location``). The rule is ``start_include``'s.
+
+    Args:
+        core: The core that executed the word (its ``current_file`` is
+            where relative paths resolve from).
+        filename: The path as written in the script.
+        once: True for `require`: a file already run to its end in this
+            interpreter is not run again, nor even opened.
+
+    Raises:
+        IncludeError: The file is not found, is not a ``.stk`` file, or is
+            already being included (a circular include).
+    """
+    started = start_include(core, filename, once)
+    if started is None:
+        return
+    started.begin()
+    file_stack: stack_data[object] = stack_data()
     try:
-        for expression in expressions_of(code, set_line):
-            runner.evaluate(parse_expression(expression), stack=file_stack)
+        for expression in started.expressions:
+            started.runner.evaluate(parse_expression(expression), stack=file_stack)
     except (Exception, BreakException) as error:  # a `break` is tagged too; SystemExit passes
-        attach_include_location(error, str(resolved), frame.line, source_lines.get(frame.line or 0), frames)
+        started.tag(error)
         raise
     finally:
-        state.stack.pop()
-    runner.warn_values_left(resolved.name, file_stack)  # what a file leaves is dropped; it is named first
-    state.loaded.add(resolved)
-
+        started.stop()
+    started.end(file_stack)
