@@ -11,17 +11,17 @@ from stacker.lang.scope import ScopedVariables
 
 if TYPE_CHECKING:
     from stacker.data_type import stack_data
-    from stacker.stacker import Stacker
+    from stacker.engine.core import StackerCore
 
 
-def _body_scope(word: str, block: object, parent: Stacker) -> ScopedVariables:
+def _body_scope(word: str, block: object, parent: StackerCore) -> ScopedVariables:
     """Returns the scope the loop body ``block`` is bound to; a value that is not a block is refused by name."""
     if not isinstance(block, type(parent)):
         raise StackerTypeError(f"`{word}` expects a code block as the body, got {plain_text(block)}")
     return block.variables
 
 
-def _loop(body: object, parent: Stacker, stack: stack_data[object]) -> None:
+def _loop(body: object, parent: StackerCore, stack: stack_data[object]) -> None:
     """Evaluates ``body`` on ``stack`` forever until ``break`` is raised.
 
     This is the single looping primitive every other loop can be built on.
@@ -70,8 +70,8 @@ def check_times_count(n_times: object) -> None:
 
 def _times(
     n_times: int,
-    block: Stacker | object,
-    parent: Stacker,
+    block: StackerCore | object,
+    parent: StackerCore,
     stack: stack_data[object],
 ) -> None:
     """Executes a block of code a specified number of times.
@@ -95,8 +95,8 @@ def _do(
     start_value: int,
     end_value: int,
     symbol: str,
-    block: Stacker,
-    parent: Stacker,
+    block: StackerCore,
+    parent: StackerCore,
     stack: stack_data[object],
 ) -> None:
     # Each iteration runs in a scope of its own holding the loop variable,
@@ -129,9 +129,9 @@ def do_range(start_value: object, end_value: object) -> range:
 
 
 def _while(
-    condition: Stacker,
-    body: Stacker,
-    parent: Stacker,
+    condition: StackerCore,
+    body: StackerCore,
+    parent: StackerCore,
     stack: stack_data[object],
 ) -> None:
     """Executes a block of code while a condition block is true.
@@ -163,8 +163,8 @@ def _while(
 def _dolist(
     symbol: str,
     lst: list[object],
-    block: Stacker,
-    parent: Stacker,
+    block: StackerCore,
+    parent: StackerCore,
     stack: stack_data[object],
 ) -> None:
     # Each iteration runs in a scope of its own holding the loop variable,

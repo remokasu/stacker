@@ -48,19 +48,9 @@ ALLOWED = {
     "plugins": {"foundation", "lang", "face"},
 }
 
-#: (file, layer imported, step of the second release that removes it).
-KNOWN_CROSSINGS = {
-    ("stacker/lang/display.py", "face", "B2"),
-    ("stacker/lang/smacro.py", "face", "B2"),
-    ("stacker/operators/collection.py", "engine", "B2"),
-    ("stacker/operators/types.py", "engine", "B2"),
-    ("stacker/operators/system.py", "engine", "B2"),
-    ("stacker/operators/setting.py", "face", "B2"),
-    ("stacker/engine/primitives/loop.py", "face", "B2"),
-    ("stacker/engine/primitives/if_else.py", "face", "B2"),
-    ("stacker/engine/primitives/defun.py", "face", "B2"),
-    ("stacker/engine/primitives/defmacro.py", "face", "B2"),
-}
+#: (file, layer imported, the step that removes it): the crossings that still exist. Empty since 1.33.0; a new
+#: one is a defect to fix, not to list.
+KNOWN_CROSSINGS: set[tuple[str, str, str]] = set()
 
 
 def _module_name(path: Path) -> str:

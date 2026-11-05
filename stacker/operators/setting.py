@@ -5,20 +5,20 @@ from typing import TYPE_CHECKING
 from stacker.lang import console
 
 if TYPE_CHECKING:
-    from stacker.stacker import Stacker
+    from stacker.lang.protocols import CoreView
 
 
-def _disable_plugin(stacker: Stacker, operator_name: str) -> None:
+def _disable_plugin(stacker: CoreView, operator_name: str) -> None:
     if operator_name in stacker.plugins:
         del stacker.plugins[operator_name]
         stacker.operator_manager.words_changed()
-        # A bare StackerCore keeps no descriptions; a Stacker shares them with its cores
+        # A bare StackerCore keeps no descriptions; a CoreView shares them with its cores
         getattr(stacker, "plugin_descriptions", {}).pop(operator_name, None)
     else:
         print(f"Plugin '{operator_name}' is not registered.", file=console.stdout())
 
 
-def _disable_all_plugins(stacker: Stacker) -> None:
+def _disable_all_plugins(stacker: CoreView) -> None:
     # Emptied in place: every child core (a block, a function body, an
     # included file) shares these tables with the root
     if stacker.plugins:

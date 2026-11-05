@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from stacker.data_type import Symbol
 
 if TYPE_CHECKING:
-    from stacker.stacker import Stacker
+    from stacker.lang.protocols import Block
 
 GENSYM_PREFIX = "__g"
 # Process-wide so names never collide, even across `include`d interpreters.
@@ -31,13 +31,13 @@ class StackerMacro:
         self,
         name: str,
         args: list[str],
-        body: Stacker,
+        body: Block,
         is_prelude: bool = False,
         defined_at: tuple[str | None, int | None] | None = None,
     ) -> None:
         self.name: str = name
         self.args: list[str] = list(args)
-        self.body: Stacker = body
+        self.body: Block = body
         self.arg_count: int = len(self.args)
         self.is_prelude: bool = is_prelude
         #: The file and line that defined it (None in the REPL), shown when another file redefines it

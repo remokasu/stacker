@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING
 from stacker.engine.sfunction import StackerFunction
 
 if TYPE_CHECKING:
-    from stacker.stacker import Stacker
+    from stacker.engine.core import StackerCore
 
 
 def defun_sfunction(
-    stacker: Stacker, func_name: str, fargs: list[str], body: Stacker
+    stacker: StackerCore, func_name: str, fargs: list[str], body: StackerCore
 ) -> None:
     function = StackerFunction(fargs, body, name=func_name)
     args_count = len(fargs)

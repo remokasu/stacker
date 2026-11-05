@@ -6,6 +6,7 @@ from typing import TextIO
 from stacker.data_type import Array, Symbol
 from stacker.error import StackerRuntimeError
 from stacker.lang.color import colored
+from stacker.lang.protocols import BLOCK, kind_of
 from stacker.syntax.token_rules import escape_for_display
 
 #: The error for a value nested too deep for the display to walk
@@ -252,8 +253,6 @@ color_map: dict[str, str] = {
 
 
 def custom_print(value: object) -> CustomPrinter | object:
-    from stacker.stacker import Stacker
-
     if isinstance(value, bool):
         return CustomBoolPrinter(value, color_map["bool"])
     if value is None:
@@ -276,7 +275,7 @@ def custom_print(value: object) -> CustomPrinter | object:
     if isinstance(value, dict):
         return CustomDictPrinter(value, color_map["dict"])
     # REMOVED: tuple handling - () now creates code blocks
-    if isinstance(value, Stacker):
+    if kind_of(value) == BLOCK:
         return CustomBlockPrinter(value, color_map["block"])
     if callable(value):
         return CutomCallablePrinter(value, color_map["callable"])

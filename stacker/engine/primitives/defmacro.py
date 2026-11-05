@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 from stacker.lang.smacro import StackerMacro
 
 if TYPE_CHECKING:
-    from stacker.stacker import Stacker
+    from stacker.engine.core import StackerCore
 
 
-def define_macro(stacker: Stacker, name: str, args: list[str], body: Stacker) -> None:
+def define_macro(stacker: StackerCore, name: str, args: list[str], body: StackerCore) -> None:
     """Registers a macro on ``stacker``: its body runs at expansion time and returns code.
 
     Args:

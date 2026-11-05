@@ -7,10 +7,10 @@ from stacker.lang import console
 from stacker.version import __version__
 
 if TYPE_CHECKING:
-    from stacker.engine.core import StackerCore
+    from stacker.lang.protocols import CoreView
 
 
-def _args(core: StackerCore) -> list[str]:
+def _args(core: CoreView) -> list[str]:
     """``args``: the command-line arguments of the program, as a new list of strings."""
     root = core
     while root.parent is not None:
@@ -18,12 +18,12 @@ def _args(core: StackerCore) -> list[str]:
     return list(root.arguments)
 
 
-def _script_path(core: StackerCore) -> str | None:
+def _script_path(core: CoreView) -> str | None:
     """``script-path``: the absolute path of the file that is running, or null in the REPL and -e."""
     return core.current_file
 
 
-def _main_script_path(core: StackerCore) -> str | None:
+def _main_script_path(core: CoreView) -> str | None:
     """``main-script-path``: the absolute path of the script the command line ran, or null in the REPL and -e."""
     root = core
     while root.parent is not None:
@@ -31,17 +31,17 @@ def _main_script_path(core: StackerCore) -> str | None:
     return root.main_script
 
 
-def _is_main(core: StackerCore) -> bool:
+def _is_main(core: CoreView) -> bool:
     """``main?``: whether the running code is the script the command line ran (not an included file); true in the REPL and -e."""
     return core.current_file == _main_script_path(core)
 
 
-def _script_dir(core: StackerCore) -> str | None:
+def _script_dir(core: CoreView) -> str | None:
     """``script-dir``: the directory of the file that is running, or null in the REPL and -e."""
     return None if core.current_file is None else str(Path(core.current_file).parent)
 
 
-def _vars(core: StackerCore) -> None:
+def _vars(core: CoreView) -> None:
     """
     Display all defined variables.
     Example:
@@ -60,7 +60,7 @@ def _vars(core: StackerCore) -> None:
         print(f"{key} = {value}", file=out)
 
 
-def _funcs(core: StackerCore) -> None:
+def _funcs(core: CoreView) -> None:
     """
     Display all defined functions.
     Example:
@@ -80,7 +80,7 @@ def _funcs(core: StackerCore) -> None:
         print(f"{name}: args={func.args}, body={func.blockstack}{suffix}", file=out)
 
 
-def _macros(core: StackerCore) -> None:
+def _macros(core: CoreView) -> None:
     """
     Display all defined macros.
     Example:
@@ -98,7 +98,7 @@ def _macros(core: StackerCore) -> None:
         print(f"{name}: {macro!r}{suffix}", file=out)
 
 
-def _operators(core: StackerCore) -> None:
+def _operators(core: CoreView) -> None:
     """
     Display all available operators grouped by category.
     Example:

@@ -36,7 +36,7 @@ from stacker.error import (
     word_in_list_literal_message,
     # UnexpectedTokenError,
 )
-from stacker.lang import console, recursion
+from stacker.lang import console, protocols, recursion
 from stacker.lang.arguments import count_argument, integer_argument
 from stacker.lang.boundary import token_to_value, value_to_token
 from stacker.lang.display import plain_text  # display.py must not import core.py
@@ -501,6 +501,8 @@ class StackerCore:
     #: attribute, so that a core's instances keep their 29 attributes. The core itself has none; the face sets
     #: ``stacker.operators.STANDARD``
     WORD_TABLES: ClassVar[Mapping[str, Sequence[Mapping[str, object]]]] = {}
+    #: The kind the lower layers read of a block (``stacker.lang.protocols.kind_of``)
+    stacker_kind: ClassVar[str] = protocols.BLOCK
 
     def __init__(
         self, expression: str | None = None, parent: StackerCore | None = None, compile: bool = True

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from stacker.data_type import stack_data
 from stacker.engine import copier
 from stacker.error import StackerRecursionError, StackerTypeError
-from stacker.lang import recursion
+from stacker.lang import protocols, recursion
 
 #: Name reported by the recursion guard for anonymous lambdas
 LAMBDA_NAME = "<lambda>"
@@ -16,6 +16,9 @@ if TYPE_CHECKING:
 
 class StackerLambda:
     """A callable object that represents a function defined in Stacker."""
+
+    #: The kind the lower layers read of a lambda (``stacker.lang.protocols.kind_of``)
+    stacker_kind: ClassVar[str] = protocols.LAMBDA
 
     def __init__(self, args: list[str], blockstack: StackerCore) -> None:
         self.args: list[str] = args

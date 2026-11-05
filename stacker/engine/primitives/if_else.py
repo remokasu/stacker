@@ -8,13 +8,13 @@ from stacker.lang.display import plain_text
 
 if TYPE_CHECKING:
     from stacker.data_type import stack_data
-    from stacker.stacker import Stacker
+    from stacker.engine.core import StackerCore
 
 
 def _if(
-    condition: Stacker | bool,
-    blockstack: Stacker | object,
-    parent: Stacker,
+    condition: StackerCore | bool,
+    blockstack: StackerCore | object,
+    parent: StackerCore,
     stack: stack_data[object],
 ) -> None:
     """Executes a block of code if a condition is true.
@@ -27,10 +27,10 @@ def _if(
 
 
 def _if_else(
-    condition: Stacker | bool,
-    true_block: Stacker | object,
-    false_block: Stacker | object,
-    parent: Stacker,
+    condition: StackerCore | bool,
+    true_block: StackerCore | object,
+    false_block: StackerCore | object,
+    parent: StackerCore,
     stack: stack_data[object],
 ) -> None:
     """Executes a block of code if a condition is true, otherwise executes another block of code.
@@ -45,7 +45,7 @@ def _if_else(
         parent._run_block(false_block, stack)
 
 
-def _cond(pairs: list[tuple[object, object]], parent: Stacker, stack: stack_data[object]) -> None:
+def _cond(pairs: list[tuple[object, object]], parent: StackerCore, stack: stack_data[object]) -> None:
     """Evaluates condition-result pairs in order, executing the first matching result.
     {c1} {r1} {c2} {r2} ... n cond
     """
@@ -69,9 +69,9 @@ def _put_back(stack: stack_data[object], saved: list[object]) -> list[object]:
 
 
 def _iferror(
-    try_block: Stacker | object,
-    catch_block: Stacker | object,
-    parent: Stacker,
+    try_block: StackerCore | object,
+    catch_block: StackerCore | object,
+    parent: StackerCore,
     stack: stack_data[object],
 ) -> None:
     """Executes a block of code if an error occurs.
@@ -109,9 +109,9 @@ def _throw(kind: object, message: object) -> None:
 
 
 def _try(
-    try_block: Stacker | object,
-    handler: Stacker | object,
-    parent: Stacker,
+    try_block: StackerCore | object,
+    handler: StackerCore | object,
+    parent: StackerCore,
     stack: stack_data[object],
 ) -> None:
     """``{try} {handler} try``: runs ``try_block``; on an error, pushes the error as a dictionary and runs ``handler``.

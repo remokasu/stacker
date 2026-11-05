@@ -18,12 +18,11 @@ from stacker.error import (
 from stacker.lang.arguments import integer_argument
 from stacker.lang.boundary import token_to_value
 from stacker.lang.display import plain_text
+from stacker.lang.protocols import BLOCK, kind_of
 
 
 def _is_block(value: object) -> bool:
-    from stacker.engine.core import StackerCore
-
-    return isinstance(value, StackerCore)
+    return kind_of(value) == BLOCK
 
 
 def _require_array(word: str, value: object) -> Array:
