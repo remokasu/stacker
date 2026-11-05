@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, ClassVar
 
 from stacker.engine.core import StackerCore
 from stacker.error import (
@@ -12,8 +12,9 @@ from stacker.error import (
 )
 from stacker.lang.console import DEFAULT_CONSOLE, Console, activate, deactivate
 from stacker.lang.scope import ScopedVariables
+from stacker.operators import STANDARD
 from stacker.slib import load_prelude
-from stacker.syntax.parser import parse_expression
+from stacker.syntax.parser import parse_expression, remove_start_end_quotes
 from stacker.syntax.token_rules import refuse_reserved
 
 if TYPE_CHECKING:
@@ -33,6 +34,8 @@ def _break_outside_a_loop(error: BreakException) -> StackerSyntaxError:
 
 
 class Stacker(StackerCore):
+    WORD_TABLES: ClassVar = STANDARD  # (the value words: see StackerCore.WORD_TABLES)
+
     def __init__(
         self,
         expression: str | None = None,
@@ -543,3 +546,29 @@ class Stacker(StackerCore):
             return self._evaluate_outside_loops(tokens, stack)
         finally:
             deactivate(token)
+
+
+def include_stacker_script(
+    filename: str | Path, base_dir: Path | None = None, prelude: bool = True
+) -> Stacker:
+    """Makes a new interpreter, runs the script in it and returns it.
+
+    Args:
+        filename: Path of the script.
+        base_dir: Directory to resolve a relative path against first; None
+            searches the current directory only.
+        prelude: Whether the new interpreter loads the prelude.
+
+    Returns:
+        The interpreter the script ran in.
+
+    Raises:
+        IncludeError: If the file cannot be resolved or has a wrong extension.
+        StackerSyntaxError: The file has a `break` outside a loop.
+    """
+    from stacker.engine.include import resolve_include_path
+
+    found = resolve_include_path(remove_start_end_quotes(str(filename)), base_dir)
+    stacker = Stacker(prelude=prelude)
+    stacker.include(str(found.resolve()))
+    return stacker

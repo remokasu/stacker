@@ -3,7 +3,8 @@
 import pytest
 
 from stacker import Stacker
-from stacker.engine.manager import OperatorManager
+from stacker.engine.manager import VALUE_CATEGORIES, OperatorManager
+from stacker.operators import STANDARD
 
 # Every kind of word but "file": the file words are regular words too, and
 # register_operator replaces a word in the first table that has it
@@ -22,7 +23,7 @@ CATEGORIES = [
 
 def a_word_only_in(category: str) -> str:
     """A word of ``category`` that no other table holds, so replacing it replaces it there."""
-    tables = OperatorManager().operators
+    tables = OperatorManager(STANDARD).operators
     return min(
         word
         for word in tables[category]
@@ -125,3 +126,22 @@ def test_a_replaced_word_is_listed_with_its_new_description_at_the_end_of_its_gr
     after = {key: words for key, _, words in stacker.get_operator_groups()}
     assert list(after["stack"].items())[-1] == ("dup", "replaced dup")
     assert {key: words for key, _, words in before}["stack"]["dup"] != "replaced dup"
+
+
+def test_the_value_words_hold_no_control_or_higher_order_words():
+    # The engine owns those; what the face hands in is value words only
+    assert set(STANDARD) <= set(VALUE_CATEGORIES)
+    assert set(STANDARD).isdisjoint({"priority", "hof"})
+
+
+def test_an_interpreter_made_without_value_words_still_has_its_control_words():
+    manager = OperatorManager()
+    assert {"if", "while", "do", "eval", "include", "defun", "lambda", "exit"} <= set(manager.operators["priority"])
+    assert set(manager.operators["hof"]) == {"map", "filter", "zip", "reduce", "fold"}
+    assert all(manager.operators[category] == {} for category in VALUE_CATEGORIES)
+    assert set(manager.dispatch_table) == set(manager.operators["priority"]) | set(manager.operators["hof"])
+
+
+def test_a_category_that_is_not_a_value_category_is_refused():
+    with pytest.raises(ValueError, match="not a category of value words: hof, priority"):
+        OperatorManager({"priority": (), "hof": ()})

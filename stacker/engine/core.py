@@ -3,11 +3,11 @@ from __future__ import annotations
 import copy
 import logging
 import sys
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from fractions import Fraction
 from functools import partial
 from pathlib import Path
-from typing import NoReturn
+from typing import ClassVar, NoReturn
 
 from stacker.constant import constants
 from stacker.data_type import VOID, Array, String, Symbol, stack_data
@@ -497,6 +497,11 @@ class TokenList(list):
 class StackerCore:
     """A class for evaluating RPN expressions."""
 
+    #: The tables of value words a root core is made with, by category (see ``OperatorManager``): a class
+    #: attribute, so that a core's instances keep their 29 attributes. The core itself has none; the face sets
+    #: ``stacker.operators.STANDARD``
+    WORD_TABLES: ClassVar[Mapping[str, Sequence[Mapping[str, object]]]] = {}
+
     def __init__(
         self, expression: str | None = None, parent: StackerCore | None = None, compile: bool = True
     ) -> None:
@@ -571,7 +576,7 @@ class StackerCore:
         # A core has 29 attributes, root and child alike. Keep it under 30: with
         # more, CPython stops sharing the attribute keys between instances and
         # every attribute access of every block slows down by a tenth or more
-        self.operator_manager: OperatorManager = OperatorManager()
+        self.operator_manager: OperatorManager = OperatorManager(type(self).WORD_TABLES)
         # Use ScopedVariables for efficient variable scoping
         self.variables: ScopedVariables = ScopedVariables(local_vars=dict(constants))
         self.macros: dict[str, object] = {}

@@ -7,6 +7,8 @@ from collections.abc import Iterator
 from stacker.error import UnterminatedTokenError
 from stacker.syntax.lexer import TerminalScanner
 
+SCRIPT_EXTENSION = ".stk"  #: the suffix a script file has
+
 
 def iter_expressions(code: str) -> Iterator[tuple[int, str]]:
     """Yields the expressions of ``code`` with the line each one starts on.

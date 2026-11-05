@@ -17,9 +17,9 @@ import re
 from pathlib import Path
 
 from stacker.constant import constants
-from stacker.engine.manager import aggregate_operators
 from stacker.engine.primitives import exit, hof, if_else, loop
 from stacker.operators import (
+    aggregate,
     algebra,
     arith,
     base,
@@ -68,7 +68,7 @@ GROUPS: list[tuple[str, set[str]]] = [
     ("keyword.operator.bitwise.stacker", set(bitwise.bitwise_operators) | set(base.base_operators)),
     ("keyword.operator.math.stacker", set(math.math_operators) | set(random.random_operators)),
     ("keyword.operator.stack.stacker", set(stack.stack_operators) | {"ans"}),
-    ("keyword.operator.list.stacker", set(hof.hof_operators) | set(transform.transform_operators) | set(aggregate_operators) | set(list_ops.list_operators) | set(collection.collection_operators) | {"nth", "listn"}),
+    ("keyword.operator.list.stacker", set(hof.hof_operators) | set(transform.transform_operators) | set(aggregate.aggregate_operators) | set(list_ops.list_operators) | set(collection.collection_operators) | {"nth", "listn"}),
     ("keyword.operator.string.stacker", set(string.string_operators) | {"split"}),
     ("keyword.operator.type.stacker", set(types.type_operators)),
     ("keyword.operator.io.stacker", set(io.io_operators) | set(file.file_operators) | set(os.os_operators) | set(time.time_operators) | {"read"}),

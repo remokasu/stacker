@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from typing import Callable
 
 from stacker.engine.primitives.defmacro import macro_operators
@@ -12,27 +13,6 @@ from stacker.engine.primitives.lmd import lambda_operators
 from stacker.engine.primitives.loop import loop_operators
 from stacker.error import StackerSyntaxError
 from stacker.lang import generation
-from stacker.operators.aggregate import aggregate_operators
-from stacker.operators.algebra import alge_operators
-from stacker.operators.arith import arith_operators
-from stacker.operators.base import base_operators
-from stacker.operators.bitwise import bitwise_operators
-from stacker.operators.collection import collection_operators
-from stacker.operators.comparison import compare_operators
-from stacker.operators.file import file_operators
-from stacker.operators.io import io_operators
-from stacker.operators.list import list_operators
-from stacker.operators.logic import logic_operators
-from stacker.operators.math import math_operators
-from stacker.operators.os import os_operators
-from stacker.operators.random import random_operators
-from stacker.operators.setting import settings_operators
-from stacker.operators.stack import stack_operators
-from stacker.operators.string import string_operators
-from stacker.operators.system import system_operators
-from stacker.operators.time import time_operators
-from stacker.operators.transform import transform_operators
-from stacker.operators.types import type_operators
 
 special_operators = {
     "ans": {
@@ -208,27 +188,29 @@ _DISPATCH_ORDER = (
 )
 
 
+#: The categories of the value words, as the tables handed to ``OperatorManager`` name them. The engine's own
+#: categories (``priority``, ``hof``) are not among them: an interpreter is made with its control words whatever
+#: value words it is given
+VALUE_CATEGORIES = ("regular", "aggregate", "collection", "transform", "stack", "file", "settings", "system")
+
+
 class OperatorManager:
-    def __init__(self) -> None:
+    def __init__(self, word_tables: Mapping[str, Sequence[Mapping[str, object]]] = {}) -> None:  # (read only)
+        """Makes the tables of one interpreter: the engine's own words, and the value words handed in.
+
+        Args:
+            word_tables: Category -> the tables of value words it holds, in listing order (``VALUE_CATEGORIES``
+                names the categories; one left out is an empty table). The face passes
+                ``stacker.operators.STANDARD``.
+
+        Raises:
+            ValueError: ``word_tables`` names a category that is not a value category.
+        """
+        unknown = set(word_tables) - set(VALUE_CATEGORIES)
+        if unknown:
+            raise ValueError(f"not a category of value words: {', '.join(sorted(unknown))}")
         #: Advances whenever a word table of this interpreter changes (see words_changed)
         self.generation = 0
-        self._regular_operators = {}
-        self._regular_operators.update(alge_operators)
-        self._regular_operators.update(arith_operators)
-        self._regular_operators.update(base_operators)
-        self._regular_operators.update(bitwise_operators)
-        self._regular_operators.update(compare_operators)
-        self._regular_operators.update(file_operators)
-        self._regular_operators.update(io_operators)
-        self._regular_operators.update(logic_operators)
-        self._regular_operators.update(math_operators)
-        self._regular_operators.update(random_operators)
-        self._regular_operators.update(type_operators)
-        self._regular_operators.update(list_operators)
-        self._regular_operators.update(string_operators)
-        self._regular_operators.update(time_operators)
-        self._regular_operators.update(os_operators)
-
         self._priority_operators = {}
         self._priority_operators.update(loop_operators)
         self._priority_operators.update(condition_operators)
@@ -238,17 +220,22 @@ class OperatorManager:
         self._priority_operators.update(macro_operators)
         self._priority_operators.update(lambda_operators)
         self._priority_operators.update(exit_operators)
+        self._hof_operators = dict(hof_operators)
 
         # Each interpreter has its own tables: register_operator replaces a
         # word in them, which must not reach another interpreter
-        self._collection_operators = dict(collection_operators)
-        self._file_operators = dict(file_operators)
-        self._hof_operators = dict(hof_operators)
-        self._aggregate_operators = dict(aggregate_operators)
-        self._transform_operators = dict(transform_operators)
-        self._stack_operators = dict(stack_operators)
-        self._settings_operators = dict(settings_operators)
-        self._system_operators = dict(system_operators)
+        tables = {category: {} for category in VALUE_CATEGORIES}
+        for category, given in word_tables.items():
+            for table in given:
+                tables[category].update(table)
+        self._regular_operators = tables["regular"]
+        self._collection_operators = tables["collection"]
+        self._file_operators = tables["file"]
+        self._aggregate_operators = tables["aggregate"]
+        self._transform_operators = tables["transform"]
+        self._stack_operators = tables["stack"]
+        self._settings_operators = tables["settings"]
+        self._system_operators = tables["system"]
 
         self.operators = {
             "priority": self._priority_operators,

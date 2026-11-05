@@ -50,9 +50,6 @@ ALLOWED = {
 
 #: (file, layer imported, step of the second release that removes it).
 KNOWN_CROSSINGS = {
-    ("stacker/engine/manager.py", "operators", "B1"),
-    ("stacker/engine/include.py", "face", "B1"),
-    ("stacker/runtime/config.py", "engine", "B1"),
     ("stacker/lang/display.py", "face", "B2"),
     ("stacker/lang/smacro.py", "face", "B2"),
     ("stacker/operators/collection.py", "engine", "B2"),

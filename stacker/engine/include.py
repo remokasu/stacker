@@ -14,12 +14,10 @@ from stacker.error import (
     attach_include_location,
 )
 from stacker.syntax.parser import parse_expression, remove_start_end_quotes
-from stacker.syntax.script import iter_expressions
+from stacker.syntax.script import SCRIPT_EXTENSION, iter_expressions
 
 if TYPE_CHECKING:
-    from stacker.stacker import Stacker
-
-SCRIPT_EXTENSION = ".stk"  #: the suffix a script file has
+    from stacker.engine.core import StackerCore
 
 
 def candidate_paths(filename: str | Path, base_dir: Path | None = None) -> list[Path]:
@@ -104,7 +102,7 @@ class IncludeState:
         return any(frame.kind == INCLUDE for frame in self.stack)
 
 
-def push_entry_file(stacker: Stacker, path: Path) -> None:
+def push_entry_file(stacker: StackerCore, path: Path) -> None:
     """Puts the script the interpreter was started on at the bottom of the include stack.
 
     A script that includes itself is then caught before it runs twice,
@@ -118,7 +116,7 @@ def push_entry_file(stacker: Stacker, path: Path) -> None:
     stacker._includes.stack.append(Frame(path.resolve(), ENTRY))
 
 
-def pop_entry_file(stacker: Stacker) -> None:
+def pop_entry_file(stacker: StackerCore) -> None:
     """Removes the frame ``push_entry_file`` put on the include stack."""
     stacker._includes.stack.pop()
 
@@ -172,7 +170,7 @@ def _already_read(target_name: str, base_dir: Path | None, loaded: set[Path]) ->
     return any(candidate.resolve() in loaded for candidate in candidates)
 
 
-def include_file(core: Stacker, filename: str, once: bool = False) -> None:
+def include_file(core: StackerCore, filename: str, once: bool = False) -> None:
     """Runs a script here, in ``core``'s interpreter: the `include` and `require` words.
 
     The file is read expression by expression, as a script is, and each
@@ -242,28 +240,3 @@ def include_file(core: Stacker, filename: str, once: bool = False) -> None:
     runner.warn_values_left(resolved.name, file_stack)  # what a file leaves is dropped; it is named first
     state.loaded.add(resolved)
 
-
-def include_stacker_script(
-    filename: str | Path, base_dir: Path | None = None, prelude: bool = True
-) -> Stacker:
-    """Makes a new interpreter, runs the script in it and returns it.
-
-    Args:
-        filename: Path of the script.
-        base_dir: Directory to resolve a relative path against first; None
-            searches the current directory only.
-        prelude: Whether the new interpreter loads the prelude.
-
-    Returns:
-        The interpreter the script ran in.
-
-    Raises:
-        IncludeError: If the file cannot be resolved or has a wrong extension.
-        StackerSyntaxError: The file has a `break` outside a loop.
-    """
-    from stacker.stacker import Stacker
-
-    found = resolve_include_path(remove_start_end_quotes(str(filename)), base_dir)
-    stacker = Stacker(prelude=prelude)
-    stacker.include(str(found.resolve()))
-    return stacker
