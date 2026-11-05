@@ -5,22 +5,20 @@ import os
 import shutil
 import sys
 import traceback
+from collections.abc import Callable
 from pathlib import Path
 from types import TracebackType
-from collections.abc import Callable
+
 import stacker
-
-from stacker.runtime.exec_modes import CommandLineMode, ReplMode, ScriptMode
-
 from stacker.engine import recursion
 from stacker.engine.recursion import (
     DEFAULT_RECURSION_LIMIT,
-    MAX_RECURSION_LIMIT,
-    RECURSION_BACKSTOP_MARGIN,
-    RECURSION_FRAMES_PER_LEVEL,
+    HOST_RECURSION_LIMIT,
+    NO_LIMIT,
 )
 from stacker.lib import disp_logo
 from stacker.lib.config import plugins_dir_path, stacker_dotfile_path
+from stacker.runtime.exec_modes import CommandLineMode, ReplMode, ScriptMode
 from stacker.stacker import Stacker
 from stacker.util import colored
 from stacker.version import __version__
@@ -43,8 +41,8 @@ parser.add_argument(
     type=int,
     default=DEFAULT_RECURSION_LIMIT,
     help=(
-        "Maximum Stacker function recursion depth "
-        f"(1-{MAX_RECURSION_LIMIT}, default {DEFAULT_RECURSION_LIMIT})."
+        "How deep a program may nest its calls, blocks and loops "
+        f"(default {DEFAULT_RECURSION_LIMIT}; {NO_LIMIT} for no limit)."
     ),
 )
 parser.add_argument("script", nargs="?", default=None, help="Script file to run.")
@@ -61,18 +59,12 @@ if argv.e is not None and argv.script is not None:
 if argv.args and argv.args[0] == "--":
     argv.args = argv.args[1:]
 
-if not 1 <= argv.recursion_limit <= MAX_RECURSION_LIMIT:
-    parser.error(
-        f"--recursion-limit must be between 1 and {MAX_RECURSION_LIMIT}, "
-        f"got {argv.recursion_limit}"
-    )
+if argv.recursion_limit < 0:
+    parser.error(f"--recursion-limit must be {NO_LIMIT} (no limit) or more, got {argv.recursion_limit}")
 recursion.set_limit(argv.recursion_limit)
 
-# Finite backstop replacing the old `1 << 30`: pathological recursion that
-# bypasses the function-call guard stops with RecursionError, not a segfault
-sys.setrecursionlimit(
-    MAX_RECURSION_LIMIT * RECURSION_FRAMES_PER_LEVEL + RECURSION_BACKSTOP_MARGIN
-)
+# The host's own depth, for the Python words that run Stacker code and for the values whose structure is shown
+sys.setrecursionlimit(HOST_RECURSION_LIMIT)
 
 
 def load_plugins(stacker: Stacker, plugins_dir_path: str) -> bool:
@@ -109,7 +101,7 @@ def load_dotfile(stacker: Stacker, dotfile_path: str | Path) -> None:
             return
         stacker.include(str(dotfile_path))
     except Exception as e:
-        print(f"An error occurred while loading the dotfile: {str(e)}")
+        print(f"An error occurred while loading the dotfile: {e!s}")
 
 
 def copy_plugin_to_install_dir(plugin_path: str, debug_mode: bool) -> None:
@@ -132,7 +124,7 @@ def copy_plugin_to_install_dir(plugin_path: str, debug_mode: bool) -> None:
         print(plugin_dir)
     except Exception as e:
         print(
-            f"An error occurred while adding the plugin ({str(plugin_path)}): {str(e)}"
+            f"An error occurred while adding the plugin ({plugin_path!s}): {e!s}"
         )
         if debug_mode:
             traceback.print_exc()

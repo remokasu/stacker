@@ -21,7 +21,7 @@ from stacker.stacker import Stacker
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-INFINITE_RECURSION = "{n} {n 1 + rundeep} :rundeep defun\n0 rundeep\n"
+INFINITE_RECURSION = "{n} {n 1 + rundeep 1 +} :rundeep defun\n0 rundeep\n"  # (not a tail call: a tail call would loop for ever)
 
 DEEP_LEGAL_RECURSION = (
     "{n} {n 0 <= {0} {n 1 - deepok} ifelse} :deepok defun\n1000 deepok echo\n"
@@ -64,19 +64,22 @@ class TestRecursionGuardSubprocess(unittest.TestCase):
 
     def test_cli_flag_lowers_the_limit(self):
         deep_20 = (
-            "{n} {n 0 <= {0} {n 1 - go20} ifelse} :go20 defun\n20 go20 echo\n"
+            "{n} {n 0 <= {0} {n 1 - go20 1 +} ifelse} :go20 defun\n20 go20 echo\n"
         )
         result = _run_stacker(["--recursion-limit", "10"], script_content=deep_20)
         combined = result.stdout + result.stderr
         self.assertIn("StackerRecursionError", combined)
         self.assertIn("(10)", combined)
 
-    def test_cli_flag_rejects_out_of_range_values(self):
-        for bad in ["0", "-5", "999999"]:
-            with self.subTest(value=bad):
-                result = _run_stacker(["--recursion-limit", bad, "-e", "1 1 +"])
-                self.assertEqual(result.returncode, 2)  # argparse error
-                self.assertIn("--recursion-limit", result.stderr)
+    def test_cli_flag_rejects_a_negative_value(self):
+        result = _run_stacker(["--recursion-limit", "-5", "-e", "1 1 +"])
+        self.assertEqual(result.returncode, 2)  # argparse error
+        self.assertIn("--recursion-limit", result.stderr)
+
+    def test_cli_flag_zero_means_no_limit(self):
+        deep = "{n} {n 0 <= {0} {n 1 - deeper 1 +} ifelse} :deeper defun\n80000 deeper echo\n"
+        result = _run_stacker(["--recursion-limit", "0"], script_content=deep)
+        self.assertEqual((result.returncode, result.stdout.strip()), (0, "80000"), result.stderr)
 
 
 class TestRecursionGuardInProcess(unittest.TestCase):
@@ -90,7 +93,7 @@ class TestRecursionGuardInProcess(unittest.TestCase):
     def test_named_function_in_error(self):
         recursion.set_limit(5)
         stacker = Stacker()
-        stacker.process_expression("{n} {n 1 + selfcall} :selfcall defun")
+        stacker.process_expression("{n} {n 1 + selfcall 1 +} :selfcall defun")
         with self.assertRaises(StackerRecursionError) as ctx:
             stacker.process_expression("0 selfcall")
         self.assertEqual(ctx.exception.name, "selfcall")
@@ -99,7 +102,7 @@ class TestRecursionGuardInProcess(unittest.TestCase):
     def test_lambda_reported_as_lambda(self):
         recursion.set_limit(5)
         stacker = Stacker()
-        stacker.process_expression("{x} {x recl eval} lambda :recl set")
+        stacker.process_expression("{x} {x recl eval 1 +} lambda :recl set")
         with self.assertRaises(StackerRecursionError) as ctx:
             stacker.process_expression("1 recl eval")
         self.assertEqual(ctx.exception.name, "<lambda>")
@@ -107,7 +110,7 @@ class TestRecursionGuardInProcess(unittest.TestCase):
     def test_counter_does_not_leak_after_error(self):
         recursion.set_limit(5)
         stacker = Stacker()
-        stacker.process_expression("{n} {n 1 + boom} :boom defun")
+        stacker.process_expression("{n} {n 1 + boom 1 +} :boom defun")
         with self.assertRaises(StackerRecursionError):
             stacker.process_expression("0 boom")
         # The guard must be fully unwound: a shallow call succeeds
@@ -116,10 +119,10 @@ class TestRecursionGuardInProcess(unittest.TestCase):
         self.assertEqual(stacker.pop(), 42)
 
     def test_set_limit_validation(self):
-        for bad in (0, -1, recursion.MAX_RECURSION_LIMIT + 1):
-            with self.subTest(value=bad):
-                with self.assertRaises(ValueError):
-                    recursion.set_limit(bad)
+        with self.assertRaises(ValueError):
+            recursion.set_limit(-1)
+        recursion.set_limit(0)  # no limit
+        self.assertEqual(recursion.get_limit(), 0)
 
 
 if __name__ == "__main__":

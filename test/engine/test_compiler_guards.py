@@ -43,7 +43,7 @@ from typing import NamedTuple
 
 import pytest
 
-from stacker.engine import compiler, inline
+from stacker.engine import compiler, inline, machine
 from stacker.engine.compiler import (
     BAD,
     BAD_LIST,
@@ -1280,12 +1280,16 @@ def test_off_default_and_eager_leave_the_same_stack_output_and_error(monkeypatch
 
 
 def test_the_twin_fails_when_the_compiling_interpreter_leaves_something_else(twin, monkeypatch):
-    def wrong(unit, core, tokens, stack, admitted=False):
-        stack.append("not what the block pushes")
-        return True
+    compile_block = compiler.compile_block
+
+    def wrong(core, tokens, entries):
+        unit = compile_block(core, tokens, entries)
+        if isinstance(unit, compiler.Unit):
+            unit.steps = [(compiler.CONST, 0, None, "not what the block pushes")]
+        return unit
 
     blk = twin.block("{1 +}")
-    monkeypatch.setattr(compiler, "run", wrong)
+    monkeypatch.setattr(compiler, "compile_block", wrong)
     with pytest.raises(AssertionError, match="compiled"):
         twin.run("10 blk eval")
     assert isinstance(blk._unit, compiler.Unit)  # (the block was compiled: the compiled path is what was wrong)
@@ -1293,17 +1297,17 @@ def test_the_twin_fails_when_the_compiling_interpreter_leaves_something_else(twi
 
 def test_a_stale_unit_that_runs_anyway_is_seen_by_the_twin(twin, monkeypatch):
     """The guard at the start of a unit is blinded, and the block meets a function defined after it was compiled."""
-    run_unit = compiler.run
+    admit = machine._admit
 
-    def blind(unit, core, tokens, stack, admitted=False):
-        unit.words = core.operator_manager.generation  # forgets that a table changed
+    def blind(frame, tokens, unit, admitted):
+        unit.words = frame.template.operator_manager.generation  # forgets that a table changed
         unit.not_variables = frozenset()  # and that a variable may hide a word
-        return run_unit(unit, core, tokens, stack)
+        return admit(frame, tokens, unit, admitted)
 
     blk = twin.block("{5 f}")
     twin.run("blk eval")  # (`f` is undefined: the unit took it for that)
     twin.run(DEFINE_F)
-    monkeypatch.setattr(compiler, "run", blind)
+    monkeypatch.setattr(machine, "_admit", blind)
     with pytest.raises(AssertionError, match="compiled"):  # (in the eager state the unit's own check says it first)
         twin.run("blk eval")
     assert isinstance(blk._unit, compiler.Unit)  # (the stale unit ran: nothing dropped it)

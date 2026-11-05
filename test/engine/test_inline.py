@@ -13,7 +13,7 @@ import itertools
 import pytest
 
 from stacker import Stacker
-from stacker.engine import compiler, copier, recursion
+from stacker.engine import compiler, copier, machine, recursion
 from stacker.engine import core as _core
 from stacker.engine.compiler import (
     BLOCK,
@@ -170,24 +170,25 @@ def test_a_body_that_clears_the_stack_runs_as_the_interpreter_does(twin):
 
 @pytest.mark.parametrize("word", ["if", "do", "dolist", "times", "loop", "while"])
 def test_the_recursion_limit_is_met_at_the_same_depth_through_an_inlined_control_word(twin, word):
-    # (a small limit: the host's own stack is finite too, and this is about the language's counter)
+    # (the limit counts every activation: the call, the arm of `if`, a loop and its body; 30 levels fit in 400
+    # through each of these, 300 do not. The call is not in tail position, or no depth would be used)
     limit, depth = recursion.get_limit(), recursion.get_depth()
-    recursion.set_limit(40)
+    recursion.set_limit(400)
     try:
-        bodies = {
-            "if": "{n 1 - deep} if",
-            "do": "{1 1 :i {n 1 - deep} do} if",
-            "dolist": "{[1] :i {n 1 - deep} dolist} if",
-            "times": "{{n 1 - deep} 1 times} if",
-            "loop": "{{n 1 - deep break} loop} if",
-            "while": "{{true} {n 1 - deep break} while} if",
+        bodies = {  # (every level leaves a 0 and drops the one its call left: the call is not in tail position)
+            "if": "{n 1 - deep drop} if",
+            "do": "{1 1 :i {n 1 - deep drop} do} if",
+            "dolist": "{[1] :i {n 1 - deep drop} dolist} if",
+            "times": "{{n 1 - deep drop} 1 times} if",
+            "loop": "{{n 1 - deep drop break} loop} if",
+            "while": "{{true} {n 1 - deep drop break} while} if",
         }
-        twin.run("{n} {n 0 != " + bodies[word] + "} :deep defun")
+        twin.run("{n} {n 0 != " + bodies[word] + " 0} :deep defun")
         for _ in range(3):
-            assert twin.run("30 deep") == ok()
-        outcome = twin.run("100 deep")
+            assert twin.run("30 deep") == ok(0)
+        outcome = twin.run("300 deep")
         assert outcome.error is not None and outcome.error[0] == "StackerRecursionError"
-        assert "Maximum recursion depth (40) exceeded in function `deep`" in outcome.error[1]
+        assert "Maximum recursion depth (400) exceeded in function `deep`" in outcome.error[1]
         assert recursion.get_depth() == depth
     finally:
         recursion.set_limit(limit)
@@ -199,13 +200,7 @@ def test_the_recursion_limit_is_met_at_the_same_depth_through_an_inlined_control
 def _admissions(monkeypatch):
     """Records, per run of a unit, whether it was admitted without the entry checks, with the block's tokens."""
     seen = []
-    original = compiler.run
-
-    def recording(unit, core, tokens, stack, admitted=False):
-        seen.append((tokens, admitted))
-        return original(unit, core, tokens, stack, admitted)
-
-    monkeypatch.setattr(compiler, "run", recording)
+    monkeypatch.setattr(machine, "_admissions", seen)  # (the machine appends to it, on every path a unit is entered by)
     return seen
 
 
@@ -301,7 +296,12 @@ def test_a_unit_of_another_interpreter_is_refused_even_when_admitted(monkeypatch
     stack = stack_data()
     # a loop of `second` could hold this unit as trusted (the run before left it in the tokens): the interpreter
     # check is the one made even then
-    assert compiler.run(unit, second, block.tokens, stack, True) is False
+    frame = machine.Frame(machine.TOP, None)
+    frame.template = frame.core = second
+    frame.scope = second.variables
+    frame.stack = stack
+    assert machine._admit(frame, block.tokens, unit, True) is False
+    assert frame.resolved is False
     assert list(stack) == []
 
 

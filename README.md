@@ -640,7 +640,7 @@ stacker [-h] [--addplugin path] [--version] [--debug] [--no-compile] [-e E] [--r
 | `script [arg ...]` | The `.stk` file to run. Stacker runs it and exits without opening the REPL; the arguments after the file name are what the word `args` reads inside the script. |
 | `-e E` | Runs the expression `E` and exits. Every positional argument becomes one of `args`. |
 | `--debug` | Debug mode: logs at the DEBUG level, and the REPL and scripts print Python's traceback with an error. With `-e`, only the log level changes. |
-| `--recursion-limit N` | The depth to which a function written in Stacker may recurse, from 1 to 1800; 1500 when omitted. |
+| `--recursion-limit N` | How deep a program may nest its calls, blocks and loops: the depth of the interpreter's return stack. 100000 when omitted; 0 for no limit, when memory is the only bound. A call made by the last word of a function's body uses no depth. |
 | `--no-compile` | Runs every block in the interpreter instead of compiling the ones that run often. The result is the same; use it to compare the two or to narrow a problem down. |
 | `--addplugin path` | Copies the plugin file to the plugin directory of the installed Stacker and exits. |
 | `--version` | Prints the version, in the form `Stacker X.Y.Z`, and exits. A script reads it with the word `version`. |
@@ -650,7 +650,7 @@ stacker [-h] [--addplugin path] [--version] [--debug] [--no-compile] [-e E] [--r
 stacker script.stk 200 100         # args is ['200' '100'] inside the script
 stacker script.stk -x              # an argument after the file name is passed through, even one starting with -
 stacker -e "args echo" -- -x       # with -e, write -- before an argument that starts with -
-stacker --recursion-limit 1800 deep.stk
+stacker --recursion-limit 0 deep.stk    # no limit: as deep as memory allows
 ```
 
 

@@ -9,19 +9,19 @@ function or plugin, looked up as ``_lookup_word`` does; a function written
 in Stacker is a call of its own), a literal spelled as a name, an
 undefined name. The result is a ``Unit``: the instructions
 (data: kind, position, name and value; a block literal is named by its
-position alone). ``run`` does for each instruction exactly what the
-interpreter does for its token, through the interpreter's own functions,
-on the real stack and the real scope: what a run leaves behind, and what
-an error finds, is what the interpreter would have left.
+position alone). The machine (``stacker.engine.machine``) does for each
+instruction exactly what it does for the token, through the interpreter's
+own functions, on the real stack and the real scope: what a run leaves
+behind, and what an error finds, is what the interpreter would have left.
 
 Some steps do the interpreter's work more directly, under conditions that
 make the result the same: a regular word on plain values is called
 without the word runner (FAST1, FAST2), a function written in Stacker is
 called without it (CALL), and a word with the tokens it reads written
 right before it is one step (``_fuse``: a symbol and `set`, a control
-word and its literal bodies, run by ``stacker.engine.inline``). A unit's
-steps are therefore not one per token; a fused step stands at its word's
-position.
+word and its literal bodies, run by the machine as its own activations).
+A unit's steps are therefore not one per token; a fused step stands at
+its word's position.
 
 What a unit resolved can go stale, and two guards catch that:
 
@@ -41,7 +41,7 @@ every change of a word table or of a scope's names advances: after a
 word, the unit compares it once and looks at the two guards only when it
 moved. A loop running the same unit again, in a scope of the same shape,
 right after an iteration that passed the entry checks admits it without
-them (``admitted``, see ``stacker.engine.inline``).
+them (the machine's ``_loop_next``).
 
 A guard that fails when the unit starts sends the block back to counting
 its runs; one that fails in the middle lets the interpreter finish the
@@ -64,15 +64,13 @@ from typing import TYPE_CHECKING, NamedTuple
 
 # core imports this module: its names are read at call time only
 from stacker.engine import core as _core
-from stacker.engine import generation, inline
+from stacker.engine import inline
 from stacker.engine.data_type import Symbol
 from stacker.engine.sfunction import StackerFunction
-from stacker.error import StackerSyntaxError
 from stacker.syntax.token_rules import cached_literal_eval
 
 if TYPE_CHECKING:
     from stacker.engine.core import StackerCore, TokenList
-    from stacker.engine.data_type import stack_data
     from stacker.engine.scope import ScopedVariables
 
 _LOGGER = logging.getLogger("stacker")
@@ -381,191 +379,3 @@ def _rewarm(tokens: TokenList, unit: Unit) -> None:
     if tokens._unit is unit:
         tokens._unit = None
         tokens._runs = 0
-
-
-def _finish(core: StackerCore, tokens: TokenList, unit: Unit, index: int, stack: stack_data[object]) -> None:
-    """Drops ``unit`` in mid-run and lets the interpreter run the block from the token after ``index``.
-
-    After GIVE_UP such drops the block is left to the interpreter for good.
-    """
-    if tokens._unit is unit:
-        tokens._drops += 1
-        tokens._runs = 0
-        tokens._unit = UNCOMPILABLE if tokens._drops >= GIVE_UP else None
-    core._evaluate(tokens[index + 1 :], stack, trace=False)
-
-
-def run(unit: Unit, core: StackerCore, tokens: TokenList, stack: stack_data[object], admitted: bool = False) -> bool:
-    """Runs the block by its unit, or says it cannot this time.
-
-    One loop over the instructions, each done by the interpreter's own
-    functions: a compiled block costs one frame more per nesting level than
-    an interpreted one, not one per instruction.
-
-    Args:
-        unit: The block's unit.
-        core: The core the block runs on (its scope and tables are the real ones).
-        tokens: The block's token list, for the interpreter to finish from when a guard fails.
-        stack: The stack to run on.
-        admitted: True to skip the checks made on entry (the tables'
-            generation, the scopes for a name that hides a word), because
-            the caller knows they would pass: a loop runs
-            the same unit again, in a scope of the same shape, right after
-            an iteration that entered through them and ran to its end.
-            Between the two only that body's words ran, and a word that
-            changed a table or hid a name made the unit drop itself right
-            after; a unit still held has nothing new to be checked for.
-            The promise is the same one the checks after a word make: a
-            change is seen when it was counted (``generation``); a write
-            through a raw table or ``own_bindings`` is not.
-
-    Returns:
-        True when the block ran (by the unit, or partly by the interpreter
-        after a guard failed in mid-run); False when the interpreter has to
-        run the block from its start.
-    """
-    manager = core.operator_manager
-    if manager is not unit.manager:
-        return False  # another interpreter's block: its words are not this one's (checked even when admitted: cheap)
-    names = unit.not_variables
-    epoch = generation.epoch
-    if not admitted:
-        if manager.generation != unit.words:
-            _rewarm(tokens, unit)
-            return False
-        scope = core.variables
-        if names:
-            # the scope's own attributes are read here, not through its methods: this runs
-            # on every entry of every compiled block
-            if scope._parent is unit.seen_parent and epoch == unit.seen_epoch:
-                # the scopes above have been checked, and no scope has changed shape since:
-                # only the innermost scope is looked at (walking the smaller of the two sides;
-                # the root scope can be large)
-                if not scope._local.keys().isdisjoint(names):
-                    _rewarm(tokens, unit)
-                    return False
-            else:
-                if scope.hides_any(names):
-                    _rewarm(tokens, unit)
-                    return False
-                unit.seen_parent = scope._parent
-                unit.seen_epoch = epoch
-    words = unit.words
-    missing = _core._MISSING
-    verify = VERIFY
-    plain = _PLAIN
-    host_errors = _core._HOST_ERRORS
-    void = _core.VOID
-    for kind, index, name, value in unit.steps:
-        if verify and kind in RESOLVED:
-            _check(core, kind, name, value)
-        if kind == FAST2:
-            # a regular word on two plain values: popped and called here, as _exec_regular would,
-            # with the same wrapping of a host error; anything else goes through the word runner
-            entry = value[1]
-            if len(stack) >= 2 and type(stack[-1]) in plain and type(stack[-2]) in plain:
-                second = stack.pop()
-                first = stack.pop()
-                try:
-                    result = entry["func"](first, second)
-                except host_errors as error:
-                    _core._host_error_as_the_words(name, [first, second], error)
-                if entry["push_result_to_stack"] and result is not void:
-                    stack.append(result)
-            else:
-                core._run_word(name, value[0], entry, stack)
-        elif kind == FAST1:
-            entry = value[1]
-            if stack and type(stack[-1]) in plain:
-                first = stack.pop()
-                try:
-                    result = entry["func"](first)
-                except host_errors as error:
-                    _core._host_error_as_the_words(name, [first], error)
-                if entry["push_result_to_stack"] and result is not void:
-                    stack.append(result)
-            else:
-                core._run_word(name, value[0], entry, stack)
-        elif kind == WORD:
-            core._run_word(name, value[0], value[1], stack)
-        elif kind == SET:
-            # the symbol and `set` as one step: the name is checked first and the value taken after,
-            # as _prio_set does; with nothing to take, the word runner reports the shortage
-            lookup, symbol = value
-            if stack:
-                bound = core._name_of(symbol, "set")
-                core._set_variable(bound, stack.pop())  # (as _pop_and_resolve takes the value: a block stays raw)
-            else:
-                stack.append(symbol)
-                core._run_word(name, lookup[0], lookup[1], stack)
-        elif kind == CALL:
-            # the function's own call, without the general word runner in between: the entry is
-            # read now, as the runner reads it, and a stack too short is left to the runner's message
-            entry = value[1]
-            count = entry["arg_count"]
-            func = entry["func"]
-            if len(stack) >= count and isinstance(func, StackerFunction):
-                args = [stack.pop() for _ in range(count)]  # (as _pop_and_resolve takes them: a block stays raw)
-                args.reverse()
-                try:
-                    result = func.run(args)
-                except IndexError as error:
-                    core._report_underflow(name, error)
-                except TypeError as error:
-                    _core._reword_type_error(name, error)
-                if entry["push_result_to_stack"]:
-                    stack.extend(result)
-            else:
-                core._run_word(name, value[0], entry, stack)
-        elif kind == VAR:
-            found = core.variables.get(name, missing)
-            if found is not missing:
-                stack.append(found)
-                continue
-            core._evaluate([name], stack, trace=False)  # gone: the name means what it means now
-        elif kind == CONST or kind == LIT:
-            stack.append(value)
-            continue
-        elif kind == BLOCK:
-            stack.append(tokens[index]._bound_to(core.variables))
-            continue
-        elif kind == LIST:
-            stack.append(core._build_list(value))
-            continue
-        elif kind == MACRO:
-            core._expand_macro(name, stack)
-        elif kind == UNDEF:
-            raise _core._name_not_found(name)
-        elif kind == BAD:
-            raise StackerSyntaxError(value)
-        elif kind == BAD_LIST:
-            stack.append(core._build_list(_core._compile_list_template(name)))
-            continue
-        # the control words, each running a whole body: last in the chain, since one of them runs many steps
-        elif kind == IFELSE:
-            inline.ifelse(core, tokens, value[0], value[1], value[2], stack)
-        elif kind == IF:
-            inline.if_(core, tokens, value[0], value[1], stack)
-        elif kind == DO:
-            inline.do(core, tokens, value[0], value[1], stack)
-        elif kind == WHILE:
-            inline.while_(core, tokens, value[0], value[1], value[2], stack)
-        elif kind == DOLIST:
-            inline.dolist(core, tokens, value[0], value[1], stack)
-        elif kind == LOOP:
-            inline.loop_(core, tokens, value[0], value[1], stack)
-        elif kind == TIMES:
-            inline.times(core, tokens, value[0], value[1], value[2], value[3], value[4], stack)
-        else:
-            core._evaluate([name], stack, trace=False)
-        # a word ran: the world may have changed. One comparison says whether anything did,
-        # anywhere in the process; only then are the two things that matter here looked at
-        if generation.epoch != epoch:
-            if manager.generation != words:
-                _finish(core, tokens, unit, index, stack)
-                return True
-            if core.variables.hides_any(names):
-                _finish(core, tokens, unit, index, stack)
-                return True
-            epoch = generation.epoch  # a scope changed shape without hiding a name, or another interpreter's tables moved
-    return True

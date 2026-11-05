@@ -362,23 +362,27 @@ CARRIED = (
 
 @pytest.mark.skipif(sys.version_info < (3, 11), reason="the C stack overflows at the default recursion limit on 3.10")
 class TestRecursionDepthAtTheDefaultLimit:
-    """The default limit is 1500 calls; n=1499 makes exactly 1500 (n=1499 down to 0)."""
+    """The default limit is 100000 activations: `plain` takes two per level (the call and the arm), `viaeval` three.
 
-    @pytest.mark.parametrize("name, prelude", [("plain", PLAIN), ("viaeval", VIA_EVAL)])
-    def test_recursion_to_exactly_the_limit_works(self, tmp_path, name, prelude):
-        result = _run_script(tmp_path, prelude + f"1499 {name} echo\n")
-        assert (result.returncode, result.stdout.strip()) == (0, "1499"), result.stderr
+    ``n`` counts down to 0, so ``n`` makes ``n + 1`` levels.
+    """
 
-    @pytest.mark.parametrize("name, prelude", [("plain", PLAIN), ("viaeval", VIA_EVAL)])
-    def test_recursion_one_past_the_limit_raises_stacker_recursion_error(self, tmp_path, name, prelude):
-        result = _run_script(tmp_path, prelude + f"1500 {name} echo\n")
+    @pytest.mark.parametrize("name, prelude, per_level", [("plain", PLAIN, 2), ("viaeval", VIA_EVAL, 3)])
+    def test_recursion_to_exactly_the_limit_works(self, tmp_path, name, prelude, per_level):
+        deepest = 100000 // per_level - 1
+        result = _run_script(tmp_path, prelude + f"{deepest} {name} echo\n")
+        assert (result.returncode, result.stdout.strip()) == (0, str(deepest)), result.stderr
+
+    @pytest.mark.parametrize("name, prelude, per_level", [("plain", PLAIN, 2), ("viaeval", VIA_EVAL, 3)])
+    def test_recursion_one_past_the_limit_raises_stacker_recursion_error(self, tmp_path, name, prelude, per_level):
+        result = _run_script(tmp_path, prelude + f"{100000 // per_level} {name} echo\n")
         combined = result.stdout + result.stderr
         assert "StackerRecursionError" in combined
-        assert "(1500)" in combined
+        assert "(100000)" in combined
         assert f"`{name}`" in combined
 
     def test_recursion_far_past_the_limit_does_not_crash_the_process(self, tmp_path):
-        result = _run_script(tmp_path, PLAIN + "100000 plain echo\n")
+        result = _run_script(tmp_path, PLAIN + "200000 plain echo\n")
         assert result.returncode >= 0
         assert "StackerRecursionError" in result.stdout + result.stderr
 
@@ -394,6 +398,6 @@ class TestRecursionDepthAtTheDefaultLimit:
         assert "(10)" in combined
 
     def test_the_guard_is_unwound_after_the_error(self, tmp_path):
-        program = PLAIN + "{} {1500 plain} :boom defun\n{boom} {0} iferror drop\n10 plain echo\n"
+        program = PLAIN + "{} {60000 plain} :boom defun\n{boom} {0} iferror drop\n10 plain echo\n"
         result = _run_script(tmp_path, program)
         assert result.stdout.strip().endswith("10"), result.stdout + result.stderr

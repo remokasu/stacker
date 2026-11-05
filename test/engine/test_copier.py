@@ -118,12 +118,18 @@ def test_which_hosts_copy_by_the_generated_copier(implementation, version, gil_e
 
 def test_blocks_functions_and_lambdas_are_copied_through_the_module_attribute(monkeypatch):
     # the test session checks every copy by replacing that attribute: a call site
-    # holding the function itself would slip past the check
+    # holding the function itself would slip past the check. A call or a loop
+    # iteration makes its copy when a word reads the running core (`script-path`
+    # reads where the code was written), not before
     stacker = Stacker()
     copies = []
     original = copier.shallow_copy
     monkeypatch.setattr(copier, "shallow_copy", lambda core: copies.append(core) or original(core))
-    for program in ("{x} {x} :f defun 1 f", "{x} {x} lambda :g set 1 g eval", "1 3 :i {i} do"):
+    for program in (
+        "{x} {script-path drop x} :f defun 1 f",
+        "{x} {script-path drop x} lambda :g set 1 g eval",
+        "1 3 :i {script-path drop i} do",
+    ):
         copies.clear()
         stacker.eval(program)
         assert copies, program

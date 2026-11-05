@@ -22,37 +22,46 @@ unwind and the counter cannot leak on the error path.
 
 from __future__ import annotations
 
+import sys
+
 from stacker.error import StackerRecursionError
 
-# Measured on CPython 3.13: the engine's true recursion ceiling is the
-# interpreter's C-recursion protection (independent of
-# sys.setrecursionlimit), which stops this engine's call chain at 2000
-# Stacker levels with a plain RecursionError. The limits below stay under
-# that ceiling so the guard's named StackerRecursionError always fires
-# first for a function body without nested blocks. Blocks nested inside
-# a function (if, ifelse, while, ...) cost host depth of their own, so a
-# deeply nested body reaches the host's limit before the guard does; a
-# function call then reports it as a StackerRecursionError that names
-# the function and the depth reached.
-#
-# Default maximum Stacker-level recursion depth for user-defined
-# functions and lambdas; overridable per run with --recursion-limit
-DEFAULT_RECURSION_LIMIT = 1500
-# Hard cap for --recursion-limit; larger values are rejected (kept 10%
-# below the measured C-recursion ceiling of 2000)
-MAX_RECURSION_LIMIT = 1800
-# Upper bound of measured Python frames per Stacker recursion level;
-# sizes the sys.setrecursionlimit backstop for non-function recursion
-RECURSION_FRAMES_PER_LEVEL = 20
-# Headroom on top of the backstop for engine base frames and operators
-RECURSION_BACKSTOP_MARGIN = 10_000
+# The machine (stacker.engine.machine) keeps its own return stack, so a
+# Stacker recursion costs the host no call depth: the depth counted here is
+# the number of activations on the way (a call, a block run by a word, a
+# loop's body, a macro's expansion ...), the machine's return stack, and
+# the limit stops it by name. The host's own limit matters only where a
+# Python word runs Stacker code, and the command line sets it to
+# HOST_RECURSION_LIMIT.
 
-_depth = 0
+#: Default maximum depth of the machine's return stack; overridable per run with --recursion-limit
+DEFAULT_RECURSION_LIMIT = 100_000
+#: The depth the command line gives the host (the value it has had since 1.12.0; a value's structure is
+#: shown to about a third of it before "too deep to show")
+HOST_RECURSION_LIMIT = 46_000
+#: The limit that means no limit (``--recursion-limit 0``)
+NO_LIMIT = 0
+
+_depth = 0  # the depth of the activation running (written by the machine), or of the calls made from Python
 _limit = DEFAULT_RECURSION_LIMIT
+_asked = DEFAULT_RECURSION_LIMIT  # the limit as set, 0 for none (what get_limit reports)
+
+
+def _no_arms() -> int:
+    """Outside the machine: no arm of `if` is running in place."""
+    return 0
+
+
+#: Set by the machine: the arms of `if` the running activation runs in place, counted in the depth but not in
+#: ``_depth`` (a reader adds them, so the machine need not write the depth at each arm)
+_arms = _no_arms
 
 
 def enter(name: str, kind: str = "function") -> None:
-    """Register entry into a Stacker function call or macro expansion.
+    """Registers entry into a Stacker function call made from Python (``StackerFunction.__call__`` and its kin).
+
+    The machine counts its own activations; this is for the calls made
+    around it, so that a call made from Python counts as one level.
 
     Args:
         name: Function or macro name reported when the limit is exceeded.
@@ -62,41 +71,53 @@ def enter(name: str, kind: str = "function") -> None:
         StackerRecursionError: If the call would exceed the limit.
     """
     global _depth
-    if _depth >= _limit:
-        raise StackerRecursionError(name, _limit, kind)
+    if _depth + _arms() >= _limit:
+        raise StackerRecursionError(name, _asked, kind)
     _depth += 1
 
 
 def leave() -> None:
-    """Register exit from a Stacker function call (call from finally)."""
+    """Registers exit from a call ``enter`` counted (call from finally)."""
     global _depth
     if _depth > 0:
         _depth -= 1
 
 
-def set_limit(limit: int) -> None:
-    """Set the maximum Stacker recursion depth for this process.
+def restore(depth: int) -> None:
+    """Puts the depth back to ``depth``, the value a machine run began with.
+
+    Called when a run ends: an exit or an interrupt that left the run
+    without taking its activations down one by one is set right here.
 
     Args:
-        limit: New limit; must be between 1 and MAX_RECURSION_LIMIT.
+        depth: The depth to put back.
+    """
+    global _depth
+    _depth = depth
+
+
+def set_limit(limit: int) -> None:
+    """Sets the maximum depth of the machine's return stack for this process.
+
+    Args:
+        limit: New limit, 1 or more; ``NO_LIMIT`` (0) for none, when the
+            depth is bounded by memory alone.
 
     Raises:
-        ValueError: If the limit is out of range.
+        ValueError: If the limit is negative.
     """
-    global _limit
-    if not 1 <= limit <= MAX_RECURSION_LIMIT:
-        raise ValueError(
-            f"recursion limit must be between 1 and {MAX_RECURSION_LIMIT}, "
-            f"got {limit}"
-        )
-    _limit = limit
+    global _limit, _asked
+    if limit < 0:
+        raise ValueError(f"recursion limit must be 0 (no limit) or more, got {limit}")
+    _asked = limit
+    _limit = sys.maxsize if limit == NO_LIMIT else limit
 
 
 def get_depth() -> int:
-    """Return the number of Stacker function calls currently on the way."""
-    return _depth
+    """Return the depth of the return stack now: the activations on the way, the arms run in place among them."""
+    return _depth + _arms()
 
 
 def get_limit() -> int:
-    """Return the current maximum Stacker recursion depth."""
-    return _limit
+    """Return the current maximum depth as set: 0 when there is none."""
+    return _asked

@@ -51,11 +51,11 @@ def test_the_engine_imports_nothing_from_the_runtime():
 
 
 def test_the_limits_and_the_extension_are_still_importable_from_config():
-    from stacker.engine.recursion import DEFAULT_RECURSION_LIMIT, MAX_RECURSION_LIMIT
+    from stacker.engine.recursion import DEFAULT_RECURSION_LIMIT, HOST_RECURSION_LIMIT
     from stacker.include.include import SCRIPT_EXTENSION
     from stacker.lib import config
 
-    assert (config.DEFAULT_RECURSION_LIMIT, config.MAX_RECURSION_LIMIT) == (DEFAULT_RECURSION_LIMIT, MAX_RECURSION_LIMIT)
+    assert (config.DEFAULT_RECURSION_LIMIT, config.HOST_RECURSION_LIMIT) == (DEFAULT_RECURSION_LIMIT, HOST_RECURSION_LIMIT)
     assert config.script_extension_name == SCRIPT_EXTENSION == ".stk"
 
 

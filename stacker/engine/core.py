@@ -54,7 +54,7 @@ from stacker.syntax.token_rules import (
 from stacker.engine.sfunction import StackerFunction
 from stacker.engine.slambda import StackerLambda
 from stacker.engine.scope import ScopedVariables
-from stacker.engine import compiler, console, copier, recursion
+from stacker.engine import compiler, console, copier, machine, recursion
 from stacker.engine.smacro import StackerMacro, gensym
 from stacker.operators.arguments import count_argument, integer_argument
 from stacker.operators.manager import OperatorManager
@@ -74,6 +74,21 @@ _DEFMACRO_USAGE = (
 
 # Sentinel for single-lookup scope reads (None is a valid variable value)
 _MISSING = object()
+
+
+class Taken:
+    """A value the machine took for a word in a block's place, already evaluated: the readers hand it over as it is.
+
+    The machine runs a block standing where a word reads a value as an
+    activation of its own, before the word runs, and puts the value it left
+    where the block stood, wrapped so that ``_pop_arg`` and
+    ``_pop_and_eval`` do not run it again when it is a block itself.
+    """
+
+    __slots__ = ("value",)
+
+    def __init__(self, value: object) -> None:
+        self.value = value
 
 # What _lookup_word says a word is, besides an operator category
 WORD_FUNCTION = "function"
@@ -678,6 +693,8 @@ class StackerCore:
             The argument value.
         """
         value = stack.pop()
+        if type(value) is Taken:
+            return value.value  # (what a block left, as the block would have been read)
 
         if isinstance(value, StackerCore):
             # Note: operators such as ifelse evaluate onto parent.stack, so
@@ -718,6 +735,9 @@ class StackerCore:
             NoValueProducedError: The block left nothing on the stack.
         """
         value = stack.pop()
+        if type(value) is Taken:
+            value = value.value  # (what a block left: a String literal is unwrapped below, as a block's result is)
+            return value.value if isinstance(value, String) else value
         if isinstance(value, StackerCore):
             value._evaluate(value.tokens, stack=value.stack)
             sub = value.stack
@@ -773,7 +793,7 @@ class StackerCore:
             block: The code block, a lambda, a symbol, or any other value.
             stack: The stack the block runs on.
             trusted: What this call returned last time, for a loop running
-                the same block again (see ``stacker.engine.inline.run_body``).
+                the same block again.
 
         Returns:
             The block's compiled unit when it ran the block to its end, for
@@ -808,7 +828,7 @@ class StackerCore:
             scope: The scope to run in (a loop scope whose parent is ``block.variables``).
             stack: The stack the block runs on.
             trusted: What this call returned last time, for a loop running
-                the same block again (see ``stacker.engine.inline.run_body``).
+                the same block again.
 
         Returns:
             The block's compiled unit when it ran the block to its end, for
@@ -871,6 +891,10 @@ class StackerCore:
         Evaluates a given RPN expression.
         Returns the result of the evaluation.
 
+        The tokens are run by the machine (``stacker.engine.machine``), as
+        every piece of Stacker code is; this is the way in for the entry
+        points and for a Python word that runs a block.
+
         Args:
             tokens: The tokens to run; a block's own ``TokenList`` is counted
                 and, run often, compiled (``stacker.engine.compiler``).
@@ -880,113 +904,35 @@ class StackerCore:
                 whole block.
             trusted: A unit of ``tokens`` that ran it to its end just before,
                 for a loop running the block again: it is admitted without
-                the checks made on entry (see ``stacker.engine.inline``).
+                the checks made on entry.
         """
         if stack is None:
             stack = stack_data()
-        if trace:
-            self.trace = tokens
-
-        # Block/function bodies hold long-lived TokenLists whose
-        # classification is computed once; top-level token lists are fresh
-        # per call and classified in a single throwaway pass.
-        if isinstance(tokens, TokenList):
-            # A block that has run often is compiled and run by its unit
-            # (stacker.engine.compiler); a macro body being expanded is not
-            if self._compiles and self._interp_scope is None:
-                unit = tokens._unit
-                if unit is None and compiler.THRESHOLD is not None:
-                    runs = tokens._runs + 1
-                    tokens._runs = runs
-                    if runs >= compiler.THRESHOLD:
-                        unit = compiler.compile_block(self, tokens, tokens.classification())
-                if (
-                    unit is not None
-                    and unit is not compiler.UNCOMPILABLE
-                    and compiler.run(unit, self, tokens, stack, unit is trusted)
-                ):
-                    return stack
-            entries = tokens.classification()
-        else:
-            entries = _classify_tokens(tokens)
-        macros = self.macros
-        # Parameter interpolation applies only while a macro body (this
-        # core's own token list) is being run; any other token list -- an
-        # interpolated copy, a caller-supplied block, a runtime-built block --
-        # is left untouched.
-        interp = self._interp_scope if tokens is self.tokens else None
-
-        for kind, token, payload in entries:
-            if kind == K_VALUE:
-                stack.append(token)  # Literal value
-                continue
-            if kind == K_BLOCK_VALUE:
-                if interp is not None:
-                    stack.append(self._interpolate(token, interp))
-                else:
-                    # The block object is shared by every evaluation of this
-                    # token list; what is pushed is the block bound to the
-                    # scope it is pushed from, so a lambda or a `map` body
-                    # made here keeps this scope (closure)
-                    stack.append(token._bound_to(self.variables))
-                continue
-            if kind == K_STRING:
-                stack.append(payload)  # a string literal is never a name
-                continue
-            # Macros take precedence over variables and operators.
-            if token in macros:
-                self._expand_macro(token, stack)
-            elif kind == K_DYNAMIC:
-                if (value := self.variables.get(token, _MISSING)) is not _MISSING:
-                    # A variable reference pushes the value, whatever it is:
-                    # a lambda is a value too and is called with `eval`.
-                    stack.append(value)
-                # The lookup of _lookup_word, inline: a function, a plugin word,
-                # an operator, in that order (the compiler takes the function)
-                elif token in self.sfunctions:
-                    self._run_word(token, WORD_FUNCTION, self.sfunctions[token], stack)
-                elif token in self.plugins:
-                    self._run_word(token, WORD_PLUGIN, self.plugins[token], stack)
-                elif (entry := self.operator_manager.dispatch_table.get(token)) is not None:
-                    self._run_word(token, entry[0], entry[1], stack)
-                else:
-                    # A literal (classified as a name only when the literal
-                    # check was skipped or deferred) pushes its value; any
-                    # other name is undefined, and that is an error here.
-                    evaluated = cached_literal_eval(token)
-                    if isinstance(evaluated, str):
-                        raise _name_not_found(token)
-                    stack.append(evaluated)
-            elif kind == K_LIST:
-                if payload is None:
-                    # Malformed literal: compile it again here so the error
-                    # is raised at the token's execution position.
-                    payload = _compile_list_template(token)
-                stack.append(self._build_list(payload))
-            elif kind == K_SYMBOL:
-                stack.append(payload)  # the Symbol
-            elif kind == K_BLOCK:
-                self._substack(token, stack)
-            elif kind == K_INVALID:
-                raise StackerSyntaxError(payload)
+        machine.run(self, tokens, stack, trace=trace, trusted=trusted)
         return stack
 
-    def _build_list(self, template: list[object]) -> list[object]:
+    def _build_list(self, template: list[object], scope: ScopedVariables | None = None) -> list[object]:
         """Builds a fresh list from a compiled list-literal template.
 
         Names are looked up now (the value of the variable, or
         ``UndefinedSymbolError``); nested lists are built fresh so no
         state is shared between evaluations.
+
+        Args:
+            template: The template (``_compile_list_template``).
+            scope: The scope the names are read in; this core's when None.
         """
+        if scope is None:
+            scope = self.variables
         return [
-            self._list_element(element)
+            self._list_element(element, scope)
             if type(element) is str
-            else (self._build_list(element) if isinstance(element, list) else element)
+            else (self._build_list(element, scope) if isinstance(element, list) else element)
             for element in template
         ]
 
-    def _list_element(self, name: str) -> object:
-        """Returns the value of ``name`` written inside a list literal.
+    def _list_element(self, name: str, scope: ScopedVariables) -> object:
+        """Returns the value of ``name`` written inside a list literal, read in ``scope``.
 
         Raises:
             StackerSyntaxError: ``name`` is a word, not a variable: a list
@@ -995,7 +941,7 @@ class StackerCore:
             ReservedWordError: ``name`` is one of the REPL's commands.
             UndefinedSymbolError: ``name`` is nothing at all.
         """
-        value = self.variables.get(name, _MISSING)
+        value = scope.get(name, _MISSING)
         if value is not _MISSING:
             return value
         if (
@@ -1286,23 +1232,26 @@ class StackerCore:
         name = self._name_of(symbol, "set")
         self._set_variable(name, self._pop_and_resolve(stack))
 
-    def _set_variable(self, name: str, value: object) -> None:
+    def _set_variable(self, name: str, value: object, scope: ScopedVariables | None = None) -> None:
         """Binds ``name`` to ``value`` as `set` does: updates the variable where it is, or makes it here.
 
-        The word's own handler and a compiled `set` both bind here.
+        The word's own handler and the machine both bind here.
 
         Args:
             name: The variable's name (already checked as a name).
             value: The value.
+            scope: The scope `set` runs in; this core's when None.
         """
-        if not self.variables.update_existing(name, value):
-            if self.variables.binds_globally():
+        if scope is None:
+            scope = self.variables
+        if not scope.update_existing(name, value):
+            if scope.binds_globally():
                 # A global variable hides a word of its name everywhere, a
                 # required library's functions included; a local one only
                 # inside its function or loop, so only the global is logged
                 # (a prelude word's name the same way as a built-in's)
                 self._warn_builtin_redefinition(name)
-            self.variables[name] = value
+            scope[name] = value
 
     def _prio_global(self, op, stack) -> None:
         # RPN: value varname global

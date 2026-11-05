@@ -92,11 +92,12 @@ class TestSequenceWordsRefuseAScalarByName:
 
 
 class TestDeepRecursionThroughNestedBlocks:
-    def test_the_hosts_limit_is_reported_as_the_functions_by_name(self):
+    def test_the_guard_stops_it_by_name_however_deeply_the_body_nests_blocks(self):
+        # the blocks nested inside the body cost the host nothing: the guard, not the host, stops the recursion
         nested = "{n} {true {true {true {true {true {true {true {true {true {true {n 0 == {0} {n 1 - f 1 +} ifelse} {0} ifelse} {0} ifelse} {0} ifelse} {0} ifelse} {0} ifelse} {0} ifelse} {0} ifelse} {0} ifelse} {0} ifelse} {0} ifelse} :f defun "
         with pytest.raises(StackerRecursionError) as info:
             run(nested + "100000 f")
-        assert "`f`" in str(info.value) and info.value.depth is not None and info.value.depth < 1500
+        assert "`f`" in str(info.value) and info.value.depth is None and info.value.limit == 100000
         # the counter is back in order afterwards
         assert run(nested + "{100000 f} {drop} try 10 f") == [10]
 
