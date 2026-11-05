@@ -4,11 +4,10 @@ import unittest
 
 import pytest
 
+from stacker.data_type import String
 from stacker.error import StackerRuntimeError, StackerSyntaxError, StackerTypeError
 from stacker.stacker import Stacker
-
 from stacker.syntax.lexer import lex_string
-from stacker.engine.data_type import String
 
 
 def cpow(x1, x2):

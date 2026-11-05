@@ -8,8 +8,8 @@ Language-level tests for the symbol semantics (the edge-case table of the
 import pytest
 
 from stacker import Stacker
+from stacker.data_type import String, Symbol
 from stacker.engine.core import StackerCore
-from stacker.engine.data_type import String, Symbol
 from stacker.error import (
     StackerSyntaxError,
     StackerTypeError,
@@ -243,12 +243,12 @@ class TestSymbolInComputation:
 
 class TestDisplay:
     def test_symbols_are_bare_and_strings_quoted(self):
-        from stacker.util.disp import disp_default
+        from stacker.lang.display import disp_default
 
         assert disp_default([Symbol("x"), "ab", String("ab")]) == "[x 'ab' 'ab']"
 
     def test_computed_strings_are_quoted(self):
-        from stacker.util.disp import disp_default
+        from stacker.lang.display import disp_default
 
         assert disp_default(run('"a" "b" +')) == "['ab']"
         assert disp_default(run('"hello" :s = s')) == "['hello']"

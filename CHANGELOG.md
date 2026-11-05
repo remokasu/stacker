@@ -1,5 +1,30 @@
 # CHANGE LOG
 
+## [1.32.0] - 2026-11-06
+
+### Added
+
+- **`from stacker import console`** gives a plugin the console module under a public name: a word that prints writes to `console.stdout()` and its output follows the interpreter's
+
+### Changed
+
+- **The package is in layers, and a module imports only from its own layer and the ones below.** From the bottom: the values and the errors (`stacker.data_type`, `stacker.error`), the syntax (`stacker.syntax`), the language's surroundings (`stacker.lang`: how a value is shown, a scope, the console, the recursion limit, a word's arguments), the engine (`stacker.engine`, with the words it runs itself in `stacker.engine.primitives`, `include` and the operator table), the words on values (`stacker.operators`), the face (`stacker`, `stacker.stacker`) and the runtime (`stacker.runtime`). A test reads every import in the package and refuses one against that order. The language, its output, its errors and its speed are unchanged
+- The parser's own test file no longer ships in the wheel; it moved to the test suite
+
+### Breaking Changes
+
+- **The internal import paths moved; the public names did not.** `from stacker import Stacker, Array, Symbol, Console, StreamConsole`, `stacker.stacker.Stacker`, `stacker.error` and the command line are as before. No alias of an old path is kept. Old → new:
+  - `stacker.engine.data_type` → `stacker.data_type`
+  - `stacker.engine.display`, and its former name `stacker.util.disp` → `stacker.lang.display`
+  - `stacker.engine.recursion`, `console`, `scope`, `generation`, `boundary`, `smacro` → the same names under `stacker.lang`
+  - `stacker.operators.arguments` → `stacker.lang.arguments`; `stacker.util.color` → `stacker.lang.color`
+  - `stacker.include.include` → `stacker.engine.include`; `stacker.include.stk_file_read` → `stacker.engine.stk_file_read`
+  - `stacker.operators.manager` and `stacker.manager` → `stacker.engine.manager`
+  - `stacker.operators.loop`, `if_else`, `hof`, `include`, `defun`, `defmacro`, `lmd`, `exit` → the same names under `stacker.engine.primitives`
+  - `stacker.lib.config` → `stacker.runtime.config`; `stacker.lib.ui_tools` → `stacker.runtime.ui_tools`; `stacker.error_formatter` → `stacker.runtime.error_formatter`
+  - `stacker.operators.eval`, an empty table, is gone
+- **`include` is no longer in `stacker.__all__`**: it named the subpackage, not a word, and `from stacker import *` no longer brings it in
+
 ## [1.31.0] - 2026-11-06
 
 ### Changed

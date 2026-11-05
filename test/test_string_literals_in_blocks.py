@@ -7,7 +7,7 @@ variable, operator or macro with the same text captured the literal.
 
 import pytest
 
-from stacker.engine.data_type import String
+from stacker.data_type import String
 from stacker.error import StackerSyntaxError
 from stacker.stacker import Stacker
 

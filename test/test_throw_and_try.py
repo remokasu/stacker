@@ -4,7 +4,7 @@ import pytest
 
 from stacker import Stacker
 from stacker.error import StackerSyntaxError, StackerTypeError, UserError, error_kind
-from stacker.error_formatter import ErrorFormatter
+from stacker.runtime.error_formatter import ErrorFormatter
 from stacker.runtime.exec_modes.execution_mode import ExecutionMode
 
 

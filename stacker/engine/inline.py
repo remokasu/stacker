@@ -6,7 +6,7 @@ the word to its handler. ``COUNTS`` are the types a count of `times` is
 run on by the machine; the word itself looks at any other.
 """
 
-from stacker.operators import if_else, loop
+from stacker.engine.primitives import if_else, loop
 
 #: The types a count of `times` is run on here; the word itself looks at any other
 COUNTS = frozenset({int, float, bool})

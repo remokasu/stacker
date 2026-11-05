@@ -71,9 +71,12 @@ from __future__ import annotations
 from itertools import islice
 from typing import TYPE_CHECKING
 
+from stacker.data_type import Symbol, stack_data
+
 # core imports this module: its names are read at call time only
-from stacker.engine import compiler, copier, generation, inline, recursion
+from stacker.engine import compiler, copier, inline
 from stacker.engine import core as _core
+from stacker.engine import include as _include_module
 from stacker.engine.compiler import (
     _PLAIN,
     BAD,
@@ -102,8 +105,9 @@ from stacker.engine.compiler import (
 from stacker.engine.compiler import (
     CALL as R_CALL,
 )
-from stacker.engine.data_type import Symbol, stack_data
-from stacker.engine.scope import ScopedVariables
+from stacker.engine.primitives import if_else, loop
+from stacker.engine.primitives.hof import hof_operators
+from stacker.engine.primitives.include import include_operators
 from stacker.engine.sfunction import StackerFunction
 from stacker.engine.slambda import LAMBDA_NAME, StackerLambda
 from stacker.error import (
@@ -120,11 +124,9 @@ from stacker.error import (
     attach_macro_context,
     error_kind,
 )
-from stacker.include import include as _include_module
-from stacker.operators import if_else, loop
-from stacker.operators.arguments import integer_argument
-from stacker.operators.hof import hof_operators
-from stacker.operators.include import include_operators
+from stacker.lang import generation, recursion
+from stacker.lang.arguments import integer_argument
+from stacker.lang.scope import ScopedVariables
 from stacker.syntax.parser import parse_expression
 from stacker.syntax.token_rules import cached_literal_eval
 

@@ -62,16 +62,17 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, NamedTuple
 
+from stacker.data_type import Symbol
+
 # core imports this module: its names are read at call time only
 from stacker.engine import core as _core
 from stacker.engine import inline
-from stacker.engine.data_type import Symbol
 from stacker.engine.sfunction import StackerFunction
 from stacker.syntax.token_rules import cached_literal_eval
 
 if TYPE_CHECKING:
     from stacker.engine.core import StackerCore, TokenList
-    from stacker.engine.scope import ScopedVariables
+    from stacker.lang.scope import ScopedVariables
 
 _LOGGER = logging.getLogger("stacker")
 

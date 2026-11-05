@@ -3,8 +3,6 @@ from __future__ import annotations
 import itertools
 from collections import deque
 
-from stacker.engine import console
-from stacker.engine.display import disp_stack
 from stacker.error import (
     DropError,
     DupError,
@@ -16,7 +14,9 @@ from stacker.error import (
     RotError,
     SwapError,
 )
-from stacker.operators.arguments import count_argument, integer_argument
+from stacker.lang import console
+from stacker.lang.arguments import count_argument, integer_argument
+from stacker.lang.display import disp_stack
 
 """
 Stack manipulation functions.

@@ -8,9 +8,9 @@ escape sequence on every REPL prompt with an empty stack.
 import re
 import unittest
 
-from stacker.engine.data_type import String
+from stacker.data_type import String
+from stacker.lang.display import disp_colored, disp_default
 from stacker.stacker import Stacker
-from stacker.util.disp import disp_colored, disp_default
 
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 

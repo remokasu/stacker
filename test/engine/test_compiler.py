@@ -5,11 +5,11 @@ import logging
 import pytest
 
 from stacker import Stacker
+from stacker.data_type import Symbol
 from stacker.engine import compiler, core
 from stacker.engine.core import StackerCore
-from stacker.engine.data_type import Symbol
-from stacker.engine.scope import ScopedVariables
 from stacker.error import StackUnderflowError, UndefinedSymbolError
+from stacker.lang.scope import ScopedVariables
 
 
 @pytest.fixture

@@ -2,7 +2,7 @@
 
 import pytest
 
-from stacker.engine.data_type import String
+from stacker.data_type import String
 from stacker.syntax import parser, token_rules
 from stacker.syntax.token_rules import (
     cached_literal_eval,

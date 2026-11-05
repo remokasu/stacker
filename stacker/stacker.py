@@ -3,15 +3,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 
-from stacker.engine.console import DEFAULT_CONSOLE, Console, activate, deactivate
 from stacker.engine.core import StackerCore
-from stacker.engine.scope import ScopedVariables
 from stacker.error import (
     BreakException,
     StackerSyntaxError,
     attach_include_location,
     copy_include_location,
 )
+from stacker.lang.console import DEFAULT_CONSOLE, Console, activate, deactivate
+from stacker.lang.scope import ScopedVariables
 from stacker.slib import load_prelude
 from stacker.syntax.parser import parse_expression
 from stacker.syntax.token_rules import refuse_reserved
@@ -19,7 +19,7 @@ from stacker.syntax.token_rules import refuse_reserved
 if TYPE_CHECKING:
     from stacker.engine.sfunction import StackerFunction
 
-from stacker.engine.data_type import stack_data
+from stacker.data_type import stack_data
 
 
 def _break_outside_a_loop(error: BreakException) -> StackerSyntaxError:
@@ -103,7 +103,7 @@ class Stacker(StackerCore):
         self._include(filename, once=True)
 
     def _include(self, filename: str, once: bool) -> None:
-        from stacker.include.include import include_file
+        from stacker.engine.include import include_file
 
         token = activate(self.console)
         try:
@@ -158,12 +158,12 @@ class Stacker(StackerCore):
             StackerSyntaxError: The file has a `break` outside a loop.
         """
         # Imported here, not at the top: the include module needs this class
-        from stacker.include.include import (
+        from stacker.engine.include import (
             expressions_of,
             pop_entry_file,
             push_entry_file,
         )
-        from stacker.include.stk_file_read import readtxt
+        from stacker.engine.stk_file_read import readtxt
 
         path = Path(path)
         if main:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from stacker.engine import console
+from stacker.lang import console
 
 if TYPE_CHECKING:
     from stacker.stacker import Stacker

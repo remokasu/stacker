@@ -2,8 +2,8 @@ import unittest
 
 import pytest
 
+from stacker.lang.display import disp_default
 from stacker.stacker import Stacker
-from stacker.util.disp import disp_default
 
 
 class TestUnit(unittest.TestCase):

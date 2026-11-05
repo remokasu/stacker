@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pystacker"
-version = "1.31.0"
+version = "1.32.0"
 authors = [
     {name = "remokasu"}
 ]
@@ -25,16 +25,14 @@ stacker = "stacker.__main__:main"
 packages = [
     "stacker",
     "stacker.engine",
+    "stacker.engine.primitives",
+    "stacker.lang",
+    "stacker.operators",
+    "stacker.plugins",
     "stacker.runtime",
     "stacker.runtime.exec_modes",
-    "stacker.include",
-    "stacker.lib",
-    "stacker.operators",
-    "stacker.manager",
-    "stacker.plugins",
     "stacker.slib",
     "stacker.syntax",
-    "stacker.util",
 ]
 package-data = {"stacker" = [
     "data/*",

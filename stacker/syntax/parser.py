@@ -3,6 +3,9 @@ from __future__ import annotations
 import ast
 from functools import lru_cache
 
+from stacker.data_type import String
+from stacker.error import StackerSyntaxError, word_in_list_literal_message
+
 # Import lexer components from the separate lexer module
 from stacker.syntax.lexer import (
     Identifier,
@@ -11,8 +14,6 @@ from stacker.syntax.lexer import (
     TupleNode,
     UnifiedLexer,
 )
-from stacker.error import StackerSyntaxError, word_in_list_literal_message
-from stacker.engine.data_type import String
 from stacker.syntax.token_rules import (  # noqa: F401 -- is_code_block / is_list / is_symbol are re-exported
     SIGNED_SPECIAL_FLOATS,
     count_outside_strings,

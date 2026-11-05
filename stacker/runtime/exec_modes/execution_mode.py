@@ -3,15 +3,14 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from stacker.stacker import Stacker
-
 from stacker.error import UserError, error_kind, include_location_of
-from stacker.error_formatter import ErrorFormatter
-from stacker.syntax.parser import remove_start_end_quotes
-from stacker.syntax.token_rules import REPL_COMMAND_NAMES
 
 # from stacker.syntax.parser import is_string
-from stacker.engine.display import disp_stack, plain_text
+from stacker.lang.display import disp_stack, plain_text
+from stacker.runtime.error_formatter import ErrorFormatter
+from stacker.stacker import Stacker
+from stacker.syntax.parser import remove_start_end_quotes
+from stacker.syntax.token_rules import REPL_COMMAND_NAMES
 
 # def simple_format(arr):
 #     """

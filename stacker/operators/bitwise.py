@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from stacker.error import ValidationError
-from stacker.operators.arguments import integer_argument
+from stacker.lang.arguments import integer_argument
 
 
 def _trailing_zeros(x: object) -> int:

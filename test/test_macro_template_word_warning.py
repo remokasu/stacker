@@ -3,7 +3,7 @@
 import logging
 
 from stacker import Stacker
-from stacker.engine.data_type import Symbol
+from stacker.data_type import Symbol
 
 
 def run(programs: list[str], caplog) -> tuple[list[object], list[str]]:

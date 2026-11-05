@@ -18,14 +18,15 @@ import time
 import pytest
 
 from stacker import Stacker
-from stacker.engine import compiler, machine, recursion
-from stacker.engine.data_type import stack_data
+from stacker.data_type import stack_data
+from stacker.engine import compiler, machine
 from stacker.error import (
     NoValueProducedError,
     ResultCountError,
     StackerRecursionError,
     include_location_of,
 )
+from stacker.lang import recursion
 
 #: Runs enough for a block to be compiled in any state of the tier (the threshold is 8 by default)
 WARM_RUNS = 12
@@ -79,7 +80,7 @@ def test_a_recursion_through_each_construct_is_as_deep_as_the_guard_allows_whate
         f"""
         import sys
         from stacker import Stacker
-        from stacker.engine import recursion
+        from stacker.lang import recursion
         recursion.set_limit(recursion.NO_LIMIT)
         s = Stacker()
         print(list(s.eval({program!r})))

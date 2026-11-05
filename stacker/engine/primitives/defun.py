@@ -1,0 +1,36 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from stacker.engine.sfunction import StackerFunction
+
+if TYPE_CHECKING:
+    from stacker.stacker import Stacker
+
+
+def defun_sfunction(
+    stacker: Stacker, func_name: str, fargs: list[str], body: Stacker
+) -> None:
+    function = StackerFunction(fargs, body, name=func_name)
+    args_count = len(fargs)
+    stacker.register_sfunction(
+        func_name,
+        function,
+        args_count,
+        push_result_to_stack=True,
+        defined_at=(stacker.current_file, stacker.current_line),
+    )
+
+
+defun_operators = {
+    "defun": {
+        "func": (
+            lambda stacker, func_name, fargs, body: defun_sfunction(
+                stacker, func_name, fargs, body
+            )
+        ),
+        "arg_count": 3,
+        "push_result_to_stack": False,
+        "desc": "Defines a function called by its name; a call pushes every value its body leaves: {args} {body} :name defun",
+    },
+}

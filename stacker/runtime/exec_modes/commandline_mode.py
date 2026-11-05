@@ -4,7 +4,7 @@ import sys
 import traceback
 
 from stacker.error import error_kind
-from stacker.error_formatter import ErrorFormatter
+from stacker.runtime.error_formatter import ErrorFormatter
 from stacker.runtime.exec_modes.execution_mode import ExecutionMode
 
 

@@ -3,7 +3,7 @@
 import pytest
 
 from stacker import Stacker
-from stacker.engine.data_type import Symbol
+from stacker.data_type import Symbol
 
 
 def run(program: str) -> list[object]:

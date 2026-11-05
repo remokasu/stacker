@@ -10,6 +10,7 @@ import copy
 import unittest
 
 from stacker import Stacker
+from stacker.data_type import String, Symbol
 from stacker.engine.core import (
     K_DYNAMIC,
     K_INVALID,
@@ -18,7 +19,6 @@ from stacker.engine.core import (
     K_SYMBOL,
     TokenList,
 )
-from stacker.engine.data_type import String, Symbol
 from stacker.error import StackerSyntaxError, UndefinedSymbolError
 
 

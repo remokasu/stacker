@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from stacker.engine.data_type import Symbol
-from stacker.engine.display import plain_text
+from stacker.data_type import Symbol
 from stacker.error import (
     StackerTypeError,
     not_a_sequence_message,
     symbol_as_value_message,
 )
-from stacker.operators.arguments import integer_argument
+from stacker.lang.arguments import integer_argument
+from stacker.lang.display import plain_text
 
 
 def _sequence(word: str, xs: object) -> object:

@@ -11,18 +11,22 @@ if TYPE_CHECKING:
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import DynamicCompleter, WordCompleter
 from prompt_toolkit.history import FileHistory
-from stacker.runtime.exec_modes.error import create_error_message
-from stacker.runtime.exec_modes.execution_mode import REPL_COMMANDS, REPL_SETTINGS, ExecutionMode
-from stacker.lib import delete_history, disp_about, disp_help
-from stacker.lib.config import history_file_path
+
 from stacker.error import error_kind
-from stacker.error_formatter import ErrorFormatter
-from stacker.version import __version__
+from stacker.runtime.config import history_file_path
+from stacker.runtime.error_formatter import ErrorFormatter
+from stacker.runtime.exec_modes.error import create_error_message
+from stacker.runtime.exec_modes.execution_mode import (
+    REPL_COMMANDS,
+    REPL_SETTINGS,
+    ExecutionMode,
+)
+from stacker.runtime.ui_tools import delete_history, disp_about, disp_help
 
 # Import parser utility functions (not lexer components)
 # Lexer components (TokenType, UnifiedLexer, etc.) are in stacker.syntax.lexer
 from stacker.syntax.lexer import analyze_terminals
-
+from stacker.version import __version__
 
 #: The heading help gives the group `operators` calls "Regular operators:"
 HELP_REGULAR_HEADING = "Supported operators and functions:"

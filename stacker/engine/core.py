@@ -1,25 +1,33 @@
 from __future__ import annotations
 
-from fractions import Fraction
-from functools import partial
 import copy
 import logging
 import sys
 from collections.abc import Callable, Iterator, Sequence
+from fractions import Fraction
+from functools import partial
 from pathlib import Path
 from typing import NoReturn
+
 from stacker.constant import constants
+from stacker.data_type import VOID, Array, String, Symbol, stack_data
+from stacker.engine import compiler, copier, machine
+from stacker.engine.include import IncludeState
+from stacker.engine.manager import OperatorManager
+from stacker.engine.sfunction import StackerFunction
+from stacker.engine.slambda import StackerLambda
 from stacker.error import (
+    BreakException,
     MacroExpansionError,
     NoValueProducedError,
     ReservedWordError,
     ResultCountError,
-    StackUnderflowError,
     StackerError,
     StackerIndexError,
     StackerRuntimeError,
     StackerSyntaxError,
     StackerTypeError,
+    StackUnderflowError,
     UndefinedSymbolError,
     ValidationError,
     attach_macro_context,
@@ -28,12 +36,14 @@ from stacker.error import (
     word_in_list_literal_message,
     # UnexpectedTokenError,
 )
+from stacker.lang import console, recursion
+from stacker.lang.arguments import count_argument, integer_argument
+from stacker.lang.boundary import token_to_value, value_to_token
+from stacker.lang.display import plain_text  # display.py must not import core.py
+from stacker.lang.scope import ScopedVariables
+from stacker.lang.smacro import StackerMacro, gensym
 from stacker.syntax.lexer import Identifier, ListNode, TupleNode
 from stacker.syntax.parser import Parser, parse_expression
-from stacker.error import BreakException
-from stacker.engine.boundary import token_to_value, value_to_token
-from stacker.engine.display import plain_text  # display.py must not import core.py
-from stacker.engine.data_type import Array, String, Symbol, stack_data, VOID
 from stacker.syntax.token_rules import (
     KEYWORD_LITERALS,
     OLD_SYMBOL_PREFIX,
@@ -51,14 +61,6 @@ from stacker.syntax.token_rules import (
     not_a_symbol_message,
     refuse_reserved,
 )
-from stacker.engine.sfunction import StackerFunction
-from stacker.engine.slambda import StackerLambda
-from stacker.engine.scope import ScopedVariables
-from stacker.engine import compiler, console, copier, machine, recursion
-from stacker.engine.smacro import StackerMacro, gensym
-from stacker.operators.arguments import count_argument, integer_argument
-from stacker.operators.manager import OperatorManager
-from stacker.include.include import IncludeState
 
 _LOGGER = logging.getLogger("stacker")
 
@@ -588,7 +590,7 @@ class StackerCore:
             "enabled": True,
         }
         # The files being and already included, shared by reference with
-        # every child core (see stacker.include.include)
+        # every child core (see stacker.engine.include)
         self._includes = IncludeState()
         # The (macro, word) pairs already warned about by a macro template
         # replacing a word (_warn_template_replaces_word): once per program
@@ -1889,7 +1891,7 @@ class StackerCore:
         """Returns the items a data word iterates over.
 
         A code block is read as data: each name token becomes a ``Symbol``
-        (see ``engine/boundary.py``). An array gives the elements it holds
+        (see ``lang/boundary.py``). An array gives the elements it holds
         now (a copy), so the word runs through those even when its body
         changes the array. A dictionary is not a sequence. Lists and other
         iterables are used as they are.
@@ -2221,7 +2223,7 @@ class StackerCore:
                 return token
             self._warn_template_replaces_word(token)
             # A symbol becomes a bare name, a string a string literal,
-            # anything else is spliced as a value (see engine/boundary.py).
+            # anything else is spliced as a value (see lang/boundary.py).
             return value_to_token(bindings[token])
 
         def build(template: StackerCore) -> StackerCore:

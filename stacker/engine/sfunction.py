@@ -5,9 +5,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from stacker.engine.core import StackerCore
 
-from stacker.engine import copier, recursion
-from stacker.engine.data_type import stack_data
+from stacker.data_type import stack_data
+from stacker.engine import copier
 from stacker.error import StackerRecursionError, StackerTypeError
+from stacker.lang import recursion
 
 
 class StackerFunction:

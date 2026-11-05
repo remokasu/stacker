@@ -13,7 +13,8 @@ import itertools
 import pytest
 
 from stacker import Stacker
-from stacker.engine import compiler, copier, machine, recursion
+from stacker.data_type import stack_data
+from stacker.engine import compiler, copier, machine
 from stacker.engine import core as _core
 from stacker.engine.compiler import (
     BLOCK,
@@ -27,7 +28,7 @@ from stacker.engine.compiler import (
     VAR,
     WORD,
 )
-from stacker.engine.data_type import stack_data
+from stacker.lang import recursion
 from test.engine.compile_helpers import assert_compiled, lines, ok, steps
 
 

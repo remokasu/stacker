@@ -15,8 +15,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from stacker.engine import recursion
 from stacker.error import StackerRecursionError
+from stacker.lang import recursion
 from stacker.stacker import Stacker
 
 REPO_ROOT = Path(__file__).resolve().parent.parent

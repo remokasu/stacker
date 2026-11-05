@@ -19,8 +19,8 @@ import io
 import unittest
 
 from stacker import Stacker
+from stacker.data_type import String
 from stacker.engine.core import StackerCore
-from stacker.engine.data_type import String
 from stacker.error import StackerSyntaxError, UndefinedSymbolError
 
 
@@ -108,7 +108,7 @@ class TestSymbolValues(unittest.TestCase):
         self.stacker = Stacker()
 
     def test_symbol_does_not_resolve_to_a_bound_value(self):
-        from stacker.engine.data_type import Symbol
+        from stacker.data_type import Symbol
 
         self.stacker.process_expression("5 :x set :x")
         self.assertEqual(list(self.stacker.stack), [Symbol("x")])

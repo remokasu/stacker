@@ -1,6 +1,6 @@
 import unittest
 
-from stacker.engine.data_type import Symbol
+from stacker.data_type import Symbol
 from stacker.stacker import Stacker
 
 

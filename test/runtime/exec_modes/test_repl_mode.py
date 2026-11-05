@@ -6,9 +6,9 @@ import pytest
 from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.document import Document
 
-from stacker.lib import disp_help
 from stacker.runtime.exec_modes.execution_mode import REPL_COMMANDS, REPL_SETTINGS
 from stacker.runtime.exec_modes.repl_mode import ReplMode
+from stacker.runtime.ui_tools import disp_help
 from stacker.stacker import Stacker
 
 

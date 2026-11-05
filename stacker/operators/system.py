@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from stacker.engine import console
+from stacker.lang import console
 from stacker.version import __version__
 
 if TYPE_CHECKING:

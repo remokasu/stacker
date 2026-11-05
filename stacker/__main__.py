@@ -10,17 +10,17 @@ from pathlib import Path
 from types import TracebackType
 
 import stacker
-from stacker.engine import recursion
-from stacker.engine.recursion import (
+from stacker.lang import recursion
+from stacker.lang.color import colored
+from stacker.lang.recursion import (
     DEFAULT_RECURSION_LIMIT,
     HOST_RECURSION_LIMIT,
     NO_LIMIT,
 )
-from stacker.lib import disp_logo
-from stacker.lib.config import plugins_dir_path, stacker_dotfile_path
+from stacker.runtime.config import plugins_dir_path, stacker_dotfile_path
 from stacker.runtime.exec_modes import CommandLineMode, ReplMode, ScriptMode
+from stacker.runtime.ui_tools import disp_logo
 from stacker.stacker import Stacker
-from stacker.util import colored
 from stacker.version import __version__
 
 parser = argparse.ArgumentParser(description="Stacker command line interface.")

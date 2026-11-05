@@ -3,10 +3,10 @@
 import pytest
 
 from stacker import Stacker
-from stacker.engine.data_type import String
+from stacker.data_type import String
 from stacker.error import StackerSyntaxError
+from stacker.lang.display import plain_text
 from stacker.syntax.token_rules import decode_string_token, escape_for_display
-from stacker.util.disp import plain_text
 
 
 def run(program: str) -> list[object]:

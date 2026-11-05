@@ -3,12 +3,12 @@ import subprocess
 import sys
 import tempfile
 import unittest
-
-from stacker.stacker import Stacker
 from pathlib import Path
+
+from stacker.engine.include import include_stacker_script
 from stacker.error import IncludeError
-from stacker.include.include import include_stacker_script
 from stacker.runtime.exec_modes.script_mode import ScriptMode
+from stacker.stacker import Stacker
 
 
 # class TestImportStacker(unittest.TestCase):
@@ -138,7 +138,7 @@ class TestCircularInclude(unittest.TestCase):
         # Run in a subprocess so a regression (unbounded recursion or an
         # interpreter crash) cannot take down the test runner itself.
         code = (
-            "from stacker.include.include import include_stacker_script\n"
+            "from stacker.engine.include import include_stacker_script\n"
             "from stacker.error import IncludeError\n"
             "try:\n"
             f"    include_stacker_script({str(entry)!r})\n"

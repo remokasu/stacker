@@ -3,10 +3,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from stacker.engine.data_type import Symbol
-from stacker.engine.display import display_text, plain_text
+from stacker.data_type import Symbol
 from stacker.error import StackerRuntimeError, StackerTypeError, symbol_as_value_message
-from stacker.operators.arguments import byte_values
+from stacker.lang.arguments import byte_values
+from stacker.lang.display import display_text, plain_text
 
 
 def _write(content: object, filename: Path | str) -> None:

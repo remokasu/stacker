@@ -3,8 +3,7 @@ from __future__ import annotations
 import codecs
 import string
 
-from stacker.engine.data_type import Symbol
-from stacker.engine.display import plain_text
+from stacker.data_type import Symbol
 from stacker.error import (
     StackerIndexError,
     StackerRuntimeError,
@@ -12,7 +11,8 @@ from stacker.error import (
     ValidationError,
     symbol_as_value_message,
 )
-from stacker.operators.arguments import byte_values, integer_argument
+from stacker.lang.arguments import byte_values, integer_argument
+from stacker.lang.display import plain_text
 
 #: The largest code point `chr` makes
 CODE_POINT_MAX = 0x10FFFF

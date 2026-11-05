@@ -3,10 +3,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TextIO
 
-from stacker.engine import console
-from stacker.engine.display import display_text
 from stacker.error import StackerRuntimeError
-from stacker.operators.arguments import byte_values
+from stacker.lang import console
+from stacker.lang.arguments import byte_values
+from stacker.lang.display import display_text
 
 #: Standard input is read as UTF-8, as scripts and files are, whatever the host's locale says
 STDIN_ENCODING = "utf-8"

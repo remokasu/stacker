@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from stacker.util.color import colored
+from stacker.lang.color import colored
 
 
 def create_error_message(error_tokens: list[str]) -> str:

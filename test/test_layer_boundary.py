@@ -8,8 +8,8 @@ One test per path of the token-layer / value-layer boundary: `nth`, `apply`,
 import pytest
 
 from stacker import Stacker
+from stacker.data_type import String, Symbol
 from stacker.engine.core import StackerCore
-from stacker.engine.data_type import String, Symbol
 from stacker.error import ResultCountError, StackerTypeError, UndefinedSymbolError
 
 

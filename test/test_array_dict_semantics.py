@@ -4,7 +4,7 @@ import pytest
 
 from stacker import Stacker
 from stacker.error import StackerRuntimeError, StackerTypeError
-from stacker.util.disp import plain_text
+from stacker.lang.display import plain_text
 
 
 def run(*lines: str) -> list[object]:
@@ -102,7 +102,7 @@ class TestDisplay:
         assert plain_text(run(program)[-1]) == expected
 
     def test_the_colored_display_tells_an_array_from_a_list(self):
-        from stacker.util.disp import disp_colored
+        from stacker.lang.display import disp_colored
 
         assert disp_colored([[1, 2]]) != disp_colored(run("[1 2] array"))
         assert disp_colored(run("dict")) != disp_colored(run("{}"))
@@ -141,7 +141,7 @@ class TestReviewFindings:
             run("1000000000000000000000 0 array-of")
 
     def test_the_display_state_is_restored_after_an_error_inside(self):
-        from stacker.util import disp
+        from stacker.lang import display as disp
 
         class Bad:
             def __str__(self):
@@ -155,7 +155,7 @@ class TestReviewFindings:
 
 
 def test_an_empty_dictionary_is_shown_apart_from_an_empty_block():
-    from stacker.util.disp import plain_text
+    from stacker.lang.display import plain_text
 
     assert plain_text({}) == "{:}"
     assert plain_text({"k": 1}) == "{'k' 1}"

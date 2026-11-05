@@ -1,6 +1,7 @@
 """Tests for reduce and fold higher-order functions."""
 
 import unittest
+
 from stacker.stacker import Stacker
 
 
@@ -80,7 +81,7 @@ class TestFoldExceptionSafety(unittest.TestCase):
         self.stacker = Stacker()
 
     def test_exception_in_fold_body_restores_state(self):
-        from stacker.engine.data_type import stack_data
+        from stacker.data_type import stack_data
         from stacker.error import UndefinedSymbolError
 
         with self.assertRaises(UndefinedSymbolError):

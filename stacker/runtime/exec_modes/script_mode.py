@@ -4,12 +4,13 @@ import sys
 import traceback
 from pathlib import Path
 
-from stacker.error import error_kind, ScriptReadError
+from stacker.error import ScriptReadError, error_kind
+from stacker.runtime.config import script_extension_name
+from stacker.runtime.error_formatter import ErrorFormatter
 from stacker.runtime.exec_modes.execution_mode import ExecutionMode
-from stacker.lib.config import script_extension_name
 from stacker.stacker import Stacker
-from stacker.error_formatter import ErrorFormatter
-# from stacker.util.color import colored
+
+# from stacker.lang.color import colored
 # from stacker.exec_modes.error import create_error_message
 
 

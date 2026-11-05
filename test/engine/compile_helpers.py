@@ -12,12 +12,12 @@ import io
 from typing import NamedTuple
 
 from stacker import Stacker
+from stacker.data_type import stack_data
 from stacker.engine import compiler
 from stacker.engine.core import StackerCore, TokenList
-from stacker.engine.data_type import stack_data
 from stacker.engine.slambda import StackerLambda
-from stacker.engine.smacro import StackerMacro
 from stacker.error import StackerError
+from stacker.lang.smacro import StackerMacro
 
 #: The threshold the compiler is made with, which the parity tests (section 6) run under as "default"
 DEFAULT_THRESHOLD = 8

@@ -6,10 +6,10 @@ import numbers
 from fractions import Fraction
 from typing import Callable
 
-from stacker.engine.data_type import Symbol
-from stacker.engine.display import plain_text
+from stacker.data_type import Symbol
 from stacker.error import StackerTypeError, ValidationError, symbol_as_value_message
-from stacker.operators.arguments import integer_argument
+from stacker.lang.arguments import integer_argument
+from stacker.lang.display import plain_text
 from stacker.operators.arith import checked_binary
 
 

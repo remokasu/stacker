@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 
-from stacker.operators.arguments import integer_argument
+from stacker.lang.arguments import integer_argument
 
 
 def _rand() -> float:

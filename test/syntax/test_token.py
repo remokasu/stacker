@@ -1,6 +1,5 @@
 import unittest
 
-from stacker.stacker import Stacker
 from stacker import error
 from stacker.error import (
     # StackUnderflowError,
@@ -8,6 +7,7 @@ from stacker.error import (
     UndefinedSymbolError,
     # UnexpectedTokenError,
 )
+from stacker.stacker import Stacker
 
 
 class TestUnit(unittest.TestCase):
@@ -55,7 +55,7 @@ class TestUnit(unittest.TestCase):
             stacker.eval("[x y]")
 
     def test_symbol_elements(self):
-        from stacker.engine.data_type import Symbol
+        from stacker.data_type import Symbol
 
         stacker = Stacker()
         self.assertEqual(stacker.eval("[:x :y]")[-1], [Symbol("x"), Symbol("y")])
@@ -81,6 +81,6 @@ class TestUnit(unittest.TestCase):
             stacker.eval("x")
         with self.assertRaises(error.UndefinedSymbolError):
             stacker.eval("x 5 +")
-        from stacker.engine.data_type import Symbol
+        from stacker.data_type import Symbol
 
         self.assertEqual(stacker.eval(":x")[-1], Symbol("x"))

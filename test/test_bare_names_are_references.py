@@ -10,8 +10,8 @@ it refers to.
 
 import pytest
 
+from stacker.data_type import Symbol
 from stacker.engine.core import K_SYMBOL, _classify_tokens
-from stacker.engine.data_type import Symbol
 from stacker.error import StackerSyntaxError, UndefinedSymbolError
 from stacker.stacker import Stacker
 

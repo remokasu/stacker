@@ -7,8 +7,8 @@ The name itself is written `:name` or `{name}`.
 import pytest
 
 from stacker import Stacker
+from stacker.data_type import Symbol
 from stacker.engine.core import StackerCore
-from stacker.engine.data_type import Symbol
 from stacker.error import UndefinedSymbolError
 from stacker.runtime.exec_modes.repl_mode import ReplMode
 from stacker.runtime.exec_modes.script_mode import ScriptMode

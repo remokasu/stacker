@@ -7,8 +7,7 @@ pushed as-is.
 
 import pytest
 
-from stacker.engine import recursion
-from stacker.engine.data_type import String
+from stacker.data_type import String
 from stacker.engine.slambda import StackerLambda
 from stacker.error import (
     MacroExpansionError,
@@ -18,6 +17,7 @@ from stacker.error import (
     StackUnderflowError,
     UndefinedSymbolError,
 )
+from stacker.lang import recursion
 from stacker.stacker import Stacker
 
 

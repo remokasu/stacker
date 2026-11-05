@@ -5,8 +5,8 @@ import sys
 import pytest
 
 from stacker import Stacker
+from stacker.data_type import String
 from stacker.engine import copier
-from stacker.engine.data_type import String
 
 WAYS = [copier.by_generated_copier, copier.by_dictionary_update]
 #: how many attributes a core has; CPython shares the attribute keys of a class's instances only up to 30

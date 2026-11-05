@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from collections.abc import Callable
 
-from stacker.engine.data_type import Array
+from stacker.data_type import Array
 from stacker.error import StackerRuntimeError
 
 

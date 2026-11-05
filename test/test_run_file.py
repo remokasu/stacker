@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from stacker.engine.include import expressions_of
 from stacker.error import (
     IncludeError,
     StackerSyntaxError,
@@ -11,7 +12,6 @@ from stacker.error import (
     UnterminatedTokenError,
     include_location_of,
 )
-from stacker.include.include import expressions_of
 from stacker.stacker import Stacker
 
 

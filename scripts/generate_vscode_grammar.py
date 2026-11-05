@@ -17,6 +17,8 @@ import re
 from pathlib import Path
 
 from stacker.constant import constants
+from stacker.engine.manager import aggregate_operators
+from stacker.engine.primitives import exit, hof, if_else, loop
 from stacker.operators import (
     algebra,
     arith,
@@ -24,13 +26,9 @@ from stacker.operators import (
     bitwise,
     collection,
     comparison,
-    exit,
     file,
-    hof,
-    if_else,
     io,
     logic,
-    loop,
     math,
     os,
     random,
@@ -45,7 +43,6 @@ from stacker.operators import (
 from stacker.operators import (
     list as list_ops,
 )
-from stacker.operators.manager import aggregate_operators
 from stacker.stacker import Stacker
 from stacker.syntax.token_rules import KEYWORD_LITERALS
 

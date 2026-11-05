@@ -43,6 +43,7 @@ from typing import NamedTuple
 
 import pytest
 
+from stacker.data_type import Symbol, stack_data
 from stacker.engine import compiler, inline, machine
 from stacker.engine.compiler import (
     BAD,
@@ -69,8 +70,7 @@ from stacker.engine.compiler import (
     WORD,
 )
 from stacker.engine.core import StackerCore
-from stacker.engine.data_type import Symbol, stack_data
-from stacker.engine.smacro import StackerMacro
+from stacker.lang.smacro import StackerMacro
 from test.engine.compile_helpers import (
     DEFAULT_THRESHOLD,
     Outcome,

@@ -35,10 +35,10 @@ from pathlib import Path
 import pytest
 
 from stacker.constant import constants
+from stacker.lang.display import disp_default
 from stacker.stacker import Stacker
 from stacker.syntax.lexer import analyze_terminals
 from stacker.syntax.token_rules import KEYWORD_LITERALS, REPL_COMMAND_NAMES
-from stacker.util.disp import disp_default
 
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"

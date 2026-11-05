@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from stacker.engine import copier, recursion
-from stacker.engine.data_type import stack_data
+from stacker.data_type import stack_data
+from stacker.engine import copier
 from stacker.error import StackerRecursionError, StackerTypeError
+from stacker.lang import recursion
 
 #: Name reported by the recursion guard for anonymous lambdas
 LAMBDA_NAME = "<lambda>"

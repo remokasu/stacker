@@ -58,9 +58,9 @@ import pytest
 
 from stacker import Stacker
 from stacker.constant import constants
-from stacker.engine import recursion
+from stacker.data_type import Symbol
 from stacker.engine.core import StackerCore
-from stacker.engine.data_type import Symbol
+from stacker.engine.primitives.loop import loop_operators
 from stacker.error import (
     DropError,
     DupError,
@@ -75,7 +75,7 @@ from stacker.error import (
     SwapError,
     UndefinedSymbolError,
 )
-from stacker.operators.loop import loop_operators
+from stacker.lang import recursion
 
 # ---------------------------------------------------------------------------
 # Helpers
