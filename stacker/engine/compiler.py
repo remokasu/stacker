@@ -81,11 +81,14 @@ THRESHOLD: int | None = 8
 VERIFY = False
 #: How many times a block's unit may be dropped in mid-run before the block is left to the interpreter
 GIVE_UP = 3
-#: Whether a block whose unit would do nothing faster than the interpreter (no fast word, no fused step, no
-#: direct call, or a macro expansion that outweighs them) is left to the interpreter instead: running such a
-#: unit only adds the unit's own entry cost. The eager test state turns this off, so that every block's unit is
-#: checked
-ONLY_WORTHWHILE = True
+#: Whether a block whose unit holds no fast word, fused step or direct call (or holds a macro expansion that
+#: outweighs them) is left to the interpreter instead. Off: on the machine a unit's steps run with less around
+#: them than the walk of the classification does, so every block that runs often is compiled (tests set it)
+ONLY_WORTHWHILE = False
+
+#: Set by the machine: rewrites a unit's steps, in place, when the unit is made (the kinds the machine runs
+#: a word's step by are decided once there, not at every step). None leaves the steps as compiled
+REWRITE = None
 #: The unit of a block that is left to the interpreter for good
 UNCOMPILABLE = object()
 
@@ -191,6 +194,8 @@ class Unit:
         self.instructions = instructions
         #: ...and the same as plain tuples, which the run loop unpacks fastest
         self.steps = [tuple(instruction) for instruction in instructions]
+        if REWRITE is not None:
+            REWRITE(self.steps, core)
         #: the names resolved as not being variables: no scope the block runs in may hold one
         self.not_variables = frozenset(i.name for i in instructions if i.kind in NOT_VARIABLES)
         #: the interpreter whose tables the names were resolved against, and its tables' generation then

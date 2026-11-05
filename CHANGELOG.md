@@ -1,5 +1,18 @@
 # CHANGE LOG
 
+## [1.31.0] - 2026-11-06
+
+### Changed
+
+- **Every block that runs often is compiled**, not only one with a word that gained from it before: on the machine a compiled block's steps run with less around them than the interpreter's walk of the tokens, so a small body (`{i drop}`, an arm `{1}`) runs faster than before. `--no-compile` is unchanged
+- **A block that `eval` runs in the scope it was written in runs in place**, as an arm of `if` does, instead of in an activation of its own
+- **A loop enters the same activation again for the next iteration**, and `map`, `filter`, `reduce` and `fold` do the same for the next element, instead of making one each time
+- **The words of a compiled block are dispatched by a kind decided once**, when the block is compiled, instead of being sorted out at every run. With the above, programs run faster than in 1.30.0 throughout, and on CPython most run in the time they took in 1.29.1 or less
+
+### Breaking Changes
+
+- **The body of `try` and `iferror` catches for itself** when it is a block: the word and its body are one activation where they were two, so `--recursion-limit` counts one for such a `try` (a body that is a lambda or a value still runs under the word's own activation)
+
 ## [1.30.0] - 2026-11-05
 
 ### Changed

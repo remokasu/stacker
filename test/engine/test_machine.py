@@ -191,6 +191,129 @@ def test_the_hosts_depth_error_inside_a_call_through_a_python_word_is_renamed_as
     assert recursion.get_depth() == 0
 
 
+def test_an_element_whose_call_ends_in_a_tail_call_leaves_the_next_element_a_sound_activation():
+    # (the element's activation is kept for the next element; a tail call replaces it, so the next element
+    # must not be run on the replaced one, left in the middle of an arm)
+    s = Stacker()
+    s.eval("{n} {n 2 >} :big defun")
+    for _ in range(3):
+        assert list(s.eval("1 20 seq {x} {x 5 > {x big} {false} ifelse} lambda filter")) == [list(range(6, 21))]
+        assert list(s.eval("1 12 seq {x} {x 5 > {x big} {x 0 >} ifelse} lambda map")) == [[True] * 12]
+        s.eval("clear")
+
+
+@pytest.mark.parametrize(
+    "program, expected",
+    [
+        pytest.param("{x} {x 1 +} lambda {99} iferror", [99], id="a-lambda-body-short-of-arguments-is-caught"),
+        pytest.param("{x y} {x y +} lambda {96} iferror", [96], id="a-lambda-body-of-two-is-caught"),
+        pytest.param('{1 0 /} {x} {x "kind" get} lambda try', ["ZeroDivisionError"], id="a-lambda-handler-is-called-on-the-error"),
+        pytest.param("{1 0 /} 5 iferror", [5], id="a-value-as-handler-is-pushed"),
+        pytest.param("{{1 0 /} {drop 1} try 0 /} {drop 2} try", [2], id="a-try-inside-a-try"),
+        pytest.param("1 5 :i {{i 3 == {break} if} {drop 9} try i} do", [1, 2], id="break-passes-through-the-body"),
+        pytest.param('{"x" "boom" throw} {"kind" get} try', ["x"], id="the-error-record-is-the-handlers"),
+    ],
+)
+def test_the_body_of_try_catches_for_itself_as_the_control_activation_did(program, expected):
+    s = Stacker()
+    for _ in range(WARM_RUNS):  # (compiled or not, the same)
+        assert list(s.eval(program)) == expected
+        s.eval("clear")
+
+
+def test_a_try_whose_body_is_a_block_is_one_activation(mocker):
+    s = Stacker()
+    before = recursion.get_limit()
+    recursion.set_limit(2)  # the expression's activation and the body's
+    try:
+        assert list(s.eval("{{1 0 /} {drop 3} try} eval")) == [3]
+    finally:
+        recursion.set_limit(before)
+    interrupting = mocker.patch.object(machine._core.StackerCore, "_run_word", side_effect=KeyboardInterrupt)
+    with pytest.raises(KeyboardInterrupt):  # (an interrupt is not an error the body takes)
+        s.eval("{1 dup} {drop 0} try")
+    assert interrupting.called and recursion.get_depth() == 0
+
+
+def test_a_block_eval_runs_in_place_behaves_as_an_activation_of_its_own():
+    s = Stacker()
+    before = recursion.get_limit()
+    recursion.set_limit(30)
+    try:
+        for _ in range(WARM_RUNS):
+            with pytest.raises(StackerRecursionError):  # the recursion through `eval` stops at the limit
+                s.eval("{b eval 1 +} :b set b eval")
+            assert recursion.get_depth() == 0 and len(s.stack) == 0
+            assert list(s.eval("0 1 10 :i {{i 4 == {break} if} eval i +} do")) == [6]  # `break` inside the block leaves the loop
+            with pytest.raises(ZeroDivisionError):
+                s.eval("1 {2 {3 0 /} eval} eval")
+            assert list(s.get_trace_copy()) == [3, 0, "/"]  # the innermost block's tokens, as an activation leaves them
+            assert list(s.eval("{n} {n 0 == {0} {{n 1 - rec} eval} ifelse} :rec defun 200 rec")) == [0]  # a tail call through `eval`
+            s.eval("clear")
+    finally:
+        recursion.set_limit(before)
+
+
+def test_the_steps_of_a_unit_carry_the_machines_kinds(monkeypatch):
+    monkeypatch.setattr(compiler, "THRESHOLD", 1)
+    s = Stacker()
+    s.eval("{} {1} :f defun")
+    s.eval('{"a" dup len drop {} eval f [1] {2 *} map clear} :blk set')
+    s.eval("blk eval")  # (compiled on this run: the threshold is one)
+    block = next(iter(s.eval("blk")))
+    kinds = {step[2]: step[0] for step in block.tokens._unit.steps if step[2] is not None}
+    assert kinds["len"] == machine.VWORD  # (an aggregate word reads the running core)
+    assert kinds["dup"] == machine.TWORD and kinds["clear"] == machine.TWORD  # (a stack word works the stack itself)
+    # a word of a category that takes values, with values to take: the step looks for a block among them first
+    entry = s.operator_manager.dispatch_table["pick"]
+    steps = [(compiler.WORD, 0, "pick", entry)]
+    machine._rewrite_steps(steps, s)
+    assert steps[0][0] == machine.PYWORD and steps[0][3][2] == entry[1]["arg_count"] == 1
+    assert kinds["eval"] == machine.MWORD and kinds["map"] == compiler.WORD and kinds["f"] == compiler.CALL
+
+
+def test_a_word_redefined_after_its_unit_was_made_runs_as_redefined():
+    s = Stacker()
+    program = "-3 abs"
+    for _ in range(WARM_RUNS):
+        assert list(s.eval(program)) == [3]
+        s.eval("clear")
+    s.eval("{x} {x 100 *} :abs defun")
+    assert list(s.eval(program)) == [-300]
+
+
+def test_an_activation_entered_again_has_the_bodys_tokens_as_its_trace():
+    s = Stacker()
+    program = "1 5 :i {{i 2 == {1 0 /} {1} ifelse} {drop 0} try drop 10 i 3 - / drop} do"
+    for _ in range(WARM_RUNS):
+        with pytest.raises(ZeroDivisionError):
+            s.eval(program)
+        assert list(s.get_trace_copy())[-1] == "drop"  # the body's tokens, not the inner block's the `try` caught
+        s.eval("clear")
+    reducing = "[1 2 3 4 5] 0 :a :x {{x 2 == {1 0 /} {1} ifelse} {drop 0} try drop 10 x 3 - / drop a x +} reduce"
+    for _ in range(WARM_RUNS):
+        with pytest.raises(ZeroDivisionError):
+            s.eval(reducing)
+        assert list(s.get_trace_copy())[-1] == "+"
+        s.eval("clear")
+
+
+def test_map_and_reduce_leave_no_cycle_of_activations():
+    s = Stacker()
+    programs = ["1 5 seq {2 *} map drop", "1 5 seq {x} {x 2 *} lambda map drop", "1 5 seq 0 :a :x {a x +} reduce drop", "1 5 seq {2 >} filter drop"]
+    for program in programs:
+        s.eval(program)
+    gc.disable()
+    try:
+        before = sum(isinstance(o, machine.Frame) for o in gc.get_objects())
+        for program in programs:
+            for _ in range(20):
+                s.eval(program)
+        assert sum(isinstance(o, machine.Frame) for o in gc.get_objects()) == before
+    finally:
+        gc.enable()
+
+
 def test_a_program_of_built_in_words_enters_the_machine_once_per_expression(monkeypatch):
     entries = []
     original = machine.run

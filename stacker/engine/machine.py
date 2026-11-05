@@ -21,6 +21,9 @@ handler of a `try`) and decides what to do when the child ends. The kinds:
   `if`, a loop's body, a condition, `eval`
 - ``CALL``: the body of a function or a lambda, on a new stack of its own
 - ``TRANSIENT``: a name run as `eval` runs a symbol: a one-token list
+- ``CATCHER``: the body of `try` / `iferror` when it is a block: a BLOCK that
+  catches the errors raised inside it itself (the handler then runs where
+  the word was)
 - ``LOOP``: `do` `dolist` `times` `while` `loop`, running their body again
   and again (the body is a child; the loop variable's scope is made here)
 - ``COND``: `if` `ifelse` `cond` while a condition block runs
@@ -137,6 +140,7 @@ TRANSIENT = 3
 ELEMENT = 4  # a block run for one element of `map` / `filter`, on a stack of its own
 MACRO_RUN = 5  # the expansion of a macro, run where the macro was called
 EXPAND = 6  # a macro's body, run on its expander for the expansion
+CATCHER = 7  # the body of `try` / `iferror` as a block: a BLOCK that catches the errors raised inside it itself
 LOOP = 10
 COND = 11
 TRY = 12
@@ -320,13 +324,13 @@ class Frame:
                 raise _depth_error(kind, parent, name)
             self.owner = None if kind < LOOP else _owner(parent)
         self.depth = depth
+        # (``it``, ``unit`` and ``epoch`` are written by whatever starts the activation on its stream, before
+        # anything reads them: _admit, _start, _enter_code, _finish, _loop_next and _splice_arm)
         self.arms = None
         self.core = None
         self.entries = None
-        self.epoch = 0
         self.index = -1
         self.interp = None
-        self.it = None
         self.name = None
         self.resolved = False
         self.scope = None
@@ -337,7 +341,6 @@ class Frame:
         self.template = None
         self.tokens = None
         self.trace = None
-        self.unit = None
         self.unit_before = None
         self.word = None
 
@@ -370,13 +373,18 @@ def _depth_error(kind: int, parent: Frame, name: str | None) -> StackerRecursion
     return StackerRecursionError(word if word is not None else "eval", recursion.get_limit(), "word")
 
 
+#: The kinds of loop, for ``_loop_next``'s fast way round
+L_DO, L_TIMES, L_WHILE, L_LOOP = 0, 1, 2, 3
+
+
 class _LoopState:
     """What a running loop remembers between two runs of its body."""
 
-    __slots__ = ("body", "body_frame", "body_scope", "condition", "condition_frame", "count", "epoch", "limit", "name", "phase", "trusted", "trusted_condition", "values", "word", "wrap_args")
+    __slots__ = ("body", "body_frame", "body_scope", "condition", "condition_frame", "count", "epoch", "kind", "limit", "name", "phase", "trusted", "trusted_condition", "values", "word", "wrap_args")
 
     def __init__(self, word: str) -> None:
         self.word = word
+        self.kind = L_DO if word == "do" or word == "dolist" else L_TIMES if word == "times" else L_WHILE if word == "while" else L_LOOP
         self.body_frame: Frame | None = None  # the body's activation, run again on every iteration
         self.condition_frame: Frame | None = None  # `while`: the condition's
         self.body: object = None
@@ -586,8 +594,15 @@ def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, t
                         spliced = False
                         while True:
                             for kind, index, name, value in it:
-                                if verify and kind in RESOLVED:
-                                    compiler._check(_view(frame), kind, name, value)
+                                if verify:
+                                    if kind in RESOLVED:
+                                        compiler._check(_view(frame), kind, name, value)
+                                    elif kind == PYWORD or kind == TWORD or kind == VWORD:
+                                        compiler._check(_view(frame), WORD, name, (value[0], value[1]))
+                                    elif kind == MWORD:
+                                        compiler._check(_view(frame), WORD, name, ("priority", value[1]))
+                                        if not _is_builtin(_view(frame), name, value[1]):
+                                            raise AssertionError(f"compiled `{name}` as the machine's own, but it is not the built-in now")
                                 if kind == FAST2:
                                     # a regular word on two plain values: popped and called here, as _exec_regular
                                     # would, with the same wrapping of a host error; anything else goes through the
@@ -656,30 +671,65 @@ def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, t
                                     frame.index = index
                                     child = _push_transient(frame, [name], None, False)
                                     break
-                                elif (
-                                    kind == WORD
-                                    and value[0] != WORD_FUNCTION
-                                    and value[0] != "hof"
-                                    and (value[0] != "priority" or name not in _MACHINE_WORDS and name not in _ARG_PLACES)
-                                    and not (
-                                        value[0] in _TAKES_VALUES
-                                        and (count := value[1]["arg_count"]) > 0
-                                        and stack
+                                elif kind == TWORD:
+                                    # a Python word that reads nothing of the running core (what the eager state's poisoned
+                                    # core checks): run on the template, whichever core the activation has
+                                    wkind, entry = value
+                                    (_poisoned(frame) if verify else template)._run_word(name, wkind, entry, stack)
+                                elif kind == VWORD:
+                                    # a Python word that reads the running core: run on its view, made on first demand
+                                    wkind, entry = value
+                                    wcore = frame.core
+                                    if wcore is None:
+                                        wcore = _view(frame)
+                                    wcore._run_word(name, wkind, entry, stack)
+                                    wcore = None  # (not kept: a loop iteration's bound copy is reused only while nothing else holds it)
+                                elif kind == PYWORD:
+                                    # a Python word that takes values: it pushes no activation, unless a block stands where
+                                    # it reads a value
+                                    wkind, entry, count = value
+                                    if (
+                                        stack
                                         and (
                                             isinstance(stack[-1], StackerCore)
                                             or (count > 1 and len(stack) > 1 and isinstance(stack[-2], StackerCore))
                                             or (count > 2 and _block_among(stack, count))
                                         )
-                                    )
-                                ):
-                                    # a Python word (its category's executor, or a priority word the machine leaves to its
-                                    # handler) with no block in a value's place: it pushes no activation
-                                    wkind = value[0]
-                                    wcore = frame.core
-                                    if wcore is None:
-                                        wcore = _view(frame) if wkind in NEEDS_VIEW else (_poisoned(frame) if verify else template)
-                                    wcore._run_word(name, wkind, value[1], stack)
-                                    wcore = None  # (not kept: a loop iteration's bound copy is reused only while nothing else holds it)
+                                    ):
+                                        if arms:
+                                            frame.it = it
+                                            frame.unit = unit
+                                            frame.tokens = tokens
+                                            frame.tailpos = tailpos
+                                        frame.epoch = epoch
+                                        frame.index = index
+                                        child = _word(frame, name, wkind, entry)
+                                        if child is not None:
+                                            break
+                                    else:
+                                        wcore = frame.core
+                                        if wcore is None:
+                                            wcore = _view(frame) if wkind in NEEDS_VIEW else (_poisoned(frame) if verify else template)
+                                        wcore._run_word(name, wkind, entry, stack)
+                                        wcore = None  # (not kept: a loop iteration's bound copy is reused only while nothing else holds it)
+                                elif kind == MWORD:
+                                    # a built-in the machine runs itself (eval, set, if, try, ...), as _word would run it
+                                    if arms:
+                                        frame.it = it
+                                        frame.unit = unit
+                                        frame.tokens = tokens
+                                        frame.tailpos = tailpos
+                                    frame.epoch = epoch
+                                    frame.index = index
+                                    handler, entry = value
+                                    try:
+                                        child = handler(frame, name, entry, stack)
+                                    except IndexError as error:
+                                        template._report_underflow(name, error)
+                                    except TypeError as error:
+                                        _core._reword_type_error(name, error)
+                                    if child is not None:
+                                        break
                                 elif kind == R_CALL or kind == WORD:
                                     # a priority word (maybe one the machine runs itself), or the function's own
                                     # call without the general word runner in between
@@ -966,15 +1016,15 @@ def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, t
                         return
                     if frame.kind == LOOP:
                         frame = _loop_next(frame, ended)  # (the body: the same activation, entered again)
-                        ended = None  # (not kept: a loop iteration's bound copy is reused only while nothing else holds it)
                     elif frame.kind > LOOP:
                         frame = _child_ended(frame, ended)
-                        ended = None
                     elif frame.resolved and frame.index >= 0:
                         # the word that pushed the child is done: a resolved activation checks its guards now
                         index = frame.index
                         frame.index = -1
-                        _guard_after(frame, index)
+                        if generation.epoch != frame.epoch:
+                            _guard_after(frame, index)
+                    ended = None  # (not kept: a bound copy is reused only while nothing else holds it)
             except BreakException as signal:
                 frame = _unwind(frame, signal, True)
             except Exception as error:  # noqa: BLE001 -- taken down activation by activation, see _unwind
@@ -1434,6 +1484,11 @@ def _eval(frame: Frame, name: str, entry: dict, stack: stack_data[object]) -> Fr
             "A string is text, not code: turn it into a block with `parse` first, "
             'e.g. "3 4 +" parse eval'
         )
+    if isinstance(expression, StackerCore):  # (the usual case: pushed here, without _push_code's other cases)
+        if expression.variables is frame.scope and frame.resolved and frame.index >= 0 and _splice_arm(frame, expression, "eval", frame.index):
+            frame.index = -1  # in place, as an arm of `if`: the guard after the word is made when the block is left
+            return frame
+        return _push_block(frame, "eval", expression, expression.variables, stack, None, _in_tail_position(frame))
     return _push_code(frame, "eval", expression, stack, _in_tail_position(frame))
 
 
@@ -1583,10 +1638,17 @@ def _try(frame: Frame, name: str, entry: dict, stack: stack_data[object]) -> Fra
     """`try` / `iferror`: ``{body} {handler} try``; the stack is as it was when the word began before the handler runs."""
     handler = stack.pop()
     try_block = stack.pop()
+    if isinstance(try_block, StackerCore):
+        # the body catches for itself: one activation, whose word is the try's (an error it does not take is reworded
+        # as the word's, as the control activation's would be). state: the stack as it was, the handler
+        child = _push_block(frame, name, try_block, try_block.variables, stack)
+        child.kind = CATCHER
+        child.state = (list(stack), handler)
+        return child
     control = Frame(TRY, frame)
     control.word = name
     control.stack = stack
-    control.state = [START, list(stack), try_block, handler]
+    control.state = [START, list(stack), try_block, handler]  # (the body, a lambda or a value, is pushed by the continuation: under the try, so that it catches)
     return control
 
 
@@ -1756,8 +1818,11 @@ def _hof(frame: Frame, name: str, stack: stack_data[object]) -> Frame:
         control.word = name
         control.stack = stack
         # state: the spec, the elements, the elements for the message, the source (for the container pushed),
-        # the results, the element on the way, the stack the element's run leaves its value on
-        control.state = [spec, it, items, items_arg, [], None, None]
+        # the results, the element on the way, the stack the element's run leaves its value on, the element's
+        # activation (made once, entered again for every element), how the function is named in an error
+        kind = spec[0]
+        who = "the block" if kind == "block" else ("the lambda" if kind == "lambda" else f"`{spec[2]}`")
+        control.state = [spec, it, items, items_arg, [], None, None, None, who]
         return control
     body = stack.pop()
     symbol_x = stack.pop()  # Second variable name (element)
@@ -1778,8 +1843,9 @@ def _hof(frame: Frame, name: str, stack: stack_data[object]) -> Frame:
     control = Frame(REDUCE, frame)
     control.word = name
     control.stack = stack
-    # state: the body, the two names, the elements, the accumulator, the arguments for the message
-    control.state = [body, name_acc, name_x, it, init, [init, items]]
+    # state: the body, the two names, the elements, the accumulator, the arguments for the message, the step's
+    # activation (made once, entered again for every step)
+    control.state = [body, name_acc, name_x, it, init, [init, items], None]
     return control
 
 
@@ -1822,12 +1888,10 @@ def _function_spec(frame: Frame, spec: object, word: str) -> tuple:
 def _map_next(control: Frame, ended: Frame | None) -> Frame:
     """An element's run ended (None: the run starts): takes its value and runs the next element, or pushes the result."""
     state = control.state
-    spec, it, _items, items_arg, results, element, result_stack = state
+    spec, it, _items, items_arg, results, element, result_stack, child, who = state
     word = control.word
-    one_result = _core.StackerCore._one_result
     if ended is not None:
-        kind = spec[0]
-        value = one_result(result_stack, word, "the block" if kind == "block" else ("the lambda" if kind == "lambda" else f"`{spec[2]}`"))
+        value = result_stack[0] if len(result_stack) == 1 else _core.StackerCore._one_result(result_stack, word, who)
         if word == "map":
             results.append(value)
         elif value:
@@ -1836,6 +1900,7 @@ def _map_next(control: Frame, ended: Frame | None) -> Frame:
         try:
             element = next(it)
         except StopIteration:
+            state[7] = None  # (the element's activation points back at this one: let go, as a loop lets its body go)
             parent = control.parent
             if isinstance(items_arg, StackerCore):
                 _view(_owner(parent))._push_like(items_arg, results, control.stack)
@@ -1862,38 +1927,78 @@ def _map_next(control: Frame, ended: Frame | None) -> Frame:
         state[5] = element
         if kind == "block":
             body = spec[1]
-            child = Frame(ELEMENT, control)
-            child.template = body
-            child.core = body
-            child.scope = body.variables
-            child.stack = result_stack = stack_data([element])  # the element is pushed as a value, never spliced into the tokens
-            state[6] = result_stack
+            if child is None:
+                child = state[7] = Frame(ELEMENT, control)
+                child.template = body
+                child.core = body
+                child.scope = body.variables
+                child.stack = result_stack = state[6] = stack_data()
+            else:
+                result_stack.clear()  # (the element's stack, used again: what the last element left was taken)
+            result_stack.append(element)  # the element is pushed as a value, never spliced into the tokens
+            if ended is not None and _reenter(child, body):
+                return child
             _enter_code(child, body.tokens, None, True)
             return child
-        results_of_call: stack_data[object] = stack_data()
-        state[6] = results_of_call
+        if result_stack is None:
+            result_stack = state[6] = stack_data()
+        else:
+            result_stack.clear()
+        results_of_call = result_stack
         if kind == "lambda":
             fn = spec[1]
-            return _push_call(control, None, LAMBDA_NAME, fn.blockstack, fn.args, [element], results_of_call, True)
-        func = spec[1]
-        return _push_call(control, None, func.name, func.blockstack, func.args, [element], results_of_call, True)
+            body, params, name = fn.blockstack, fn.args, LAMBDA_NAME
+        else:
+            func = spec[1]
+            body, params, name = func.blockstack, func.args, func.name
+        if child is None or ended is not child:
+            # the first element, or the last element's call ended with a tail call that replaced its activation
+            # (what ended is the replacement): the element gets an activation of its own
+            child = state[7] = _push_call(control, None, name, body, params, [element], results_of_call, True)
+            child.unit_before = body.tokens._unit  # (what the next element may be admitted on without the checks)
+            return child
+        # the call's activation, entered again for this element: what _push_call sets for a call is set anew
+        child.state = (results_of_call, True, None)
+        child.scope = body.variables.create_child_scope({params[0]: element})
+        child.stack.clear()  # (the call's own stack, used again: what the last call left went to the results)
+        child.core = None
+        if not _reenter(child, body):
+            tokens = body.tokens
+            child.trace = tokens
+            child.unit_before = tokens._unit
+            _start(child, body, tokens, None)
+        return child
 
 
 def _reduce_next(control: Frame, ended: Frame | None) -> Frame:
     """A step's run ended (None: the run starts): takes the new accumulator and runs the next step, or pushes the result."""
     state = control.state
-    body, name_acc, name_x, it, acc, _wrap_args = state
+    body, name_acc, name_x, it, acc, _wrap_args, child = state
     if ended is not None:
         acc = state[4] = _core.StackerCore._one_result(ended.stack, control.word, "the block")
     try:
         x = next(it)
     except StopIteration:
+        state[6] = None  # (the step's activation points back at this one: let go)
         control.stack.append(acc)
         return _resume(control.parent)
     # Each step runs in a loop scope holding the two names, a child of the body's own scope: a name the body
     # is first to set goes to that scope (see loop_scope)
     scope = ScopedVariables.loop_scope(body.variables, {name_acc: acc, name_x: x})
-    return _push_block(control, None, body, scope, stack_data())
+    if child is None:
+        child = state[6] = _push_block(control, None, body, scope, stack_data())
+        child.unit_before = body.tokens._unit  # (what the next step may be admitted on without the checks)
+        return child
+    # the step's activation, entered again (as _push_block sets it, for the new scope)
+    child.scope = scope
+    child.stack.clear()  # (the step's stack, used again: the accumulator it left was taken)
+    child.core = None
+    if not _reenter(child, body):
+        tokens = body.tokens
+        child.trace = tokens
+        child.unit_before = tokens._unit
+        _start(child, body, tokens, None)
+    return child
 
 
 def _block_among(stack: stack_data[object], count: int) -> bool:
@@ -2074,6 +2179,45 @@ def _include_next(control: Frame, ended: Frame | None) -> Frame:
     return child
 
 
+#: The machine's own kinds of word step, decided once when a unit is made (``_rewrite_steps``): a WORD step the
+#: compiler made is kept for a function written in Python, a word of higher order and a built-in that may find a
+#: block where it reads a value (through ``_word`` every time)
+TWORD = "TWORD"  # a Python word run on the template, never looking for a block in a value's place: value (category, entry)
+VWORD = "VWORD"  # a Python word that reads the running core (``NEEDS_VIEW``), no block to look for: value (category, entry)
+PYWORD = "PYWORD"  # a Python word that may find a block where it reads a value: value (category, entry, values to look at)
+MWORD = "MWORD"  # a built-in the machine runs itself: value (its handler, entry)
+
+
+def _rewrite_steps(steps: list[tuple], core: StackerCore) -> None:
+    """Gives the WORD steps of a new unit the machine's kinds, so that the run loop dispatches them without ``_word``."""
+    if not _bound:
+        _bind_core()
+    for i, step in enumerate(steps):
+        if step[0] != WORD:
+            continue
+        _kind, index, name, (wkind, entry) = step
+        if wkind == WORD_FUNCTION or wkind == "hof":
+            continue
+        if wkind == "priority":
+            if name in _ARG_PLACES and _is_builtin(core, name, entry):
+                continue  # (a block may stand where the word reads a value: _word looks)
+            if name in _MACHINE_WORDS and _is_builtin(core, name, entry):
+                steps[i] = (MWORD, index, name, (_MACHINE_WORDS[name], entry))
+                continue
+            steps[i] = (VWORD, index, name, (wkind, entry))
+            continue
+        count = entry["arg_count"] if wkind in _TAKES_VALUES or wkind == WORD_PLUGIN else 0
+        if count:
+            steps[i] = (PYWORD, index, name, (wkind, entry, count))
+        elif wkind in NEEDS_VIEW:
+            steps[i] = (VWORD, index, name, (wkind, entry))
+        else:
+            steps[i] = (TWORD, index, name, (wkind, entry))
+
+
+compiler.REWRITE = _rewrite_steps
+
+
 _MACHINE_WORDS = {
     "set": _set,
     "=": _set,
@@ -2205,7 +2349,8 @@ def _resume(frame: Frame) -> Frame:
     if frame.resolved and frame.index >= 0:
         index = frame.index
         frame.index = -1
-        _guard_after(frame, index)
+        if generation.epoch != frame.epoch:
+            _guard_after(frame, index)
     return frame
 
 
@@ -2281,6 +2426,69 @@ def _loop_next(control: Frame, ended: Frame | None) -> Frame | None:
     through ``_start``.
     """
     state = control.state
+    if ended is not None and ended is state.body_frame and state.kind <= L_TIMES:
+        # the usual iteration of `do` / `dolist` / `times`: the body ran to its end on its own unit, and runs
+        # again on it (the general way below is taken when anything is not so)
+        unit = ended.unit_before
+        if unit is not None and type(unit) is compiler.Unit and ended.tokens._unit is unit and unit.manager is state.body.operator_manager:
+            if state.kind == L_DO:
+                try:
+                    value = next(state.values)
+                except StopIteration:
+                    return _end_loop(control)
+                ended.scope = ScopedVariables.loop_scope(state.body_scope, {state.name: value})
+                ended.core = None  # (the copy of the last iteration is let go first)
+            else:
+                if not (state.count < state.limit):  # a comparison, not range(): non-integer counts keep working
+                    return _end_loop(control)
+                state.count += 1
+            state.trusted = unit
+            if _admissions is not None:
+                _admissions.append((ended.tokens, True))
+            ended.trace = ended.tokens  # (a `try` inside the last iteration may have left its own block's)
+            ended.epoch = generation.epoch
+            ended.it = iter(unit.steps)
+            return ended
+    elif ended is not None and state.kind == L_WHILE:
+        epoch = generation.epoch
+        if ended is state.condition_frame:
+            # the condition ran: the body runs again on its unit when it may be admitted (else the general way)
+            body_frame = state.body_frame
+            trusted = state.trusted if epoch == state.epoch else None
+            if body_frame is not None and trusted is not None and body_frame.tokens._unit is trusted and trusted.manager is state.body.operator_manager:
+                cunit = ended.unit_before
+                state.trusted_condition = cunit if cunit is not None and type(cunit) is compiler.Unit and ended.tokens._unit is cunit else None
+                if not control.parent.template._condition_left(control.stack, "while"):
+                    return _end_loop(control)
+                state.epoch = epoch
+                state.phase = BODY
+                if _admissions is not None:
+                    _admissions.append((body_frame.tokens, True))
+                body_frame.trace = body_frame.tokens
+                core = body_frame.core
+                if core is not None:
+                    core.trace = body_frame.tokens
+                body_frame.epoch = epoch
+                body_frame.it = iter(trusted.steps)
+                return body_frame
+        elif ended is state.body_frame:
+            # the body ran: the condition runs again on its unit when it may be admitted
+            condition_frame = state.condition_frame
+            trusted = state.trusted_condition if epoch == state.epoch else None
+            if condition_frame is not None and trusted is not None and condition_frame.tokens._unit is trusted and trusted.manager is state.condition.operator_manager:
+                unit = ended.unit_before
+                state.trusted = unit if unit is not None and type(unit) is compiler.Unit and ended.tokens._unit is unit else None
+                state.epoch = epoch
+                state.phase = CONDITION
+                if _admissions is not None:
+                    _admissions.append((condition_frame.tokens, True))
+                condition_frame.trace = condition_frame.tokens
+                core = condition_frame.core
+                if core is not None:
+                    core.trace = condition_frame.tokens
+                condition_frame.epoch = epoch
+                condition_frame.it = iter(trusted.steps)
+                return condition_frame
     word = state.word
     condition = False
     if ended is not None:
@@ -2390,6 +2598,29 @@ def _loop_next(control: Frame, ended: Frame | None) -> Frame | None:
     return child
 
 
+def _reenter(child: Frame, body: StackerCore) -> bool:
+    """Enters ``child`` again on the unit it ran to its end last time, when the unit is still the block's; else says no.
+
+    What a loop does for its body between two iterations (``_loop_next``),
+    for an activation `map` or `reduce` keeps for its elements: a unit that
+    was there before the last run and is still there is admitted without
+    the entry checks, as a loop admits a trusted unit.
+    """
+    unit = child.unit_before
+    if unit is None or type(unit) is not compiler.Unit or body.tokens._unit is not unit or unit.manager is not body.operator_manager:
+        return False
+    if _admissions is not None:
+        _admissions.append((body.tokens, True))
+    tokens = body.tokens
+    child.trace = tokens  # (a `try` inside the last run may have left its own block's)
+    core = child.core
+    if core is not None:
+        core.trace = tokens
+    child.epoch = generation.epoch
+    child.it = iter(unit.steps)
+    return True
+
+
 def _trusted_unit(frame: Frame) -> compiler.Unit | None:
     """The unit a loop may admit next time: the one the body had before and still has, having run it to its end."""
     unit = frame.unit_before
@@ -2447,9 +2678,11 @@ def _unwind(frame: Frame, error: BaseException, is_break: bool) -> Frame | None:
             attach_include_location(error, str(resolved), running.line, source_lines.get(running.line or 0), frames)
             state.stack.pop()
         elif kind == MAP:
+            frame.state[7] = None  # (the element's activation, let go either way)
             if not is_break:
                 error = _rewrapped(frame.word, [frame.state[2]], error)
         elif kind == REDUCE:
+            frame.state[6] = None
             if not is_break:
                 error = _rewrapped(frame.word, frame.state[5], error)
         elif kind == LOOP:
@@ -2469,10 +2702,20 @@ def _unwind(frame: Frame, error: BaseException, is_break: bool) -> Frame | None:
             state[0] = HANDLER
             child = _push_code(frame, None, state[3], frame.stack)
             return child if child is not None else _resume(frame.parent)
+        elif kind == CATCHER and not is_break and isinstance(error, Exception):
+            # the body took the error: the handler runs in its place, as the word's activation's child
+            saved, handler = frame.state
+            parent = frame.parent
+            _write_trace(parent, frame.trace)
+            partial = if_else._put_back(frame.stack, saved)
+            if frame.word == "try":
+                frame.stack.append({"kind": error_kind(error), "message": str(error), "stack": partial})
+            child = _push_code(parent, None, handler, frame.stack)
+            return child if child is not None else _resume(parent)
         parent = frame.parent
         if parent is None:
             raise error
-        if kind == BLOCK or kind == MACRO_RUN:
+        if kind == BLOCK or kind == MACRO_RUN or kind == CATCHER:
             _write_trace(parent, frame.trace)  # the tokens of the innermost failing block, for diagnostics
         if frame.word is not None and not is_break:
             error = _reworded(_owner(frame).template, frame.word, error)
