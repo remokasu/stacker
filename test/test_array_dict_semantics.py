@@ -102,7 +102,7 @@ class TestDisplay:
         assert plain_text(run(program)[-1]) == expected
 
     def test_the_colored_display_tells_an_array_from_a_list(self):
-        from stacker.lang.display import disp_colored
+        from stacker.runtime.display import disp_colored
 
         assert disp_colored([[1, 2]]) != disp_colored(run("[1 2] array"))
         assert disp_colored(run("dict")) != disp_colored(run("{}"))

@@ -11,12 +11,12 @@ from types import TracebackType
 
 import stacker
 from stacker.lang import recursion
-from stacker.lang.color import colored
 from stacker.lang.recursion import (
     DEFAULT_RECURSION_LIMIT,
     HOST_RECURSION_LIMIT,
     NO_LIMIT,
 )
+from stacker.runtime.color import colored
 from stacker.runtime.config import plugins_dir_path, stacker_dotfile_path
 from stacker.runtime.exec_modes import CommandLineMode, ReplMode, ScriptMode
 from stacker.runtime.ui_tools import disp_logo

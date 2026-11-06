@@ -1,85 +1,41 @@
+"""How a value is written.
+
+One set of type cases turns a value into pieces of text, each tagged with the
+kind of value it came from; the plain text is the pieces joined. Nothing here
+knows about terminals; a caller that wants colors takes the kind of each piece.
+"""
+
 from __future__ import annotations
 
 import threading
-from typing import TextIO
 
 from stacker.data_type import Array, Symbol
 from stacker.error import StackerRuntimeError
-from stacker.lang.color import colored
 from stacker.lang.protocols import BLOCK, kind_of
 from stacker.syntax.token_rules import escape_for_display
 
 #: The error for a value nested too deep for the display to walk
 TOO_DEEP_TO_SHOW = "cannot show a value nested this deep; take it apart first (`at`, `dolist`)"
 
+#: The kinds of value a piece of display text can come from; a block's kind is
+#: ``protocols.BLOCK``. A piece with kind ``None`` is a separator or a value of
+#: a kind the language does not know, shown with ``str()``.
+INT = "int"
+FLOAT = "float"
+COMPLEX = "complex"
+SYMBOL = "symbol"
+STRING = "String"
+BOOL = "bool"
+NULL = "null"
+LIST = "list"
+ARRAY = "array"
+DICT = "dict"
+CALLABLE = "callable"
 
-class CustomPrinter:
-    def __init__(self, value: object, color: str) -> None:
-        self.value = value
-        self.color = color
+#: One piece of display text: the kind of value it came from, and the text
+Piece = tuple[str | None, str]
 
-    def __str__(self) -> str:
-        return colored(str(self.value), self.color)
-
-    def __repr__(self) -> str:
-        return str(self.value)
-
-
-class CustomIntPrinter(CustomPrinter):
-    def __init__(self, value: int, color: str) -> None:
-        self.value = value
-        self.color = color
-
-
-class CustomFloatPrinter(CustomPrinter):
-    def __init__(self, value: float, color: str) -> None:
-        self.value = value
-        self.color = color
-
-
-class CustromComplexPrinter(CustomPrinter):
-    def __init__(self, value: complex, color: str) -> None:
-        self.value = value
-        self.color = color
-
-
-class CustomSymbolPrinter(CustomPrinter):
-    """A symbol is shown as its bare name."""
-
-    def __init__(self, value: Symbol, color: str) -> None:
-        self.value = value
-        self.color = color
-
-    def __str__(self) -> str:
-        return colored(self.value.name, self.color)
-
-    def __repr__(self) -> str:
-        return self.value.name
-
-
-class CustomBoolPrinter(CustomPrinter):
-    def __init__(self, value: bool, color: str) -> None:
-        self.value = value
-        self.color = color
-
-    def __str__(self) -> str:
-        return colored(str(self.value).lower(), self.color)
-
-    def __repr__(self) -> str:
-        return str(self.value).lower()
-
-
-class CustomNullPrinter(CustomPrinter):
-    def __init__(self, value: None, color: str) -> None:
-        self.value = value
-        self.color = color
-
-    def __str__(self) -> str:
-        return colored("null", self.color)
-
-    def __repr__(self) -> str:
-        return "null"
-
+_SEPARATOR: Piece = (None, " ")
 
 #: Arrays and dictionaries nested deeper than this are shown as `[...]` / `{...}`
 DISPLAY_NESTING_LIMIT = 8
@@ -110,210 +66,123 @@ def _left() -> None:
     _showing().pop()
 
 
-class CustomArrayPrinter(CustomPrinter):
-    """An array is shown like a list, `[1 2 3]`, in its own color; one inside itself, or too deep, as `[...]`."""
+def pieces(value: object) -> list[Piece]:
+    """The display text of a value, in pieces tagged with the kind of value each came from.
 
-    def __init__(self, value: list[object], color: str) -> None:
-        self.value = value
-        self.color = color
+    Containers contribute their brackets in their own kind and their items in
+    theirs, with untagged separators between; so ``[1 'a']`` as an array is
+    ``[(ARRAY, "["), (INT, "1"), (None, " "), (STRING, "'a'"), (ARRAY, "]")]``.
 
-    def __str__(self) -> str:
-        if not _entered(self.value):
-            return colored("[...]", self.color)
-        try:
-            inner = " ".join(str(custom_print(item)) for item in self.value)
-        finally:
-            _left()
-        return colored("[", self.color) + inner + colored("]", self.color)
+    Args:
+        value: Any value.
 
-    def __repr__(self) -> str:
-        if not _entered(self.value):
-            return "[...]"
-        try:
-            inner = " ".join(plain_text(item) for item in self.value)
-        finally:
-            _left()
-        return f"[{inner}]"
+    Returns:
+        The pieces, in the order they are written.
+
+    Raises:
+        StackerRuntimeError: The value is nested too deep to show.
+    """
+    out: list[Piece] = []
+    try:
+        _write(value, out)
+    except RecursionError:
+        raise StackerRuntimeError(TOO_DEEP_TO_SHOW) from None
+    return out
 
 
-class CustomDictPrinter(CustomPrinter):
-    """A dictionary is shown as `{'a' 1 b 2}`, keys and values in the order the keys were added, in its own color."""
-
-    def __init__(self, value: dict[object, object], color: str) -> None:
-        self.value = value
-        self.color = color
-
-    def __str__(self) -> str:
-        if not self.value:
-            return colored("{:}", self.color)  # an empty dictionary, told apart from an empty block `{}`
-        if not _entered(self.value):
-            return colored("{...}", self.color)
-        try:
-            inner = " ".join(f"{custom_print(k)} {custom_print(v)}" for k, v in self.value.items())
-        finally:
-            _left()
-        return colored("{", self.color) + inner + colored("}", self.color)
-
-    def __repr__(self) -> str:
-        if not self.value:
-            return "{:}"
-        if not _entered(self.value):
-            return "{...}"
-        try:
-            inner = " ".join(f"{plain_text(k)} {plain_text(v)}" for k, v in self.value.items())
-        finally:
-            _left()
-        return f"{{{inner}}}"
-
-
-class CustomListPrinter(CustomPrinter):
-    def __init__(self, value: list[object], color: str) -> None:
-        # self.value = [custom_print(item) for item in value]
-        self.value = value
-        self.color = color
-
-    def __str__(self) -> str:
-        # Element by element, so commas inside strings survive and each
-        # element keeps its own color; only the brackets take the list color
-        # (the same scheme the top-level stack display uses).
-        inner = " ".join(str(custom_print(item)) for item in self.value)
-        return colored("[", self.color) + inner + colored("]", self.color)
-
-    def __repr__(self) -> str:
-        inner = " ".join(plain_text(item) for item in self.value)
-        return f"[{inner}]"
-
-
-# REMOVED: CustomTuplePrinter - () now creates code blocks, not tuples
-# Tuples are no longer a primary data type in Stacker
-
-
-class OperatorPrinter(CustomPrinter):
-    def __init__(self, value: object, color: str) -> None:
-        self.value = value
-        self.color = color
-
-    def __str__(self) -> str:
-        return colored(str(self.value), self.color)
-
-    def __repr__(self) -> str:
-        return str(self.value)
-
-
-class CustomBlockPrinter(CustomPrinter):
-    def __init__(self, value: object, color: str) -> None:
-        self.value = value
-        self.color = color
-
-    def __str__(self) -> str:
-        return colored(str(self.value), self.color)
-
-    def __repr__(self) -> str:
-        return str(self.value)
-
-
-class CustomStringPrinter(CustomPrinter):
-    def __init__(self, value: object, color: str) -> None:
-        self.value = value
-        self.color = color
-
-    def __str__(self) -> str:
-        return colored(repr(self), self.color)
-
-    def __repr__(self) -> str:
-        return "'" + escape_for_display(str(self.value)) + "'"
-
-
-class CutomCallablePrinter(CustomPrinter):
-    def __init__(self, value: object, color: str) -> None:
-        self.value = value
-        self.color = color
-
-    def __str__(self) -> str:
-        return colored(str(self.value), self.color)
-
-    def __repr__(self) -> str:
-        return str(self.value)
-
-
-color_map: dict[str, str] = {
-    "int": "default",
-    "float": "default",
-    "complex": "default",
-    "symbol": "default",
-    "String": "lightgreen",  # every string, literal or computed
-    "bool": "lightblue",
-    "list": "red",
-    "array": "magenta",  # an array looks like a list; the color tells them apart
-    "dict": "lightmagenta",
-    # "tuple": "red",  # REMOVED: Tuples no longer supported
-    "block": "cyan",
-    "callable": "yellow",
-}
-
-
-def custom_print(value: object) -> CustomPrinter | object:
+def _write(value: object, out: list[Piece]) -> None:
     if isinstance(value, bool):
-        return CustomBoolPrinter(value, color_map["bool"])
-    if value is None:
-        return CustomNullPrinter(value, color_map["bool"])
-    if isinstance(value, int):
-        return CustomIntPrinter(value, color_map["int"])
-    if isinstance(value, float):
-        return CustomFloatPrinter(value, color_map["float"])
-    if isinstance(value, complex):
-        return CustromComplexPrinter(value, color_map["complex"])
-    if isinstance(value, Symbol):
-        return CustomSymbolPrinter(value, color_map["symbol"])
-    if isinstance(value, str):
+        out.append((BOOL, str(value).lower()))
+    elif value is None:
+        out.append((NULL, "null"))
+    elif isinstance(value, int):
+        out.append((INT, str(value)))
+    elif isinstance(value, float):
+        out.append((FLOAT, str(value)))
+    elif isinstance(value, complex):
+        out.append((COMPLEX, str(value)))
+    elif isinstance(value, Symbol):
+        # A symbol is shown as its bare name
+        out.append((SYMBOL, value.name))
+    elif isinstance(value, str):
         # A string is shown quoted whether it is a literal or a computed value
-        return CustomStringPrinter(value, color_map["String"])
-    if isinstance(value, Array):
-        return CustomArrayPrinter(value, color_map["array"])
-    if isinstance(value, list):
-        return CustomListPrinter(value, color_map["list"])
-    if isinstance(value, dict):
-        return CustomDictPrinter(value, color_map["dict"])
-    # REMOVED: tuple handling - () now creates code blocks
-    if kind_of(value) == BLOCK:
-        return CustomBlockPrinter(value, color_map["block"])
-    if callable(value):
-        return CutomCallablePrinter(value, color_map["callable"])
-    return value
+        out.append((STRING, "'" + escape_for_display(str(value)) + "'"))
+    elif isinstance(value, Array):
+        _write_array(value, out)
+    elif isinstance(value, list):
+        _write_list(value, out)
+    elif isinstance(value, dict):
+        _write_dict(value, out)
+    elif kind_of(value) == BLOCK:
+        out.append((BLOCK, str(value)))
+    elif callable(value):
+        out.append((CALLABLE, str(value)))
+    else:
+        out.append((None, str(value)))
 
 
-def disp_colored(stack_list: list[object]) -> str:
-    stack_str = colored("[", "yellow")
-    for item in stack_list:
-        stack_str += str(custom_print(item))
-        stack_str += " "
-    if stack_list:
-        # Drop only the trailing separator; on an empty stack there is
-        # none, and trimming would truncate the bracket's ANSI reset code
-        stack_str = stack_str[0:-1]
-    stack_str += colored("]", "yellow")
-    return stack_str
+def _write_items(items: list[object], out: list[Piece]) -> None:
+    for position, item in enumerate(items):
+        if position:
+            out.append(_SEPARATOR)
+        _write(item, out)
+
+
+def _write_array(value: Array, out: list[Piece]) -> None:
+    """An array is shown like a list, `[1 2 3]`, in its own kind; one inside itself, or too deep, as `[...]`."""
+    if not _entered(value):
+        out.append((ARRAY, "[...]"))
+        return
+    try:
+        out.append((ARRAY, "["))
+        _write_items(value, out)
+    finally:
+        _left()
+    out.append((ARRAY, "]"))
+
+
+def _write_list(value: list[object], out: list[Piece]) -> None:
+    # Element by element, so commas inside strings survive and each element
+    # keeps its own kind; only the brackets take the list's
+    out.append((LIST, "["))
+    _write_items(value, out)
+    out.append((LIST, "]"))
+
+
+def _write_dict(value: dict[object, object], out: list[Piece]) -> None:
+    """A dictionary is shown as `{'a' 1 b 2}`, keys and values in the order the keys were added."""
+    if not value:
+        out.append((DICT, "{:}"))  # an empty dictionary, told apart from an empty block `{}`
+        return
+    if not _entered(value):
+        out.append((DICT, "{...}"))
+        return
+    try:
+        out.append((DICT, "{"))
+        for position, (key, item) in enumerate(value.items()):
+            if position:
+                out.append(_SEPARATOR)
+            _write(key, out)
+            out.append(_SEPARATOR)
+            _write(item, out)
+    finally:
+        _left()
+    out.append((DICT, "}"))
 
 
 def plain_text(item: object) -> str:
-    """Formats one stack item exactly like the colored display, minus the colors.
-
-    Each printer's ``__repr__`` is its color-free text, so the colored and the
-    plain display share one set of type cases (``custom_print``).
+    """Formats one stack item as the stack shows it, without colors.
 
     Args:
         item: A value from the stack.
 
     Returns:
         The item's display text.
+
+    Raises:
+        StackerRuntimeError: The value is nested too deep to show.
     """
-    printed = custom_print(item)
-    # custom_print hands back unknown kinds of value unchanged; the colored
-    # display shows those with str(), so do the same here.
-    try:
-        return repr(printed) if isinstance(printed, CustomPrinter) else str(printed)
-    except RecursionError:
-        raise StackerRuntimeError(TOO_DEEP_TO_SHOW) from None
+    return "".join([text for _, text in pieces(item)])
 
 
 def display_text(value: object) -> str:
@@ -342,21 +211,3 @@ def disp_default(stack_list: list[object]) -> str:
         The display text, e.g. ``[3 'a, b' [1 2]]``.
     """
     return "[" + " ".join(plain_text(item) for item in stack_list) + "]"
-
-
-def disp_stack(stack_list: list[object], colored: bool = False, file: TextIO | None = None) -> None:
-    """Prints the stack as the REPL and `disp` show it.
-
-    Args:
-        stack_list: The values, bottom first.
-        colored: Whether to color the values by type.
-        file: The stream to print to; ``sys.stdout`` when None.
-
-    Raises:
-        StackerRuntimeError: A value is nested too deep to show.
-    """
-    try:
-        text = disp_colored(stack_list) if colored else disp_default(stack_list)
-    except RecursionError:
-        raise StackerRuntimeError(TOO_DEEP_TO_SHOW) from None
-    print(text, file=file)

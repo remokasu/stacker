@@ -10,7 +10,7 @@ from stacker.runtime.error_formatter import ErrorFormatter
 from stacker.runtime.exec_modes.execution_mode import ExecutionMode
 from stacker.stacker import Stacker
 
-# from stacker.lang.color import colored
+# from stacker.runtime.color import colored
 # from stacker.exec_modes.error import create_error_message
 
 

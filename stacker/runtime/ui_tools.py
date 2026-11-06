@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from importlib.resources import files
 
-from stacker.lang.color import colored
+from stacker.runtime.color import colored
 from stacker.runtime.config import history_file_path
 
 

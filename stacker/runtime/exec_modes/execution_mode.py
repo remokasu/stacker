@@ -4,9 +4,8 @@ import sys
 from pathlib import Path
 
 from stacker.error import UserError, error_kind, include_location_of
-
-# from stacker.syntax.parser import is_string
-from stacker.lang.display import disp_stack, plain_text
+from stacker.lang.display import plain_text
+from stacker.runtime.display import disp_stack
 from stacker.runtime.error_formatter import ErrorFormatter
 from stacker.stacker import Stacker
 from stacker.syntax.parser import remove_start_end_quotes
@@ -162,11 +161,6 @@ class ExecutionMode:
         """Print the current stack to the console."""
         _stack = self.rpn_calculator.get_stack_copy_as_list()
         disp_stack(_stack, colored=self.color_print)
-        # if self.color_print is True:
-        #     stack_str = disp_colored(_stack)
-        #     print(stack_str)
-        # else:
-        #     print(f"{_stack}".replace(",", ""))
 
     def disp_all_variables(self) -> None:
         variables = self.rpn_calculator.get_variables_copy()

@@ -9,7 +9,7 @@ import pytest
 from stacker import Stacker
 from stacker.data_type import Symbol
 from stacker.lang import protocols
-from stacker.lang.display import CustomBlockPrinter, custom_print, plain_text
+from stacker.lang.display import pieces, plain_text
 
 
 def _block_and_lambda() -> tuple[object, object]:
@@ -35,7 +35,7 @@ def test_any_other_value_has_no_kind_even_one_that_answers_every_attribute(value
 
 def test_the_display_shows_a_block_as_a_block_by_its_kind():
     block, function = _block_and_lambda()
-    assert isinstance(custom_print(block), CustomBlockPrinter)
+    assert pieces(block) == [(protocols.BLOCK, str(block))]
     assert plain_text(block) == "{1 2 +}"
     assert plain_text(function) == "λx.{x 1 +}"
 

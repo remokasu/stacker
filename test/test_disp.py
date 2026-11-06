@@ -9,7 +9,8 @@ import re
 import unittest
 
 from stacker.data_type import String
-from stacker.lang.display import disp_colored, disp_default
+from stacker.lang.display import disp_default
+from stacker.runtime.display import disp_colored
 from stacker.stacker import Stacker
 
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
