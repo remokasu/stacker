@@ -37,7 +37,7 @@ from stacker.error import (
 from stacker.lang import console, protocols
 from stacker.lang.arguments import count_argument, integer_argument
 from stacker.lang.boundary import token_to_value, value_to_token
-from stacker.lang.scope import ScopedVariables
+from stacker.lang.scope import KEPT_SCOPE, ScopedVariables
 from stacker.lang.smacro import gensym
 from stacker.lang.text import plain_text  # text.py must not import core.py
 from stacker.syntax.lexer import Identifier, ListNode, TupleNode
@@ -2263,7 +2263,8 @@ class StackerCore:
         bound.variables = scope
         bound.stack = stack_data()
         bound._bound_cache = None
-        self._bound_cache = (scope, bound)
+        if self.variables is not KEPT_SCOPE:
+            self._bound_cache = (scope, bound)
         return bound
 
     def __eq__(self, other: object) -> bool:

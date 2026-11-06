@@ -1,5 +1,11 @@
 # CHANGE LOG
 
+## [1.35.0] - 2026-11-07
+
+### Changed
+
+- **A macro whose body is one block literal expands once per set of arguments.** Such a body runs nothing at expansion time, so the expansion depends on the arguments alone: the machine keeps it (by the arguments' identity, up to 16 per macro) and runs the kept code where the macro is called, in the caller's scope, with the words the caller sees. `alias` and the words it makes are such macros: `{over drop} :over2 alias` runs `over2` in about a third of the time (19 → 6 µs). A macro given a new object every time stops keeping expansions after 32 misses in a row. `macroexpand` always expands anew; a redefinition and `copy()` start with nothing kept
+
 ## [1.34.0] - 2026-11-06
 
 ### Changed

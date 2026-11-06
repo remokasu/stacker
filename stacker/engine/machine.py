@@ -71,7 +71,7 @@ from __future__ import annotations
 from itertools import islice
 from typing import TYPE_CHECKING
 
-from stacker.data_type import Symbol, stack_data
+from stacker.data_type import String, Symbol, stack_data
 
 # core imports this module: its names are read at call time only
 from stacker.engine import compiler, copier, inline
@@ -125,7 +125,8 @@ from stacker.error import (
 )
 from stacker.lang import generation, recursion
 from stacker.lang.arguments import integer_argument
-from stacker.lang.scope import ScopedVariables
+from stacker.lang.scope import KEPT_SCOPE, ScopedVariables
+from stacker.lang.smacro import StackerMacro
 from stacker.syntax.parser import parse_expression
 from stacker.syntax.token_rules import cached_literal_eval
 
@@ -150,6 +151,29 @@ MAP = 14  # `map` / `filter`: one child per element
 REDUCE = 15  # `reduce` / `fold`: one child per element, with the accumulator
 INCLUDE = 16  # `include` / `require`: one child per expression of the file
 ARGS = 17  # a word with a block in a value's place: the block runs first, its value takes its place
+
+#: Whether the expansions of a macro whose body is one block literal are kept, by their arguments' identity
+MEMO_ENABLED = True
+#: Test-only: expand every time, and check what was kept against the fresh expansion (``ExpansionMismatch``).
+#: The kept expansion is compared, never run: the hit path (``_kept_expansion``) runs in the default state only
+MEMO_SHADOW = False
+#: How many expansions a macro keeps; the oldest goes when it is full
+MEMO_MAX = 16
+#: Misses in a row after which a macro stops keeping expansions (its arguments are new objects every time)
+MEMO_GIVE_UP = 32
+#: The argument types keyed by identity (a block is keyed too); a list or a dictionary is mutable and new every time
+_MEMO_KEY_TYPES = frozenset({Symbol, str, String, int, float, complex, bool, type(None), StackerLambda})
+#: The scope the block literals of a kept expansion are bound to (see ``scope.KEPT_SCOPE``)
+_KEPT = KEPT_SCOPE
+
+
+class ExpansionMismatch(AssertionError):
+    """A kept expansion differs from the fresh one (``MEMO_SHADOW``).
+
+    Test-only, so it lives with the mode that raises it rather than among
+    the language's errors in ``stacker.error``: no program meets it.
+    """
+
 
 #: The phases of a control activation: not started yet, or which child is running
 START = -1
@@ -1752,6 +1776,15 @@ def _expand(frame: Frame, name: str, stack: stack_data[object], evaluate: bool) 
     """
     template = frame.template
     macro = template.macros[name]
+    memo = None
+    if evaluate and MEMO_ENABLED and getattr(macro, "expansions", None) is not None:
+        keyed = _memo_key(macro, stack)
+        if keyed is not None:
+            key, args_read = keyed
+            entry = macro.expansions.get(key)
+            if entry is not None and not MEMO_SHADOW and _same_args(args_read, entry[0]):
+                return _kept_expansion(frame, name, macro, entry, stack)
+            memo = (key, args_read, macro)
     args: list[object] = []
     for _ in range(macro.arg_count):
         try:
@@ -1774,9 +1807,131 @@ def _expand(frame: Frame, name: str, stack: stack_data[object], evaluate: bool) 
     child.core = expander
     child.scope = scope
     child.stack = stack_data()
-    child.state = (stack, evaluate)
+    child.state = (stack, evaluate, memo)
     _enter_code(child, expander.tokens, None, True)
     return child
+
+
+def _memo_key(macro: StackerMacro, stack: stack_data[object]) -> tuple[tuple[int, ...], tuple[object, ...]] | None:
+    """The key of the expansion for the arguments on ``stack``, with the arguments: None when they are not keyed.
+
+    The key is the arguments' identities, never their values: `1`, `1.0` and
+    `true` are equal and expand differently. The arguments are read where
+    they stand, not taken.
+    """
+    count = macro.arg_count
+    if len(stack) < count:
+        return None
+    if count == 0:
+        return ((), ())
+    if count == 1:
+        argument = stack[-1]
+        if type(argument) in _MEMO_KEY_TYPES or isinstance(argument, StackerCore):
+            return ((id(argument),), (argument,))
+        return None
+    args = tuple(stack[-i] for i in range(count, 0, -1))
+    for argument in args:
+        if type(argument) not in _MEMO_KEY_TYPES and not isinstance(argument, StackerCore):
+            return None
+    return (tuple(map(id, args)), args)
+
+
+def _same_args(args: tuple[object, ...], kept: tuple[object, ...]) -> bool:
+    """Whether ``args`` are the very objects a kept expansion was made from (an identity can be reused once its object is gone)."""
+    for argument, held in zip(args, kept):
+        if argument is not held:
+            return False
+    return True
+
+
+def _kept_expansion(frame: Frame, name: str, macro: StackerMacro, entry: tuple, stack: stack_data[object]) -> Frame:
+    """Runs a kept expansion of ``macro`` where it is called, as the fresh expansion would run.
+
+    The expansion is a new block of the caller's interpreter (its tables,
+    its file and line), bound to the caller's scope, on the kept tokens: the
+    tokens are shared and read only, and the block literals in them are
+    bound to no running scope, so each is copied when it is pushed.
+    """
+    args, tokens, bracket_type = entry
+    for _ in range(len(args)):
+        stack.pop()
+    macro.memo_hits += 1
+    macro.memo_misses = 0
+    template = frame.template
+    expansion = type(template)(parent=template)
+    expansion.tokens = tokens
+    expansion.bracket_type = bracket_type
+    expansion.variables = _owner(frame).scope
+    child = Frame(MACRO_RUN, frame)
+    child.name = name
+    child.template = expansion
+    child.core = expansion
+    child.scope = expansion.variables
+    child.stack = stack
+    _enter_code(child, tokens, None, True)
+    return child
+
+
+def _keep_expansion(macro: StackerMacro, key: tuple[int, ...], args: tuple[object, ...], result: StackerCore, expansion_scope: ScopedVariables) -> None:
+    """Keeps the fresh expansion ``result`` of ``macro`` for ``args``, or checks it against the kept one under ``MEMO_SHADOW``.
+
+    Raises:
+        ExpansionMismatch: Under ``MEMO_SHADOW``, the kept expansion is not what a fresh one is.
+    """
+    table = macro.expansions
+    if table is None:
+        return
+    if MEMO_SHADOW:
+        entry = table.get(key)
+        if entry is not None and _same_args(args, entry[0]):
+            if result.bracket_type != entry[2] or not _same_expansion(result.tokens, entry[1], args):
+                raise ExpansionMismatch(f"the kept expansion of `{macro.name}` differs from a fresh one")
+            macro.memo_hits += 1
+            macro.memo_misses = 0
+            return
+    macro.memo_misses += 1
+    if macro.memo_misses > MEMO_GIVE_UP:
+        macro.expansions = None
+        return
+    table.pop(key, None)  # the entry of an object that is gone, under the same identity: replaced, as the newest
+    if len(table) >= MEMO_MAX:
+        del table[next(iter(table))]
+    tokens = result.tokens
+    tokens._unit = None  # it runs more than once now: counted and compiled as any block
+    _rebind_kept(tokens, expansion_scope)
+    table[key] = (args, tokens, result.bracket_type)
+
+
+def _rebind_kept(tokens: list[object], expansion_scope: ScopedVariables) -> None:
+    """Binds the block literals the template made (bound to the expansion scope) to ``_KEPT``, so the kept expansion holds no caller's scope.
+
+    A block bound there is copied whenever it is pushed, and keeps no
+    cache of the copy (``StackerCore._bound_to``): the cache would hold the
+    scope it was pushed from.
+    """
+    for token in tokens:
+        if isinstance(token, StackerCore) and token.variables is expansion_scope:
+            token.variables = _KEPT
+            token._bound_cache = None
+            _rebind_kept(token.tokens, expansion_scope)
+
+
+def _same_expansion(fresh: list[object], kept: list[object], args: tuple[object, ...]) -> bool:
+    """Whether ``kept`` is what ``fresh`` is, strictly: an argument stands as itself, a block the template made is another object, and a value is of the same type."""
+    if len(fresh) != len(kept):
+        return False
+    for a, b in zip(fresh, kept):
+        if type(a) is not type(b):
+            return False
+        if any(a is argument for argument in args):
+            if a is not b:
+                return False
+        elif isinstance(a, StackerCore):
+            if a is b or a.bracket_type != b.bracket_type or not _same_expansion(a.tokens, b.tokens, args):
+                return False
+        elif not (a is b or a == b):
+            return False
+    return True
 
 
 def _expanded(ended: Frame) -> Frame:
@@ -1792,7 +1947,7 @@ def _expanded(ended: Frame) -> Frame:
         NoValueProducedError: The body left nothing.
         MacroExpansionError: The body left more than one value.
     """
-    caller, evaluate = ended.state
+    caller, evaluate, memo = ended.state
     name = ended.name
     parent = ended.parent
     expansion_stack = ended.stack
@@ -1801,6 +1956,8 @@ def _expanded(ended: Frame) -> Frame:
     if len(expansion_stack) > 1:
         raise MacroExpansionError(name, len(expansion_stack))
     result = expansion_stack.pop()
+    if memo is not None and isinstance(result, StackerCore):
+        _keep_expansion(memo[2], memo[0], memo[1], result, ended.scope)
     # The expansion runs where the macro was called, as if written there
     scope = _owner(parent).scope
     if isinstance(result, StackerCore):

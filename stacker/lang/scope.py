@@ -372,3 +372,10 @@ class ScopedVariables:
         local_vars = dict(self._local)
         has_parent = self._parent is not None
         return f"ScopedVariables(local={local_vars}, has_parent={has_parent})"
+
+
+#: The scope the block literals of a kept macro expansion are bound to: never a running one, so such a block is
+#: copied whenever it is pushed, and the copy is not cached on it (the cache would hold the pushing scope, and a
+#: kept expansion holds no caller's scope). The engine keeps the expansions; the scope is made here so both the
+#: core (which binds blocks) and the machine (which keeps expansions) read the one object
+KEPT_SCOPE = ScopedVariables()

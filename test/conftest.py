@@ -6,15 +6,19 @@
   run, every unit made whether or not it would gain anything, every name re-resolved
   before its step). Tests that start another process always
   run it in the default state; the golden snapshot covers those in every state
+- The kept macro expansions run in the state ``STACKER_TEST_MEMO`` names: ``default``
+  (kept and used), ``off`` (never kept) or ``shadow`` (kept, and every use checked
+  against a fresh expansion, which is the one run: only ``default`` runs the kept code)
 """
 
 import os
 
 import pytest
 
-from stacker.engine import compiler, copier
+from stacker.engine import compiler, copier, machine
 
 COMPILE_STATES = ("off", "default", "eager")
+MEMO_STATES = ("off", "default", "shadow")
 
 
 def pytest_configure(config):
@@ -29,11 +33,22 @@ def pytest_configure(config):
         compiler.VERIFY = True
         compiler.ONLY_WORTHWHILE = False
     config.stacker_compile_state = state
+    memo = os.environ.get("STACKER_TEST_MEMO", "default")
+    if memo not in MEMO_STATES:
+        raise pytest.UsageError(f"STACKER_TEST_MEMO must be one of {', '.join(MEMO_STATES)}, not {memo!r}")
+    if memo == "off":
+        machine.MEMO_ENABLED = False
+    elif memo == "shadow":
+        machine.MEMO_SHADOW = True
+    config.stacker_memo_state = memo
 
 
 def pytest_report_header(config):
-    """Names the compile tier's state at the top of the run, so a log says which state it was."""
-    return f"stacker compile tier: {config.stacker_compile_state} (STACKER_TEST_COMPILE)"
+    """Names the compile tier's and the kept expansions' states at the top of the run, so a log says which they were."""
+    return (
+        f"stacker compile tier: {config.stacker_compile_state} (STACKER_TEST_COMPILE), "
+        f"kept expansions: {config.stacker_memo_state} (STACKER_TEST_MEMO)"
+    )
 
 
 def check_shallow_copy(core, new):
