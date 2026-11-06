@@ -6,8 +6,13 @@ has no function can be registered over; a function or lambda value can be
 called from Python; a script can be included through the interpreter's
 methods; and a higher-order word can be wrapped too. None of these paths
 is in the golden cases, so what they leave (the stack, the error, the trace,
-the depth they count) is pinned here, before the Python side of each word
-is rewritten.
+the depth they count) is pinned here.
+
+These are records of what the words do, not claims that it is right: a
+wrapped control word counts no depth where the built-in does, and its trace
+after a `break` is the outer code's where the built-in's is the innermost
+block's. When one of these fails, decide first whether the change is
+wanted, then move the expectation.
 """
 
 from __future__ import annotations

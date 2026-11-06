@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Callable, ClassVar
 
 from stacker.engine.core import StackerCore
+from stacker.engine.include import resolve_include_path
 from stacker.error import (
     BreakException,
     StackerSyntaxError,
@@ -566,8 +567,6 @@ def include_stacker_script(
         IncludeError: If the file cannot be resolved or has a wrong extension.
         StackerSyntaxError: The file has a `break` outside a loop.
     """
-    from stacker.engine.include import resolve_include_path
-
     found = resolve_include_path(remove_start_end_quotes(str(filename)), base_dir)
     stacker = Stacker(prelude=prelude)
     stacker.include(str(found.resolve()))

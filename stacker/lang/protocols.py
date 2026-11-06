@@ -58,4 +58,4 @@ class CoreView(Protocol):
     macros: dict[str, object]
     plugins: dict[str, object]
     operator_manager: WordTables
-    _prelude: dict[str, object]
+    _prelude: dict[str, object]  #: the prelude's bookkeeping (`funcs` marks the words it defined); the core's own name

@@ -1,5 +1,23 @@
 # CHANGE LOG
 
+## [1.33.0] - 2026-11-06
+
+### Changed
+
+- **The engine is made with its own words, and the face hands it the value words.** `stacker.operators.STANDARD` lists the tables of value words by category, in the order `operators` shows them; `Stacker.WORD_TABLES` is that set, and the root core makes its tables from it. The words, their order and their groups are unchanged
+- **A block and a lambda carry their kind on the class** (`stacker_kind`, read by `stacker.lang.protocols.kind_of`), so the display, `type` and the collection words tell them without importing the engine. `stacker.lang.protocols` also holds what the lower layers read of a block and of the running core, for type checking
+- **The rule of `include` and `require` is written once** (`stacker.engine.include.start_include`): the word on the machine and `Stacker.include()` / `require()` both resolve the path, catch a circular include, record the including line and make the child core by it
+- No import in the package goes up the layers any more: the layer test's table of known crossings is empty
+- What the words do when reached from Python (a control word wrapped and registered again, a subclass handler, a function or lambda value called from Python, a script included by the methods, a wrapped higher-order word) is pinned by tests, unchanged
+
+### Breaking Changes
+
+- **Internal paths moved again; the public names did not.** No alias is kept. Old → new:
+  - `stacker.engine.include.SCRIPT_EXTENSION` → `stacker.syntax.script.SCRIPT_EXTENSION` (`stacker.runtime.config.script_extension_name` still re-exports it)
+  - `stacker.engine.include.include_stacker_script` → `stacker.stacker.include_stacker_script`
+  - `stacker.engine.manager.OperatorManager()` takes the tables of value words (`stacker.operators.STANDARD`); made with none, it holds the engine's words only
+- **A `StackerCore` made directly has no value words** (its `WORD_TABLES` is empty): use `Stacker`, or a subclass that sets `WORD_TABLES`. The display shows such a core as a block, as it shows a `Stacker`; before, only a `Stacker` was shown so
+
 ## [1.32.0] - 2026-11-06
 
 ### Added

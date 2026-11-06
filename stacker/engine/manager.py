@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from types import MappingProxyType
 from typing import Callable
 
 from stacker.engine.primitives.defmacro import macro_operators
@@ -192,10 +193,12 @@ _DISPATCH_ORDER = (
 #: categories (``priority``, ``hof``) are not among them: an interpreter is made with its control words whatever
 #: value words it is given
 VALUE_CATEGORIES = ("regular", "aggregate", "collection", "transform", "stack", "file", "settings", "system")
+#: No value words: what a manager is made with when none are handed in
+NO_WORD_TABLES: Mapping[str, Sequence[Mapping[str, object]]] = MappingProxyType({})
 
 
 class OperatorManager:
-    def __init__(self, word_tables: Mapping[str, Sequence[Mapping[str, object]]] = {}) -> None:  # (read only)
+    def __init__(self, word_tables: Mapping[str, Sequence[Mapping[str, object]]] = NO_WORD_TABLES) -> None:
         """Makes the tables of one interpreter: the engine's own words, and the value words handed in.
 
         Args:
