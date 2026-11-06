@@ -26,11 +26,10 @@ import sys
 
 from stacker.error import StackerRecursionError
 
-# The machine (stacker.engine.machine) keeps its own return stack, so a
-# Stacker recursion costs the host no call depth: the depth counted here is
-# the number of activations on the way (a call, a block run by a word, a
-# loop's body, a macro's expansion ...), the machine's return stack, and
-# the limit stops it by name. The host's own limit matters only where a
+# The machine keeps its own return stack, so a Stacker recursion costs the
+# host no call depth: the depth counted here is the number of activations
+# on the way (a call, a block run by a word, a loop's body, a macro's
+# expansion ...), the machine's return stack, and the limit stops it by name. The host's own limit matters only where a
 # Python word runs Stacker code, and the command line sets it to
 # HOST_RECURSION_LIMIT.
 

@@ -2,5 +2,7 @@
 the boundary between tokens and values, a word's arguments, the console, a macro,
 the recursion limit, and the protocols by which the words see the engine. The
 layer imports only from itself, the syntax and the foundation (the value types,
-the errors); it never runs code and knows nothing of terminals.
+the errors); it never runs code and knows nothing of terminals. The console and
+the recursion limit are here, below the words: the words write to the console,
+and the command line sets the recursion limit, neither through the engine.
 """

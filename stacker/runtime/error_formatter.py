@@ -1,5 +1,5 @@
 """
-Error formatter for Stacker with Clang-style output.
+Error messages that point at the source.
 
 Provides rich, visual error messages with:
 - File location and line number
@@ -15,7 +15,7 @@ from typing import Optional
 
 
 class ErrorFormatter:
-    """Formats error messages in a Clang-like style with visual indicators."""
+    """Formats an error with the file, the line, the source and a marker under the place."""
 
     # ANSI color codes
     RESET = '\033[0m'
@@ -47,7 +47,7 @@ class ErrorFormatter:
         frames: list[str] | None = None,
     ) -> str:
         """
-        Format an error message in Clang style.
+        Format an error message with its location and source context.
 
         Args:
             filename: Source file name (None for REPL)
@@ -145,7 +145,7 @@ class ErrorFormatter:
         source_line: Optional[str] = None,
         hint: Optional[str] = None
     ) -> str:
-        """Format a warning message in Clang style."""
+        """Format a warning message with its location and source context."""
         use_color = cls._supports_color()
         lines = []
 

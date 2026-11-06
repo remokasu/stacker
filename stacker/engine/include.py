@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from stacker.data_type import stack_data
-from stacker.engine.stk_file_read import readtxt
 from stacker.error import (
     BreakException,
     IncludeError,
@@ -14,7 +13,7 @@ from stacker.error import (
     attach_include_location,
 )
 from stacker.syntax.parser import parse_expression, remove_start_end_quotes
-from stacker.syntax.script import SCRIPT_EXTENSION, iter_expressions
+from stacker.syntax.script import SCRIPT_EXTENSION, iter_expressions, read_script
 
 if TYPE_CHECKING:
     from stacker.engine.core import StackerCore
@@ -243,7 +242,7 @@ def start_include(core: StackerCore, filename: str, once: bool) -> Started | Non
     if any(frame.path == resolved for frame in state.stack):
         raise IncludeError(f"Circular include detected: {filename}")
 
-    code = readtxt(found)
+    code = read_script(found)
     # The entry script's line is the expression the script runner is on
     # (the line that includes, or that calls the function that includes).
     # It is recorded now, before a nested include moves the root's line on

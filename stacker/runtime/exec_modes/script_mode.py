@@ -33,7 +33,7 @@ class ScriptMode(ExecutionMode):
             self.rpn_calculator.run_file(path, main=True)
             self.rpn_calculator.warn_values_left(path.name, self.rpn_calculator.stack)
         except Exception as e:
-            # Format error using Clang-style formatter
+            # Format the error with its location and source context
             error_type = error_kind(e)
             message = str(e)
 

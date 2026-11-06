@@ -114,9 +114,9 @@ class TestFilesAreUtf8:
         path = tmp_path / "bad.stk"
         path.write_bytes(b'"ok"\n1 2 +\n# \xff\n')
         with pytest.raises(ScriptReadError, match="is not UTF-8 text at line 3"):
-            from stacker.engine.stk_file_read import readtxt
+            from stacker.syntax.script import read_script
 
-            readtxt(path)
+            read_script(path)
 
     def test_file_words_write_and_read_utf8(self, tmp_path):
         path = tmp_path / "w.txt"

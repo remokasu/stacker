@@ -12,7 +12,7 @@ because a name resolved as a word may be a variable now that hides it.
 A scope born with its names (a call's arguments, a loop variable, given
 to the constructor) does not count: a block looks at the scopes it runs
 in when it starts (a loop body, run again in a scope of the same shape,
-skips that look after its first iteration: ``stacker.engine.inline``).
+skips that look after its first iteration).
 A name set in such a scope later does count, so a
 function that sets a local advances the counter on every call; the
 block that called it then looks at its scopes again, which is cheap.

@@ -167,12 +167,12 @@ class Stacker(StackerCore):
             pop_entry_file,
             push_entry_file,
         )
-        from stacker.engine.stk_file_read import readtxt
+        from stacker.syntax.script import read_script
 
         path = Path(path)
         if main:
             self.main_script = str(path.resolve())
-        code = readtxt(path)
+        code = read_script(path)
         before = (self.current_file, self.current_line, dict(self.source_lines)) if restore_location else None
         # Set before anything runs: a block or function the file defines
         # takes the current file as its own when it is made

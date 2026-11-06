@@ -1,13 +1,42 @@
-"""Splits the text of a script into the expressions a script runner evaluates one by one."""
+"""A script file: reads its text, and splits the text into the expressions a script runner evaluates one by one."""
 
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
 
-from stacker.error import UnterminatedTokenError
+from stacker.error import ScriptReadError, UnterminatedTokenError
 from stacker.syntax.lexer import TerminalScanner
 
 SCRIPT_EXTENSION = ".stk"  #: the suffix a script file has
+
+#: Scripts are UTF-8; a byte order mark at the start is skipped
+SCRIPT_ENCODING = "utf-8-sig"
+
+
+def read_script(file_path: str | Path) -> str:
+    """Reads a script file as UTF-8 text.
+
+    Comments (``#`` to the end of the line, ``#| ... |#`` blocks) and
+    triple-quoted strings are the lexer's business; this changes nothing in
+    the text itself.
+
+    Args:
+        file_path: Path to the script file.
+
+    Returns:
+        The file content, without trailing newlines; a leading byte order mark is skipped.
+
+    Raises:
+        ScriptReadError: The file is not UTF-8 text; the message names the line.
+    """
+    with open(file_path, "rb") as file:
+        raw = file.read()
+    try:
+        return raw.decode(SCRIPT_ENCODING).rstrip("\n")
+    except UnicodeDecodeError as error:
+        line = raw[: error.start].count(b"\n") + 1
+        raise ScriptReadError(f"{file_path} is not UTF-8 text at line {line}: {error.reason}") from error
 
 
 def iter_expressions(code: str) -> Iterator[tuple[int, str]]:
