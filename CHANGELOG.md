@@ -1,5 +1,22 @@
 # CHANGE LOG
 
+## [1.34.0] - 2026-11-06
+
+### Changed
+
+- **A control word reached from Python runs by the machine.** A wrapper registered over `if`, `ifelse`, `cond`, `iferror`, `try`, `loop`, `times`, `do`, `while` or `dolist`, a subclass handler that calls the built-in, and `eval`, `collect`, `apply` and `macroexpand` reached the same way hand the word to the machine, which holds the one implementation. Such a word now leaves what the built-in leaves: the trace after a `break` is the innermost block's, and a recursion through a wrapped `if` or `ifelse` counts a level per call where it was a tail call before, since the activation that called the Python function stays under it. A value such a word read for its call already (the bounds of `do`, the count of `times`) is not read again. From Stacker code nothing changes
+- **How a value is written is the language's; colors are the runtime's.** `stacker.lang.text.pieces` writes a value as `(kind, text)` pieces, one rule for `echo`, `str`, the error messages and the stack display, and `stacker.runtime.display` colors the pieces for the REPL. The language layer knows nothing of terminals
+- **A script is read where it is split**: `stacker.syntax.script.read_script` reads the file whose expressions `iter_expressions` splits; the engine's own reader is gone
+- Each layer's docstring says what the layer knows, and none names a layer above it
+
+### Breaking Changes
+
+- **Internal paths moved; the public names did not.** No alias is kept. Old → new:
+  - `stacker.lang.color` → `stacker.runtime.color`
+  - `stacker.lang.display` → `stacker.lang.text`, and `disp_default` → `stack_text`; `disp_colored` and `disp_stack` → `stacker.runtime.display`. The printer classes, `custom_print` and `color_map` are gone: a value's text comes from `plain_text`, `display_text` or `pieces`
+  - `stacker.engine.stk_file_read.readtxt` → `stacker.syntax.script.read_script` (with `SCRIPT_ENCODING`)
+- **A control word called from Python counts depth as the built-in does**: a program that recursed through a wrapped `if` or `ifelse` close to `--recursion-limit` may now reach the limit
+
 ## [1.33.0] - 2026-11-06
 
 ### Changed
