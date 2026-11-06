@@ -18,7 +18,6 @@ from stacker.engine.sfunction import StackerFunction
 from stacker.engine.slambda import StackerLambda
 from stacker.error import (
     BreakException,
-    MacroExpansionError,
     NoValueProducedError,
     ReservedWordError,
     ResultCountError,
@@ -30,17 +29,16 @@ from stacker.error import (
     StackUnderflowError,
     UndefinedSymbolError,
     ValidationError,
-    attach_macro_context,
     not_a_sequence_message,
     symbol_as_value_message,
     word_in_list_literal_message,
     # UnexpectedTokenError,
 )
-from stacker.lang import console, protocols, recursion
+from stacker.lang import console, protocols
 from stacker.lang.arguments import count_argument, integer_argument
 from stacker.lang.boundary import token_to_value, value_to_token
 from stacker.lang.scope import ScopedVariables
-from stacker.lang.smacro import StackerMacro, gensym
+from stacker.lang.smacro import gensym
 from stacker.lang.text import plain_text  # text.py must not import core.py
 from stacker.syntax.lexer import Identifier, ListNode, TupleNode
 from stacker.syntax.parser import Parser, parse_expression
@@ -782,50 +780,20 @@ class StackerCore:
         """
         return stack.pop()
 
-    def _run_block(
-        self, block: object, stack: stack_data[object], trusted: compiler.Unit | None = None
-    ) -> compiler.Unit | None:
-        """Runs ``block`` on ``stack``, in the scope the block is bound to.
+    def _run_built_in(self, name: str, stack: stack_data[object]) -> None:
+        """Runs the built-in ``name`` once on ``stack``, by the machine, with its arguments already on the stack.
 
-        Every word that runs a block goes through here (or ``_run_bound``),
-        so a block reads its names the same way wherever it is run: `if`,
-        `eval`, `times` and `map` agree. The stack is the caller's; the
-        scope is the block's own (``block.variables``), which is the
-        caller's scope when the block was written where it is run.
-
-        A lambda is called with its arguments from ``stack`` and a symbol is
-        run as its name, as `eval` does, so a word that runs code runs
-        every kind of code the same way; any other value is pushed as it is
-        (`true 1 2 ifelse` chooses a value).
+        The bridge a control word's Python function crosses when it is
+        called from Python (a wrapper registered over the word calls the
+        original): the word's meaning is the machine's, written once. An
+        error the word raises at once (too few values, a wrong type) is
+        reworded by the caller's word runner, as for any word.
 
         Args:
-            block: The code block, a lambda, a symbol, or any other value.
-            stack: The stack the block runs on.
-            trusted: What this call returned last time, for a loop running
-                the same block again.
-
-        Returns:
-            The block's compiled unit when it ran the block to its end, for
-            a loop to pass back as ``trusted``; None otherwise.
+            name: One of the machine's own words.
+            stack: The stack the word's arguments are on.
         """
-        if not isinstance(block, StackerCore):
-            if isinstance(block, StackerLambda):
-                self._call_lambda(block, stack)
-            elif isinstance(block, Symbol):
-                self._evaluate([block.name], stack=stack)
-            else:
-                stack.append(block)
-            return None
-        tokens = block.tokens
-        unit = tokens._unit
-        try:
-            block._evaluate(tokens, stack=stack, trusted=trusted)
-        except Exception:
-            self.trace = block.trace  # the tokens of the innermost failing block, for diagnostics
-            raise
-        # the unit that was there before and is still there ran the block to its end (one that gave up in
-        # mid-run, or was found stale, is gone from the tokens); a unit made during this run is not trusted yet
-        return unit if type(unit) is compiler.Unit and tokens._unit is unit else None
+        machine.run(self, [], stack, word=name)
 
     def _run_bound(
         self, block: StackerCore, scope: ScopedVariables, stack: stack_data[object], trusted: compiler.Unit | None = None
@@ -851,28 +819,9 @@ class StackerCore:
         except Exception:
             self.trace = bound.trace
             raise
-        return unit if type(unit) is compiler.Unit and tokens._unit is unit else None  # (as _run_block)
-
-    def _condition_of(self, condition: object, stack: stack_data[object], word: str) -> object:
-        """Returns the value a condition stands for: a block is run on ``stack`` and its top taken, a value is itself.
-
-        A symbol or a string is never looked up as a variable here: a symbol
-        is truthy, a string is truthy when non-empty. Write the bare name to
-        test a variable's value.
-
-        Args:
-            condition: The value or block written at the condition's position.
-            stack: The caller's stack.
-            word: The word reading the condition (for the error message).
-
-        Raises:
-            NoValueProducedError: The block ran and the stack is empty, so
-                there is nothing to read as the condition.
-        """
-        if isinstance(condition, StackerCore):
-            self._run_block(condition, stack)
-            return self._condition_left(stack, word)
-        return condition
+        # the unit that was there before and is still there ran the block to its end; one made during this
+        # run is not trusted yet
+        return unit if type(unit) is compiler.Unit and tokens._unit is unit else None
 
     def _condition_left(self, stack: stack_data[object], word: str) -> object:
         """The value a condition block left on top of ``stack``, taken off it.
@@ -1395,10 +1344,8 @@ class StackerCore:
         op["func"](self, name, args, body)
 
     def _prio_macroexpand(self, op, stack) -> None:
-        name = self._name_of(stack.pop(), "macroexpand")
-        if name not in self.macros:
-            raise StackerSyntaxError(f"`macroexpand` expects a macro name, `{name}` is not a macro")
-        self._expand_macro(name, stack, evaluate=False)
+        """``:name macroexpand``: pushes the macro's expansion without running it. The machine runs the word; this is its entry from Python."""
+        self._run_built_in("macroexpand", stack)
 
     def _prio_gensym(self, op, stack) -> None:
         stack.append(gensym())
@@ -1457,7 +1404,7 @@ class StackerCore:
             op["func"](fargs, body)
 
     def _prio_eval(self, op, stack) -> None:
-        """Evaluates the top value: code, never text.
+        """Evaluates the top value: code, never text. The machine runs the word; this is its entry from Python.
 
         - a code block is evaluated on this stack
         - a ``Symbol`` is evaluated as its name, exactly as if the bare name
@@ -1467,65 +1414,19 @@ class StackerCore:
           ``parse`` first)
         - anything else is pushed back
         """
-        expression = stack.pop()
-        if isinstance(expression, Symbol):
-            self._evaluate([expression.name], stack=stack)
-        elif isinstance(expression, str):
-            raise StackerTypeError(
-                f"`eval` expects a code block, a symbol or a lambda, got the string {str(expression)!r}. "
-                "A string is text, not code: turn it into a block with `parse` first, "
-                'e.g. "3 4 +" parse eval'
-            )
-        elif isinstance(expression, StackerCore):
-            self._run_block(expression, stack)
-        elif isinstance(expression, StackerLambda):
-            self._call_lambda(expression, stack)
-        else:
-            stack.append(expression)
+        self._run_built_in("eval", stack)
 
     def _prio_collect(self, op, stack) -> None:
         """``{...} collect``: runs the code on an empty stack, in this scope, and pushes what it left as one list.
+
+        The machine runs the word; this is its entry from Python.
 
         The code is a block, a symbol (run as its name) or a lambda, as for
         `eval`; a lambda takes its arguments from the empty stack, so only
         one without parameters runs. The caller's stack is not visible to
         the code; values below stay where they are.
         """
-        code = stack.pop()
-        collected: stack_data[object] = stack_data()
-        if isinstance(code, StackerCore):
-            self._run_block(code, collected)
-        elif isinstance(code, Symbol):
-            self._evaluate([code.name], stack=collected)
-        elif isinstance(code, StackerLambda):
-            self._call_lambda(code, collected)
-        else:
-            raise StackerTypeError(
-                f"`collect` expects a code block, a symbol or a lambda, got {plain_text(code)}"
-            )
-        stack.append(list(collected))
-
-    def _call_lambda(self, fn: StackerLambda, stack: stack_data[object]) -> None:
-        """Calls a lambda value with arguments popped from ``stack``.
-
-        Parameters are binding forms, so a code-block argument is bound raw
-        (code is data), like a function parameter. Every value the body
-        leaves is pushed, in order.
-
-        Args:
-            fn: The lambda to call.
-            stack: Stack holding the arguments; the result is pushed here.
-
-        Raises:
-            StackUnderflowError: Fewer than ``fn.arg_count`` values on ``stack``.
-        """
-        args: list[object] = []
-        try:
-            for _ in range(fn.arg_count):
-                args.insert(0, self._pop_and_resolve(stack))
-        except IndexError:
-            raise StackUnderflowError("lambda", fn.arg_count) from None
-        stack.extend(fn.run(args))  # every value the body left, in order
+        self._run_built_in("collect", stack)
 
     def _prio_sub(self, op, stack) -> None:
         self._substack_with_tokens([value_to_token(stack.pop())], stack)
@@ -1701,26 +1602,8 @@ class StackerCore:
             raise StackerSyntaxError(f"Cannot expand {iterable}")
 
     def _prio_apply(self, op, stack) -> None:
-        func = stack.pop()
-        args_list = self._pop_and_eval(stack)
-        if args_list is VOID:
-            pass  # an empty argument block: the function is applied to nothing
-        elif isinstance(args_list, (list, tuple)):
-            for arg in args_list:
-                stack.append(arg)
-        elif isinstance(args_list, StackerCore):
-            for tok in args_list.tokens:
-                stack.append(token_to_value(tok))
-        else:
-            stack.append(args_list)
-        if isinstance(func, StackerCore):
-            self._run_block(func, stack)
-        elif isinstance(func, StackerLambda):
-            self._call_lambda(func, stack)
-        elif isinstance(func, Symbol):
-            self._evaluate([func.name], stack=stack)
-        else:
-            raise StackerTypeError(self._function_spec_message("apply", func))
+        """``[args] f apply``: pushes the arguments and runs ``f``. The machine runs the word; this is its entry from Python."""
+        self._run_built_in("apply", stack)
 
     def _prio_include(self, op, stack, word: str = "include") -> None:
         filename = stack.pop()
@@ -2239,7 +2122,7 @@ class StackerCore:
             copy_core.bracket_type = template.bracket_type
             # Bound to the expansion scope while the body runs (a block the
             # body runs during expansion writes behind the write barrier);
-            # the expansion itself is bound to the caller's scope by _expand_macro
+            # the expansion itself is bound to the caller's scope when it is taken
             copy_core.variables = self.variables
             return copy_core
 
@@ -2300,76 +2183,6 @@ class StackerCore:
         raise StackerSyntaxError(
             f"`:{name}` in a macro template needs a name, but `{name}` holds {shown}"
         )
-
-    def _expand_macro(self, name: str, stack: stack_data[object], *, evaluate: bool = True) -> None:
-        """Expands a macro call and (by default) evaluates the expansion.
-
-        The body runs on a throwaway stack in a child scope of the caller
-        where the arguments are bound and assignments stay local. Exactly one
-        value must remain: a code block is bound to the caller's scope and
-        evaluated on ``stack``, any other value is pushed.
-
-        Args:
-            name: Macro name (already known to be in ``self.macros``).
-            stack: Caller's evaluation stack.
-            evaluate: When False (``macroexpand``), push the expansion instead
-                of evaluating it.
-
-        Raises:
-            StackUnderflowError: Not enough arguments on ``stack``.
-            NoValueProducedError: The body left nothing.
-            MacroExpansionError: The body left more than one value.
-        """
-        macro: StackerMacro = self.macros[name]  # type: ignore[assignment]
-        recursion.enter(name, kind="macro")
-        try:
-            args: list[object] = []
-            for _ in range(macro.arg_count):
-                try:
-                    args.insert(0, self._pop_and_resolve(stack))  # blocks stay raw, symbols stay symbols
-                except IndexError:
-                    raise StackUnderflowError(name, macro.arg_count) from None
-
-            scope = self.variables.create_child_scope(dict(zip(macro.args, args)))
-            scope._write_barrier = True
-
-            expander = type(self)(parent=self)
-            expander.tokens = macro.body.tokens  # shared, read-only
-            expander.bracket_type = macro.body.bracket_type
-            expander.variables = scope
-            expander._interp_scope = scope
-            expander._interp_name = name
-            expander._interp_params = frozenset(macro.args)
-            expansion_stack: stack_data[object] = stack_data()
-            try:
-                expander._evaluate(expander.tokens, stack=expansion_stack)
-            except StackerError as error:
-                attach_macro_context(error, f"while expanding macro '{name}'")
-                raise
-
-            if len(expansion_stack) == 0:
-                raise NoValueProducedError(
-                    name, f"Macro `{name}` left no value to use as its expansion."
-                )
-            if len(expansion_stack) > 1:
-                raise MacroExpansionError(name, len(expansion_stack))
-            result = expansion_stack.pop()
-            # The expansion runs where the macro was called, as if written there
-            if isinstance(result, StackerCore):
-                result = result._bound_to(self.variables)
-            elif isinstance(result, StackerLambda):
-                result.blockstack = result.blockstack._bound_to(self.variables)
-
-            if not evaluate or not isinstance(result, StackerCore):
-                stack.append(result)
-                return
-            try:
-                self._run_block(result, stack)
-            except StackerError as error:
-                attach_macro_context(error, f"in code generated by macro '{name}'")
-                raise
-        finally:
-            recursion.leave()
 
     def _stacker_lambda(self, arg: object, body: StackerCore, operator: str) -> object:
         """Runs ``body`` once with ``arg`` as the only value on its stack.

@@ -1,9 +1,17 @@
+"""The condition words' Python entries: `if`, `ifelse`, `cond`, `iferror`, `try` and `throw`.
+
+Each entry puts its arguments back on the stack and hands the word to the
+machine, which holds the one implementation; a wrapper registered over a
+word, or a subclass, reaches it here. `throw` raises on its own, and the
+stack's restoring after a caught error is written here for the machine.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from stacker.data_type import Symbol
-from stacker.error import StackerTypeError, UserError, error_kind
+from stacker.error import StackerTypeError, UserError
 from stacker.lang.text import plain_text
 
 if TYPE_CHECKING:
@@ -22,8 +30,9 @@ def _if(
     {block}
     if
     """
-    if parent._condition_of(condition, stack, "if"):
-        parent._run_block(blockstack, stack)
+    stack.append(condition)
+    stack.append(blockstack)
+    parent._run_built_in("if", stack)
 
 
 def _if_else(
@@ -39,10 +48,10 @@ def _if_else(
     {false block}
     ifelse
     """
-    if parent._condition_of(condition, stack, "ifelse"):
-        parent._run_block(true_block, stack)
-    else:
-        parent._run_block(false_block, stack)
+    stack.append(condition)
+    stack.append(true_block)
+    stack.append(false_block)
+    parent._run_built_in("ifelse", stack)
 
 
 def _cond(pairs: list[tuple[object, object]], parent: StackerCore, stack: stack_data[object]) -> None:
@@ -50,9 +59,10 @@ def _cond(pairs: list[tuple[object, object]], parent: StackerCore, stack: stack_
     {c1} {r1} {c2} {r2} ... n cond
     """
     for condition, result in pairs:
-        if parent._condition_of(condition, stack, "cond"):
-            parent._run_block(result, stack)
-            return
+        stack.append(condition)
+        stack.append(result)
+    stack.append(len(pairs))
+    parent._run_built_in("cond", stack)
 
 
 def _put_back(stack: stack_data[object], saved: list[object]) -> list[object]:
@@ -82,18 +92,9 @@ def _iferror(
     The stack is as it was when `iferror` began before the catch block
     runs: what the try block pushed is dropped and what it took is back.
     """
-    saved = list(stack)
-    try:
-        parent._run_block(try_block, stack)
-    # Deliberately Exception, not BaseException: control-flow signals such as
-    # BreakException derive from BaseException so they pass through iferror
-    # (a break inside the try block must exit the enclosing loop, not run the
-    # catch block). The broad catch itself is intentional: iferror is the
-    # language's user-facing generic try/catch construct, so it must catch
-    # every runtime error, unlike internal error handling.
-    except Exception as _:  # noqa: BLE001
-        _put_back(stack, saved)
-        parent._run_block(catch_block, stack)
+    stack.append(try_block)
+    stack.append(catch_block)
+    parent._run_built_in("iferror", stack)
 
 
 def _throw(kind: object, message: object) -> None:
@@ -122,13 +123,9 @@ def _try(
     the stack held at the failure, for looking into). What is caught is
     what `iferror` catches: every error, but not `break` or an exit.
     """
-    saved = list(stack)
-    try:
-        parent._run_block(try_block, stack)
-    except Exception as error:  # noqa: BLE001 -- the language's try/catch, see _iferror
-        partial = _put_back(stack, saved)
-        stack.append({"kind": error_kind(error), "message": str(error), "stack": partial})
-        parent._run_block(handler, stack)
+    stack.append(try_block)
+    stack.append(handler)
+    parent._run_built_in("try", stack)
 
 
 condition_operators = {

@@ -8,11 +8,13 @@ methods; and a higher-order word can be wrapped too. None of these paths
 is in the golden cases, so what they leave (the stack, the error, the trace,
 the depth they count) is pinned here.
 
-These are records of what the words do, not claims that it is right: a
-wrapped control word counts no depth where the built-in does, and its trace
-after a `break` is the outer code's where the built-in's is the innermost
-block's. When one of these fails, decide first whether the change is
-wanted, then move the expectation.
+A control word's Python function hands the word to the machine, so a word
+reached from Python leaves what the built-in leaves: the same stack, the
+same error, the same trace, and a recursion through it counts the levels
+the built-in counts. A higher-order word's function is its own, and its
+trace may differ. These are records of what the words do; when one of
+these fails, decide first whether the change is wanted, then move the
+expectation.
 """
 
 from __future__ import annotations
@@ -92,7 +94,7 @@ WRAPPED_RUNS = {
     "cond": ("5 {false} {1} {true} {2} 2 cond", ok(5, 2, trace=["5", "{false}", "{1}", "{true}", "{2}", "2", "cond"]), [3]),
     "try": ('{1 0 /} {dup "kind" get} try', ok({"kind": "ZeroDivisionError", "message": "division by zero", "stack": []}, "ZeroDivisionError", trace=[1, 0, "/"]), [4]),
     "iferror": ('{1 0 /} {"caught"} iferror', ok("caught", trace=[1, 0, "/"]), [4]),
-    "loop": ("0 {1 + dup 3 == {break} if} loop", ok(3, trace=["0", "{1 + dup 3 == {break} if}", "loop"]), [3]),
+    "loop": ("0 {1 + dup 3 == {break} if} loop", ok(3, trace=["break"]), [3]),
     "while": ("0 {dup 3 <} {1 +} while", ok(3, trace=["0", "{dup 3 <}", "{1 +}", "while"]), [4]),
     "times": ("0 {1 +} 3 times", ok(3, trace=["0", "{1 +}", "3", "times"]), [4]),
     "do": ("0 1 3 :i {i +} do", ok(6, trace=["0", "1", "3", ":i", "{i +}", "do"]), [6]),
@@ -106,16 +108,16 @@ def test_a_wrapped_control_word_leaves_what_the_built_in_leaves_and_is_called_on
     stacker = Stacker()
     calls = wrap(stacker, "priority", word)
     assert outcome(program, stacker) == expected
-    assert outcome(program)[:2] == expected[:2]  # (the built-in's trace may be the innermost block's: not compared)
+    assert outcome(program) == expected  # the built-in leaves the same
     assert calls == calls_expected
 
 
 WRAPPED_BREAKS = {
-    "loop": ("{break} loop 9", ok(9, trace=["{break}", "loop", "9"])),
-    "while": ("{true} {break} while 9", ok(9, trace=["{true}", "{break}", "while", "9"])),
-    "times": ("0 {1 + break} 3 times 9", ok(1, 9, trace=["0", "{1 + break}", "3", "times", "9"])),
-    "do": ("1 3 :i {i i 2 == {break} if} do 9", ok(1, 2, 9, trace=["1", "3", ":i", "{i i 2 == {break} if}", "do", "9"])),
-    "dolist": ("[1 2 3] :x {x x 2 == {break} if} dolist 9", ok(1, 2, 9, trace=["[1 2 3]", ":x", "{x x 2 == {break} if}", "dolist", "9"])),
+    "loop": ("{break} loop 9", ok(9, trace=["break"])),
+    "while": ("{true} {break} while 9", ok(9, trace=["break"])),
+    "times": ("0 {1 + break} 3 times 9", ok(1, 9, trace=[1, "+", "break"])),
+    "do": ("1 3 :i {i i 2 == {break} if} do 9", ok(1, 2, 9, trace=["break"])),
+    "dolist": ("[1 2 3] :x {x x 2 == {break} if} dolist 9", ok(1, 2, 9, trace=["break"])),
 }
 
 
@@ -125,7 +127,7 @@ def test_a_break_inside_a_wrapped_loop_word_ends_that_loop(word):
     stacker = Stacker()
     wrap(stacker, "priority", word)
     assert outcome(program, stacker) == expected
-    assert outcome(program)[:2] == expected[:2]  # (the built-in's trace may be the innermost block's: not compared)
+    assert outcome(program) == expected  # the built-in leaves the same
 
 
 WRAPPED_ERRORS = {
@@ -146,7 +148,24 @@ def test_an_error_inside_a_wrapped_control_word_keeps_its_kind_message_and_trace
     stacker = Stacker()
     wrap(stacker, "priority", word)
     assert outcome(program, stacker) == expected
-    assert outcome(program)[:2] == expected[:2]  # (the built-in's trace may be the innermost block's: not compared)
+    assert outcome(program) == expected  # the built-in leaves the same
+
+
+#: A value a wrapped word read for its call already (the bounds of `do`, the count of `times`) goes to the machine
+#: as it was read: a block it left is not run again, so the word refuses it as the built-in does
+WRAPPED_ONCE = {
+    "do": ("{{1 2 +}} 3 :i {i} do", fails("StackerTypeError", "`do` expects an integer, got {1 2 +}", ["{{1 2 +}}", "3", ":i", "{i}", "do"])),
+    "times": ("0 {1 +} {{2}} times", fails("StackerSyntaxError", "`times` expects a number of repetitions on top, got {2}: write `{body} n times`", ["0", "{1 +}", "{{2}}", "times"], 0)),
+}
+
+
+@pytest.mark.parametrize("word", WRAPPED_ONCE)
+def test_a_value_a_wrapped_word_read_already_is_not_read_again(word):
+    program, expected = WRAPPED_ONCE[word]
+    stacker = Stacker()
+    wrap(stacker, "priority", word)
+    assert outcome(program, stacker) == expected
+    assert outcome(program) == expected  # the built-in leaves the same
 
 
 # ---------------------------------------------------------------------------
@@ -157,12 +176,14 @@ LIMIT = 60
 TOO_DEEP = f"Maximum recursion depth ({LIMIT}) exceeded in function `f`"
 
 #: A function recursing through a control word, and the deepest call that runs under the limit: with the word
-#: built in, with the word wrapped, and with `if`, `ifelse` and `times` all wrapped. None: a tail call, any depth
+#: built in, with the word wrapped, and with `if`, `ifelse` and `times` all wrapped. None: a tail call, any depth.
+#: A wrapped word runs by the machine as the built-in does, so it counts the built-in's levels; only a tail call
+#: through it is a call like any other, since the activation that called the word's Python function stays under it
 DEPTHS = {
-    "ifelse": ("{n} {n 0 == {0} {n 1 - f} ifelse} :f defun", None, 59, 59),
-    "if": ("{n} {n 0 > {n 1 - f} if} :f defun", None, 59, 59),
-    "times": ("{n} {n 0 > {{n 1 - f} 1 times} if} :f defun", 14, 29, 59),
-    "eval": ("{n} {n 0 > {{n 1 - f} eval} if} :f defun", None, 29, 29),
+    "ifelse": ("{n} {n 0 == {0} {n 1 - f} ifelse} :f defun", None, 29, 29),
+    "if": ("{n} {n 0 > {n 1 - f} if} :f defun", None, 29, 29),
+    "times": ("{n} {n 0 > {{n 1 - f} 1 times} if} :f defun", 14, 14, 14),
+    "eval": ("{n} {n 0 > {{n 1 - f} eval} if} :f defun", None, 19, 19),
 }
 
 
@@ -256,7 +277,7 @@ def test_a_word_without_a_function_runs_its_handler_whatever_is_registered_under
     stacker = Stacker()
     stacker.register_operator(word, lambda *taken: taken[-1].append("mine"), 1, False, "mine")
     assert outcome(program, stacker) == expected
-    assert outcome(program)[:2] == expected[:2]  # (the built-in's trace may be the innermost block's: not compared)
+    assert outcome(program) == expected  # the built-in leaves the same
 
 
 # ---------------------------------------------------------------------------

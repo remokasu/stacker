@@ -519,7 +519,7 @@ def _host_depth_error(name: str, error: RecursionError) -> StackerRecursionError
     return replacement
 
 
-def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, trace: bool = True, trusted: compiler.Unit | None = None) -> None:
+def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, trace: bool = True, trusted: compiler.Unit | None = None, word: str | None = None) -> None:
     """Runs ``tokens`` on ``stack`` in ``core``'s scope, to their end.
 
     The one way Stacker code is run. The interpreter's ``_evaluate`` calls
@@ -534,8 +534,11 @@ def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, t
         core: The core whose scope, tables and trace the tokens run with.
         tokens: The tokens (a block's ``TokenList``, or a list built for the occasion).
         stack: The stack to run on.
-        trace: Whether ``core.trace`` becomes ``tokens`` first.
-        trusted: A unit of ``tokens`` that ran them to their end just before, for a loop running them again.
+        trace: Whether ``core.trace`` becomes ``tokens`` first (not read when ``word`` is given).
+        trusted: A unit of ``tokens`` that ran them to their end just before, for a loop running them again
+            (not read when ``word`` is given).
+        word: One of the machine's own words to run once on ``stack`` instead of ``tokens`` (the bridge a control
+            word's Python function crosses when it is called from Python: ``StackerCore._run_built_in``).
 
     Raises:
         BreakException: A `break` with no loop around it inside these tokens.
@@ -566,7 +569,21 @@ def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, t
     sfunctions = core.sfunctions
     plugins = core.plugins
     try:
-        _enter_code(frame, tokens, trusted, trace)
+        if word is None:
+            _enter_code(frame, tokens, trusted, trace)
+        else:
+            # nothing of its own to walk: the word's activation runs, and when it ends this one is over
+            # (``epoch`` stays unset, read only while ``resolved`` is true; the entry passed is the one
+            # registered under the word, which these words' handlers do not read)
+            frame.tokens = tokens
+            frame.entries = []
+            frame.resolved = False
+            frame.unit = None
+            frame.it = iter(())
+            child = _MACHINE_WORDS[word](frame, word, manager.dispatch_table[word][1], stack)
+            if child is None:
+                return
+            frame = child
         while True:
             # ``frame`` is always the activation whose code or continuation is running, so an error raised
             # below is taken down from it
@@ -1358,7 +1375,7 @@ def _push_call(frame: Frame, word: str | None, name: str, body: StackerCore, par
 
 
 def _push_code(frame: Frame, word: str | None, code: object, stack: stack_data[object], tail: Frame | None = None) -> Frame | None:
-    """Runs ``code`` on ``stack`` as `eval` and every word that runs a block do (``_run_block``).
+    """Runs ``code`` on ``stack`` as `eval` and every word that runs a block do.
 
     A block is pushed as an activation, a lambda is called with its
     arguments from ``stack``, a symbol is run as its name, and any other
@@ -1385,7 +1402,7 @@ def _push_code(frame: Frame, word: str | None, code: object, stack: stack_data[o
 
 
 def _call_lambda(frame: Frame, word: str | None, fn: StackerLambda, stack: stack_data[object], tail: Frame | None = None) -> Frame:
-    """Calls the lambda ``fn`` with arguments popped from ``stack`` (``_call_lambda``); every value its body leaves is pushed there.
+    """Calls the lambda ``fn`` with arguments popped from ``stack``; every value its body leaves is pushed there.
 
     Args:
         frame: The activation running the word.
@@ -1717,7 +1734,7 @@ def _macroexpand(frame: Frame, name: str, entry: dict, stack: stack_data[object]
 
 
 def _expand(frame: Frame, name: str, stack: stack_data[object], evaluate: bool) -> Frame:
-    """Starts the expansion of the macro ``name`` called from ``frame`` (``StackerCore._expand_macro``).
+    """Starts the expansion of the macro ``name`` called from ``frame``.
 
     The body runs on a throwaway core, in a child scope of the caller's
     where the arguments are bound and assignments stay local, with its own

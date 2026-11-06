@@ -1,10 +1,19 @@
+"""The loop words' Python entries: `loop`, `times`, `do`, `while` and `dolist`.
+
+Each entry puts its arguments back on the stack and hands the word to the
+machine, which holds the one implementation; a wrapper registered over a
+word, or a subclass, reaches it here. The checks the machine shares with a
+compiled loop (the count of `times`, the bounds of `do`, the body's scope)
+are written here too.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from stacker.data_type import Symbol
-from stacker.error import BreakException, StackerSyntaxError, StackerTypeError
-from stacker.lang import generation
+from stacker.engine import core as _core
+from stacker.error import StackerSyntaxError, StackerTypeError
 from stacker.lang.arguments import integer_argument
 from stacker.lang.scope import ScopedVariables
 from stacker.lang.text import plain_text
@@ -22,11 +31,10 @@ def _body_scope(word: str, block: object, parent: StackerCore) -> ScopedVariable
 
 
 def _loop(body: object, parent: StackerCore, stack: stack_data[object]) -> None:
-    """Evaluates ``body`` on ``stack`` forever until ``break`` is raised.
+    """Runs ``body`` on ``stack`` again and again until a ``break``.
 
-    This is the single looping primitive every other loop can be built on.
-    Each iteration runs the body in its own scope; no Python recursion
-    accumulates across iterations, so the recursion guard is unaffected.
+    The loop is the machine's: this function puts the body back and hands
+    the word over, like every entry in this module.
 
     Args:
         body: Code block to repeat.
@@ -37,14 +45,8 @@ def _loop(body: object, parent: StackerCore, stack: stack_data[object]) -> None:
         StackerSyntaxError: If ``body`` is not a code block (a bare value
             would otherwise be pushed forever).
     """
-    if not isinstance(body, type(parent)):
-        raise StackerSyntaxError(f"`loop` expects a code block, got {body}")
-    trusted = None  # (the body's unit, once an iteration ran it to its end: see stacker.engine.inline)
-    while True:
-        try:
-            trusted = parent._run_block(body, stack, trusted)
-        except BreakException:
-            break
+    stack.append(body)
+    parent._run_built_in("loop", stack)
 
 
 def check_times_count(n_times: object) -> None:
@@ -74,21 +76,18 @@ def _times(
     parent: StackerCore,
     stack: stack_data[object],
 ) -> None:
-    """Executes a block of code a specified number of times.
+    """Runs ``block`` ``n_times`` times.
+
+    The count was read for this call already, so it goes back wrapped, for
+    the machine to read as it is (a block it left is not run again).
 
     Raises:
         StackerSyntaxError: If ``n_times`` is not a number, which is what
             the block and the count written the wrong way round gives.
     """
-    check_times_count(n_times)
-    count = 0
-    trusted = None
-    while count < n_times:  # a comparison, not range(): non-integer counts keep working
-        try:
-            trusted = parent._run_block(block, stack, trusted)
-        except BreakException:
-            return
-        count += 1
+    stack.append(block)
+    stack.append(_core.Taken(n_times))
+    parent._run_built_in("times", stack)
 
 
 def _do(
@@ -99,18 +98,18 @@ def _do(
     parent: StackerCore,
     stack: stack_data[object],
 ) -> None:
-    # Each iteration runs in a scope of its own holding the loop variable,
-    # a child of the body's own scope: a lambda or block kept from one
-    # iteration sees that iteration's value, and a name the body is first
-    # to set goes to the body's scope (see loop_scope)
-    values = do_range(start_value, end_value)
-    body_scope = _body_scope("do", block, parent)
-    trusted = None
-    for i in values:
-        try:
-            trusted = parent._run_bound(block, ScopedVariables.loop_scope(body_scope, {symbol: i}), stack, trusted)
-        except BreakException:
-            break
+    """Runs ``block`` once for each integer from ``start_value`` to ``end_value``, bound to ``symbol``.
+
+    The bounds were read for this call already, so they go back wrapped,
+    for the machine to read as they are (a block one left is not run
+    again). The machine makes each iteration's scope, a child of the
+    body's own holding the loop variable (see ``loop_scope``).
+    """
+    stack.append(_core.Taken(start_value))
+    stack.append(_core.Taken(end_value))
+    stack.append(Symbol(symbol))
+    stack.append(block)
+    parent._run_built_in("do", stack)
 
 
 def do_range(start_value: object, end_value: object) -> range:
@@ -140,24 +139,9 @@ def _while(
         StackerSyntaxError: If ``condition`` is not a code block (a plain
             value would test the same every time, looping for ever or never).
     """
-    if not isinstance(condition, type(parent)):
-        raise StackerSyntaxError(f"`while` expects a condition block, got {condition}")
-    # each block's unit is trusted only while the other block changed nothing in the process
-    trusted_condition = trusted_body = None
-    while True:
-        epoch = generation.epoch
-        trusted_condition = parent._run_block(condition, stack, trusted_condition)
-        if generation.epoch != epoch:
-            trusted_body = None
-        if not parent._condition_left(stack, "while"):
-            break
-        epoch = generation.epoch
-        try:
-            trusted_body = parent._run_block(body, stack, trusted_body)
-        except BreakException:
-            break
-        if generation.epoch != epoch:
-            trusted_condition = None
+    stack.append(condition)
+    stack.append(body)
+    parent._run_built_in("while", stack)
 
 
 def _dolist(
@@ -167,15 +151,16 @@ def _dolist(
     parent: StackerCore,
     stack: stack_data[object],
 ) -> None:
-    # Each iteration runs in a scope of its own holding the loop variable,
-    # a child of the body's own scope (see _do)
-    body_scope = _body_scope("dolist", block, parent)
-    trusted = None
-    for i in lst:
-        try:
-            trusted = parent._run_bound(block, ScopedVariables.loop_scope(body_scope, {symbol: i}), stack, trusted)
-        except BreakException:
-            break
+    """Runs ``block`` once for each item of ``lst``, bound to ``symbol``.
+
+    The items were read for this call already, so they go back wrapped, for
+    the machine to read as they are; the machine makes each iteration's
+    scope (see ``_do``).
+    """
+    stack.append(_core.Taken(lst))
+    stack.append(Symbol(symbol))
+    stack.append(block)
+    parent._run_built_in("dolist", stack)
 
 
 loop_operators = {
