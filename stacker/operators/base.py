@@ -4,7 +4,7 @@ import re
 
 from stacker.data_type import Symbol
 from stacker.error import StackerTypeError, symbol_as_value_message
-from stacker.lang.display import plain_text
+from stacker.lang.text import plain_text
 
 
 def _convert_to_base(word: str, value: object, base: int) -> str | int:

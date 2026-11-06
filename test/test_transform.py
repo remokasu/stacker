@@ -2,7 +2,7 @@ import unittest
 
 import pytest
 
-from stacker.lang.display import disp_default
+from stacker.lang.text import stack_text
 from stacker.stacker import Stacker
 
 
@@ -106,4 +106,4 @@ class TestStringArgumentIsData(unittest.TestCase):
 )
 def test_pairs_are_lists_not_python_tuples(expression, shown):
     # Tuples are not a Stacker type; a pair used to display as `(1, 4)`.
-    assert disp_default(list(Stacker().eval(expression))) == shown
+    assert stack_text(list(Stacker().eval(expression))) == shown

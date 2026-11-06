@@ -5,7 +5,7 @@ from __future__ import annotations
 import io
 
 from stacker.data_type import Array, String
-from stacker.lang import display
+from stacker.lang import text as lang_text
 from stacker.lang.protocols import BLOCK
 from stacker.runtime.color import COLORS
 from stacker.runtime.display import (
@@ -28,17 +28,17 @@ YELLOW, MAGENTA, LIGHT_MAGENTA, LIGHT_GREEN, DEFAULT, RESET = (
 
 def test_every_kind_has_a_color_the_terminal_knows():
     kinds = {
-        display.INT,
-        display.FLOAT,
-        display.COMPLEX,
-        display.SYMBOL,
-        display.STRING,
-        display.BOOL,
-        display.NULL,
-        display.LIST,
-        display.ARRAY,
-        display.DICT,
-        display.CALLABLE,
+        lang_text.INT,
+        lang_text.FLOAT,
+        lang_text.COMPLEX,
+        lang_text.SYMBOL,
+        lang_text.STRING,
+        lang_text.BOOL,
+        lang_text.NULL,
+        lang_text.LIST,
+        lang_text.ARRAY,
+        lang_text.DICT,
+        lang_text.CALLABLE,
         BLOCK,
     }
     assert set(PALETTE) == kinds

@@ -12,7 +12,7 @@ from stacker.error import (
     symbol_as_value_message,
 )
 from stacker.lang.arguments import byte_values, integer_argument
-from stacker.lang.display import plain_text
+from stacker.lang.text import plain_text
 
 #: The largest code point `chr` makes
 CODE_POINT_MAX = 0x10FFFF

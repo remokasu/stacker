@@ -39,9 +39,9 @@ from stacker.error import (
 from stacker.lang import console, protocols, recursion
 from stacker.lang.arguments import count_argument, integer_argument
 from stacker.lang.boundary import token_to_value, value_to_token
-from stacker.lang.display import plain_text  # display.py must not import core.py
 from stacker.lang.scope import ScopedVariables
 from stacker.lang.smacro import StackerMacro, gensym
+from stacker.lang.text import plain_text  # text.py must not import core.py
 from stacker.syntax.lexer import Identifier, ListNode, TupleNode
 from stacker.syntax.parser import Parser, parse_expression
 from stacker.syntax.token_rules import (

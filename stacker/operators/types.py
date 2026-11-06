@@ -4,8 +4,8 @@ from fractions import Fraction
 
 from stacker.data_type import Array, Symbol
 from stacker.error import StackerTypeError, symbol_as_value_message
-from stacker.lang.display import display_text, plain_text
 from stacker.lang.protocols import LAMBDA, kind_of
+from stacker.lang.text import display_text, plain_text
 
 #: The name `type` gives each kind of value, in the order the kinds are told apart
 #: (a bool before an int, an array before a list, a string literal with any string).

@@ -10,7 +10,7 @@ import pytest
 from stacker import Stacker
 from stacker.data_type import String
 from stacker.error import StackerSyntaxError, UndefinedSymbolError
-from stacker.lang.display import plain_text
+from stacker.lang.text import plain_text
 from stacker.syntax.token_rules import decode_string_token, escape_for_display
 
 QUOTES = ['"', "'", '"""', "'''"]

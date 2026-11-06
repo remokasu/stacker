@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from stacker.error import UserError, error_kind, include_location_of
-from stacker.lang.display import plain_text
+from stacker.lang.text import plain_text
 from stacker.runtime.display import disp_stack
 from stacker.runtime.error_formatter import ErrorFormatter
 from stacker.stacker import Stacker

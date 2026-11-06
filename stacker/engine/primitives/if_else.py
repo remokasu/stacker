@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from stacker.data_type import Symbol
 from stacker.error import StackerTypeError, UserError, error_kind
-from stacker.lang.display import plain_text
+from stacker.lang.text import plain_text
 
 if TYPE_CHECKING:
     from stacker.data_type import stack_data

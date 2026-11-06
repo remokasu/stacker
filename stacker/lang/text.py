@@ -197,7 +197,7 @@ def display_text(value: object) -> str:
     return value if isinstance(value, str) else plain_text(value)
 
 
-def disp_default(stack_list: list[object]) -> str:
+def stack_text(stack_list: list[object]) -> str:
     """Formats the stack without colors: items space-separated inside brackets.
 
     Built item by item rather than from ``str(list)`` with the commas

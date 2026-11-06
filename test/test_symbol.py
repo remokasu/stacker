@@ -243,15 +243,15 @@ class TestSymbolInComputation:
 
 class TestDisplay:
     def test_symbols_are_bare_and_strings_quoted(self):
-        from stacker.lang.display import disp_default
+        from stacker.lang.text import stack_text
 
-        assert disp_default([Symbol("x"), "ab", String("ab")]) == "[x 'ab' 'ab']"
+        assert stack_text([Symbol("x"), "ab", String("ab")]) == "[x 'ab' 'ab']"
 
     def test_computed_strings_are_quoted(self):
-        from stacker.lang.display import disp_default
+        from stacker.lang.text import stack_text
 
-        assert disp_default(run('"a" "b" +')) == "['ab']"
-        assert disp_default(run('"hello" :s = s')) == "['hello']"
+        assert stack_text(run('"a" "b" +')) == "['ab']"
+        assert stack_text(run('"hello" :s = s')) == "['hello']"
 
     def test_block_tokens_are_shown_as_written(self):
         (block,) = run("{foo}")

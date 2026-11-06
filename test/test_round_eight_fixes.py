@@ -9,7 +9,7 @@ import pytest
 
 from stacker import Stacker
 from stacker.error import StackerRuntimeError, StackerTypeError
-from stacker.lang.display import plain_text
+from stacker.lang.text import plain_text
 
 
 def run(program: str) -> list[object]:

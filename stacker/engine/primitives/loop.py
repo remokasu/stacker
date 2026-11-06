@@ -6,8 +6,8 @@ from stacker.data_type import Symbol
 from stacker.error import BreakException, StackerSyntaxError, StackerTypeError
 from stacker.lang import generation
 from stacker.lang.arguments import integer_argument
-from stacker.lang.display import plain_text
 from stacker.lang.scope import ScopedVariables
+from stacker.lang.text import plain_text
 
 if TYPE_CHECKING:
     from stacker.data_type import stack_data

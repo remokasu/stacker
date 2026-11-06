@@ -9,7 +9,7 @@ from typing import Callable
 from stacker.data_type import Symbol
 from stacker.error import StackerTypeError, ValidationError, symbol_as_value_message
 from stacker.lang.arguments import integer_argument
-from stacker.lang.display import plain_text
+from stacker.lang.text import plain_text
 from stacker.operators.arith import checked_binary
 
 

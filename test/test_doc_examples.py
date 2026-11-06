@@ -35,7 +35,7 @@ from pathlib import Path
 import pytest
 
 from stacker.constant import constants
-from stacker.lang.display import disp_default
+from stacker.lang.text import stack_text
 from stacker.stacker import Stacker
 from stacker.syntax.lexer import analyze_terminals
 from stacker.syntax.token_rules import KEYWORD_LITERALS, REPL_COMMAND_NAMES
@@ -187,7 +187,7 @@ def test_repl_transcript(steps: list[Step]) -> None:
         with redirect_stdout(buffer):
             stacker.process_expression(step.expression)
         if step.expected_stack is not None:
-            shown = disp_default(list(stacker.stack))
+            shown = stack_text(list(stacker.stack))
             assert shown == step.expected_stack, (
                 f"{step.where}: `{step.expression}` displays {shown}"
             )

@@ -9,7 +9,7 @@ import pytest
 from stacker import Stacker
 from stacker.data_type import Symbol
 from stacker.lang import protocols
-from stacker.lang.display import pieces, plain_text
+from stacker.lang.text import pieces, plain_text
 
 
 def _block_and_lambda() -> tuple[object, object]:

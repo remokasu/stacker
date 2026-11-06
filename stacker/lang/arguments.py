@@ -6,7 +6,7 @@ import operator
 
 from stacker.data_type import Symbol
 from stacker.error import StackerTypeError, ValidationError, symbol_as_value_message
-from stacker.lang.display import plain_text
+from stacker.lang.text import plain_text
 
 
 def integer_argument(word: str, value: object) -> int:

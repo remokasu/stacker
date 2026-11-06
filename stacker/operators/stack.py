@@ -16,7 +16,7 @@ from stacker.error import (
 )
 from stacker.lang import console
 from stacker.lang.arguments import count_argument, integer_argument
-from stacker.lang.display import disp_default
+from stacker.lang.text import stack_text
 
 """
 Stack manipulation functions.
@@ -309,7 +309,7 @@ def _disp(stack: deque | list) -> None:
     """
     Prints the stack.
     """
-    print(disp_default(list(stack)), file=console.stdout())
+    print(stack_text(list(stack)), file=console.stdout())
 
 
 stack_operators = {

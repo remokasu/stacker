@@ -9,7 +9,7 @@ import re
 import unittest
 
 from stacker.data_type import String
-from stacker.lang.display import disp_default
+from stacker.lang.text import stack_text
 from stacker.runtime.display import disp_colored
 from stacker.stacker import Stacker
 
@@ -39,16 +39,16 @@ class TestDispColored(unittest.TestCase):
 
 class TestDispDefault(unittest.TestCase):
     def test_items_are_space_separated(self):
-        self.assertEqual(disp_default([3, 4]), "[3 4]")
+        self.assertEqual(stack_text([3, 4]), "[3 4]")
 
     def test_commas_inside_strings_are_kept(self):
-        self.assertEqual(disp_default([String("Hello, World!")]), "['Hello, World!']")
+        self.assertEqual(stack_text([String("Hello, World!")]), "['Hello, World!']")
 
     def test_nested_lists_and_bools_match_the_colored_display(self):
-        self.assertEqual(disp_default([[1, 2], True, 1.5]), "[[1 2] true 1.5]")
+        self.assertEqual(stack_text([[1, 2], True, 1.5]), "[[1 2] true 1.5]")
 
     def test_empty_stack(self):
-        self.assertEqual(disp_default([]), "[]")
+        self.assertEqual(stack_text([]), "[]")
 
     def test_colored_list_keeps_commas_inside_strings(self):
         shown = ANSI.sub("", disp_colored([[1, String("b, c"), True]]))
@@ -57,7 +57,7 @@ class TestDispDefault(unittest.TestCase):
     def test_plain_and_colored_agree_on_every_item_kind(self):
         block = Stacker().eval("{1 2 +}", stack=None).pop()
         items = [1, 1.5, 1 + 2j, True, String("a, b"), "sym", [1, [2, String("c, d")]], block, len]
-        self.assertEqual(ANSI.sub("", disp_colored(items)), disp_default(items))
+        self.assertEqual(ANSI.sub("", disp_colored(items)), stack_text(items))
 
 
 class TestValuesSplicedIntoBlocks(unittest.TestCase):
@@ -85,14 +85,14 @@ class TestNullDisplay(unittest.TestCase):
     """`null` is shown as written, like `true` and `false`, not as Python's None."""
 
     def test_null_on_the_stack(self):
-        self.assertEqual(disp_default(list(Stacker().eval("true false null"))), "[true false null]")
+        self.assertEqual(stack_text(list(Stacker().eval("true false null"))), "[true false null]")
 
     def test_null_inside_a_list(self):
-        self.assertEqual(disp_default(list(Stacker().eval("[null 1]"))), "[[null 1]]")
+        self.assertEqual(stack_text(list(Stacker().eval("[null 1]"))), "[[null 1]]")
 
     def test_colored_display_agrees(self):
         items = list(Stacker().eval("null"))
-        self.assertEqual(ANSI.sub("", disp_colored(items)), disp_default(items))
+        self.assertEqual(ANSI.sub("", disp_colored(items)), stack_text(items))
 
 
 if __name__ == "__main__":

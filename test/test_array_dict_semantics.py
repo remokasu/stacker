@@ -4,7 +4,7 @@ import pytest
 
 from stacker import Stacker
 from stacker.error import StackerRuntimeError, StackerTypeError
-from stacker.lang.display import plain_text
+from stacker.lang.text import plain_text
 
 
 def run(*lines: str) -> list[object]:
@@ -141,7 +141,7 @@ class TestReviewFindings:
             run("1000000000000000000000 0 array-of")
 
     def test_the_display_state_is_restored_after_an_error_inside(self):
-        from stacker.lang import display as disp
+        from stacker.lang import text as disp
 
         class Bad:
             def __str__(self):
@@ -155,7 +155,7 @@ class TestReviewFindings:
 
 
 def test_an_empty_dictionary_is_shown_apart_from_an_empty_block():
-    from stacker.lang.display import plain_text
+    from stacker.lang.text import plain_text
 
     assert plain_text({}) == "{:}"
     assert plain_text({"k": 1}) == "{'k' 1}"

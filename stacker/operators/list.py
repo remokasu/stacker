@@ -7,7 +7,7 @@ from stacker.error import (
     symbol_as_value_message,
 )
 from stacker.lang.arguments import integer_argument
-from stacker.lang.display import plain_text
+from stacker.lang.text import plain_text
 
 
 def _sequence(word: str, xs: object) -> object:
