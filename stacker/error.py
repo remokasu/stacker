@@ -276,12 +276,15 @@ class StackerTypeError(StackerError, TypeError):
 
 
 class StackerRecursionError(StackerError):
-    """Raised when Stacker-level function recursion exceeds the limit.
+    """Raised when a Stacker recursion is stopped by name.
 
-    Raised by the process-wide recursion guard (lang/recursion.py) at
-    the entry of StackerFunction/StackerLambda calls, before the Python
-    C stack is at risk. The limit counts Stacker recursion levels and
-    can be changed with the --recursion-limit CLI flag.
+    Either the recursion went deeper than the limit, or, with ``depth``
+    set, the host's own call depth ran out first.
+
+    The limit counts the activations on the machine's return stack (see
+    stacker.lang.recursion) and can be changed with the --recursion-limit
+    flag. It stops a recursion that never returns before it fills the
+    memory.
     """
 
     def __init__(self, name: str, limit: int, kind: str = "function", depth: int | None = None) -> None:

@@ -1,9 +1,24 @@
-"""Process-wide recursion guard for Stacker function calls.
+"""Process-wide depth guard for Stacker recursion.
 
-The real resource being guarded is the process's C stack, which is shared
-by every Stacker instance (including child interpreters created by
-``include``), so both the depth counter and the limit live at module
-level rather than per instance.
+The machine keeps its own return stack, so a Stacker recursion does not
+by itself cost the host any call depth: an activation (a call, a block
+run by a word, a loop's body, a macro's expansion ...) is an entry on
+that stack. The limit bounds the memory those entries take, and what it
+buys is the named error: a recursion that never returns is stopped
+quickly, as a StackerRecursionError naming the word, instead of growing
+until the process has no memory left. ``--recursion-limit 0`` takes the
+ceiling away, and only memory then bounds a recursion that stays inside
+the machine.
+
+The depth and the limit live at module level rather than per instance
+because one process runs every Stacker instance (including child
+interpreters created by ``include``), and that memory is shared.
+
+The host's own call depth is spent only where a Python function runs
+Stacker code (a wrapper registered over a word, a function called from
+Python). The command line sets that depth to HOST_RECURSION_LIMIT, and
+a recursion that runs out of it is reported as a StackerRecursionError
+too, with the depth it reached.
 
 ``enter``/``leave`` are plain functions instead of a context manager on
 purpose: they sit on the function-call hot path (recursive workloads call
@@ -25,13 +40,6 @@ from __future__ import annotations
 import sys
 
 from stacker.error import StackerRecursionError
-
-# The machine keeps its own return stack, so a Stacker recursion costs the
-# host no call depth: the depth counted here is the number of activations
-# on the way (a call, a block run by a word, a loop's body, a macro's
-# expansion ...), the machine's return stack, and the limit stops it by name. The host's own limit matters only where a
-# Python word runs Stacker code, and the command line sets it to
-# HOST_RECURSION_LIMIT.
 
 #: Default maximum depth of the machine's return stack; overridable per run with --recursion-limit
 DEFAULT_RECURSION_LIMIT = 100_000
