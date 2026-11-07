@@ -150,10 +150,12 @@ REGULAR = "regular"
 _PRIORITY = "priority"
 #: The words that bind a variable from a symbol and a value (a cheap sieve before the handler is compared)
 _SET_WORDS = frozenset({"set", "="})
-#: The types a FAST step takes from the stack itself: those ``_pop_arg`` hands to a word unchanged, and a String,
-#: which it hands as the ``str`` it holds (the machine unwraps it the same way). A value of another type goes
-#: through the word runner: a block is evaluated there, a Symbol reported, a lambda refused
-_DIRECT = frozenset({int, float, bool, complex, str, list, tuple, dict, type(None), Array, String})
+#: The types ``_pop_arg`` hands to a word unchanged: a FAST step takes them from the stack itself. A value of another
+#: type goes through the word runner: a block is evaluated there, a Symbol reported, a lambda refused...
+_PLAIN = frozenset({int, float, bool, complex, str, list, tuple, dict, type(None), Array})
+#: ...except a String, which ``_pop_arg`` hands as the ``str`` it holds: a FAST step takes it too, unwrapped the same
+#: way, on a path of its own, so that the plain values pay nothing for it
+_DIRECT = _PLAIN | {String}
 
 
 def _handler_of(kind: str) -> object:
