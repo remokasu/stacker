@@ -64,7 +64,6 @@ from stacker.engine.compiler import (
     NAME,
     SET,
     TIMES,
-    UNDEF,
     VAR,
     WHILE,
     WORD,
@@ -132,23 +131,23 @@ DEFINE_M = "{} {{100 +}} :m defmacro"
 
 WRITERS = [
     Writer("defun", given="5", use="f", change=DEFINE_F, word="f",
-           before=undefined("f", 5), after=ok(105), resolved=(UNDEF, CALL), rewrites=True),
+           before=undefined("f", 5), after=ok(105), resolved=(VAR, CALL), rewrites=True),
     Writer("defun-over-a-function", given="5", setup="{x} {x 1 +} :f defun", use="f", change=DEFINE_F, word="f",
            before=ok(6), after=ok(105), resolved=(CALL, CALL), rewrites=True),
     Writer("defmacro", given="5", use="m", change=DEFINE_M, word="m",
-           before=undefined("m", 5), after=ok(105), resolved=(UNDEF, MACRO), rewrites=True),
+           before=undefined("m", 5), after=ok(105), resolved=(VAR, MACRO), rewrites=True),
     Writer("defmacro-over-a-variable", given="5", setup="7 :m set", use="m", change=DEFINE_M, word="m",
            before=ok(5, 7), after=ok(105), resolved=(VAR, MACRO), rewrites=True),
     Writer("defmacro-over-a-function", given="5", setup="{x} {x 1 +} :m defun", use="m", change=DEFINE_M, word="m",
            before=ok(6), after=ok(105), resolved=(CALL, MACRO), rewrites=True),
     Writer("alias", given="5", use="inc", change="{100 +} {inc} alias", word="inc",
-           before=undefined("inc", 5), after=ok(105), resolved=(UNDEF, MACRO), rewrites=True),
+           before=undefined("inc", 5), after=ok(105), resolved=(VAR, MACRO), rewrites=True),
     Writer("register_sfunction", given="5", use="hf", change="reg-hf", word="hf",
-           before=undefined("hf", 5), after=ok(105), resolved=(UNDEF, WORD), rewrites=True),
+           before=undefined("hf", 5), after=ok(105), resolved=(VAR, WORD), rewrites=True),
     Writer("register_plugin", given="5", use="pw", change="reg-pw", word="pw",
-           before=undefined("pw", 5), after=ok(105), resolved=(UNDEF, WORD), rewrites=True),
+           before=undefined("pw", 5), after=ok(105), resolved=(VAR, WORD), rewrites=True),
     Writer("register_macro", given="5", use="hm", change="reg-hm", word="hm",
-           before=undefined("hm", 5), after=ok(105), resolved=(UNDEF, MACRO), rewrites=True),
+           before=undefined("hm", 5), after=ok(105), resolved=(VAR, MACRO), rewrites=True),
     Writer("register_plugin-over-a-plugin", given="3", use="triple", change="redefine-triple", word="triple",
            before=ok(9), after=ok(30), resolved=(WORD, WORD), rewrites=True),
     Writer("defun-over-a-plugin", given="3", use="triple", change="{x} {x 100 +} :triple defun", word="triple",
@@ -158,9 +157,9 @@ WRITERS = [
     Writer("register_operator", given="7", use="dup", change="redefine-dup", word="dup",
            before=ok(7, 7), after=ok(7, 100), resolved=(WORD, WORD), rewrites=True),
     Writer("disable_plugin", given="3", use="triple", change='"triple" disable_plugin', word="triple",
-           before=ok(9), after=undefined("triple", 3), resolved=(WORD, UNDEF), rewrites=False),
+           before=ok(9), after=undefined("triple", 3), resolved=(WORD, VAR), rewrites=False),
     Writer("disable_all_plugins", given="3", use="triple", change="disable_all_plugins", word="triple",
-           before=ok(9), after=undefined("triple", 3), resolved=(WORD, UNDEF), rewrites=False),
+           before=ok(9), after=undefined("triple", 3), resolved=(WORD, VAR), rewrites=False),
 ]
 REWRITERS = [writer for writer in WRITERS if writer.rewrites]
 every_writer = pytest.mark.parametrize("writer", WRITERS, ids=lambda writer: writer.id)
@@ -355,20 +354,34 @@ def test_a_local_a_function_sets_under_the_name_of_a_word_drops_its_body_on_ever
 def test_a_variable_that_defines_an_undefined_name_between_two_runs_is_read_by_the_next_run(twin):
     blk = twin.block("{nosuch}")
     assert twin.run("blk eval") == undefined("nosuch")
-    assert resolved_as(blk._unit, "nosuch") == UNDEF
+    unit = blk._unit
+    assert resolved_as(unit, "nosuch") == VAR  # (defined nowhere: read as a variable, looked up when none is found)
 
     twin.run("5 :nosuch set")
     assert twin.run("blk eval") == ok(5)
-    assert_rewarmed(blk)
+    assert_kept(blk, unit)  # (a variable the unit reads may come and go: nothing to check on entry)
     assert twin.run("blk eval") == ok(5)
-    assert resolved_as(blk._unit, "nosuch") == VAR
 
 
 def test_a_variable_that_defines_an_undefined_name_inside_the_run_is_read_by_the_rest_of_it(twin):
     blk = twin.block("{5 :nosuch set nosuch}")
-    assert twin.run("blk eval") == ok(5)
-    assert resolved_as(twin.units(blk)[0], "nosuch") == UNDEF
-    assert_dropped(blk)
+    for _ in range(2):
+        assert twin.run("blk eval") == ok(5)
+    unit = twin.units(blk)[0]
+    assert resolved_as(unit, "nosuch") == VAR
+    assert_kept(blk, unit)  # (the name was taken for a variable, so binding it drops nothing)
+
+
+def test_a_function_that_binds_a_fresh_local_and_reads_it_keeps_its_unit_from_call_to_call(twin):
+    """Every call binds the local in a scope of its own, so it is defined nowhere when the body compiles."""
+    twin.run("{x} {x :y set y 1 +} :f defun")
+    body = twin.body("f")
+    for call in range(1, 5):
+        assert twin.run(f"{call} f") == ok(call + 1)
+    unit = assert_compiled(body)
+    assert resolved_as(unit, "y") == VAR
+    assert_kept(body, unit)
+    assert len(twin.units(body)) == 1
 
 
 def test_a_variable_named_like_a_literal_a_block_spells_as_a_name_hides_the_literal(twin):
@@ -730,11 +743,12 @@ def test_a_regular_word_runs_as_the_interpreter_does_whatever_its_arguments_are(
 
 #: (program, the kinds its block compiles to on the first run, the kinds on the second): a symbol and `set` fuse
 #: into SET, which must bind, refuse and fail as `set` does, and leave the same stack when it fails. A name the
-#: set makes is undefined, or a word, when the block is first compiled; the binding drops that unit (the step
-#: after it took the name for something else), and the second run compiles the block with the variable
+#: set makes is a word when the block is first compiled; the binding drops that unit (the step after it took the
+#: name for the word), and the second run compiles the block with the variable. A name defined nowhere is read
+#: as a variable from the first compilation on, so binding it drops nothing
 SET_PROGRAMS = [
-    pytest.param("5 :x set x", [CONST, SET, UNDEF], [CONST, SET, VAR], id="binds-and-reads-back"),
-    pytest.param("5 :x = x", [CONST, SET, UNDEF], [CONST, SET, VAR], id="the-equals-spelling"),
+    pytest.param("5 :x set x", [CONST, SET, VAR], [CONST, SET, VAR], id="binds-and-reads-back"),
+    pytest.param("5 :x = x", [CONST, SET, VAR], [CONST, SET, VAR], id="the-equals-spelling"),
     pytest.param("5 :true set", [CONST, SET], [CONST, SET], id="a-literal-as-the-name"),
     pytest.param("5 :help set", [CONST, SET], [CONST, SET], id="a-repl-command-as-the-name"),
     pytest.param(":x set", [SET], [SET], id="no-value-to-take"),
@@ -748,16 +762,16 @@ SET_PROGRAMS = [
         id="set-itself-hidden-mid-block",
     ),
     pytest.param('5 "x" set', [CONST, CONST, WORD], [CONST, CONST, WORD], id="a-string-is-not-a-name"),
-    pytest.param("5 {x} set x", [CONST, BLOCK, WORD, UNDEF], [CONST, BLOCK, WORD, VAR], id="a-quoted-name-is-read-by-the-word"),
+    pytest.param("5 {x} set x", [CONST, BLOCK, WORD, VAR], [CONST, BLOCK, WORD, VAR], id="a-quoted-name-is-read-by-the-word"),
     pytest.param(
         "[] :items set 1 :items get", [LIST, SET, CONST, CONST, WORD], [LIST, SET, CONST, CONST, WORD],
         id="a-list-bound-and-indexed",
     ),
-    pytest.param("{1 2} :b set b", [BLOCK, SET, UNDEF], [BLOCK, SET, VAR], id="a-block-as-the-value-stays-a-block"),
-    pytest.param('"s" :s set s', [CONST, SET, UNDEF], [CONST, SET, VAR], id="a-string-as-the-value"),
-    pytest.param(":a :b set b", [CONST, SET, UNDEF], [CONST, SET, VAR], id="a-symbol-as-the-value"),
+    pytest.param("{1 2} :b set b", [BLOCK, SET, VAR], [BLOCK, SET, VAR], id="a-block-as-the-value-stays-a-block"),
+    pytest.param('"s" :s set s', [CONST, SET, VAR], [CONST, SET, VAR], id="a-string-as-the-value"),
+    pytest.param(":a :b set b", [CONST, SET, VAR], [CONST, SET, VAR], id="a-symbol-as-the-value"),
     pytest.param(
-        "0 :outer set 1 2 :i {i :outer set} do outer", [CONST, SET, CONST, CONST, CONST, DO, UNDEF],
+        "0 :outer set 1 2 :i {i :outer set} do outer", [CONST, SET, CONST, CONST, CONST, DO, VAR],
         [CONST, SET, CONST, CONST, CONST, DO, VAR], id="an-outer-variable-updated-from-a-loop",
     ),
 ]
@@ -841,7 +855,7 @@ CONTROL_PROGRAMS = [
     pytest.param("{1} {2} times", [BLOCK, BLOCK, WORD], id="times-with-a-block-count-is-not-inlined"),
     pytest.param("{1} {} times", [BLOCK, BLOCK, WORD], id="times-with-an-empty-block-count"),
     pytest.param("{1} depth times", [BLOCK, WORD, WORD], id="times-with-a-word-between-is-not-inlined"),
-    pytest.param("{1} nosuch times", [BLOCK, UNDEF, WORD], id="times-with-an-undefined-count"),
+    pytest.param("{1} nosuch times", [TIMES], id="times-with-an-undefined-count-is-inlined-as-with-a-variable"),
     pytest.param("{break 1} 3 times", [TIMES], id="times-with-a-break"),
     pytest.param("{foo} 2 times", [TIMES], id="times-whose-body-fails"),
     pytest.param("1 2 :k {k {k} :j {j} do} do", [CONST, CONST, CONST, DO], id="nested-do"),
@@ -1041,8 +1055,8 @@ def test_a_macro_registered_under_such_a_token_after_the_unit_was_made_takes_the
 
 #: (the step's text, its kind, the error it raises). A step that cannot run raises at its own position
 FAILING_STEPS = [
-    pytest.param("nosuch", UNDEF, ("UndefinedSymbolError", "`nosuch` is not defined."), id="an-undefined-name"),
-    pytest.param("help", UNDEF, REPL_COMMAND, id="a-repl-command"),
+    pytest.param("nosuch", VAR, ("UndefinedSymbolError", "`nosuch` is not defined."), id="an-undefined-name"),
+    pytest.param("help", VAR, REPL_COMMAND, id="a-repl-command"),
     pytest.param(":", BAD, COLON_ALONE, id="a-colon-alone"),
     pytest.param(":1", BAD, COLON_AND_NUMBER, id="a-colon-and-a-number"),
     pytest.param("$x", BAD, DOLLAR_NAME, id="a-dollar-name"),
@@ -1196,13 +1210,13 @@ def test_a_call_that_redefines_its_function_between_two_calls_of_it_finishes_as_
 
 
 def test_the_rest_of_every_call_running_a_unit_is_run_with_the_words_a_call_below_it_defined(twin):
-    """f(2) defines `g`, which every call above it uses after its recursive call; the unit took `g` for undefined."""
+    """f(2) defines `g`, which every call above it uses after its recursive call; the unit read `g` as a variable."""
     twin.run("{n} {n 0 <= {0} {n 2 == {{x} {x 100 +} :g defun} if n 1 - f n g +} ifelse} :f defun")
     recursive_branch = [token.tokens for token in twin.body("f") if isinstance(token, StackerCore)][1]
 
     assert twin.run("4 f") == ok(101 + 102 + 103 + 104)
     stale, anew, *_ = twin.units(recursive_branch)
-    assert resolved_as(stale, "g") == UNDEF
+    assert resolved_as(stale, "g") == VAR
     assert resolved_as(anew, "g") == CALL  # (a call made after the drop compiled the branch anew)
     assert recursive_branch._unit is not stale
     assert recursive_branch._drops == 1
@@ -1323,7 +1337,7 @@ def test_the_twin_fails_when_the_compiling_interpreter_leaves_something_else(twi
 
 
 def test_a_stale_unit_that_runs_anyway_is_seen_by_the_twin(twin, monkeypatch):
-    """The guard at the start of a unit is blinded, and the block meets a function defined after it was compiled."""
+    """The guard at the start of a unit is blinded, and the block meets a function redefined after it was compiled."""
     admit = machine._admit
 
     def blind(frame, tokens, unit, admitted):
@@ -1331,8 +1345,9 @@ def test_a_stale_unit_that_runs_anyway_is_seen_by_the_twin(twin, monkeypatch):
         unit.not_variables = frozenset()  # and that a variable may hide a word
         return admit(frame, tokens, unit, admitted)
 
+    twin.run("{x} {x 1 +} :f defun")
     blk = twin.block("{5 f}")
-    twin.run("blk eval")  # (`f` is undefined: the unit took it for that)
+    twin.run("blk eval")  # (the unit took `f` for the function it was then)
     twin.run(DEFINE_F)
     monkeypatch.setattr(machine, "_admit", blind)
     with pytest.raises(AssertionError, match="compiled"):  # (in the eager state the unit's own check says it first)

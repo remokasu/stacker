@@ -95,7 +95,6 @@ from stacker.engine.compiler import (
     RESOLVED,
     SET,
     TIMES,
-    UNDEF,
     VAR,
     WORD,
 )
@@ -826,8 +825,6 @@ def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, t
                                     frame.index = index
                                     child = _expand(frame, name, stack, True)
                                     break
-                                elif kind == UNDEF:
-                                    raise _core._name_not_found(name)
                                 elif kind == BAD:
                                     raise StackerSyntaxError(value)
                                 elif kind == BAD_LIST:

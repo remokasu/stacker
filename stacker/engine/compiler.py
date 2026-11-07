@@ -101,7 +101,7 @@ BAD_LIST = "BAD_LIST"  # a list literal whose template failed to build: build it
 BLOCK = "BLOCK"  # push the block literal (the token itself) bound to the scope the block runs in
 BAD = "BAD"  # a token that does not parse: raise its message here
 MACRO = "MACRO"  # expand the macro of that name
-VAR = "VAR"  # push the variable of that name (or, gone, look the name up the general way)
+VAR = "VAR"  # push the variable of that name (or, gone or not yet made, look the name up the general way)
 WORD = "WORD"  # run the built-in word, function or plugin of that name, looked up once
 CALL = "CALL"  # call the function of that name (a word whose entry holds a function written in Stacker)
 FAST1 = "FAST1"  # run the regular word of one argument directly when the argument is a plain value
@@ -117,14 +117,13 @@ IF = "IF"
 IFELSE = "IFELSE"
 TIMES = "TIMES"  # `{body} n times` with the count a number literal or a variable: the value holds them too
 LIT = "LIT"  # push the literal the name spells (the name is not a variable)
-UNDEF = "UNDEF"  # the name is defined nowhere: raise as the interpreter does
 NAME = "NAME"  # look the name up the general way, every time
 
 CONTROL = frozenset({DO, DOLIST, LOOP, WHILE, IF, IFELSE, TIMES})
 #: The kinds made of several tokens; their value starts with the lookup of the word that ends them
 FUSED = CONTROL | {SET}
-RESOLVED = frozenset({MACRO, VAR, WORD, CALL, FAST1, FAST2, LIT, UNDEF}) | FUSED  # what a dynamic name can resolve to
-NOT_VARIABLES = frozenset({WORD, CALL, FAST1, FAST2, LIT, UNDEF}) | FUSED  # the kinds that hold only while no variable has the name
+RESOLVED = frozenset({MACRO, VAR, WORD, CALL, FAST1, FAST2, LIT}) | FUSED  # what a dynamic name can resolve to
+NOT_VARIABLES = frozenset({WORD, CALL, FAST1, FAST2, LIT}) | FUSED  # the kinds that hold only while no variable has the name
 WORDS = frozenset({WORD, CALL, FAST1, FAST2})  # the kinds that hold a word's lookup, (kind, entry), as their value
 #: The kinds that do less than the interpreter does for the same tokens; a unit without one gains nothing
 WORTHWHILE = frozenset({CALL, FAST1, FAST2}) | FUSED
@@ -219,7 +218,7 @@ def resolve(core: StackerCore, name: str) -> tuple[str, object]:
         name: The token.
 
     Returns:
-        The kind (MACRO, VAR, WORD, CALL, FAST1, FAST2, LIT or UNDEF) and
+        The kind (MACRO, VAR, WORD, CALL, FAST1, FAST2 or LIT) and
         what running it needs: the word's lookup for the words, the
         literal's value for LIT, else None.
     """
@@ -240,7 +239,9 @@ def resolve(core: StackerCore, name: str) -> tuple[str, object]:
         return WORD, lookup
     literal = cached_literal_eval(name)
     if isinstance(literal, str):
-        return UNDEF, None
+        # defined nowhere now: read as a variable, which looks the name up the general way when it finds none,
+        # so a block that makes the variable itself (a function binding a local) keeps its unit
+        return VAR, None
     return LIT, literal
 
 

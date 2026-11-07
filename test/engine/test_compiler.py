@@ -105,7 +105,7 @@ def test_the_instructions_are_data(at_once):
         compiler.CONST,
         compiler.LIST,
         compiler.BLOCK,
-        compiler.UNDEF,
+        compiler.VAR,  # a name defined nowhere: read as a variable, looked up the general way when none is found
     ]
     for instruction in block.tokens._unit.instructions:
         assert not callable(instruction.value) and not isinstance(instruction.value, StackerCore)
