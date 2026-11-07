@@ -161,6 +161,35 @@ def test_a_run_of_tail_calls_that_leave_values_takes_time_in_proportion_to_its_l
     assert large < small * 64  # (16 times the length: linear is about 16 times the time, quadratic about 256)
 
 
+def test_a_loop_whose_body_has_a_unit_runs_in_place_and_counts_its_two_levels(monkeypatch):
+    if compiler.THRESHOLD is None:
+        pytest.skip("no unit to run the body by: the loops are activations")
+    s = Stacker()
+    seen = []
+
+    def probe():
+        seen.append(recursion.get_depth())
+        return 0
+
+    s.register_sfunction("probe", probe, 0, push_result_to_stack=True)
+    s.eval("{1 2 :i {probe drop} do [1] :x {probe drop} dolist {probe drop} 1 times {probe drop break} loop} :b set")
+    s.eval("b eval")  # (the first run: the loops and their bodies are activations)
+    first, seen[:] = list(seen), []
+    for _ in range(WARM_RUNS):
+        s.eval("b eval")  # (warmed up: the loops run in place, counted as the two activations they were)
+    assert seen[-len(first):] == first == [3, 3, 3, 3, 3]
+    made = []
+    original = machine.Frame.__init__
+
+    def counting(self, kind, parent, name=None):
+        made.append(kind)
+        original(self, kind, parent, name)
+
+    monkeypatch.setattr(machine.Frame, "__init__", counting)
+    s.eval("b eval")
+    assert [kind for kind in made if kind in (machine.LOOP, machine.BLOCK)] == [machine.BLOCK]  # (`eval` pushes the block; the loops push nothing)
+
+
 def test_the_depth_a_python_word_reads_counts_the_arms_run_in_place():
     s = Stacker()
     seen = []

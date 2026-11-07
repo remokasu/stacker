@@ -169,6 +169,23 @@ def test_a_body_that_clears_the_stack_runs_as_the_interpreter_does(twin):
     assert steps(assert_compiled(blk)) == [CONST, CONST, CONST, CONST, CONST, CONST, DO]
 
 
+@pytest.mark.parametrize("limit", range(1, 41))
+def test_a_name_defined_nowhere_fails_at_the_limit_as_it_does_without_a_unit(twin, limit):
+    """Compiled as a variable read, the name must raise where the generic stream raises: at the depth it is met,
+    not one level before it, which an activation of its own would have used up."""
+    before = recursion.get_limit()
+    recursion.set_limit(limit)
+    try:
+        twin.run("{n} {n 0 > {n 1 - f} {nosuch} ifelse} :f defun")
+        for _ in range(3):
+            twin.run("3 f")  # (the twin compares the error: the limit's, or the undefined name's)
+        twin.run("{n} {n 0 > {1 1 :i {n 1 - g} do} {nosuch} ifelse} :g defun")
+        for _ in range(3):
+            twin.run("3 g")
+    finally:
+        recursion.set_limit(before)
+
+
 @pytest.mark.parametrize("word", ["if", "do", "dolist", "times", "loop", "while"])
 def test_the_recursion_limit_is_met_at_the_same_depth_through_an_inlined_control_word(twin, word):
     # (the limit counts every activation: the call, the arm of `if`, a loop and its body; 30 levels fit in 400
@@ -283,6 +300,41 @@ def test_the_loop_word_itself_trusts_its_body_as_an_inlined_loop_does(twin, setu
     # (the loop at the top level: the word runs it, not a compiled block. The recursion row's loop is inside
     # the function either way; it is kept so that the two tables stay one)
     assert twin.run(program[1:-1]) == left
+
+
+#: (setup, the loop as a block, what it leaves, or None when the runs must only agree): the shapes a loop run in
+#: place (``machine._start_loop``: no activation for the loop or its body) has to keep: a `break` from wherever
+#: it comes, an error reworded by the words around it, the iteration's scope seen by `eval`, a variable the body
+#: makes outliving the loop, a recursion through the same literal loop, a body whose unit drops in mid-loop, and
+#: the values a `dolist` hands over
+IN_PLACE_LOOP_PROGRAMS = [
+    pytest.param("{x} {x 3 == {break} if x} :f defun", "{1 5 :k {k f} do}", ok(1, 2), id="break-through-a-function"),
+    pytest.param("", "{1 3 :i {1 3 :j {j 2 == {break} if j} do i} do}", ok(1, 1, 1, 2, 1, 3), id="break-leaves-the-inner-loop-only"),
+    pytest.param("", "{{1 break} 3 times {2 break} loop}", ok(1, 2), id="break-in-times-and-loop"),
+    pytest.param("{} {1 6 :i {i 3 == {9 :+ set} if i 5 == {break} if 1 2 +} do} :h defun", "{h}", ok(3, 3, 1, 2, 9, 1, 2, 9), id="break-after-the-body-dropped-its-unit"),
+    pytest.param("", "{[1 2] :k {k :s +} dolist}", None, id="a-symbol-error-in-a-dolist-body"),
+    pytest.param("", "{{+} 2 times}", None, id="an-underflow-in-a-times-body"),
+    pytest.param("{x} {1 2 :k {x 0 == {k :s +} if} do} :g defun", "{0 g}", None, id="an-error-in-an-arm-in-a-loop-in-a-function"),
+    pytest.param("", "{1 3 :k {{k 10 *} eval} do}", ok(10, 20, 30), id="eval-sees-the-iterations-scope"),
+    pytest.param("", "{1 3 :k {k :last set} do last}", ok(3), id="a-variable-the-body-makes-outlives-the-loop"),
+    pytest.param("{n} {n 0 > {1 1 :i {n 1 - f} do} if n} :f defun", "{3 f}", ok(0, 1, 2, 3), id="a-recursion-through-the-same-loop"),
+    pytest.param("", "{1 3 :k {k 2 > {k} {k neg} ifelse} do}", ok(-1, -2, 3), id="an-ifelse-in-the-body"),
+    pytest.param("", "{[1 2 3] :k {k 2 == {k 10 *} if} dolist}", ok(20), id="a-dolist-whose-body-leaves-nothing-on-most-iterations"),
+    pytest.param("", '{"ab" array :c {c} dolist}', ok("a", "b"), id="a-dolist-over-the-characters-of-a-string"),
+    pytest.param("", "{3 1 :k {k} do {1} 0 times}", ok(), id="loops-with-nothing-to-run"),
+]
+
+
+@pytest.mark.parametrize(("setup", "program", "left"), IN_PLACE_LOOP_PROGRAMS)
+def test_a_loop_run_in_place_does_what_the_loops_activations_did(twin, setup, program, left):
+    """The first run gives the body its unit (the loop gets an activation); from the second on the loop runs in place."""
+    if setup:
+        twin.run(setup)
+    twin.block(program)
+    outcomes = [twin.run("blk eval") for _ in range(3)]  # (each compared with the interpreter: stack, output, error, trace)
+    assert outcomes[0] == outcomes[1] == outcomes[2]
+    if left is not None:
+        assert outcomes[-1] == left
 
 
 def test_a_unit_of_another_interpreter_is_refused_even_when_admitted(monkeypatch):

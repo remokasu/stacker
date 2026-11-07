@@ -68,7 +68,7 @@ depth for as long as the word runs, and no longer.
 
 from __future__ import annotations
 
-from itertools import islice
+from itertools import chain, islice
 from typing import TYPE_CHECKING
 
 from stacker.data_type import String, Symbol, stack_data
@@ -296,7 +296,7 @@ class Frame:
     """
 
     __slots__ = (
-        "arms",  # the arms of `if` / `ifelse` this activation is inside, innermost last (tuples), or None
+        "arms",  # what this activation runs in place, innermost last, one entry per level of depth: an arm of `if` (a tuple), a loop (its _LoopState, twice: the loop and its body), or None
         "core",  # the core handed to Python words: the template when it is bound to ``scope``, else made on demand
         "depth",  # how many activations are below this one
         "entries",  # the classification of ``tokens``
@@ -371,7 +371,7 @@ class Frame:
 
 
 def _arms_running() -> int:
-    """The arms of `if` the running activation runs in place: in the depth, but not in ``recursion._depth``."""
+    """The depth of what the running activation runs in place (arms of `if`, loops): in the depth, but not in ``recursion._depth``."""
     current = _current
     return len(current.arms) if current is not None and current.arms else 0
 
@@ -379,13 +379,20 @@ def _arms_running() -> int:
 recursion._arms = _arms_running
 
 
-def _depth_error(kind: int, parent: Frame, name: str | None) -> StackerRecursionError:
-    """The error for an activation that would exceed the limit: named after the nearest call or macro, or the word that ran the block."""
+def _depth_error(kind: int, parent: Frame, name: str | None, word: str | None = None) -> StackerRecursionError:
+    """The error for an activation that would exceed the limit: named after the nearest call or macro, or the word that ran the block.
+
+    Args:
+        kind: The kind of the activation that could not be made.
+        parent: The activation it would have been made above.
+        name: A CALL's or EXPAND's name.
+        word: The word that would have run the block, when the activation is a loop's body run in place (the
+            loop's own activation, which would have been looked at first, is not there).
+    """
     if kind == CALL and name is not None:
         return StackerRecursionError(name, recursion.get_limit(), "function")
     if kind == EXPAND and name is not None:
         return StackerRecursionError(name, recursion.get_limit(), "macro")
-    word = None
     frame = parent
     while frame is not None:
         if frame.kind == CALL:
@@ -400,12 +407,15 @@ def _depth_error(kind: int, parent: Frame, name: str | None) -> StackerRecursion
 
 #: The kinds of loop, for ``_loop_next``'s fast way round
 L_DO, L_TIMES, L_WHILE, L_LOOP = 0, 1, 2, 3
+#: Where a fused `do` / `dolist` reads its values, below the name symbol: the bounds, or the items
+_FUSED_DO_PLACES = ((-2, "arg"), (-3, "arg"))
+_FUSED_DOLIST_PLACES = ((-2, "arg"),)
 
 
 class _LoopState:
     """What a running loop remembers between two runs of its body."""
 
-    __slots__ = ("body", "body_frame", "body_scope", "condition", "condition_frame", "count", "epoch", "kind", "limit", "name", "phase", "trusted", "trusted_condition", "values", "word", "wrap_args")
+    __slots__ = ("body", "body_frame", "body_scope", "condition", "condition_frame", "count", "epoch", "kind", "limit", "name", "phase", "saved", "tokens", "trusted", "trusted_condition", "unit", "values", "word", "wrap_args")
 
     def __init__(self, word: str) -> None:
         self.word = word
@@ -424,6 +434,11 @@ class _LoopState:
         self.trusted_condition: compiler.Unit | None = None
         self.epoch = 0
         self.wrap_args: list | None = None  # the arguments ``_reraise_type_error`` shows for `do` / `dolist` / `times`
+        # a loop run in place (``_start_loop``): the body's unit and tokens, and the registers of the activation
+        # running it as they were at the loop word, to come back when the loop ends
+        self.unit = None
+        self.tokens = None
+        self.saved = None
 
 
 def _owner(frame: Frame) -> Frame:
@@ -728,7 +743,11 @@ def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, t
                                     if found is not missing:
                                         stack.append(found)
                                         continue
-                                    # gone: the name means what it means now
+                                    # gone, or never made: the name means what it means now. One that is nothing
+                                    # raises here, as the generic stream does, with no activation made for it (an
+                                    # activation would meet the limit one level before the stream does)
+                                    if not _names_something(template, name):
+                                        raise _core._name_not_found(name)
                                     if arms:
                                         frame.it = it
                                         frame.unit = unit
@@ -909,6 +928,19 @@ def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, t
                                         frame.epoch = epoch
                                         frame.index = index
                                         child = _fused(frame, kind, name, value)
+                                        if child is frame and frame.resolved:
+                                            # spliced in (a loop, an arm): the registers are the activation's now
+                                            child = None
+                                            template = frame.template
+                                            scope = frame.scope
+                                            it = frame.it
+                                            unit = frame.unit
+                                            tokens = frame.tokens
+                                            epoch = frame.epoch
+                                            tailpos = frame.tailpos
+                                            arms = frame.arms
+                                            spliced = True
+                                            break
                                         if child is not None:
                                             break
                                 else:  # NAME: a raw block, which only a hand-built token list holds
@@ -936,6 +968,33 @@ def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, t
                             else:
                                 # the steps ran out
                                 if arms:
+                                    if type(arms[-1]) is not tuple:
+                                        # the body of a loop run in place ran out: the body runs again on the next
+                                        # value, in its scope (only the registers that change are set), or the loop
+                                        # ends and the parent's registers come back (read again from the activation)
+                                        state = arms[-1]
+                                        if state.tokens._unit is not state.unit:
+                                            # another activation (a recursion) dropped the unit: the rest of the
+                                            # loop goes on as an activation of its own, entering the body the
+                                            # general way
+                                            child = _leave_inplace(frame)
+                                            break
+                                        scope = _loop_again(frame, state)
+                                        if scope is not None:
+                                            it = frame.it
+                                            epoch = frame.epoch
+                                            continue
+                                        if not frame.resolved:
+                                            child = frame  # (the guard after the loop word switched to the generic stream)
+                                            break
+                                        template = frame.template
+                                        scope = frame.scope
+                                        it = frame.it
+                                        unit = frame.unit
+                                        tokens = frame.tokens
+                                        epoch = frame.epoch
+                                        tailpos = frame.tailpos
+                                        continue
                                     # an arm of `if` ran out: the parent's registers come back, and the guard after
                                     # the word is made as after any word
                                     it, unit, tokens, epoch, _arm_word, index, tailpos = arms.pop()
@@ -1062,7 +1121,7 @@ def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, t
                         frame = child
                         continue
                     if not frame.resolved and frame.arms:
-                        _leave_arm(frame)  # the rest of an arm of `if`, run by the generic stream, ran out
+                        frame = _leave_inplace(frame)  # the rest of an arm (or of a loop's body), run by the generic stream, ran out
                         continue
                     # the activation ran to its end: what it leaves goes below, and the one below goes on
                     ended = frame
@@ -1193,7 +1252,7 @@ def _splice_arm(frame: Frame, block: StackerCore, word: str, index: int) -> bool
     The arm runs in the scope and on the stack ``frame`` runs in, so no
     activation is made for it: the activation's iterator, unit, tokens and
     trace are put aside and the arm's take their place, until the arm's
-    steps run out (``_leave_arm``). An error inside the arm is reworded as
+    steps run out (``_leave_inplace``). An error inside the arm is reworded as
     the word's, as it would be in an activation of its own, and leaves the
     arm's tokens as the trace, as the innermost failing block's.
 
@@ -1202,7 +1261,7 @@ def _splice_arm(frame: Frame, block: StackerCore, word: str, index: int) -> bool
     """
     tokens = block.tokens
     unit = tokens._unit
-    if unit is None or unit is compiler.UNCOMPILABLE or not block._compiles:
+    if unit is None or unit is compiler.UNCOMPILABLE or not block._compiles or block._interp_scope is not None:
         return False
     if not _guards_pass(unit, tokens, frame.scope, block.operator_manager, False):
         return False
@@ -1226,8 +1285,25 @@ def _splice_arm(frame: Frame, block: StackerCore, word: str, index: int) -> bool
     return True
 
 
-def _leave_arm(frame: Frame) -> None:
-    """The spliced arm's steps ran out: ``frame`` goes on after the word, with its guards checked as after any word."""
+def _leave_inplace(frame: Frame) -> Frame:
+    """The generic stream ran out inside what ``frame`` runs in place: an arm, or the body of a loop.
+
+    An arm's parent goes on after the word, with its guards checked as
+    after any word. A loop's body left the resolved stream in mid-run (its
+    unit was dropped), so the rest of the loop runs as an activation of
+    its own, on the same state, as a loop whose body has no unit does.
+
+    Returns:
+        The activation to go on with: ``frame`` itself, or the loop's.
+    """
+    entry = frame.arms[-1]
+    if type(entry) is not tuple:
+        _leave_loop(frame, entry, guard=False)
+        control = Frame(LOOP, frame)
+        control.word = entry.word
+        control.stack = frame.stack
+        control.state = entry
+        return control
     it, unit, tokens, epoch, _word, index, tailpos = frame.arms.pop()
     frame.tailpos = tailpos
     frame.it = it
@@ -1242,6 +1318,7 @@ def _leave_arm(frame: Frame) -> None:
         core.trace = tokens
     frame.index = -1
     _guard_after(frame, index)
+    return frame
 
 
 def _admit(frame: Frame, tokens: list[object], unit: compiler.Unit, admitted: bool) -> bool:
@@ -1292,8 +1369,7 @@ def _finish(frame: Frame, index: int) -> None:
     frame.unit = None
     frame.resolved = False
     frame.index = -1  # (set for the word that just ran: there is no guard to make after it now)
-    if frame.entries is None:
-        frame.entries = tokens.classification()
+    frame.entries = tokens.classification()  # (cached on the list; what ``entries`` held may be another list's)
     frame.it = enumerate(islice(frame.entries, index + 1, None), index + 1)
 
 
@@ -1351,6 +1427,17 @@ def _push_block(frame: Frame, word: str | None, block: StackerCore, scope: Scope
         child.unit_before = tokens._unit  # (a loop's body: what the next iteration may trust)
     _start(child, block, tokens, trusted)
     return child
+
+
+def _names_something(core: StackerCore, name: str) -> bool:
+    """Whether ``name``, not a variable now, still names something the generic stream would run or push: a macro, a word, a literal."""
+    return (
+        name in core.macros
+        or name in core.sfunctions
+        or name in core.plugins
+        or name in core.operator_manager.dispatch_table
+        or not isinstance(cached_literal_eval(name), str)
+    )
 
 
 def _push_transient(frame: Frame, tokens: list[object], word: str | None, write_trace: bool, stack: stack_data[object] | None = None, tail: Frame | None = None) -> Frame:
@@ -2438,11 +2525,7 @@ def _fused(frame: Frame, kind: str, name: str, value: tuple) -> Frame | None:
         state.body_scope = scope
         state.wrap_args = [count]
         state.limit = count
-        control = Frame(LOOP, frame)
-        control.word = "times"
-        control.stack = stack
-        control.state = state
-        return control
+        return _start_loop(frame, state)
     indexes = value[1:]
     if len(stack) < _NEEDED[kind]:
         for index in indexes:
@@ -2470,7 +2553,7 @@ def _fused(frame: Frame, kind: str, name: str, value: tuple) -> Frame | None:
         control.state = [START, condition, true_body, false_body, []]
         return control
     if kind == DO or kind == DOLIST:
-        places = ((-2, "arg"), (-3, "arg")) if kind == DO else ((-2, "arg"),)  # below the name: the bounds, or the items
+        places = _FUSED_DO_PLACES if kind == DO else _FUSED_DOLIST_PLACES
         if _block_at(stack, places):
             return _args(frame, name, places, kind, value)
     state = _LoopState(name)
@@ -2498,11 +2581,146 @@ def _fused(frame: Frame, kind: str, name: str, value: tuple) -> Frame | None:
         state.body = tokens[indexes[1]]
     else:  # LOOP
         state.body = tokens[indexes[0]]
+    return _start_loop(frame, state)
+
+
+def _start_loop(frame: Frame, state: _LoopState) -> Frame | None:
+    """Starts the loop ``state`` describes: inside ``frame`` itself when its body's unit can run now, else as an activation of its own.
+
+    In place, as an arm of `if` is spliced in (``_splice_arm``): no
+    activation is made for the loop or for its body. The activation's
+    registers are put aside on ``state``, the body's unit takes their
+    place, and the scope becomes the iteration's; the body's steps run out
+    into ``_loop_again``, which enters them again for the next value or
+    brings the registers back (``_leave_loop``). The loop and its body
+    count two levels of depth, as their activations would, and the depth
+    errors are raised where those activations would have raised them.
+    `while` always gets an activation (its condition and body alternate).
+
+    Returns:
+        ``frame`` when the loop runs in place; the loop's activation; or None when the loop has no iteration to
+        run (nothing was done: the word is over).
+    """
+    body = state.body
+    tokens = body.tokens
+    unit = tokens._unit
+    kind = state.kind
+    if kind != L_WHILE and unit is not None and unit is not compiler.UNCOMPILABLE and body._compiles and body._interp_scope is None:
+        arms = frame.arms
+        below = len(arms) if arms else 0  # (the levels run in place already)
+        if frame.depth + below + 1 > recursion._limit:
+            raise _depth_error(LOOP, frame, None)
+        scope = state.body_scope
+        if kind == L_DO:
+            value = next(state.values, _MISSING)
+            if value is _MISSING:
+                return None
+            scope = ScopedVariables.loop_scope(scope, {state.name: value})
+        elif kind == L_TIMES and not (state.count < state.limit):  # a comparison, not range(): non-integer counts keep working
+            return None
+        if frame.depth + below + 2 > recursion._limit:
+            raise _depth_error(BLOCK, frame, None, state.word)
+        if _guards_pass(unit, tokens, scope, body.operator_manager, False):
+            if kind == L_TIMES:
+                state.count += 1
+            if arms is None:
+                frame.arms = arms = []
+            state.unit = unit
+            state.tokens = tokens
+            state.phase = BODY
+            # (``interp`` is not put aside: the activation is resolved, and a block with an interpolation scope
+            # has no unit to be resolved on)
+            state.saved = (frame.it, frame.unit, frame.tokens, frame.epoch, frame.index, frame.tailpos, frame.scope, frame.core, frame.template, frame.trace)
+            arms.append(state)
+            arms.append(state)  # (twice: the loop and its body, a level of depth each, as their activations were)
+            frame.scope = scope
+            frame.core = None  # (a view, when a word needs one, is made bound to the iteration's scope)
+            frame.template = body
+            frame.tokens = tokens
+            frame.unit = unit
+            frame.it = iter(unit.steps)
+            frame.epoch = generation.epoch
+            frame.trace = tokens
+            frame.tailpos = False  # (a loop's body is never a tail position)
+            frame.entries = None
+            frame.resolved = True
+            return frame
+        if kind == L_DO:
+            state.values = chain((value,), state.values)  # (the value goes back: the loop's activation takes it first)
     control = Frame(LOOP, frame)
-    control.word = name
-    control.stack = stack
+    control.word = state.word
+    control.stack = frame.stack
     control.state = state
     return control
+
+
+def _loop_again(frame: Frame, state: _LoopState) -> ScopedVariables | None:
+    """The body of the loop ``frame`` runs in place ran out: enters it again for the next iteration, or ends the loop.
+
+    Returns:
+        The scope the next iteration runs in (``frame.it`` and ``frame.epoch`` are set for it, the body is
+        admitted on trust as ``_loop_next`` admits it), or None when the loop ended and the registers came back.
+    """
+    kind = state.kind
+    if kind == L_DO:
+        value = next(state.values, _MISSING)
+        if value is _MISSING:
+            _leave_loop(frame, state)
+            return None
+        scope = ScopedVariables.loop_scope(state.body_scope, {state.name: value})
+        frame.scope = scope
+        frame.core = None  # (the last iteration's view, if one was made, is let go: the scope is new)
+    else:
+        if kind == L_TIMES:
+            if not (state.count < state.limit):
+                _leave_loop(frame, state)
+                return None
+            state.count += 1
+        scope = frame.scope
+        core = frame.core
+        if core is not None:
+            core.trace = state.tokens
+    if _admissions is not None:
+        _admissions.append((state.tokens, True))
+    frame.trace = state.tokens  # (a `try` inside the last iteration may have left its own block's)
+    frame.epoch = generation.epoch
+    frame.it = iter(state.unit.steps)
+    return scope
+
+
+def _leave_loop(frame: Frame, state: _LoopState, guard: bool = True) -> None:
+    """The loop ``frame`` runs in place is over: the registers put aside at the loop word come back.
+
+    Args:
+        frame: The activation.
+        state: The loop, the innermost thing ``frame`` runs in place.
+        guard: Whether the guard after the loop word is made now (as after any word). False when the loop
+            goes on as an activation of its own: the guard is made when that ends, from ``frame.index``.
+    """
+    arms = frame.arms
+    arms.pop()
+    arms.pop()
+    it, unit, tokens, epoch, index, tailpos, scope, core, template, trace = state.saved
+    state.saved = None
+    frame.it = it
+    frame.unit = unit
+    frame.tokens = tokens
+    frame.tailpos = tailpos
+    frame.scope = scope
+    frame.core = core
+    frame.template = template
+    frame.trace = trace
+    if core is not None:
+        core.trace = trace
+    frame.entries = None
+    frame.resolved = True
+    frame.epoch = epoch
+    if guard:
+        frame.index = -1
+        if generation.epoch != epoch:
+            _guard_after(frame, index)
+    else:
+        frame.index = index
 
 
 # ---------------------------------------------------------------------------
@@ -2816,12 +3034,28 @@ def _unwind(frame: Frame, error: BaseException, is_break: bool) -> Frame | None:
         kind = frame.kind
         arms = frame.arms
         if arms:
-            # the arms of `if` this activation was running in place: each would have reworded the error as its
-            # word's; the trace already holds the innermost arm's tokens
-            if not is_break:
-                for spliced in reversed(arms):
-                    error = _reworded(frame.template, spliced[4], error)
-            frame.tailpos = arms[0][6]
+            # what this activation was running in place, innermost first: an arm of `if` would have reworded the
+            # error as its word's; a loop's body would have too, after the loop's own rewrapping, and a loop
+            # whose body is running catches a `break`. The trace already holds the innermost tokens
+            while arms:
+                entry = arms[-1]
+                if type(entry) is tuple:
+                    arms.pop()
+                    if not is_break:
+                        error = _reworded(frame.template, entry[4], error)
+                    tailpos = entry[6]
+                else:
+                    if is_break:
+                        _leave_loop(frame, entry)  # the loop ends: the activation goes on after the loop word
+                        return frame
+                    arms.pop()
+                    arms.pop()
+                    frame.template = entry.saved[8]  # (the words outside the loop reword on the parent's template)
+                    if entry.wrap_args is not None:
+                        error = _rewrapped(entry.word, entry.wrap_args, error)
+                    error = _reworded(frame.template, entry.word, error)
+                    tailpos = entry.saved[5]
+            frame.tailpos = tailpos
             frame.arms = None
         if kind == CALL:
             if not is_break and isinstance(error, RecursionError):
