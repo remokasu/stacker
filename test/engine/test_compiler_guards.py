@@ -633,7 +633,7 @@ FAST_PROGRAMS = [
     pytest.param("1 2 +", [CONST, CONST, FAST2], id="two-plain-values"),
     pytest.param("true false +", [CONST, CONST, FAST2], id="booleans-are-plain"),
     pytest.param("[1] [2] +", [LIST, LIST, FAST2], id="lists-are-plain"),
-    pytest.param('"a" "b" +', [CONST, CONST, FAST2], id="strings-go-through-the-runner"),
+    pytest.param('"a" "b" +', [CONST, CONST, FAST2], id="strings-run-directly-as-plain-str"),
     pytest.param('"a" 2 *', [CONST, CONST, FAST2], id="a-string-and-a-number"),
     pytest.param("{1} 2 +", [BLOCK, CONST, FAST2], id="a-block-argument-is-evaluated"),
     pytest.param("{} 2 +", [BLOCK, CONST, FAST2], id="a-block-argument-that-leaves-nothing"),
@@ -645,7 +645,7 @@ FAST_PROGRAMS = [
     pytest.param("[1 2] 5 nth", [LIST, CONST, WORD], id="a-priority-word-is-not-fast"),
     pytest.param("2.25 sqrt", [CONST, FAST1], id="one-plain-value"),
     pytest.param("-3 abs", [CONST, FAST1], id="one-negative-value"),
-    pytest.param('"a" str', [CONST, FAST1], id="one-string-through-the-runner"),
+    pytest.param('"a" str', [CONST, FAST1], id="one-string-runs-directly"),
     pytest.param("{4} sqrt", [BLOCK, FAST1], id="one-block-argument"),
     pytest.param("sqrt", [FAST1], id="one-argument-missing"),
     pytest.param(":x neg", [CONST, FAST1], id="one-symbol"),
@@ -661,7 +661,7 @@ FAST_PROGRAMS = [
     pytest.param('"12" 3 *', [CONST, CONST, FAST2], id="a-string-of-digits-is-text"),
     pytest.param("9 1 2 +", [CONST, CONST, CONST, FAST2], id="a-value-under-the-arguments-stays"),
     pytest.param("[[1] [2]] [3] +", [LIST, LIST, FAST2], id="nested-lists"),
-    pytest.param("[1 2] array [3] array +", [LIST, WORD, LIST, WORD, FAST2], id="arrays-go-through-the-runner"),
+    pytest.param("[1 2] array [3] array +", [LIST, WORD, LIST, WORD, FAST2], id="arrays-are-plain"),
     pytest.param("[1 2] array 1 +", [LIST, WORD, CONST, FAST2], id="an-array-and-a-number"),
     pytest.param("3 2 1 - -", [CONST, CONST, CONST, FAST2, FAST2], id="two-fast-words-in-a-row"),
 ]
@@ -679,7 +679,7 @@ def test_a_fast_word_runs_directly_on_plain_values_and_through_the_runner_otherw
         return original(core, token, kind, op, stack)
 
     monkeypatch.setattr(StackerCore, "_run_word", recording)
-    for given, runs_the_runner in (("1 2", False), ('"a" "b"', True), ("{1} 2", True), (":x 1", True), ("1", True)):
+    for given, runs_the_runner in (("1 2", False), ('"a" "b"', False), ("{1} 2", True), (":x 1", True), ("1", True)):
         runs.clear()
         twin.run(f"{given} blk eval")
         assert ("+" in runs) is runs_the_runner, given
@@ -691,6 +691,33 @@ def test_one_fast_step_run_on_values_of_changing_types_leaves_what_the_interpret
     for given in ("1 2", '"a" "b"', "{1} 2", "2 {1}", "1.5 2", "[1] [2]", ":x 1", "true 1", "1"):
         twin.run(f"{given} blk eval")
     assert steps(assert_compiled(blk)) == [FAST2]
+
+
+def test_a_fast_step_hands_a_string_literal_to_the_word_as_the_plain_str_the_runner_hands(twin):
+    # `abs` and `-` are redefined (a new name would not be a built-in, so it would not compile to a FAST step) as
+    # words that record the type of what they are handed and give it back; the originals come back at the end
+    received = []
+    originals = {}
+
+    def redefine(stacker):
+        table = stacker.operator_manager.dispatch_table
+        originals.setdefault("abs", table["abs"][1]["func"])
+        originals.setdefault("-", table["-"][1]["func"])
+        stacker.register_operator("abs", lambda x: received.append(type(x)) or x, 1, True, "")
+        stacker.register_operator("-", lambda x, y: received.append((type(x), type(y))) or x + y, 2, True, "")
+
+    twin.do(redefine)
+    try:
+        one = twin.block("{abs}", "one")
+        two = twin.block("{-}", "two")
+        for _ in range(2):
+            twin.run('"a" one eval  "b" "c" two eval')
+        assert steps(assert_compiled(one)) == [FAST1]
+        assert steps(assert_compiled(two)) == [FAST2]
+        assert received == [str, (str, str)] * 4  # both sides, both runs: never a String
+    finally:
+        twin.do(lambda stacker: stacker.register_operator("abs", originals["abs"], 1, True, ""))
+        twin.do(lambda stacker: stacker.register_operator("-", originals["-"], 2, True, ""))
 
 
 @pytest.mark.parametrize(("program", "kinds"), FAST_PROGRAMS)

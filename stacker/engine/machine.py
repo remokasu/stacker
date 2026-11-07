@@ -78,7 +78,7 @@ from stacker.engine import compiler, copier, inline
 from stacker.engine import core as _core
 from stacker.engine import include as _include_module
 from stacker.engine.compiler import (
-    _PLAIN,
+    _DIRECT,
     BAD,
     BAD_LIST,
     CONST,
@@ -581,7 +581,7 @@ def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, t
     frame.scope = core.variables
     frame.stack = stack
     missing = _MISSING
-    plain = _PLAIN
+    direct = _DIRECT
     host_errors = HOST_ERRORS
     void = VOID
     verify = compiler.VERIFY  # (set before a run, by the tests)
@@ -647,12 +647,16 @@ def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, t
                                             raise AssertionError(f"compiled `{name}` as the machine's own, but it is not the built-in now")
                                 if kind == FAST2:
                                     # a regular word on two plain values: popped and called here, as _exec_regular
-                                    # would, with the same wrapping of a host error; anything else goes through the
-                                    # word runner
+                                    # would (a String as the str it holds), with the same wrapping of a host error;
+                                    # anything else goes through the word runner
                                     entry = value[1]
-                                    if len(stack) >= 2 and type(stack[-1]) in plain and type(stack[-2]) in plain:
+                                    if len(stack) >= 2 and type(stack[-1]) in direct and type(stack[-2]) in direct:
                                         second = stack.pop()
                                         first = stack.pop()
+                                        if type(second) is String:
+                                            second = second.value
+                                        if type(first) is String:
+                                            first = first.value
                                         try:
                                             result = entry["func"](first, second)
                                         except host_errors as error:
@@ -674,8 +678,10 @@ def run(core: StackerCore, tokens: list[object], stack: stack_data[object], *, t
                                         _core_for(frame, value[0])._run_word(name, value[0], entry, stack)
                                 elif kind == FAST1:
                                     entry = value[1]
-                                    if stack and type(stack[-1]) in plain:
+                                    if stack and type(stack[-1]) in direct:
                                         first = stack.pop()
+                                        if type(first) is String:
+                                            first = first.value
                                         try:
                                             result = entry["func"](first)
                                         except host_errors as error:

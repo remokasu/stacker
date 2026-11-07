@@ -62,7 +62,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, NamedTuple
 
-from stacker.data_type import Symbol
+from stacker.data_type import Array, String, Symbol
 
 # core imports this module: its names are read at call time only
 from stacker.engine import core as _core
@@ -151,9 +151,10 @@ REGULAR = "regular"
 _PRIORITY = "priority"
 #: The words that bind a variable from a symbol and a value (a cheap sieve before the handler is compared)
 _SET_WORDS = frozenset({"set", "="})
-#: The types ``_pop_arg`` hands to a word unchanged: a value of another type (a block, a String, a Symbol, a
-#: container of the language's own) goes through the word runner, which evaluates or converts it
-_PLAIN = frozenset({int, float, bool, complex, str, list, tuple, dict, type(None)})
+#: The types a FAST step takes from the stack itself: those ``_pop_arg`` hands to a word unchanged, and a String,
+#: which it hands as the ``str`` it holds (the machine unwraps it the same way). A value of another type goes
+#: through the word runner: a block is evaluated there, a Symbol reported, a lambda refused
+_DIRECT = frozenset({int, float, bool, complex, str, list, tuple, dict, type(None), Array, String})
 
 
 def _handler_of(kind: str) -> object:
