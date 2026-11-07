@@ -102,8 +102,9 @@ def test_equal_arguments_of_other_types_are_other_expansions():
 
 
 def test_the_same_object_hits_and_a_new_one_misses():
-    _, stacker = both("{x} {{x 1 +}} :inc defmacro 5 :a set a inc a inc a inc 1000 :b set b 1 + inc b 1 + inc")
-    assert hits(stacker, "inc") == 2
+    # A string made by `+` is a new object on every implementation; equal ints need not be
+    _, stacker = both('{x} {{x x +}} :twice defmacro "a" :a set a twice a twice a twice "b" :b set b "c" + twice b "c" + twice')
+    assert hits(stacker, "twice") == 2
 
 
 def test_a_list_argument_is_never_keyed():

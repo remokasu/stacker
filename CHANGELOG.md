@@ -8,6 +8,10 @@
 - **A string or an array given to a regular word takes the direct path of a compiled block.** Such a word on plain values ran directly in a compiled block since 1.29.0, but a string literal is a `String` and an array an `Array`, which went through the word runner every time. The string reaches the word as the plain `str` it holds, as the runner handed it
 - **A name defined nowhere compiles as a variable read.** It was a step that raised, and the unit dropped itself as soon as the block bound that name: a function that sets a local and reads it back ran by the generic stream from its fourth call on. The name is now read as a variable, found once bound and looked up the general way, raising as before, when none is found
 
+### Added
+
+- **The package says where it runs.** `pyproject.toml` carries the classifiers for CPython 3.10 to 3.13 and PyPy, and the README a PyPy badge beside the Python one. The test suite passes on PyPy 3.10 and 3.11 in every compile state, once one macro memo test that leaned on CPython giving equal ints distinct identities was rewritten over strings
+
 ## [1.35.0] - 2026-11-07
 
 ### Changed
