@@ -1,5 +1,13 @@
 # CHANGE LOG
 
+## [1.36.0] - 2026-11-07
+
+### Changed
+
+- **A loop written with its body runs inside the activation that runs it.** `do`, `dolist`, `times` and `loop` whose body is a block literal, once the body has run often enough to be compiled, make no activation for the loop or for the body: the activation's own instruction stream is swapped for the body's and back, as an arm of `if` already was. The depth they count (two levels), `break`, the errors' wording and the trace are unchanged. The loops inside a loop that 1.30.0 made a third slower run as fast as in 1.29.1 again
+- **A string or an array given to a regular word takes the direct path of a compiled block.** Such a word on plain values ran directly in a compiled block since 1.29.0, but a string literal is a `String` and an array an `Array`, which went through the word runner every time. The string reaches the word as the plain `str` it holds, as the runner handed it
+- **A name defined nowhere compiles as a variable read.** It was a step that raised, and the unit dropped itself as soon as the block bound that name: a function that sets a local and reads it back ran by the generic stream from its fourth call on. The name is now read as a variable, found once bound and looked up the general way, raising as before, when none is found
+
 ## [1.35.0] - 2026-11-07
 
 ### Changed
